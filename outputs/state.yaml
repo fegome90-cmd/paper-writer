@@ -1,0 +1,15 @@
+# Schema version: 1.0
+stage: bootstrap
+gates:
+  repo_initialized: true
+  search_completed: false
+  screened_evidence: false
+  outline_drafted: false
+  sections_completed: false
+  bib_normalized: false
+  citations_resolved: false
+  refs_validated: false
+  style_passed: false
+  reporting_passed: false
+  render_passed: false
+  ready_for_delivery: false

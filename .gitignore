@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+*.egg
+
+# Environment
+.env
+
+# macOS
+.DS_Store
+
+# Editor artifacts
+*.swp
+*.swo
+*.bak
+*.backup
+
+# Render/build artifacts
+build/
+dist/
+.tmp/
+
+# Local editor/tool noise
+.atl/
+.pi/
+.pi-lens/
+_ctx/
+
+# Coverage
+coverage/
+.coverage
+
+# Node (pandoc filters, etc.)
+node_modules/
+
+# Generated outputs can be kept, but nested transient files should stay out
+outputs/**/__pycache__/
+outputs/**/*.tmp

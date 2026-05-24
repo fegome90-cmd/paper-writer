@@ -1,0 +1,44 @@
+[project]
+name = "paper-writer"
+version = "0.1.0"
+description = "Scientific search, drafting, validation, and rendering pipeline."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0.1",
+]
+
+[project.scripts]
+paper = "cli.paper.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    "types-pyyaml>=6.0.12.12",
+]
+
+[tool.setuptools]
+packages = ["harness", "cli", "validators", "integrations"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "RUF"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+pythonpath = ["."]
