@@ -2,9 +2,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from harness.domain.state import ManuscriptState
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
 from harness.services.gates import (
+    GateResult,
     validate_outline_drafted,
     validate_ready_for_delivery,
     validate_render_passed,
@@ -80,7 +82,24 @@ class Orchestrator:
         # 1. PREPARE PHASE: Load state and check preconditions
         # ----------------------------------------------------
 
-        # Load state (except for 'init' if it does not exist yet)
+        # Bootstrap state if command is init and state does not exist yet
+        if request.command == "init" and not self.state_manager.exists():
+            try:
+                self.state_manager.state = ManuscriptState(
+                    stage="bootstrap",
+                    gates={
+                        gate: (gate == "repo_initialized")
+                        for gate in ManuscriptState.REQUIRED_GATES
+                    },
+                )
+                self.state_manager.save_state()
+            except Exception as e:
+                msg = f"Failed to bootstrap state: {e}"
+                blockers.append(msg)
+                steps.append({"step_id": "bootstrap_state", "status": "failed", "error": msg})
+                return self._build_fail_result(result, steps, blockers, warnings)
+
+        # Load state
         stage_before = "bootstrap"
         if request.command != "init" or self.state_manager.exists():
             try:
@@ -111,9 +130,11 @@ class Orchestrator:
         # 2. APPLY PHASE: Execute command action
         # ----------------------------------------------------
         try:
-            action_artifacts = self.action_runner.run_action(
-                request.command, request.args, self.state_manager
-            )
+            # Trigger downstream gate reset if editing a draft
+            if request.command == "draft_section":
+                self.state_manager.reset_downstream_gates("draft")
+
+            action_artifacts = self.action_runner.run_action(request.command, request.args)
             artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
         except Exception as e:
@@ -126,50 +147,52 @@ class Orchestrator:
         # 3. VERIFY PHASE: Evaluate gates and update state
         # ----------------------------------------------------
         try:
-            gate_verdict = self._run_gate_verification(request)
-
-            # Record gate changes
-            gate_changes[gate_verdict.gate] = gate_verdict.status in ["pass", "warn"]
-
-            # For draft_section, incomplete sections are NOT command blockers
+            gate_verdicts = self._run_gate_verification(request)
             is_draft = request.command == "draft_section"
-            if gate_verdict.blockers and not is_draft:
-                blockers.extend(gate_verdict.blockers)
-            if gate_verdict.warnings:
-                warnings.extend(gate_verdict.warnings)
 
-            step_status = (
-                "succeeded" if (gate_verdict.status in ["pass", "warn"] or is_draft) else "failed"
-            )
-            step_err = (
-                ", ".join(gate_verdict.blockers) if gate_verdict.blockers and not is_draft else None
-            )
-            steps.append(
-                {
-                    "step_id": f"verify_gate_{gate_verdict.gate}",
-                    "status": step_status,
-                    "error": step_err,
-                }
-            )
+            for gate_verdict in gate_verdicts:
+                # Record gate changes
+                gate_changes[gate_verdict.gate] = gate_verdict.status in ["pass", "warn"]
+
+                # Incomplete drafts are not command blockers
+                if gate_verdict.blockers and not is_draft:
+                    blockers.extend(gate_verdict.blockers)
+                if gate_verdict.warnings:
+                    warnings.extend(gate_verdict.warnings)
+
+                step_status = (
+                    "succeeded"
+                    if (gate_verdict.status in ["pass", "warn"] or is_draft)
+                    else "failed"
+                )
+                step_err = (
+                    ", ".join(gate_verdict.blockers)
+                    if gate_verdict.blockers and not is_draft
+                    else None
+                )
+                steps.append(
+                    {
+                        "step_id": f"verify_gate_{gate_verdict.gate}",
+                        "status": step_status,
+                        "error": step_err,
+                    }
+                )
+
+                # Persist state update
+                self.state_manager.set_gate(gate_verdict.gate, gate_changes[gate_verdict.gate])
 
             # Check failure policy (bypass for draft_section since incomplete draft
             # is not a command failure)
-            if (
-                gate_verdict.status == "fail"
-                and request.failure_policy == "stop_on_error"
-                and not is_draft
-            ):
+            any_failed = any(v.status == "fail" for v in gate_verdicts)
+            if any_failed and request.failure_policy == "stop_on_error" and not is_draft:
                 return self._build_fail_result(
                     result, steps, blockers, warnings, artifacts, gate_changes
                 )
 
-            # Persist state update
-            # Write gate value
-            self.state_manager.set_gate(gate_verdict.gate, gate_changes[gate_verdict.gate])
-
-            # Transition stage if the verification passed (or warned) or if it's
+            # Transition stage if all verification gates passed (or warned) or if it's
             # draft_section (stage manager will handle transition)
-            if gate_changes[gate_verdict.gate] or is_draft:
+            all_passed = all(gate_changes.get(v.gate, False) for v in gate_verdicts)
+            if all_passed or is_draft:
                 next_stage = self._get_next_stage(request.command, stage_before)
                 if next_stage:
                     self.state_manager.set_stage(next_stage)
@@ -253,46 +276,49 @@ class Orchestrator:
                 f"Current stage is '{current_stage}'."
             )
 
-    def _run_gate_verification(self, request: OrchestratorRequest) -> Any:
-        """Invokes the gate verifier corresponding to the executed command."""
+    def _run_gate_verification(self, request: OrchestratorRequest) -> list[GateResult]:
+        """Invokes the gate verifiers corresponding to the executed command."""
         cmd = request.command
 
         if cmd == "init":
-            return validate_repo_initialized(self.checker)
+            return [validate_repo_initialized(self.checker)]
         elif cmd == "search":
-            return validate_search_completed(self.checker)
+            return [validate_search_completed(self.checker)]
         elif cmd == "screen":
-            return validate_screened_evidence(self.checker)
+            return [validate_screened_evidence(self.checker)]
         elif cmd == "draft_outline":
-            return validate_outline_drafted(self.checker)
+            return [validate_outline_drafted(self.checker)]
         elif cmd == "draft_section":
-            return validate_sections_completed(self.checker)
+            return [validate_sections_completed(self.checker)]
         elif cmd == "lint_bib":
             result_mock = {
                 "status": "pass",
                 "findings": [],
                 "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
             }
-            return validate_validator_gate("bib_normalized", result_mock)
+            return [validate_validator_gate("bib_normalized", result_mock)]
         elif cmd == "check_refs":
             result_mock = {
                 "status": "pass",
                 "findings": [],
                 "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
             }
-            self.state_manager.set_gate("citations_resolved", True)
-            return validate_validator_gate("refs_validated", result_mock)
+            # Return both gates explicitly rather than side-effecting inside the verifier
+            return [
+                validate_validator_gate("citations_resolved", result_mock),
+                validate_validator_gate("refs_validated", result_mock),
+            ]
         elif cmd == "lint_style":
             result_mock = {"status": "pass", "findings": [], "artifacts_checked": []}
-            return validate_validator_gate("style_passed", result_mock)
+            return [validate_validator_gate("style_passed", result_mock)]
         elif cmd == "audit_reporting":
             result_mock = {"status": "pass", "findings": [], "artifacts_checked": []}
-            return validate_validator_gate("reporting_passed", result_mock)
+            return [validate_validator_gate("reporting_passed", result_mock)]
         elif cmd == "render":
-            return validate_render_passed(self.checker)
+            return [validate_render_passed(self.checker)]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
-            return validate_ready_for_delivery(self.checker, state_gates)
+            return [validate_ready_for_delivery(self.checker, state_gates)]
 
         raise ValueError(f"Unknown gate verification for command: {cmd}")
 

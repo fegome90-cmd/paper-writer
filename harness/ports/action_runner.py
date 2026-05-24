@@ -6,7 +6,7 @@ class ActionRunner(ABC):
     """Port for executing side-effect actions and emitting pipeline outputs."""
 
     @abstractmethod
-    def run_action(self, command: str, args: dict[str, Any], state_manager: Any) -> list[str]:
+    def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
         """Runs the action associated with a command.
 
         Returns list of generated artifact paths.

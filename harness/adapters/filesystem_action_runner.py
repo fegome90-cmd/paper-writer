@@ -4,7 +4,6 @@ from typing import Any
 
 import yaml
 
-from harness.domain.state import ManuscriptState
 from harness.ports.action_runner import ActionRunner
 
 
@@ -14,7 +13,7 @@ class FilesystemActionRunner(ActionRunner):
     def __init__(self, repo_path: Path) -> None:
         self.repo_path = repo_path
 
-    def run_action(self, command: str, args: dict[str, Any], state_manager: Any) -> list[str]:
+    def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
         artifacts: list[str] = []
 
         if command == "init":
@@ -34,16 +33,6 @@ class FilesystemActionRunner(ActionRunner):
                 (self.repo_path / d).mkdir(parents=True, exist_ok=True)
 
             state_file = self.repo_path / "outputs" / "state.yaml"
-            if not state_manager.exists():
-                state_manager.state = ManuscriptState(
-                    stage="bootstrap",
-                    gates={
-                        gate: (gate == "repo_initialized")
-                        for gate in ManuscriptState.REQUIRED_GATES
-                    },
-                )
-                state_manager.save_state()
-
             manuscript_qmd = self.repo_path / "templates" / "manuscript.qmd"
             manuscript_qmd.touch(exist_ok=True)
 
@@ -88,9 +77,6 @@ class FilesystemActionRunner(ActionRunner):
                 raise ValueError(
                     f"Invalid section name '{section_name}'. Must be one of {valid_sections}"
                 )
-
-            # Reset gates on edit
-            state_manager.reset_downstream_gates("draft")
 
             section_file = self.repo_path / "outputs" / "drafts" / f"{section_name}.md"
             with open(section_file, "w", encoding="utf-8") as f:
