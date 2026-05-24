@@ -1,27 +1,46 @@
-"""Academic writer skill using prompts from source SKILL.md.
+"""Academic writer skill consuming section manifest derived from SKILL.md.
 
-The source skill at /Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/
+The source skill at:
+  /Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/
 is a **prompt collection** — 7 section prompts for Q1 journal papers.
 There is NO executable Python code in the source.
 
-This module reads section structures from the vendored SKILL.md and
-generates section skeletons. It does NOT call an LLM — for real content,
-use the SKILL.md prompts directly with an LLM.
+This module reads ``sections_manifest.json`` (a derived artifact extracted
+from SKILL.md) at runtime to get section structure. It does NOT hardcode
+section data — all structure comes from the manifest.
 
-**Adaptation truth:**
-- Section structure (CARS model for intro, CONSORT flow for methods, etc.)
-  is extracted from the SKILL.md prompt guidelines.
-- Tone rules ("human-like, conversational academic") inform the template style.
-- Citation formatting follows APA 7th as specified in the prompts.
-- The actual prompt text is preserved verbatim in SKILL.md for manual use.
+**Adaptation chain (fully traceable):**
+1. SKILL.md (vendored) → human-readable prompts with {placeholders}
+2. sections_manifest.json (derived) → machine-readable structure extracted
+   from SKILL.md by manual audit, versioned alongside the source
+3. This module → reads manifest, generates section skeletons
+
+For real content generation, use SKILL.md prompts with an LLM.
 """
 
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
+
+_MANIFEST_PATH = Path(__file__).parent / "sections_manifest.json"
+_SKILL_MD_PATH = Path(__file__).parent / "SKILL.md"
+
+
+def load_manifest() -> dict[str, Any]:
+    """Load the sections manifest derived from SKILL.md.
+
+    Returns:
+        The parsed manifest dict with sections, guidelines, and provenance.
+
+    Raises:
+        FileNotFoundError: If sections_manifest.json is missing.
+    """
+    data = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise TypeError("Manifest must be a JSON object (dict)")
+    return data
 
 
 def _extract_cite_keys(bib_path: Path) -> list[str]:
@@ -29,6 +48,8 @@ def _extract_cite_keys(bib_path: Path) -> list[str]:
     if not bib_path.exists():
         return []
     content = bib_path.read_text(encoding="utf-8")
+    import re
+
     return re.findall(r"@\w+\{(\w+)", content)
 
 
@@ -43,64 +64,15 @@ def _evidence_cite_keys(evidence: list[dict[str, Any]]) -> list[str]:
     return keys
 
 
-# Section structures derived from SKILL.md prompt guidelines.
-# Each section follows the structure specified in the corresponding prompt.
-# The SKILL.md contains the FULL prompts with {placeholders} for manual use.
-_SECTION_STRUCTURES: dict[str, dict[str, Any]] = {
-    "introduction": {
-        "model": "CARS",
-        "subsections": [
-            "Establish territory — why the topic matters",
-            "Identify niche — what is missing or uncertain",
-            "Occupy niche — purpose and direction of study",
-        ],
-        "tone": "human-like conversational academic with varied sentence lengths",
-    },
-    "methods": {
-        "model": "CONSORT/PRISMA",
-        "subsections": [
-            "Study design and justification",
-            "Setting and timeframe",
-            "Ethics statement",
-            "Participants/sampling with inclusion criteria",
-            "Instruments and measures",
-            "Data collection procedure",
-            "Statistical analysis plan",
-        ],
-        "tone": "past tense, detailed enough for replication",
-    },
-    "results": {
-        "model": "APA 7th reporting",
-        "subsections": [
-            "Descriptive statistics / demographics",
-            "Main analyses with test statistics, df, p-values, effect sizes",
-            "Secondary analyses",
-            "Negative or non-significant results",
-        ],
-        "tone": "careful researcher presenting evidence, past tense",
-    },
-    "discussion": {
-        "model": "critical synthesis",
-        "subsections": [
-            "Summary of key findings",
-            "Comparison with previous literature",
-            "Theoretical and practical implications",
-            "Limitations and their impact",
-            "Future research recommendations",
-        ],
-        "tone": "intelligent, natural, critical, 1000-1200 words",
-    },
-}
-
-
 def draft_outline(
     evidence_path: Path,
     output_dir: Path,
     bib_path: Path,
 ) -> dict[str, Any]:
-    """Create outline from screened evidence.
+    """Create outline from screened evidence using manifest structure.
 
-    Structure follows the CARS model and section guidelines from SKILL.md.
+    Section order and structure come from sections_manifest.json,
+    which was derived from the vendored SKILL.md.
 
     Args:
         evidence_path: Path to screened_evidence.json.
@@ -120,41 +92,35 @@ def draft_outline(
     all_refs = cite_keys + ev_keys
     ref_list = ", ".join(all_refs[:8]) if all_refs else "see bibliography"
 
+    manifest = load_manifest()
+    sections = manifest.get("sections", {})
+
     lines: list[str] = [
         f"# Outline — {query}",
         "",
         "<!--",
-        "Structure follows CARS model and section guidelines from SKILL.md.",
-        "For full prompts, see skills/imported/academic-writer/SKILL.md",
-        "Source: /Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/",
+        "Structure derived from sections_manifest.json",
+        f"Manifest source: {manifest.get('_provenance', {}).get('source_path', 'SKILL.md')}",
+        f"Source version: {manifest.get('_provenance', {}).get('source_version', 'unknown')}",
+        f"Full prompts: {_SKILL_MD_PATH.name}",
         "-->",
         "",
-        "## 1. Introduction (CARS model)",
-        f"   - Establish territory: clinical significance of {query} [{ref_list}]",
-        "   - Identify niche: what is missing or uncertain in current research",
-        "   - Occupy niche: purpose, objectives, and direction of this study",
-        "",
-        "## 2. Methods (CONSORT/PRISMA flow)",
-        "   - Study design and justification",
-        "   - Setting, timeframe, ethics approval",
-        "   - Participants: population, sampling, inclusion/exclusion criteria",
-        "   - Instruments and measures with psychometric properties",
-        "   - Data collection procedure (chronological)",
-        "   - Statistical analysis plan (tests, significance level, software)",
-        "",
-        "## 3. Results (APA 7th reporting)",
-        f"   - Study characteristics [{ref_list}]",
-        "   - Descriptive statistics and demographics",
-        "   - Main analyses: test statistics, df, p-values, effect sizes",
-        "   - Secondary and non-significant results",
-        "",
-        "## 4. Discussion (critical synthesis, 1000-1200 words)",
-        "   - Summary of key findings with comparison to prior literature",
-        "   - Theoretical and practical implications",
-        "   - Limitations and their potential impact on findings",
-        "   - Future research recommendations",
-        "",
     ]
+
+    # Sort sections by order from manifest
+    ordered = sorted(sections.items(), key=lambda s: s[1].get("order", 99))
+    for section_name, section_data in ordered:
+        display_name = section_name.replace("_", " ").title()
+        model = section_data.get("model", "standard")
+        word_count = section_data.get("word_count")
+        subsections = section_data.get("subsections", [])
+
+        wc_note = f" ({word_count} words)" if word_count else ""
+        lines.append(f"## {section_data['order']}. {display_name} ({model} model){wc_note}")
+        for sub in subsections:
+            lines.append(f"   - {sub} [{ref_list}]")
+        lines.append("")
+
     outline_path = output_dir / "outline.md"
     outline_path.write_text("\n".join(lines), encoding="utf-8")
     return {"artifacts": [str(outline_path)]}
@@ -167,13 +133,14 @@ def draft_section(
     bib_path: Path,
     output_dir: Path,
 ) -> dict[str, Any]:
-    """Draft a section skeleton following SKILL.md prompt structure.
+    """Draft a section skeleton using manifest structure.
 
-    The generated skeleton provides the STRUCTURE from the source prompts.
-    For real content, use the SKILL.md prompts with an LLM.
+    All structure (model, subsections, tone, rules) comes from
+    sections_manifest.json, which was derived from SKILL.md.
+    No section data is hardcoded in this function.
 
     Args:
-        section_name: One of: introduction, methods, results, discussion.
+        section_name: Section key from manifest (e.g. introduction, methods).
         outline_path: Path to outline.md (for context).
         evidence_path: Path to screened_evidence.json.
         bib_path: Path to references.bib.
@@ -183,16 +150,17 @@ def draft_section(
         Dict with 'artifacts' list of created file paths.
 
     Raises:
-        ValueError: If section_name is not recognized.
+        ValueError: If section_name is not in the manifest.
     """
-    key = section_name.lower().strip()
-    if key not in _SECTION_STRUCTURES:
-        raise ValueError(
-            f"Unknown section: {section_name}. "
-            f"Available: {', '.join(_SECTION_STRUCTURES)}"
-        )
+    key = section_name.lower().strip().replace(" ", "_")
+    manifest = load_manifest()
+    sections = manifest.get("sections", {})
 
-    structure = _SECTION_STRUCTURES[key]
+    if key not in sections:
+        available = ", ".join(sorted(sections.keys()))
+        raise ValueError(f"Unknown section: {section_name}. Available: {available}")
+
+    section_data = sections[key]
     output_dir.mkdir(parents=True, exist_ok=True)
 
     evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
@@ -205,22 +173,44 @@ def draft_section(
     all_refs = cite_keys + ev_keys
     ref_list = ", ".join(all_refs[:8]) if all_refs else "see bibliography"
 
+    # Build header from manifest provenance
+    provenance = manifest.get("_provenance", {})
+    model = section_data.get("model", "standard")
+    tone = section_data.get("tone", "academic")
+    word_count = section_data.get("word_count")
+    subsections = section_data.get("subsections", [])
+    rules = section_data.get("rules", [])
+
+    display_name = key.replace("_", " ").title()
+
+    src_ver = provenance.get("source_version", "?")
+    wc_str = word_count or "not specified"
     lines = [
-        f"# {key.capitalize()}",
+        f"# {display_name}",
         "",
         "<!--",
-        f"Structure: {structure['model']} model from SKILL.md",
-        f"Tone: {structure['tone']}",
-        "For full prompt, see skills/imported/academic-writer/SKILL.md",
-        "-->",
-        "",
+        f"Structure: sections_manifest.json (from SKILL.md v{src_ver})",
+        f"Model: {model}",
+        f"Tone: {tone}",
+        f"Word count: {wc_str}",
     ]
+    if rules:
+        lines.append(f"Rules: {'; '.join(rules)}")
+    lines.extend(
+        [
+            f"Full prompt: {_SKILL_MD_PATH.name}",
+            "-->",
+            "",
+        ]
+    )
 
-    for sub in structure["subsections"]:
+    # Generate subsections from manifest
+    for sub in subsections:
         lines.append(f"## {sub}")
         lines.append(f"[Content placeholder: {sub} for {query} [{ref_list}]]")
         lines.append("")
 
+    # For results section, add evidence listing if available
     if key == "results" and total > 0:
         lines.append("## Evidence summary")
         lines.append(f"{total} studies included in evidence base.")

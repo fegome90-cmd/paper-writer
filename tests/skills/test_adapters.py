@@ -70,20 +70,35 @@ class TestLiteratureSearchAdapter:
         output_dir = tmp_path / "outputs" / "search"
 
         papers = [
-            _make_paper(1, metrics={
-                "population_score": 8, "intervention_score": 7,
-                "outcome_score": 6, "evidence_score": 4.5,
-                "sample_score": 0.5, "journal_score": 2,
-                "citations_score": 0.1, "coi_penalty": 0,
-                "context_score": 6,
-            }),
-            _make_paper(2, doi="10.1000/test-1", metrics={
-                "population_score": 5, "intervention_score": 4,
-                "outcome_score": 3, "evidence_score": 1.5,
-                "sample_score": 0.25, "journal_score": 1,
-                "citations_score": 0.1, "coi_penalty": 0,
-                "context_score": 4,
-            }),
+            _make_paper(
+                1,
+                metrics={
+                    "population_score": 8,
+                    "intervention_score": 7,
+                    "outcome_score": 6,
+                    "evidence_score": 4.5,
+                    "sample_score": 0.5,
+                    "journal_score": 2,
+                    "citations_score": 0.1,
+                    "coi_penalty": 0,
+                    "context_score": 6,
+                },
+            ),
+            _make_paper(
+                2,
+                doi="10.1000/test-1",
+                metrics={
+                    "population_score": 5,
+                    "intervention_score": 4,
+                    "outcome_score": 3,
+                    "evidence_score": 1.5,
+                    "sample_score": 0.25,
+                    "journal_score": 1,
+                    "citations_score": 0.1,
+                    "coi_penalty": 0,
+                    "context_score": 4,
+                },
+            ),
         ]
 
         result = adapter.execute(
@@ -124,22 +139,23 @@ class TestLiteratureSearchAdapter:
             "query": "voice disorders",
             "papers": [
                 {
-                    "title": "Tier 1 Paper", "doi": "10.1/a",
+                    "title": "Tier 1 Paper",
+                    "doi": "10.1/a",
                     "scoring": {"tier": "Tier 1", "final_score": 8.5},
                 },
                 {
-                    "title": "Tier 3 Paper", "doi": "10.1/b",
+                    "title": "Tier 3 Paper",
+                    "doi": "10.1/b",
                     "scoring": {"tier": "Tier 3", "final_score": 5.2},
                 },
                 {
-                    "title": "Discard Paper", "doi": "10.1/c",
+                    "title": "Discard Paper",
+                    "doi": "10.1/c",
                     "scoring": {"tier": "Discard", "final_score": 3.1},
                 },
             ],
         }
-        (search_dir / "raw_results.json").write_text(
-            json.dumps(raw_data), encoding="utf-8"
-        )
+        (search_dir / "raw_results.json").write_text(json.dumps(raw_data), encoding="utf-8")
 
         result = adapter.execute(
             command="screen",
@@ -168,15 +184,11 @@ class TestLiteratureSearchAdapter:
         raw_data = {
             "query": "test",
             "papers": [
-                {"title": "T1", "doi": "10.1/a",
-                 "scoring": {"tier": "Tier 1"}},
-                {"title": "T2", "doi": "10.1/b",
-                 "scoring": {"tier": "Tier 2"}},
+                {"title": "T1", "doi": "10.1/a", "scoring": {"tier": "Tier 1"}},
+                {"title": "T2", "doi": "10.1/b", "scoring": {"tier": "Tier 2"}},
             ],
         }
-        (search_dir / "raw_results.json").write_text(
-            json.dumps(raw_data), encoding="utf-8"
-        )
+        (search_dir / "raw_results.json").write_text(json.dumps(raw_data), encoding="utf-8")
 
         result = adapter.execute(
             command="screen",
@@ -234,10 +246,10 @@ class TestAcademicWriterAdapter:
         search_dir.mkdir(parents=True)
         evidence = {
             "query": "voice disorders",
-            "total_raw": 1, "total_screened": 1,
+            "total_raw": 1,
+            "total_screened": 1,
             "evidence": [
-                {"title": "Test Paper", "doi": "10.1000/test", "year": 2023,
-                 "authors": "Smith J"},
+                {"title": "Test Paper", "doi": "10.1000/test", "year": 2023, "authors": "Smith J"},
             ],
         }
         evidence_path = search_dir / "screened_evidence.json"
@@ -280,16 +292,19 @@ class TestAcademicWriterAdapter:
         search_dir.mkdir(parents=True)
         evidence = {
             "query": "voice disorders",
-            "total_raw": 1, "total_screened": 1,
+            "total_raw": 1,
+            "total_screened": 1,
             "evidence": [
-                {"title": "Paper A", "doi": "10.1/a", "year": 2023,
-                 "authors": "Smith J", "scoring": {"tier": "Tier 1",
-                                                    "final_score": 8.5}},
+                {
+                    "title": "Paper A",
+                    "doi": "10.1/a",
+                    "year": 2023,
+                    "authors": "Smith J",
+                    "scoring": {"tier": "Tier 1", "final_score": 8.5},
+                },
             ],
         }
-        (search_dir / "screened_evidence.json").write_text(
-            json.dumps(evidence), encoding="utf-8"
-        )
+        (search_dir / "screened_evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
 
         drafts_dir.mkdir(parents=True)
         (drafts_dir / "outline.md").write_text("# Outline\n", encoding="utf-8")
@@ -313,7 +328,7 @@ class TestAcademicWriterAdapter:
         assert result.status == "pass"
         content = Path(result.artifacts[0]).read_text(encoding="utf-8")
         # Results section should reference APA 7th reporting model
-        assert "APA 7th" in content
+        assert "APA_7th_reporting" in content
         # Should have subsections from SKILL.md structure
         assert "Descriptive statistics" in content
         # Should list evidence with tier from real scoring
@@ -325,3 +340,99 @@ class TestAcademicWriterAdapter:
         result = adapter.execute(command="bogus", inputs={}, context={})
         assert result.status == "fail"
         assert "bogus" in result.summary
+
+
+class TestManifestDrivenDrafting:
+    """Tests proving drafting.py reads from manifest, not hardcoded data."""
+
+    def test_manifest_loads_from_file(self) -> None:
+        """Manifest is a real file on disk, not generated in code."""
+        from skills.imported.academic_writer.drafting import load_manifest
+
+        manifest = load_manifest()
+        assert "sections" in manifest
+        assert "_provenance" in manifest
+        assert manifest["_provenance"]["source_version"] == "1.2.0"
+
+    def test_manifest_has_all_7_sections(self) -> None:
+        """All 7 sections from SKILL.md are in the manifest."""
+        from skills.imported.academic_writer.drafting import load_manifest
+
+        manifest = load_manifest()
+        sections = manifest["sections"]
+        expected = [
+            "abstract", "introduction", "literature_review",
+            "methods", "results", "discussion", "conclusion",
+        ]
+        for name in expected:
+            assert name in sections, f"Missing section: {name}"
+
+    def test_manifest_subsections_match_skill_md(self) -> None:
+        """CARS model steps from SKILL.md are in the manifest."""
+        from skills.imported.academic_writer.drafting import load_manifest
+
+        manifest = load_manifest()
+        intro = manifest["sections"]["introduction"]
+        assert intro["model"] == "CARS"
+        # CARS steps from SKILL.md: Establish territory, Identify niche, Occupy niche
+        steps = intro.get("model_steps", [])
+        assert any("Establish territory" in s for s in steps)
+        assert any("Identify niche" in s for s in steps)
+        assert any("Occupy niche" in s for s in steps)
+
+    def test_manifest_methods_has_consort(self) -> None:
+        """Methods section references CONSORT/PRISMA from SKILL.md."""
+        from skills.imported.academic_writer.drafting import load_manifest
+
+        manifest = load_manifest()
+        methods = manifest["sections"]["methods"]
+        assert "CONSORT" in methods["model"]
+
+    def test_draft_section_reads_manifest_at_runtime(self, tmp_path: Path) -> None:
+        """draft_section produces content that references manifest provenance."""
+        from skills.imported.academic_writer.drafting import draft_section
+
+        search_dir = tmp_path / "outputs" / "search"
+        drafts_dir = tmp_path / "outputs" / "drafts"
+        search_dir.mkdir(parents=True)
+        drafts_dir.mkdir(parents=True)
+
+        evidence = {
+            "query": "test", "total_raw": 0, "total_screened": 0,
+            "evidence": [],
+        }
+        (search_dir / "screened_evidence.json").write_text(
+            json.dumps(evidence), encoding="utf-8"
+        )
+        (drafts_dir / "outline.md").write_text("# Outline\n", encoding="utf-8")
+        bib_path = tmp_path / "ref.bib"
+        bib_path.write_text("", encoding="utf-8")
+
+        result = draft_section(
+            section_name="introduction",
+            outline_path=drafts_dir / "outline.md",
+            evidence_path=search_dir / "screened_evidence.json",
+            bib_path=bib_path,
+            output_dir=drafts_dir,
+        )
+
+        content = Path(result["artifacts"][0]).read_text(encoding="utf-8")
+        # Must reference manifest provenance
+        assert "sections_manifest.json" in content
+        assert "SKILL.md" in content
+        # Must use model from manifest (CARS for introduction)
+        assert "CARS" in content
+
+    def test_no_hardcoded_sections_in_drafting_module(self) -> None:
+        """Verify drafting.py has no _SECTION_STRUCTURES or similar hardcoded dict."""
+        import inspect
+
+        from skills.imported.academic_writer import drafting
+
+        source = inspect.getsource(drafting)
+        assert "_SECTION_STRUCTURES" not in source, (
+            "drafting.py must not contain hardcoded _SECTION_STRUCTURES"
+        )
+        assert "_SECTION_TEMPLATES" not in source, (
+            "drafting.py must not contain hardcoded _SECTION_TEMPLATES"
+        )

@@ -153,9 +153,7 @@ class AcademicWriterAdapter(SkillAdapter):
 
     def _handle_draft_outline(self, inputs: dict[str, Any]) -> SkillResult:
         """Handle draft_outline using SKILL.md section structures."""
-        evidence_path = Path(
-            inputs.get("evidence_path", "outputs/search/screened_evidence.json")
-        )
+        evidence_path = Path(inputs.get("evidence_path", "outputs/search/screened_evidence.json"))
         output_dir = Path(inputs.get("output_dir", "outputs/drafts"))
         bib_path = Path(inputs.get("bib_path", "templates/references.bib"))
 
@@ -175,12 +173,8 @@ class AcademicWriterAdapter(SkillAdapter):
     def _handle_draft_section(self, inputs: dict[str, Any]) -> SkillResult:
         """Handle draft_section using SKILL.md prompt structures."""
         section_name = str(inputs.get("section_name", "introduction"))
-        outline_path = Path(
-            inputs.get("outline_path", "outputs/drafts/outline.md")
-        )
-        evidence_path = Path(
-            inputs.get("evidence_path", "outputs/search/screened_evidence.json")
-        )
+        outline_path = Path(inputs.get("outline_path", "outputs/drafts/outline.md"))
+        evidence_path = Path(inputs.get("evidence_path", "outputs/search/screened_evidence.json"))
         bib_path = Path(inputs.get("bib_path", "templates/references.bib"))
         output_dir = Path(inputs.get("output_dir", "outputs/drafts"))
 

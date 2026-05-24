@@ -86,7 +86,7 @@ Required fields:
 | Skill | Source Path | What Was Imported | What Was Adapted |
 |---|---|---|---|
 | literature-search | `/Users/felipe_gonzalez/Developer/examen_grado/skills/literature-search/` | `resources/scoring.py` vendored as `skills/imported/literature_search/scoring.py` (340+ lines: PaperMetrics, ScoringWeights, deduplicate, classify_tier, calculate_final_score, verify_citation). 6 resource `.md` files vendored. 56 tests vendored. | `search.py` wraps scoring engine for dedup+scoring+tier pipeline. Does NOT call external APIs — an agent following `SKILL.md` must collect papers. |
-| academic-writer | `/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/` | `SKILL.md` vendored as `skills/imported/academic-writer/SKILL.md` (prompt collection only — 7 section prompts for Q1 journals). | `drafting.py` extracts section structures (CARS model, CONSORT flow) from prompts. Generates section skeletons, NOT LLM content. For real writing, use the SKILL.md prompts with an LLM. |
+| academic-writer | `/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/` | `SKILL.md` vendored as `skills/imported/academic_writer/SKILL.md` (prompt collection only — 7 section prompts for Q1 journals). | `drafting.py` extracts section structures (CARS model, CONSORT flow) from prompts. Generates section skeletons, NOT LLM content. For real writing, use the SKILL.md prompts with an LLM. |
 
 **What was NOT imported:**
 - `benchmark_dedup.py` — benchmark script
@@ -110,8 +110,9 @@ Error handling: unknown commands return `SkillResult(status="fail")` with error 
 ### AcademicWriterAdapter
 
 - **Location**: `skills/local/adapters.py`
-- **Wraps**: `skills/imported/academic_writer/drafting.py` using section structures from SKILL.md
+- **Wraps**: `skills/imported/academic_writer/drafting.py` consuming `sections_manifest.json` (derived from SKILL.md)
 - **Adapter name**: `academic-writer`
+- **Manifest chain**: SKILL.md (vendored) → sections_manifest.json (derived artifact) → drafting.py (runtime consumer)
 
 | Command | Input Contract | Output Contract | Gate Change |
 |---|---|---|---|

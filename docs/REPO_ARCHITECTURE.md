@@ -327,7 +327,7 @@ flowchart TD
     T --> R[reference-validator or refchecker]
 
     K --> LS[skills/imported/literature-search]
-    K --> AW[skills/imported/academic-writer]
+    K --> AW[skills/imported/academic_writer]
     K --> LA[skills/local/reporting-audit]
     K --> CP[skills/local/citation-pipeline]
 

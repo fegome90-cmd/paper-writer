@@ -1,0 +1,161 @@
+{
+  "_provenance": {
+    "source_path": "/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/SKILL.md",
+    "source_version": "1.2.0",
+    "source_last_updated": "2026-05-20",
+    "generated_by": "manual extraction from vendored SKILL.md",
+    "generated_date": "2026-05-25",
+    "method": "Each section's model, subsections, tone, placeholders, and word_count were extracted directly from the corresponding prompt in SKILL.md. No content was invented — only structure was captured."
+  },
+  "_adaptation_truth": {
+    "what_is_real": "SKILL.md is vendored verbatim. This manifest captures its structure for programmatic consumption.",
+    "what_is_adapted": "The manifest is a derived artifact — it does not contain the full prompt text, only structural metadata.",
+    "what_is_missing": "The full prompt text for each section is only in SKILL.md. For LLM-based drafting, read SKILL.md directly.",
+    "consumption": "drafting.py reads this manifest at runtime to derive section skeletons."
+  },
+  "sections": {
+    "abstract": {
+      "order": 1,
+      "model": "structured_paragraph",
+      "word_count": "250-300",
+      "tone": "direct, precise, dense with information, Q1 journal standard",
+      "tense": "past for completed studies, present for ongoing/proposed",
+      "placeholders": ["title"],
+      "subsections": [
+        "1-2 sentences establishing research problem and why it matters",
+        "Main objectives or research questions",
+        "Methodology: study design, participants, key procedures",
+        "Most important findings with specificity (key statistics if applicable)",
+        "1-2 sentences on implications for theory, practice, or policy"
+      ],
+      "rules": [
+        "No citations",
+        "No abbreviations not first defined",
+        "No vague statements like 'results are discussed'"
+      ]
+    },
+    "introduction": {
+      "order": 2,
+      "model": "CARS",
+      "word_count": null,
+      "tone": "human-like, conversational academic, varied sentence lengths, natural pauses",
+      "tense": null,
+      "placeholders": ["title"],
+      "subsections": [
+        "Introduce topic and explain real-world or theoretical issue",
+        "Problem statement: ideal situation vs current shortfall",
+        "Previous attempts and why they don't solve the problem",
+        "Direct and indirect results of the problem and consequences",
+        "Knowledge gap this study fills and why this approach is necessary",
+        "Key studies: how work builds on or differs from them",
+        "Theory or conceptual model guiding the study",
+        "Objectives of the study",
+        "CARS model paragraph: establish territory, identify niche, occupy niche"
+      ],
+      "model_steps": [
+        "Establish territory — why the topic matters",
+        "Identify niche — what is missing or uncertain in current research",
+        "Occupy niche — purpose and direction of study"
+      ],
+      "avoid": ["It is important to note", "Studies have shown", "filler phrases"],
+      "citation_style": "APA 7th edition"
+    },
+    "literature_review": {
+      "order": 3,
+      "model": "critical_synthesis",
+      "word_count": "1000-1200",
+      "tone": "formal academic style, logical flow, Q1 journal standard",
+      "tense": null,
+      "placeholders": ["topic", "objectives"],
+      "subsections": [
+        "Broad topic statement and significance",
+        "Critical synthesis of most relevant literature",
+        "Examine each study: aim, method, findings, limitations",
+        "Identify patterns, contradictions, knowledge gaps",
+        "Assess overall condition of the literature",
+        "How your research addresses the gap"
+      ],
+      "citation_style": "APA 7th edition"
+    },
+    "methods": {
+      "order": 4,
+      "model": "CONSORT/PRISMA",
+      "word_count": "800",
+      "tone": "clear, detailed, human-like academic, past tense, sufficient for replication",
+      "tense": "past tense throughout",
+      "placeholders": ["design", "tool"],
+      "subsections": [
+        "Study design and justification",
+        "Research setting and timeframe",
+        "Ethics statement: approval, institution, informed consent",
+        "Participants or subjects: population, sampling, inclusion/exclusion, demographics",
+        "Equipment and materials: tools, devices, substances with justification",
+        "Study procedures: chronological, interventions, data collection",
+        "Outcome measures: primary and secondary outcomes",
+        "Statistical analysis: tests, significance level, power analysis, software"
+      ],
+      "rules": ["No em-dashes", "Do not report results", "Detail sufficient for replication"],
+      "citation_style": "APA 7th edition"
+    },
+    "results": {
+      "order": 5,
+      "model": "APA_7th_reporting",
+      "word_count": null,
+      "tone": "careful researcher presenting evidence, not machine listing numbers",
+      "tense": "past tense for completed analyses",
+      "placeholders": [],
+      "subsections": [
+        "Restate research questions or hypotheses",
+        "Descriptive statistics or demographic data",
+        "Main analyses: test statistics, df, p-values, effect sizes",
+        "Secondary analyses",
+        "Negative or non-significant results (honest reporting)",
+        "Excluded data and reasons"
+      ],
+      "rules": [
+        "Describe what data shows without interpretation",
+        "Reference tables and figures without duplicating content",
+        "Natural transitions between subsections"
+      ],
+      "citation_style": "APA 7th edition"
+    },
+    "discussion": {
+      "order": 6,
+      "model": "critical_comparison",
+      "word_count": "1000-1200",
+      "tone": "intelligent, natural, human academic, clear transitions, broad paragraphs",
+      "tense": null,
+      "placeholders": ["results", "theories"],
+      "subsections": [
+        "Critical examination relating findings to previous literature",
+        "Comparison with previous researchers: agreement, contradiction, novelty",
+        "Impact on theory, policy, and practice",
+        "Limitations and how they might have affected findings",
+        "Precise recommendations for future research"
+      ],
+      "citation_style": "APA 7th edition"
+    },
+    "conclusion": {
+      "order": 7,
+      "model": "synthesis_forward",
+      "word_count": "400-600",
+      "tone": "academic, coherent, human-like, Q1 journal publication standard",
+      "tense": null,
+      "placeholders": ["title", "key_findings"],
+      "subsections": [
+        "Restate main purpose and objectives",
+        "Briefly summarize key findings from results section",
+        "Broader significance for theory, practice, and policy",
+        "Implications for future research, practice, decision-making",
+        "Reflect on limitations and how to address in future studies",
+        "Forward-looking statement advancing understanding"
+      ]
+    }
+  },
+  "writing_guidelines": {
+    "tone": ["human-like, conversational academic", "varied sentence lengths", "natural pauses", "critical and specific", "real-life examples and transitions"],
+    "avoid": ["It is important to note", "Studies have shown", "In today's world", "filler phrases", "generic claims without evidence", "plagiarism"],
+    "citation_style": "APA 7th edition",
+    "citation_rules": ["verify before submitting", "in-text: (Author, Year)", "critical synthesis, not laundry lists"]
+  }
+}
