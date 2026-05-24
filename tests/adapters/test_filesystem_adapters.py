@@ -1,0 +1,163 @@
+from pathlib import Path
+
+import pytest
+import yaml
+
+from harness.adapters.filesystem_action_runner import FilesystemActionRunner
+from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
+
+
+def test_artifact_checker_dir_exists(tmp_path: Path) -> None:
+    checker = FilesystemArtifactChecker(tmp_path)
+
+    # Missing directory
+    with pytest.raises(FileNotFoundError, match="Directory 'outputs' not found"):
+        checker.check_dir_exists("outputs")
+
+    # Created directory
+    (tmp_path / "outputs").mkdir()
+    checker.check_dir_exists("outputs")
+
+
+def test_artifact_checker_file_exists(tmp_path: Path) -> None:
+    checker = FilesystemArtifactChecker(tmp_path)
+
+    # Missing file
+    with pytest.raises(FileNotFoundError, match=r"File 'manuscript\.qmd' not found"):
+        checker.check_file_exists("manuscript.qmd")
+
+    # Created file
+    (tmp_path / "manuscript.qmd").touch()
+    checker.check_file_exists("manuscript.qmd")
+
+
+def test_artifact_checker_any_file_exists(tmp_path: Path) -> None:
+    checker = FilesystemArtifactChecker(tmp_path)
+
+    files = ["file1.txt", "file2.txt"]
+    with pytest.raises(FileNotFoundError, match="No files found"):
+        checker.check_any_file_exists(files)
+
+    # Create only one file
+    (tmp_path / "file2.txt").touch()
+    checker.check_any_file_exists(files)
+
+
+def test_artifact_checker_get_full_path_str(tmp_path: Path) -> None:
+    checker = FilesystemArtifactChecker(tmp_path)
+    assert checker.get_full_path_str("templates/ref.bib") == str(tmp_path / "templates" / "ref.bib")
+
+
+def test_action_runner_init(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    artifacts = runner.run_action("init", {})
+
+    assert len(artifacts) == 3
+    assert (tmp_path / "templates" / "manuscript.qmd").is_file()
+    assert (tmp_path / "templates" / "references.bib").is_file()
+    assert (tmp_path / "outputs" / "search").is_dir()
+    assert (tmp_path / "outputs" / "drafts").is_dir()
+    assert (tmp_path / "outputs" / "render").is_dir()
+    assert (tmp_path / "outputs" / "logs").is_dir()
+
+
+def test_action_runner_search(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    artifacts = runner.run_action("search", {})
+
+    assert len(artifacts) == 2
+    plan_path = tmp_path / "outputs" / "search" / "search_plan.json"
+    results_path = tmp_path / "outputs" / "search" / "raw_results.json"
+    assert plan_path.is_file()
+    assert results_path.is_file()
+
+
+def test_action_runner_screen(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    # create search directory first since screen action expects it to write screened_evidence
+    (tmp_path / "outputs" / "search").mkdir(parents=True, exist_ok=True)
+    artifacts = runner.run_action("screen", {})
+
+    assert len(artifacts) == 1
+    evidence_path = tmp_path / "outputs" / "search" / "screened_evidence.json"
+    assert evidence_path.is_file()
+
+
+def test_action_runner_draft_outline(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    (tmp_path / "outputs" / "drafts").mkdir(parents=True, exist_ok=True)
+    artifacts = runner.run_action("draft_outline", {})
+
+    assert len(artifacts) == 1
+    outline_path = tmp_path / "outputs" / "drafts" / "outline.md"
+    assert outline_path.is_file()
+
+
+def test_action_runner_draft_section(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    (tmp_path / "outputs" / "drafts").mkdir(parents=True, exist_ok=True)
+
+    # Missing name
+    with pytest.raises(ValueError, match="Missing 'name' argument"):
+        runner.run_action("draft_section", {})
+
+    # Invalid name
+    with pytest.raises(ValueError, match="Invalid section name"):
+        runner.run_action("draft_section", {"name": "conclusion"})
+
+    # Valid section
+    artifacts = runner.run_action("draft_section", {"name": "introduction"})
+    assert len(artifacts) == 1
+    intro_path = tmp_path / "outputs" / "drafts" / "introduction.md"
+    assert intro_path.is_file()
+
+
+def test_action_runner_validation_logs(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    for cmd in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
+        artifacts = runner.run_action(cmd, {})
+        assert len(artifacts) == 1
+        log_path = tmp_path / "outputs" / "logs" / f"{cmd}.log"
+        assert log_path.is_file()
+
+
+def test_action_runner_render(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    artifacts = runner.run_action("render", {})
+
+    assert len(artifacts) == 2
+    assert (tmp_path / "outputs" / "render" / "manuscript.docx").is_file()
+    assert (tmp_path / "outputs" / "render" / "manuscript.pdf").is_file()
+
+
+def test_action_runner_emit_manifest(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    (tmp_path / "outputs").mkdir(parents=True, exist_ok=True)
+
+    gates = {
+        "repo_initialized": True,
+        "search_completed": True,
+        "screened_evidence": True,
+        "outline_drafted": True,
+        "sections_completed": True,
+        "bib_normalized": True,
+        "citations_resolved": True,
+        "refs_validated": True,
+        "style_passed": True,
+        "reporting_passed": True,
+        "render_passed": True,
+        "ready_for_delivery": True,
+    }
+
+    manifest_path_str = runner.emit_manifest(gates)
+    manifest_path = Path(manifest_path_str)
+    assert manifest_path.is_file()
+
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = yaml.safe_load(f)
+
+    assert manifest["schema_version"] == "1.0"
+    assert manifest["status"] == "ready_for_delivery"
+    assert manifest["stage"] == "verified"
+    assert manifest["gate_snapshot"] == gates
+    assert len(manifest["gate_snapshot"]) == 12

@@ -1,18 +1,15 @@
-from pathlib import Path
-
 import pytest
-import yaml
 
-from harness.adapters.yaml_repository import YamlFileStateRepository
+from harness.domain.state import ManuscriptState
 from harness.services.state_manager import StateManager, StateManagerError
+from tests.harness.mocks import InMemoryStateRepository
 
 
 @pytest.fixture
-def temp_state_file(tmp_path: Path) -> Path:
-    state_file = tmp_path / "state.yaml"
-    initial_content = {
-        "stage": "bootstrap",
-        "gates": {
+def repo() -> InMemoryStateRepository:
+    initial_content = ManuscriptState(
+        stage="bootstrap",
+        gates={
             "repo_initialized": True,
             "search_completed": False,
             "screened_evidence": False,
@@ -26,14 +23,11 @@ def temp_state_file(tmp_path: Path) -> Path:
             "render_passed": False,
             "ready_for_delivery": False,
         },
-    }
-    with open(state_file, "w", encoding="utf-8") as f:
-        yaml.dump(initial_content, f)
-    return state_file
+    )
+    return InMemoryStateRepository(initial_content)
 
 
-def test_load_state_success(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_load_state_success(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     state = manager.load_state()
     assert state["stage"] == "bootstrap"
@@ -41,78 +35,59 @@ def test_load_state_success(temp_state_file: Path) -> None:
     assert state["gates"]["search_completed"] is False
 
 
-def test_load_state_missing_file(tmp_path: Path) -> None:
-    non_existent = tmp_path / "missing.yaml"
-    repo = YamlFileStateRepository(non_existent)
+def test_load_state_missing_file() -> None:
+    repo = InMemoryStateRepository()  # Empty repository (does not exist)
     manager = StateManager(repo)
     with pytest.raises(StateManagerError, match="does not exist"):
         manager.load_state()
 
 
-def test_load_state_invalid_yaml(temp_state_file: Path) -> None:
-    with open(temp_state_file, "w", encoding="utf-8") as f:
-        f.write("{invalid_yaml: [missing_bracket")
-    repo = YamlFileStateRepository(temp_state_file)
-    manager = StateManager(repo)
-    with pytest.raises(StateManagerError, match="failed to load"):
-        manager.load_state()
-
-
-def test_validate_state_invalid_types() -> None:
-    repo = YamlFileStateRepository(Path("dummy.yaml"))
+def test_validate_state_invalid_types(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     with pytest.raises(StateManagerError, match="Validation failed"):
         manager.validate_state({"stage": "bootstrap", "gates": "not_a_dict"})
 
 
-def test_validate_state_unknown_gate() -> None:
-    repo = YamlFileStateRepository(Path("dummy.yaml"))
+def test_validate_state_unknown_gate(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     invalid_data = {
         "stage": "bootstrap",
         "gates": {
             "repo_initialized": True,
-            "unknown_gate": False,  # Unknown
+            "unknown_gate": False,
         },
     }
     with pytest.raises(StateManagerError):
         manager.validate_state(invalid_data)
 
 
-def test_set_gate(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_set_gate(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     manager.set_gate("search_completed", True)
 
-    new_repo = YamlFileStateRepository(temp_state_file)
-    new_manager = StateManager(new_repo)
-    state = new_manager.load_state()
-    assert state["gates"]["search_completed"] is True
+    assert repo.current_state is not None
+    assert repo.current_state.gates["search_completed"] is True
 
 
-def test_set_gate_unknown(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_set_gate_unknown(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     with pytest.raises(StateManagerError):
         manager.set_gate("non_existent_gate", True)
 
 
-def test_set_stage_valid_transition(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_set_stage_valid_transition(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     manager.set_stage("search")
     assert manager.state.stage == "search"  # type: ignore
 
 
-def test_set_stage_invalid_transition(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_set_stage_invalid_transition(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     with pytest.raises(StateManagerError, match="precondition gate 'search_completed' is not True"):
         manager.set_stage("screen")
 
 
-def test_reset_downstream_gates_draft(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_reset_downstream_gates_draft(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     manager.set_gate("citations_resolved", True)
     manager.set_gate("style_passed", True)
@@ -131,8 +106,7 @@ def test_reset_downstream_gates_draft(temp_state_file: Path) -> None:
     assert state["gates"]["bib_normalized"] is False
 
 
-def test_reset_downstream_gates_bib(temp_state_file: Path) -> None:
-    repo = YamlFileStateRepository(temp_state_file)
+def test_reset_downstream_gates_bib(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
     manager.set_gate("bib_normalized", True)
     manager.set_gate("refs_validated", True)

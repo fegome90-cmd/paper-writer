@@ -204,7 +204,8 @@ class Orchestrator:
 
             # Emit manifest if we transitioned successfully to 'verified' stage (paper verify)
             if request.command == "verify" and result.stage_after == "verified":
-                manifest_path = self.action_runner.emit_manifest(gate_changes)
+                full_snapshot = self.state_manager.load_state().get("gates", {})
+                manifest_path = self.action_runner.emit_manifest(full_snapshot)
                 artifacts.append(manifest_path)
                 steps.append({"step_id": "emit_manifest", "status": "succeeded"})
 

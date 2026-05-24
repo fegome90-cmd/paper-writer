@@ -1,8 +1,5 @@
-from pathlib import Path
-
 import pytest
 
-from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
 from harness.services.gates import (
     validate_bib_normalized,
     validate_outline_drafted,
@@ -14,102 +11,79 @@ from harness.services.gates import (
     validate_sections_completed,
     validate_validator_gate,
 )
+from tests.harness.mocks import InMemoryArtifactChecker
 
 
 @pytest.fixture
-def checker(tmp_path: Path) -> FilesystemArtifactChecker:
-    return FilesystemArtifactChecker(tmp_path)
+def checker() -> InMemoryArtifactChecker:
+    return InMemoryArtifactChecker()
 
 
-def test_validate_repo_initialized_success(
-    tmp_path: Path, checker: FilesystemArtifactChecker
-) -> None:
-    # Create required directories
-    for d in ["cli", "harness", "validators", "templates", "outputs"]:
-        (tmp_path / d).mkdir()
-
+def test_validate_repo_initialized_success(checker: InMemoryArtifactChecker) -> None:
+    checker.existing_paths.update(["cli", "harness", "validators", "templates", "outputs"])
     result = validate_repo_initialized(checker)
     assert result.status == "pass"
     assert not result.blockers
     assert not result.warnings
 
 
-def test_validate_repo_initialized_fail(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    # Leave outputs directory missing
-    for d in ["cli", "harness", "validators", "templates"]:
-        (tmp_path / d).mkdir()
-
+def test_validate_repo_initialized_fail(checker: InMemoryArtifactChecker) -> None:
+    checker.existing_paths.update(["cli", "harness", "validators", "templates"])
     result = validate_repo_initialized(checker)
     assert result.status == "fail"
     assert any("dir_exists_outputs" in b for b in result.blockers)
 
 
-def test_validate_search_completed_success(
-    tmp_path: Path, checker: FilesystemArtifactChecker
-) -> None:
-    search_dir = tmp_path / "outputs" / "search"
-    search_dir.mkdir(parents=True)
-    (search_dir / "search_plan.json").touch()
-    (search_dir / "raw_results.json").touch()
-
+def test_validate_search_completed_success(checker: InMemoryArtifactChecker) -> None:
+    checker.existing_paths.update(
+        ["outputs/search", "outputs/search/search_plan.json", "outputs/search/raw_results.json"]
+    )
     result = validate_search_completed(checker)
     assert result.status == "pass"
 
 
-def test_validate_search_completed_fail(checker: FilesystemArtifactChecker) -> None:
+def test_validate_search_completed_fail(checker: InMemoryArtifactChecker) -> None:
     result = validate_search_completed(checker)
     assert result.status == "fail"
     assert len(result.blockers) == 2
 
 
-def test_validate_screened_evidence(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    search_dir = tmp_path / "outputs" / "search"
-    search_dir.mkdir(parents=True)
-
+def test_validate_screened_evidence(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_screened_evidence(checker)
     assert result1.status == "fail"
 
-    (search_dir / "screened_evidence.json").touch()
+    checker.existing_paths.update(["outputs/search", "outputs/search/screened_evidence.json"])
     result2 = validate_screened_evidence(checker)
     assert result2.status == "pass"
 
 
-def test_validate_outline_drafted(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    drafts_dir = tmp_path / "outputs" / "drafts"
-    drafts_dir.mkdir(parents=True)
-
+def test_validate_outline_drafted(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_outline_drafted(checker)
     assert result1.status == "fail"
 
-    (drafts_dir / "outline.md").touch()
+    checker.existing_paths.update(["outputs/drafts", "outputs/drafts/outline.md"])
     result2 = validate_outline_drafted(checker)
     assert result2.status == "pass"
 
 
-def test_validate_sections_completed(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    drafts_dir = tmp_path / "outputs" / "drafts"
-    drafts_dir.mkdir(parents=True)
-
+def test_validate_sections_completed(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_sections_completed(checker)
     assert result1.status == "fail"
     assert len(result1.blockers) == 4
 
-    # Create sections
+    checker.existing_paths.update(["outputs/drafts"])
     for sec in ["introduction.md", "methods.md", "results.md", "discussion.md"]:
-        (drafts_dir / sec).touch()
+        checker.existing_paths.add(f"outputs/drafts/{sec}")
 
     result2 = validate_sections_completed(checker)
     assert result2.status == "pass"
 
 
-def test_validate_bib_normalized(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    templates_dir = tmp_path / "templates"
-    templates_dir.mkdir(parents=True)
-
+def test_validate_bib_normalized(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_bib_normalized(checker)
     assert result1.status == "fail"
 
-    (templates_dir / "references.bib").touch()
+    checker.existing_paths.update(["templates", "templates/references.bib"])
     result2 = validate_bib_normalized(checker)
     assert result2.status == "pass"
 
@@ -153,20 +127,16 @@ def test_validate_validator_gate() -> None:
     assert "unresolved_ref" in result_fail.blockers[0]
 
 
-def test_validate_render_passed(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
-    render_dir = tmp_path / "outputs" / "render"
-    render_dir.mkdir(parents=True)
-
+def test_validate_render_passed(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_render_passed(checker)
     assert result1.status == "fail"
 
-    # Create docx file
-    (render_dir / "manuscript.docx").touch()
+    checker.existing_paths.update(["outputs/render", "outputs/render/manuscript.docx"])
     result2 = validate_render_passed(checker)
     assert result2.status == "pass"
 
 
-def test_validate_ready_for_delivery(tmp_path: Path, checker: FilesystemArtifactChecker) -> None:
+def test_validate_ready_for_delivery(checker: InMemoryArtifactChecker) -> None:
     gates_state = {
         "repo_initialized": True,
         "search_completed": True,

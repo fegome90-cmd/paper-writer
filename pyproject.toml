@@ -20,7 +20,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["harness", "cli", "validators", "integrations"]
+packages = ["harness", "cli"]
 
 [tool.ruff]
 line-length = 100
