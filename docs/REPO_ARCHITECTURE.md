@@ -119,19 +119,51 @@ skills/local/
 
 ### `skills/imported/`
 
-Use this for skills copied or subtree-imported from other repos:
+Use this for skills vendored from external repos. Each imported skill reflects its real source:
 
 ```text
 skills/imported/
   academic_writer/
-    __init__.py
-    drafting.py          # AcademicWriterSkill: draft_outline(), draft_section()
+    __init__.py            # Docstring documenting source + what was imported
+    SKILL.md               # Vendored from source (prompt collection — no Python code)
+    drafting.py            # Adapted from SKILL.md: section structure extraction
   literature_search/
-    __init__.py
-    search.py            # LiteratureSearchSkill: search(), screen()
+    __init__.py            # Re-exports from scoring.py
+    scoring.py             # Vendored verbatim from source (340+ lines, real scoring engine)
+    search.py              # Wraps scoring engine for dedup+scoring+tier pipeline
+    resources/
+      __init__.py
+      SKILL.md             # Vendored: 5-phase systematic review agent instructions
+      search-protocol.md   # Vendored: database strategies, API usage
+      ranking-criteria.md  # Vendored: scoring A-E formula, tiers
+      critical-appraisal.md  # Vendored: RoB assessment
+      synthesis-protocol.md  # Vendored: Phase 5 claim verification
+      citation-format.md   # Vendored: APA 7th & Vancouver
+      examples.md          # Vendored: worked examples
 ```
 
-Each imported skill is a self-contained module with no dependency on `harness/` or `cli/`. They accept typed Python arguments and return plain dicts with artifact paths.
+**Source paths:**
+- literature-search: `/Users/felipe_gonzalez/Developer/examen_grado/skills/literature-search/`
+- academic-writer: `/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/`
+
+**What `scoring.py` contains (REAL imported code):**
+- `PaperMetrics` — frozen dataclass with all scoring dimensions
+- `ScoringWeights` — configurable weights (sum to 1.0)
+- `calculate_d_score()` — methodological quality composite
+- `calculate_final_score()` — weighted A-E score
+- `classify_tier()` — maps score to Tier 1/2/3/Discard
+- `get_default_weights()` — phase-specific presets
+- `deduplicate()` — DOI/PMID/title similarity dedup with stop-word filtering
+- `verify_citation()` — CrossRef/PubMed API verification
+
+**What `drafting.py` adapts (NOT copied verbatim):**
+- Source SKILL.md is a prompt collection with 7 section prompts
+- No Python code in source — `drafting.py` extracts section structures
+  (CARS model for intro, CONSORT for methods, APA 7th for results)
+- Generates section skeletons, NOT LLM content
+- For real writing, the SKILL.md prompts must be used with an LLM
+
+Each imported skill is a self-contained module with no dependency on `harness/` or `cli/`.
 
 ### `skills/local/`
 

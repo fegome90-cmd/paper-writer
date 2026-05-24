@@ -81,23 +81,36 @@ Required fields:
 
 ## Implemented Adapters
 
+### Provenance
+
+| Skill | Source Path | What Was Imported | What Was Adapted |
+|---|---|---|---|
+| literature-search | `/Users/felipe_gonzalez/Developer/examen_grado/skills/literature-search/` | `resources/scoring.py` vendored as `skills/imported/literature_search/scoring.py` (340+ lines: PaperMetrics, ScoringWeights, deduplicate, classify_tier, calculate_final_score, verify_citation). 6 resource `.md` files vendored. 56 tests vendored. | `search.py` wraps scoring engine for dedup+scoring+tier pipeline. Does NOT call external APIs — an agent following `SKILL.md` must collect papers. |
+| academic-writer | `/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/` | `SKILL.md` vendored as `skills/imported/academic-writer/SKILL.md` (prompt collection only — 7 section prompts for Q1 journals). | `drafting.py` extracts section structures (CARS model, CONSORT flow) from prompts. Generates section skeletons, NOT LLM content. For real writing, use the SKILL.md prompts with an LLM. |
+
+**What was NOT imported:**
+- `benchmark_dedup.py` — benchmark script
+- `autoresearch.*` — experiment tooling
+- `_ctx/`, `.atl/`, `.pi/`, `.mypy_cache/` — tool artifacts
+- No Python code exists in academic-writer source (it's purely a prompt collection)
+
 ### LiteratureSearchAdapter
 
 - **Location**: `skills/local/adapters.py`
-- **Wraps**: `skills/imported/literature_search/search.py` → `LiteratureSearchSkill`
+- **Wraps**: `skills/imported/literature_search/search.py` using real `scoring.py` engine
 - **Adapter name**: `literature-search`
 
 | Command | Input Contract | Output Contract | Gate Change |
 |---|---|---|---|
-| `search` | `query: str`, `output_dir: str` (default `outputs/search`) | `artifacts`: `[search_plan.json, raw_results.json]`, `status: pass` | `search_completed: true` |
-| `screen` | `search_dir: str`, `output_dir: str` | `artifacts`: `[screened_evidence.json]`, `status: pass` | `screened_evidence: true` |
+| `search` | `query: str`, `output_dir: str`, `raw_papers: list[dict] | None`, `weights_phase: str` (default `balanced`) | `artifacts`: `[search_plan.json]` (plan only if no papers) or `[search_plan.json, raw_results.json]` (with scored papers), `status: pass` | `search_completed: true` |
+| `screen` | `search_dir: str`, `output_dir: str`, `min_tier: str` (default `Tier 3`) | `artifacts`: `[screened_evidence.json]` (filtered by real tier classification), `status: pass` | `screened_evidence: true` |
 
 Error handling: unknown commands return `SkillResult(status="fail")` with error summary and warnings.
 
 ### AcademicWriterAdapter
 
 - **Location**: `skills/local/adapters.py`
-- **Wraps**: `skills/imported/academic_writer/drafting.py` → `AcademicWriterSkill`
+- **Wraps**: `skills/imported/academic_writer/drafting.py` using section structures from SKILL.md
 - **Adapter name**: `academic-writer`
 
 | Command | Input Contract | Output Contract | Gate Change |

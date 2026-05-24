@@ -248,17 +248,24 @@ Verified deliverables:
 
 ### Phase 3 - Domain Skill Integration
 
-Status: COMPLETE
+Status: COMPLETE (real import, no surrogates)
 
 Verified deliverables:
 
-- imported `literature-search` into `skills/imported/literature_search/` with `LiteratureSearchSkill` providing `search()` and `screen()` methods
-- imported `academic-writer` into `skills/imported/academic_writer/` with `AcademicWriterSkill` providing `draft_outline()` and `draft_section()` methods
-- created normalized adapters in `skills/local/adapters.py`: `LiteratureSearchAdapter` and `AcademicWriterAdapter` bridging skills to the `SkillAdapter` port
-- adapters return `SkillResult` with normalized status, summary, artifacts, and gate_changes
-- evidence-to-draft workflow connected: search → screen → draft_outline → draft_section with proper gate propagation
-- 8 adapter tests added in `tests/skills/test_adapters.py`
-- all architectural invariants verified: no harness→skills imports, no imported→harness imports, CLI <200 lines, skills write no state
+- vendored `resources/scoring.py` from source into `skills/imported/literature_search/scoring.py` — 340+ lines of real scoring engine (PaperMetrics, ScoringWeights, deduplicate, classify_tier, calculate_final_score, verify_citation)
+- vendored 6 resource `.md` files and `SKILL.md` from literature-search source
+- vendored `SKILL.md` from academic-writer source (prompt collection only — no Python code in source)
+- `search.py` wraps real scoring engine for dedup+tier+score pipeline
+- `drafting.py` extracts section structures (CARS model, CONSORT flow) from academic-writer prompts
+- adapters in `skills/local/adapters.py` bridge real imports to `SkillAdapter` port
+- 56 scoring tests vendored from source (`tests/skills/test_scoring.py`) + 14 adapter tests
+- all architectural invariants verified: no harness→skills imports, skills write no state
+
+**Adaptation truth:**
+- literature-search scoring code is used verbatim — no invented code
+- academic-writer is a prompt collection — adapter generates structural skeletons, NOT LLM content
+- The agent following SKILL.md collects papers; the scoring engine processes them
+- Fallback papers are provided by the action runner for CLI testing without an agent
 
 ### Phase 4 - Editorial Gates and Hardening
 

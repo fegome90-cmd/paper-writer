@@ -1,19 +1,51 @@
-"""Tests for skill adapters (LiteratureSearchAdapter, AcademicWriterAdapter)."""
+"""Tests for skill adapters using real imported skill surface.
+
+Tests verify that:
+1. LiteratureSearchAdapter uses real scoring engine (deduplicate, classify_tier)
+2. AcademicWriterAdapter uses section structures from SKILL.md
+3. Neither skill writes outputs/state.yaml
+4. The full search→screen→draft flow works with real scoring
+"""
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
 
 
+def _make_paper(
+    idx: int,
+    *,
+    doi: str | None = None,
+    pmid: str | None = None,
+    title: str | None = None,
+    metrics: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    """Create a paper dict with optional scoring metrics."""
+    paper: dict[str, Any] = {
+        "title": title or f"Test Paper {idx}: voice disorders study",
+        "doi": doi or f"10.1000/test-{idx}",
+        "pmid": pmid,
+        "year": 2023 + (idx % 3),
+        "authors": f"Author{idx} et al.",
+    }
+    if metrics:
+        paper["metrics"] = metrics
+    return paper
+
+
 class TestLiteratureSearchAdapter:
-    """Tests for LiteratureSearchAdapter."""
+    """Tests for LiteratureSearchAdapter using real scoring engine."""
 
     def test_name_property(self) -> None:
         adapter = LiteratureSearchAdapter()
         assert adapter.name == "literature-search"
 
-    def test_search_produces_valid_json(self, tmp_path: Path) -> None:
+    def test_search_without_papers_produces_only_plan(self, tmp_path: Path) -> None:
+        """When no raw_papers provided, search writes plan only."""
         adapter = LiteratureSearchAdapter()
         output_dir = tmp_path / "outputs" / "search"
 
@@ -24,101 +56,197 @@ class TestLiteratureSearchAdapter:
         )
 
         assert result.status == "pass"
-        assert len(result.artifacts) == 2
-
-        # Verify search_plan.json is valid JSON with expected fields
+        # Only search_plan.json (no raw_results without papers)
+        assert len(result.artifacts) == 1
         plan_path = Path(result.artifacts[0])
         assert plan_path.name == "search_plan.json"
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
         assert plan["query"] == "voice disorders"
-        assert "strategy" in plan
+        assert plan["weights_phase"] == "balanced"
 
-        # Verify raw_results.json has paper entries
+    def test_search_with_papers_applies_real_scoring(self, tmp_path: Path) -> None:
+        """When raw_papers provided, search deduplicates and scores them."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        papers = [
+            _make_paper(1, metrics={
+                "population_score": 8, "intervention_score": 7,
+                "outcome_score": 6, "evidence_score": 4.5,
+                "sample_score": 0.5, "journal_score": 2,
+                "citations_score": 0.1, "coi_penalty": 0,
+                "context_score": 6,
+            }),
+            _make_paper(2, doi="10.1000/test-1", metrics={
+                "population_score": 5, "intervention_score": 4,
+                "outcome_score": 3, "evidence_score": 1.5,
+                "sample_score": 0.25, "journal_score": 1,
+                "citations_score": 0.1, "coi_penalty": 0,
+                "context_score": 4,
+            }),
+        ]
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "voice disorders",
+                "output_dir": str(output_dir),
+                "raw_papers": papers,
+            },
+            context={},
+        )
+
+        assert result.status == "pass"
+        assert len(result.artifacts) == 2  # plan + results
+
         results_path = Path(result.artifacts[1])
         assert results_path.name == "raw_results.json"
         results = json.loads(results_path.read_text(encoding="utf-8"))
-        assert results["total_results"] > 0
-        assert len(results["papers"]) > 0
-        for paper in results["papers"]:
-            assert "title" in paper
-            assert "doi" in paper
-            assert "abstract" in paper
 
-    def test_screen_produces_screened_evidence(self, tmp_path: Path) -> None:
+        # Dedup should have removed one (same DOI as paper 1)
+        assert results["total_input"] == 2
+        assert results["total_after_dedup"] == 1
+        assert len(results["dedup_log"]) == 1
+
+        # Scored paper should have tier from real classify_tier
+        paper = results["papers"][0]
+        assert "scoring" in paper
+        assert "tier" in paper["scoring"]
+        assert paper["scoring"]["tier"] in ("Tier 1", "Tier 2", "Tier 3", "Discard")
+
+    def test_screen_filters_by_tier(self, tmp_path: Path) -> None:
+        """Screen uses real tier classification to filter papers."""
         adapter = LiteratureSearchAdapter()
         search_dir = tmp_path / "outputs" / "search"
         search_dir.mkdir(parents=True)
 
-        # Create raw_results.json for screen to read
         raw_data = {
             "query": "voice disorders",
-            "total_results": 2,
             "papers": [
-                {"title": "Paper A", "doi": "10.1000/a", "year": 2023},
-                {"title": "Paper B", "doi": "10.1000/b", "year": 2024},
+                {
+                    "title": "Tier 1 Paper", "doi": "10.1/a",
+                    "scoring": {"tier": "Tier 1", "final_score": 8.5},
+                },
+                {
+                    "title": "Tier 3 Paper", "doi": "10.1/b",
+                    "scoring": {"tier": "Tier 3", "final_score": 5.2},
+                },
+                {
+                    "title": "Discard Paper", "doi": "10.1/c",
+                    "scoring": {"tier": "Discard", "final_score": 3.1},
+                },
             ],
         }
-        (search_dir / "raw_results.json").write_text(json.dumps(raw_data), encoding="utf-8")
+        (search_dir / "raw_results.json").write_text(
+            json.dumps(raw_data), encoding="utf-8"
+        )
 
         result = adapter.execute(
             command="screen",
             inputs={
                 "search_dir": str(search_dir),
                 "output_dir": str(search_dir),
+                "min_tier": "Tier 3",
             },
             context={},
         )
 
         assert result.status == "pass"
-        assert len(result.artifacts) == 1
-
         evidence_path = Path(result.artifacts[0])
-        assert evidence_path.name == "screened_evidence.json"
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        # Should include Tier 1 and Tier 3, exclude Discard
         assert evidence["total_screened"] == 2
-        assert len(evidence["evidence"]) == 2
+        titles = [p["title"] for p in evidence["evidence"]]
+        assert "Discard Paper" not in titles
+
+    def test_screen_strict_tier_excludes_lower(self, tmp_path: Path) -> None:
+        """Screen with min_tier=Tier 1 excludes Tier 2 and below."""
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "outputs" / "search"
+        search_dir.mkdir(parents=True)
+
+        raw_data = {
+            "query": "test",
+            "papers": [
+                {"title": "T1", "doi": "10.1/a",
+                 "scoring": {"tier": "Tier 1"}},
+                {"title": "T2", "doi": "10.1/b",
+                 "scoring": {"tier": "Tier 2"}},
+            ],
+        }
+        (search_dir / "raw_results.json").write_text(
+            json.dumps(raw_data), encoding="utf-8"
+        )
+
+        result = adapter.execute(
+            command="screen",
+            inputs={
+                "search_dir": str(search_dir),
+                "output_dir": str(search_dir),
+                "min_tier": "Tier 1",
+            },
+            context={},
+        )
+
+        evidence = json.loads(Path(result.artifacts[0]).read_text(encoding="utf-8"))
+        assert evidence["total_screened"] == 1
+        assert evidence["evidence"][0]["title"] == "T1"
 
     def test_unknown_command_returns_fail(self) -> None:
         adapter = LiteratureSearchAdapter()
-        result = adapter.execute(
-            command="bogus",
-            inputs={},
-            context={},
-        )
+        result = adapter.execute(command="bogus", inputs={}, context={})
         assert result.status == "fail"
         assert "bogus" in result.summary
 
+    def test_skills_do_not_write_state_yaml(self, tmp_path: Path) -> None:
+        """Verify that skills never create outputs/state.yaml."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        adapter.execute(
+            command="search",
+            inputs={
+                "query": "test",
+                "output_dir": str(output_dir),
+                "raw_papers": [_make_paper(1)],
+            },
+            context={},
+        )
+
+        # state.yaml must NOT exist anywhere in outputs
+        state_files = list(tmp_path.rglob("state.yaml"))
+        assert len(state_files) == 0, "Skills must not write state.yaml"
+
 
 class TestAcademicWriterAdapter:
-    """Tests for AcademicWriterAdapter."""
+    """Tests for AcademicWriterAdapter using SKILL.md structures."""
 
     def test_name_property(self) -> None:
         adapter = AcademicWriterAdapter()
         assert adapter.name == "academic-writer"
 
-    def test_draft_outline_produces_markdown(self, tmp_path: Path) -> None:
+    def test_draft_outline_uses_cars_model(self, tmp_path: Path) -> None:
+        """Outline follows CARS model structure from SKILL.md."""
         adapter = AcademicWriterAdapter()
         drafts_dir = tmp_path / "outputs" / "drafts"
         search_dir = tmp_path / "outputs" / "search"
 
-        # Create screened evidence
         search_dir.mkdir(parents=True)
         evidence = {
             "query": "voice disorders",
-            "total_raw": 1,
-            "total_screened": 1,
+            "total_raw": 1, "total_screened": 1,
             "evidence": [
-                {"title": "Test Paper", "doi": "10.1000/test", "year": 2023, "authors": "Smith J"},
+                {"title": "Test Paper", "doi": "10.1000/test", "year": 2023,
+                 "authors": "Smith J"},
             ],
         }
         evidence_path = search_dir / "screened_evidence.json"
         evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
 
-        # Create bib file with a key
         bib_path = tmp_path / "templates" / "references.bib"
         bib_path.parent.mkdir(parents=True)
         bib_path.write_text(
-            "@article{smith2024voice,\n  title = {Test},\n  year = {2024}\n}\n",
+            "@article{smith2023voice,\n  title = {Voice},\n}\n",
             encoding="utf-8",
         )
 
@@ -133,56 +261,49 @@ class TestAcademicWriterAdapter:
         )
 
         assert result.status == "pass"
-        assert len(result.artifacts) == 1
+        outline = Path(result.artifacts[0]).read_text(encoding="utf-8")
+        # CARS model structure from SKILL.md
+        assert "CARS" in outline
+        assert "Introduction" in outline
+        assert "Methods" in outline
+        assert "Results" in outline
+        assert "Discussion" in outline
+        # Bib key from references.bib
+        assert "smith2023voice" in outline
 
-        outline_path = Path(result.artifacts[0])
-        assert outline_path.name == "outline.md"
-        content = outline_path.read_text(encoding="utf-8")
-        assert "## 1. Introduction" in content
-        assert "## 2. Methods" in content
-        assert "## 3. Results" in content
-        assert "## 4. Discussion" in content
-        # Should reference citation keys from bib and evidence
-        assert "smith2024voice" in content or "@" in content
-
-    def test_draft_section_produces_markdown_with_citations(self, tmp_path: Path) -> None:
+    def test_draft_section_uses_skill_md_structure(self, tmp_path: Path) -> None:
+        """Sections use model from SKILL.md (CARS, CONSORT, etc.)."""
         adapter = AcademicWriterAdapter()
         drafts_dir = tmp_path / "outputs" / "drafts"
         search_dir = tmp_path / "outputs" / "search"
 
-        # Create screened evidence
         search_dir.mkdir(parents=True)
         evidence = {
             "query": "voice disorders",
-            "total_raw": 2,
-            "total_screened": 2,
+            "total_raw": 1, "total_screened": 1,
             "evidence": [
-                {"title": "Paper A", "doi": "10.1000/a", "year": 2023, "authors": "Smith J"},
-                {"title": "Paper B", "doi": "10.1000/b", "year": 2024, "authors": "Garcia M"},
+                {"title": "Paper A", "doi": "10.1/a", "year": 2023,
+                 "authors": "Smith J", "scoring": {"tier": "Tier 1",
+                                                    "final_score": 8.5}},
             ],
         }
-        evidence_path = search_dir / "screened_evidence.json"
-        evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+        (search_dir / "screened_evidence.json").write_text(
+            json.dumps(evidence), encoding="utf-8"
+        )
 
-        # Create outline
         drafts_dir.mkdir(parents=True)
-        outline_path = drafts_dir / "outline.md"
-        outline_path.write_text("# Outline\n## Introduction\n", encoding="utf-8")
+        (drafts_dir / "outline.md").write_text("# Outline\n", encoding="utf-8")
 
-        # Create bib
         bib_path = tmp_path / "templates" / "references.bib"
         bib_path.parent.mkdir(parents=True)
-        bib_path.write_text(
-            "@article{smith2024voice,\n  title = {Voice Disorders},\n}\n",
-            encoding="utf-8",
-        )
+        bib_path.write_text("", encoding="utf-8")
 
         result = adapter.execute(
             command="draft_section",
             inputs={
-                "section_name": "introduction",
-                "outline_path": str(outline_path),
-                "evidence_path": str(evidence_path),
+                "section_name": "results",
+                "outline_path": str(drafts_dir / "outline.md"),
+                "evidence_path": str(search_dir / "screened_evidence.json"),
                 "bib_path": str(bib_path),
                 "output_dir": str(drafts_dir),
             },
@@ -190,21 +311,17 @@ class TestAcademicWriterAdapter:
         )
 
         assert result.status == "pass"
-        assert len(result.artifacts) == 1
-
-        section_path = Path(result.artifacts[0])
-        assert section_path.name == "introduction.md"
-        content = section_path.read_text(encoding="utf-8")
-        assert "# Introduction" in content
-        # Should have citation references (@-keys)
-        assert "@" in content or "smith" in content.lower()
+        content = Path(result.artifacts[0]).read_text(encoding="utf-8")
+        # Results section should reference APA 7th reporting model
+        assert "APA 7th" in content
+        # Should have subsections from SKILL.md structure
+        assert "Descriptive statistics" in content
+        # Should list evidence with tier from real scoring
+        assert "Tier 1" in content
+        assert "Paper A" in content
 
     def test_unknown_command_returns_fail(self) -> None:
         adapter = AcademicWriterAdapter()
-        result = adapter.execute(
-            command="bogus",
-            inputs={},
-            context={},
-        )
+        result = adapter.execute(command="bogus", inputs={}, context={})
         assert result.status == "fail"
         assert "bogus" in result.summary
