@@ -1,7 +1,7 @@
 from typing import Any
 
-from harness.domain_state import DomainStateError, ManuscriptState
-from harness.state_repository import StateRepository, StateRepositoryError
+from harness.domain.state import DomainStateError, ManuscriptState
+from harness.ports.state_repository import StateRepository, StateRepositoryError
 
 
 class StateManagerError(Exception):

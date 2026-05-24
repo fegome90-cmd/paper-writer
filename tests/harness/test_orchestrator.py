@@ -3,9 +3,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from harness.orchestrator import Orchestrator, OrchestratorRequest
-from harness.state_manager import StateManager
-from harness.state_repository import YamlFileStateRepository
+from harness.adapters.filesystem_action_runner import FilesystemActionRunner
+from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
+from harness.adapters.yaml_repository import YamlFileStateRepository
+from harness.services.orchestrator import Orchestrator, OrchestratorRequest
+from harness.services.state_manager import StateManager
 
 
 @pytest.fixture
@@ -17,7 +19,9 @@ def test_repo(tmp_path: Path) -> Path:
 def _create_orchestrator(repo_path: Path) -> Orchestrator:
     repo = YamlFileStateRepository(repo_path / "outputs" / "state.yaml")
     manager = StateManager(repo)
-    return Orchestrator(repo_path, manager)
+    checker = FilesystemArtifactChecker(repo_path)
+    action_runner = FilesystemActionRunner(repo_path)
+    return Orchestrator(repo_path, manager, checker, action_runner)
 
 
 def test_orchestrator_init(test_repo: Path) -> None:

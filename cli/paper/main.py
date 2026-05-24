@@ -3,9 +3,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from harness.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
-from harness.state_manager import StateManager
-from harness.state_repository import YamlFileStateRepository
+from harness.adapters.filesystem_action_runner import FilesystemActionRunner
+from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
+from harness.adapters.yaml_repository import YamlFileStateRepository
+from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
+from harness.services.state_manager import StateManager
 
 
 def main() -> None:
@@ -100,8 +102,10 @@ def main() -> None:
     state_file_path = repo_path / "outputs" / "state.yaml"
     repository = YamlFileStateRepository(state_file_path)
     state_manager = StateManager(repository)
+    checker = FilesystemArtifactChecker(repo_path)
+    action_runner = FilesystemActionRunner(repo_path)
 
-    orchestrator = Orchestrator(repo_path, state_manager)
+    orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner)
     result = orchestrator.execute(request)
 
     # Format outputs

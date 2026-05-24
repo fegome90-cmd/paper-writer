@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from harness.state_manager import StateManager, StateManagerError
-from harness.state_repository import YamlFileStateRepository
+from harness.adapters.yaml_repository import YamlFileStateRepository
+from harness.services.state_manager import StateManager, StateManagerError
 
 
 @pytest.fixture

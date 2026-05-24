@@ -1,34 +1,9 @@
-from abc import ABC, abstractmethod
 from pathlib import Path
 
 import yaml
 
-from harness.domain_state import DomainStateError, ManuscriptState
-
-
-class StateRepositoryError(Exception):
-    """Raised for serialization and persistence issues in the repository."""
-
-    pass
-
-
-class StateRepository(ABC):
-    """Abstract port defining persistence contract for ManuscriptState."""
-
-    @abstractmethod
-    def exists(self) -> bool:
-        """Returns True if the persisted state exists."""
-        pass
-
-    @abstractmethod
-    def load(self) -> ManuscriptState:
-        """Loads and returns the ManuscriptState from persistence."""
-        pass
-
-    @abstractmethod
-    def save(self, state: ManuscriptState) -> None:
-        """Persists the ManuscriptState to storage."""
-        pass
+from harness.domain.state import DomainStateError, ManuscriptState
+from harness.ports.state_repository import StateRepository, StateRepositoryError
 
 
 class YamlFileStateRepository(StateRepository):

@@ -1,12 +1,10 @@
-import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-from harness.domain_state import ManuscriptState
-from harness.gates import (
+from harness.ports.action_runner import ActionRunner
+from harness.ports.artifact_checker import ArtifactChecker
+from harness.services.gates import (
     validate_outline_drafted,
     validate_ready_for_delivery,
     validate_render_passed,
@@ -16,7 +14,7 @@ from harness.gates import (
     validate_sections_completed,
     validate_validator_gate,
 )
-from harness.state_manager import StateManager, StateManagerError
+from harness.services.state_manager import StateManager, StateManagerError
 
 
 @dataclass
@@ -51,9 +49,17 @@ class OrchestratorResult:
 class Orchestrator:
     """Central orchestrator managing stage progression and gates validation."""
 
-    def __init__(self, repo_path: Path, state_manager: StateManager) -> None:
+    def __init__(
+        self,
+        repo_path: Path,
+        state_manager: StateManager,
+        checker: ArtifactChecker,
+        action_runner: ActionRunner,
+    ) -> None:
         self.repo_path = repo_path
         self.state_manager = state_manager
+        self.checker = checker
+        self.action_runner = action_runner
 
     def execute(self, request: OrchestratorRequest) -> OrchestratorResult:
         """Executes a command by loading state, validating, and updating gates."""
@@ -105,8 +111,10 @@ class Orchestrator:
         # 2. APPLY PHASE: Execute command action
         # ----------------------------------------------------
         try:
-            action_artifacts = self._run_action(request, stage_before)
-            artifacts.extend([str(a) for a in action_artifacts])
+            action_artifacts = self.action_runner.run_action(
+                request.command, request.args, self.state_manager
+            )
+            artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
         except Exception as e:
             msg = f"Action failed: {e}"
@@ -173,8 +181,8 @@ class Orchestrator:
 
             # Emit manifest if we transitioned successfully to 'verified' stage (paper verify)
             if request.command == "verify" and result.stage_after == "verified":
-                manifest_path = self._emit_manifest(gate_changes)
-                artifacts.append(str(manifest_path))
+                manifest_path = self.action_runner.emit_manifest(gate_changes)
+                artifacts.append(manifest_path)
                 steps.append({"step_id": "emit_manifest", "status": "succeeded"})
 
             steps.append({"step_id": "persist_state", "status": "succeeded"})
@@ -245,146 +253,32 @@ class Orchestrator:
                 f"Current stage is '{current_stage}'."
             )
 
-    def _run_action(self, request: OrchestratorRequest, current_stage: str) -> list[Path]:
-        """Runs the command's side effect action, creating mock files for this base phase."""
-        artifacts: list[Path] = []
-        cmd = request.command
-
-        if cmd == "init":
-            # Scaffold folders
-            dirs = [
-                "cli",
-                "harness",
-                "validators",
-                "templates",
-                "outputs",
-                "tests",
-                "outputs/search",
-                "outputs/drafts",
-                "outputs/render",
-                "outputs/logs",
-            ]
-            for d in dirs:
-                (self.repo_path / d).mkdir(parents=True, exist_ok=True)
-
-            # Initial state file
-            state_file = self.repo_path / "outputs" / "state.yaml"
-            if not self.state_manager.exists():
-                self.state_manager.state = ManuscriptState(
-                    stage="bootstrap",
-                    gates={
-                        gate: (gate == "repo_initialized")
-                        for gate in ManuscriptState.REQUIRED_GATES
-                    },
-                )
-                self.state_manager.save_state()
-
-            # Templates
-            manuscript_qmd = self.repo_path / "templates" / "manuscript.qmd"
-            manuscript_qmd.touch(exist_ok=True)
-
-            references_bib = self.repo_path / "templates" / "references.bib"
-            references_bib.touch(exist_ok=True)
-
-            artifacts.extend([state_file, manuscript_qmd, references_bib])
-
-        elif cmd == "search":
-            search_dir = self.repo_path / "outputs" / "search"
-            search_dir.mkdir(parents=True, exist_ok=True)
-
-            plan_file = search_dir / "search_plan.json"
-            with open(plan_file, "w", encoding="utf-8") as f:
-                f.write('{"query": "mock search", "date": "2026-05-24"}')
-
-            results_file = search_dir / "raw_results.json"
-            with open(results_file, "w", encoding="utf-8") as f:
-                f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123"}]')
-
-            artifacts.extend([plan_file, results_file])
-
-        elif cmd == "screen":
-            evidence_file = self.repo_path / "outputs" / "search" / "screened_evidence.json"
-            with open(evidence_file, "w", encoding="utf-8") as f:
-                f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123", "screened": true}]')
-            artifacts.append(evidence_file)
-
-        elif cmd == "draft_outline":
-            outline_file = self.repo_path / "outputs" / "drafts" / "outline.md"
-            with open(outline_file, "w", encoding="utf-8") as f:
-                f.write("# Outline\n\n- Introduction\n- Methods\n- Results\n- Discussion\n")
-            artifacts.append(outline_file)
-
-        elif cmd == "draft_section":
-            section_name = request.args.get("name")
-            if not section_name:
-                raise ValueError("Missing 'name' argument for draft_section.")
-
-            # Validate section name
-            valid_sections = ["introduction", "methods", "results", "discussion"]
-            if section_name not in valid_sections:
-                raise ValueError(
-                    f"Invalid section name '{section_name}'. Must be one of {valid_sections}"
-                )
-
-            # Reset gates on edit
-            self.state_manager.reset_downstream_gates("draft")
-
-            section_file = self.repo_path / "outputs" / "drafts" / f"{section_name}.md"
-            with open(section_file, "w", encoding="utf-8") as f:
-                f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
-            artifacts.append(section_file)
-
-        elif cmd in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
-            log_dir = self.repo_path / "outputs" / "logs"
-            log_dir.mkdir(parents=True, exist_ok=True)
-            log_file = log_dir / f"{cmd}.log"
-            with open(log_file, "w", encoding="utf-8") as f:
-                f.write(f"Log for {cmd} at {datetime.datetime.now().isoformat()}\n")
-            artifacts.append(log_file)
-
-        elif cmd == "render":
-            render_dir = self.repo_path / "outputs" / "render"
-            render_dir.mkdir(parents=True, exist_ok=True)
-
-            docx_file = render_dir / "manuscript.docx"
-            docx_file.touch(exist_ok=True)
-
-            pdf_file = render_dir / "manuscript.pdf"
-            pdf_file.touch(exist_ok=True)
-
-            artifacts.extend([docx_file, pdf_file])
-
-        elif cmd == "verify":
-            pass
-
-        return artifacts
-
     def _run_gate_verification(self, request: OrchestratorRequest) -> Any:
         """Invokes the gate verifier corresponding to the executed command."""
         cmd = request.command
 
         if cmd == "init":
-            return validate_repo_initialized(self.repo_path)
+            return validate_repo_initialized(self.checker)
         elif cmd == "search":
-            return validate_search_completed(self.repo_path)
+            return validate_search_completed(self.checker)
         elif cmd == "screen":
-            return validate_screened_evidence(self.repo_path)
+            return validate_screened_evidence(self.checker)
         elif cmd == "draft_outline":
-            return validate_outline_drafted(self.repo_path)
+            return validate_outline_drafted(self.checker)
         elif cmd == "draft_section":
-            return validate_sections_completed(self.repo_path)
+            return validate_sections_completed(self.checker)
         elif cmd == "lint_bib":
             result_mock = {
                 "status": "pass",
                 "findings": [],
-                "artifacts_checked": [str(self.repo_path / "templates" / "references.bib")],
+                "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
             }
             return validate_validator_gate("bib_normalized", result_mock)
         elif cmd == "check_refs":
             result_mock = {
                 "status": "pass",
                 "findings": [],
-                "artifacts_checked": [str(self.repo_path / "templates" / "references.bib")],
+                "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
             }
             self.state_manager.set_gate("citations_resolved", True)
             return validate_validator_gate("refs_validated", result_mock)
@@ -395,10 +289,10 @@ class Orchestrator:
             result_mock = {"status": "pass", "findings": [], "artifacts_checked": []}
             return validate_validator_gate("reporting_passed", result_mock)
         elif cmd == "render":
-            return validate_render_passed(self.repo_path)
+            return validate_render_passed(self.checker)
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
-            return validate_ready_for_delivery(self.repo_path, state_gates)
+            return validate_ready_for_delivery(self.checker, state_gates)
 
         raise ValueError(f"Unknown gate verification for command: {cmd}")
 
@@ -413,7 +307,7 @@ class Orchestrator:
         elif command == "draft_outline":
             return "drafting"
         elif command == "draft_section":
-            gate_res = validate_sections_completed(self.repo_path)
+            gate_res = validate_sections_completed(self.checker)
             if gate_res.status == "pass" and current_stage == "drafting":
                 return "validating"
         elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
@@ -432,31 +326,6 @@ class Orchestrator:
         elif command == "verify":
             return "verified"
         return None
-
-    def _emit_manifest(self, gate_changes: dict[str, bool]) -> Path:
-        """Emits outputs/manifest.yaml upon successful verification."""
-        manifest_path = self.repo_path / "outputs" / "manifest.yaml"
-        state_gates = self.state_manager.load_state().get("gates", {})
-
-        manifest_data = {
-            "schema_version": "1.0",
-            "project": "paper-writer",
-            "status": "ready_for_delivery",
-            "generated_at": datetime.datetime.now().isoformat(),
-            "stage": "verified",
-            "gate_snapshot": state_gates,
-            "artifacts": {
-                "manuscript": ["outputs/render/manuscript.docx", "outputs/render/manuscript.pdf"],
-                "bibliography": "templates/references.bib",
-            },
-            "verdict": "pass",
-            "notes": [],
-        }
-
-        with open(manifest_path, "w", encoding="utf-8") as f:
-            yaml.dump(manifest_data, f, default_flow_style=False, sort_keys=False)
-
-        return manifest_path
 
     def _build_fail_result(
         self,

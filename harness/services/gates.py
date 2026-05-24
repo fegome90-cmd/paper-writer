@@ -1,7 +1,8 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
+
+from harness.ports.artifact_checker import ArtifactChecker
 
 
 @dataclass
@@ -25,7 +26,7 @@ class GateResult:
     artifacts: list[str] = field(default_factory=list)
 
 
-def run_gate(gate_name: str, checks: list[Check], artifacts: list[Path]) -> GateResult:
+def run_gate(gate_name: str, checks: list[Check], artifacts: list[str]) -> GateResult:
     """Executes a list of checks for a gate and consolidates the outcome."""
     blockers: list[str] = []
     warnings: list[str] = []
@@ -53,24 +54,23 @@ def run_gate(gate_name: str, checks: list[Check], artifacts: list[Path]) -> Gate
         status=status,
         blockers=blockers,
         warnings=warnings,
-        artifacts=[str(a) for a in artifacts],
+        artifacts=artifacts,
     )
 
 
-# Concrete gate validators
+# Concrete gate validators using the ArtifactChecker port
 
 
-def validate_repo_initialized(repo_path: Path) -> GateResult:
+def validate_repo_initialized(checker: ArtifactChecker) -> GateResult:
     """Checks if base folders exist."""
     required_dirs = ["cli", "harness", "validators", "templates", "outputs"]
     checks = []
 
     for d in required_dirs:
-        dir_path = repo_path / d
 
-        def make_check(path: Path = dir_path, name: str = d) -> Check:
+        def make_check(name: str = d) -> Check:
             def run_fn() -> None:
-                _assert_is_dir(path, name)
+                checker.check_dir_exists(name)
 
             return Check(
                 id=f"dir_exists_{name}",
@@ -80,19 +80,23 @@ def validate_repo_initialized(repo_path: Path) -> GateResult:
 
         checks.append(make_check())
 
-    return run_gate("repo_initialized", checks, [repo_path / d for d in required_dirs])
+    return run_gate(
+        "repo_initialized",
+        checks,
+        [checker.get_full_path_str(d) for d in required_dirs],
+    )
 
 
-def validate_search_completed(repo_path: Path) -> GateResult:
+def validate_search_completed(checker: ArtifactChecker) -> GateResult:
     """Checks if search artifacts exist."""
-    plan_file = repo_path / "outputs" / "search" / "search_plan.json"
-    results_file = repo_path / "outputs" / "search" / "raw_results.json"
+    plan_file = "outputs/search/search_plan.json"
+    results_file = "outputs/search/raw_results.json"
 
     def check_plan() -> None:
-        _assert_is_file(plan_file, "Search Plan")
+        checker.check_file_exists(plan_file)
 
     def check_results() -> None:
-        _assert_is_file(results_file, "Raw Results")
+        checker.check_file_exists(results_file)
 
     checks = [
         Check(
@@ -106,15 +110,19 @@ def validate_search_completed(repo_path: Path) -> GateResult:
             run_fn=check_results,
         ),
     ]
-    return run_gate("search_completed", checks, [plan_file, results_file])
+    return run_gate(
+        "search_completed",
+        checks,
+        [checker.get_full_path_str(plan_file), checker.get_full_path_str(results_file)],
+    )
 
 
-def validate_screened_evidence(repo_path: Path) -> GateResult:
+def validate_screened_evidence(checker: ArtifactChecker) -> GateResult:
     """Checks if screened evidence exists."""
-    evidence_file = repo_path / "outputs" / "search" / "screened_evidence.json"
+    evidence_file = "outputs/search/screened_evidence.json"
 
     def check_evidence() -> None:
-        _assert_is_file(evidence_file, "Screened Evidence")
+        checker.check_file_exists(evidence_file)
 
     checks = [
         Check(
@@ -123,33 +131,37 @@ def validate_screened_evidence(repo_path: Path) -> GateResult:
             run_fn=check_evidence,
         )
     ]
-    return run_gate("screened_evidence", checks, [evidence_file])
+    return run_gate("screened_evidence", checks, [checker.get_full_path_str(evidence_file)])
 
 
-def validate_outline_drafted(repo_path: Path) -> GateResult:
+def validate_outline_drafted(checker: ArtifactChecker) -> GateResult:
     """Checks if outline exists."""
-    outline_file = repo_path / "outputs" / "drafts" / "outline.md"
+    outline_file = "outputs/drafts/outline.md"
 
     def check_outline() -> None:
-        _assert_is_file(outline_file, "Outline")
+        checker.check_file_exists(outline_file)
 
     checks = [
-        Check(id="outline_exists", description="Verify if outline.md exists", run_fn=check_outline)
+        Check(
+            id="outline_exists",
+            description="Verify if outline.md exists",
+            run_fn=check_outline,
+        )
     ]
-    return run_gate("outline_drafted", checks, [outline_file])
+    return run_gate("outline_drafted", checks, [checker.get_full_path_str(outline_file)])
 
 
-def validate_sections_completed(repo_path: Path) -> GateResult:
+def validate_sections_completed(checker: ArtifactChecker) -> GateResult:
     """Checks if required sections exist."""
     required_sections = ["introduction.md", "methods.md", "results.md", "discussion.md"]
     checks = []
 
     for section in required_sections:
-        sec_file = repo_path / "outputs" / "drafts" / section
+        sec_file = f"outputs/drafts/{section}"
 
-        def make_check(file_path: Path = sec_file, name: str = section) -> Check:
+        def make_check(file_path: str = sec_file, name: str = section) -> Check:
             def run_fn() -> None:
-                _assert_is_file(file_path, name)
+                checker.check_file_exists(file_path)
 
             return Check(
                 id=f"section_exists_{name.split('.')[0]}",
@@ -162,16 +174,16 @@ def validate_sections_completed(repo_path: Path) -> GateResult:
     return run_gate(
         "sections_completed",
         checks,
-        [repo_path / "outputs" / "drafts" / s for s in required_sections],
+        [checker.get_full_path_str(f"outputs/drafts/{s}") for s in required_sections],
     )
 
 
-def validate_bib_normalized(repo_path: Path) -> GateResult:
+def validate_bib_normalized(checker: ArtifactChecker) -> GateResult:
     """Checks if references.bib is present."""
-    bib_file = repo_path / "templates" / "references.bib"
+    bib_file = "templates/references.bib"
 
     def check_bib() -> None:
-        _assert_is_file(bib_file, "References Bibliography")
+        checker.check_file_exists(bib_file)
 
     checks = [
         Check(
@@ -180,19 +192,11 @@ def validate_bib_normalized(repo_path: Path) -> GateResult:
             run_fn=check_bib,
         )
     ]
-    return run_gate("bib_normalized", checks, [bib_file])
+    return run_gate("bib_normalized", checks, [checker.get_full_path_str(bib_file)])
 
 
 def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | None) -> GateResult:
-    """Generic validator gate evaluation.
-
-    Consumes the output dict from a validator:
-    {
-        "status": "pass" | "warn" | "fail",
-        "findings": [{"severity": "error"|"warning"|"info", "message": "..."}],
-        "artifacts_checked": ["..."]
-    }
-    """
+    """Generic validator gate evaluation."""
     if not validator_result:
         return GateResult(
             gate=gate_name,
@@ -230,13 +234,13 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
     )
 
 
-def validate_render_passed(repo_path: Path) -> GateResult:
+def validate_render_passed(checker: ArtifactChecker) -> GateResult:
     """Checks if rendered document exists."""
-    render_docx = repo_path / "outputs" / "render" / "manuscript.docx"
-    render_pdf = repo_path / "outputs" / "render" / "manuscript.pdf"
+    render_docx = "outputs/render/manuscript.docx"
+    render_pdf = "outputs/render/manuscript.pdf"
 
     def check_render() -> None:
-        _assert_any_file_exists([render_docx, render_pdf], "Rendered manuscript")
+        checker.check_any_file_exists([render_docx, render_pdf])
 
     checks = [
         Check(
@@ -245,14 +249,17 @@ def validate_render_passed(repo_path: Path) -> GateResult:
             run_fn=check_render,
         )
     ]
-    return run_gate("render_passed", checks, [render_docx, render_pdf])
+    return run_gate(
+        "render_passed",
+        checks,
+        [checker.get_full_path_str(render_docx), checker.get_full_path_str(render_pdf)],
+    )
 
 
-def validate_ready_for_delivery(repo_path: Path, state_gates: dict[str, Any]) -> GateResult:
-    """Final check gate.
-
-    All gates except 'ready_for_delivery' must be 'True' (or 'pass'/'warn').
-    """
+def validate_ready_for_delivery(
+    checker: ArtifactChecker, state_gates: dict[str, Any]
+) -> GateResult:
+    """Final check gate."""
     required_gates = [
         "repo_initialized",
         "search_completed",
@@ -282,28 +289,11 @@ def validate_ready_for_delivery(repo_path: Path, state_gates: dict[str, Any]) ->
 
         checks.append(make_check())
 
-    manifest_file = repo_path / "outputs" / "manifest.yaml"
-    return run_gate("ready_for_delivery", checks, [manifest_file])
+    manifest_file = "outputs/manifest.yaml"
+    return run_gate("ready_for_delivery", checks, [checker.get_full_path_str(manifest_file)])
 
 
 # Helper assertions for Checks
-
-
-def _assert_is_dir(path: Path, name: str) -> None:
-    if not path.is_dir():
-        raise FileNotFoundError(f"Directory '{name}' not found at {path}")
-
-
-def _assert_is_file(path: Path, name: str) -> None:
-    if not path.is_file():
-        raise FileNotFoundError(f"File '{name}' not found at {path}")
-
-
-def _assert_any_file_exists(paths: list[Path], name: str) -> None:
-    if not any(p.is_file() for p in paths):
-        raise FileNotFoundError(
-            f"No rendered files found for '{name}'. Tried: {[str(p) for p in paths]}"
-        )
 
 
 def _assert_gate_true(gates: dict[str, Any], gate_name: str) -> None:
