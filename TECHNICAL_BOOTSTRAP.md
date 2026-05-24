@@ -221,32 +221,44 @@ paper-writer/
 
 ### Phase 1 - Repository Base
 
-Deliverables:
+Status: COMPLETE
+
+Verified deliverables:
 
 - new repo initialized
 - base directories created (`cli/`, `harness/`, `validators/`, `templates/`, `outputs/`, `tests/`, `docs/`)
 - `paper` CLI skeleton
 - `outputs/state.yaml` defined as workflow source of truth
+- seeded base templates (`templates/manuscript.qmd`, `templates/references.bib`)
 - minimal test runner path working
+- fresh verification path passing (`pytest`, `ruff`, `mypy`)
 
 ### Phase 2 - Harness and Verification
 
-Deliverables:
+Status: COMPLETE
 
-- state machine
-- mandatory gate enforcement
-- artifact manifest
-- delivery blocking rules
-- CLI and harness tests
+Verified deliverables:
+
+- hardened state machine and gate authority model
+- validation logic extracted into dedicated `validators/` modules
+- real Pandoc wrapper replacing placeholder render behavior
+- assembled manuscript flow from `outputs/drafts/*.md` to render input
+- artifact manifest and delivery blocking rules preserved as fail-closed surfaces
+- expanded CLI, integration, and validator tests around real validator/render behavior
 
 ### Phase 3 - Domain Skill Integration
 
-Deliverables:
+Status: COMPLETE
 
-- imported `literature-search`
-- imported `academic-writer`
-- output contract aligned with imported skills
-- first evidence-to-draft workflow connected
+Verified deliverables:
+
+- imported `literature-search` into `skills/imported/literature_search/` with `LiteratureSearchSkill` providing `search()` and `screen()` methods
+- imported `academic-writer` into `skills/imported/academic_writer/` with `AcademicWriterSkill` providing `draft_outline()` and `draft_section()` methods
+- created normalized adapters in `skills/local/adapters.py`: `LiteratureSearchAdapter` and `AcademicWriterAdapter` bridging skills to the `SkillAdapter` port
+- adapters return `SkillResult` with normalized status, summary, artifacts, and gate_changes
+- evidence-to-draft workflow connected: search → screen → draft_outline → draft_section with proper gate propagation
+- 8 adapter tests added in `tests/skills/test_adapters.py`
+- all architectural invariants verified: no harness→skills imports, no imported→harness imports, CLI <200 lines, skills write no state
 
 ### Phase 4 - Editorial Gates and Hardening
 
@@ -307,13 +319,13 @@ Do NOT do these in v1:
 
 ### Mandatory
 
-- [ ] initialize git repository `paper-writer`
-- [ ] create `cli/`, `harness/`, `validators/`, `templates/`, `outputs/`, `tests/`, `docs/`
-- [ ] create CLI skeleton `paper`
-- [ ] create `Makefile`
-- [ ] create `outputs/state.yaml`
-- [ ] create `templates/manuscript.qmd`
-- [ ] create baseline tests for CLI/harness
+- [x] initialize git repository `paper-writer`
+- [x] create `cli/`, `harness/`, `validators/`, `templates/`, `outputs/`, `tests/`, `docs/`
+- [x] create CLI skeleton `paper`
+- [x] create `Makefile`
+- [x] create `outputs/state.yaml`
+- [x] create `templates/manuscript.qmd`
+- [x] create baseline tests for CLI/harness
 
 ### Optional
 
@@ -333,9 +345,10 @@ mkdir -p cli harness validators templates outputs tests docs skills
 touch cli/__init__.py harness/__init__.py validators/__init__.py
 cat > outputs/state.yaml <<'YAML'
 # Schema version: 1.0
+# Pre-init state. Run `paper init` to scaffold the repository.
 stage: bootstrap
 gates:
-  repo_initialized: true
+  repo_initialized: false
   search_completed: false
   screened_evidence: false
   outline_drafted: false
@@ -360,3 +373,14 @@ Then build the repo with this exact scope:
 6. fail delivery if `.bib` or reference validation is missing
 
 That is enough to create a serious MVP.
+
+
+## Recommended Next Work
+
+After Phase 2, do Phase 3 in this order:
+
+1. import `literature-search` into `skills/imported/` and document its authority boundaries
+2. import `academic-writer` into `skills/imported/` and document its drafting boundaries
+3. implement `skills/local/` adapters so the CLI and orchestrator call skills through normalized contracts
+4. wire search outputs into drafting inputs without letting imported skills mutate state directly
+5. keep `paper` thin and the harness authoritative while domain skills are added incrementally

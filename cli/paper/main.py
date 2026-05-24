@@ -16,6 +16,7 @@ from integrations.tools import (  # noqa: IRIX
     ReportingAuditor,
     StyleLinter,
 )
+from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
 
 
 def main() -> None:
@@ -111,7 +112,13 @@ def main() -> None:
     repository = YamlFileStateRepository(state_file_path)
     state_manager = StateManager(repository)
     checker = FilesystemArtifactChecker(repo_path)
-    action_runner = FilesystemActionRunner(repo_path)
+
+    # Wire skill adapters
+    skill_adapters = {
+        "literature_search": LiteratureSearchAdapter(),
+        "academic_writer": AcademicWriterAdapter(),
+    }
+    action_runner = FilesystemActionRunner(repo_path, skill_adapters=skill_adapters)
 
     # Wire tool wrappers
     wrappers = {

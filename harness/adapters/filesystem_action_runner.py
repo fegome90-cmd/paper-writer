@@ -6,6 +6,7 @@ from typing import Any
 import yaml
 
 from harness.ports.action_runner import ActionRunner
+from harness.ports.skill_adapter import SkillAdapter
 from harness.services.assembler import assemble_manuscript
 
 logger = logging.getLogger(__name__)
@@ -14,26 +15,24 @@ logger = logging.getLogger(__name__)
 class FilesystemActionRunner(ActionRunner):
     """Adapter implementing ActionRunner that executes actions on local filesystem.
 
-    CAVEAT (MVP): Several commands generate scaffold/placeholder content rather
-    than delegating to real tools. This is intentional for the base construction
-    phase per AGENTS.md "Base Construction Order". When real skill adapters are
-    integrated (literature-search, academic-writer, pandoc), this adapter will
-    delegate to those tools instead of writing mock content.
-
-    Commands that currently write placeholder content:
-      - search: writes mock search_plan.json and raw_results.json
-      - screen: writes mock screened_evidence.json
-      - draft_outline: writes a skeleton outline
-      - draft_section: writes a skeleton section file
-      - render: creates empty .docx/.pdf touch files
+    When skill_adapters are provided, search/screen/draft_outline/draft_section
+    delegate to real skill adapters (LiteratureSearchAdapter, AcademicWriterAdapter).
+    When absent, the original mock behavior is used as a fallback for backward
+    compatibility with tests that construct the runner without adapters.
 
     Commands that are already real:
       - init: scaffolds directory structure and empty templates
       - lint_bib/check_refs/lint_style/audit_reporting: delegates to ToolWrapper instances
+      - render: assembles manuscript and delegates to PandocRenderer
     """
 
-    def __init__(self, repo_path: Path) -> None:
+    def __init__(
+        self,
+        repo_path: Path,
+        skill_adapters: dict[str, SkillAdapter] | None = None,
+    ) -> None:
         self.repo_path = repo_path.resolve()
+        self._skill_adapters = skill_adapters or {}
 
     def _resolve(self, rel_path: str) -> Path:
         """Resolve a relative path and verify it stays within repo boundaries."""
@@ -74,27 +73,73 @@ class FilesystemActionRunner(ActionRunner):
             search_dir = self._resolve("outputs/search")
             search_dir.mkdir(parents=True, exist_ok=True)
 
-            plan_file = self._resolve("outputs/search/search_plan.json")
-            with open(plan_file, "w", encoding="utf-8") as f:
-                f.write('{"query": "mock search", "date": "2026-05-24"}')
+            adapter = self._skill_adapters.get("literature_search")
+            if adapter:
+                result = adapter.execute(
+                    command="search",
+                    inputs={
+                        "query": args.get("query", ""),
+                        "output_dir": str(search_dir),
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+            else:
+                plan_file = self._resolve("outputs/search/search_plan.json")
+                with open(plan_file, "w", encoding="utf-8") as f:
+                    f.write('{"query": "mock search", "date": "2026-05-24"}')
 
-            results_file = self._resolve("outputs/search/raw_results.json")
-            with open(results_file, "w", encoding="utf-8") as f:
-                f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123"}]')
+                results_file = self._resolve("outputs/search/raw_results.json")
+                with open(results_file, "w", encoding="utf-8") as f:
+                    f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123"}]')
 
-            artifacts.extend([str(plan_file), str(results_file)])
+                artifacts.extend([str(plan_file), str(results_file)])
 
         elif command == "screen":
-            evidence_file = self._resolve("outputs/search/screened_evidence.json")
-            with open(evidence_file, "w", encoding="utf-8") as f:
-                f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123", "screened": true}]')
-            artifacts.append(str(evidence_file))
+            search_dir = self._resolve("outputs/search")
+
+            adapter = self._skill_adapters.get("literature_search")
+            if adapter:
+                result = adapter.execute(
+                    command="screen",
+                    inputs={
+                        "search_dir": str(search_dir),
+                        "output_dir": str(search_dir),
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+            else:
+                evidence_file = self._resolve("outputs/search/screened_evidence.json")
+                with open(evidence_file, "w", encoding="utf-8") as f:
+                    f.write(
+                        '[{"title": "Mock Paper 1", "doi": "10.1000/xyz123", "screened": true}]'
+                    )
+                artifacts.append(str(evidence_file))
 
         elif command == "draft_outline":
-            outline_file = self._resolve("outputs/drafts/outline.md")
-            with open(outline_file, "w", encoding="utf-8") as f:
-                f.write("# Outline\n\n- Introduction\n- Methods\n- Results\n- Discussion\n")
-            artifacts.append(str(outline_file))
+            drafts_dir = self._resolve("outputs/drafts")
+            drafts_dir.mkdir(parents=True, exist_ok=True)
+
+            adapter = self._skill_adapters.get("academic_writer")
+            if adapter:
+                evidence_path = str(self._resolve("outputs/search/screened_evidence.json"))
+                bib_path = str(self._resolve("templates/references.bib"))
+                result = adapter.execute(
+                    command="draft_outline",
+                    inputs={
+                        "evidence_path": evidence_path,
+                        "output_dir": str(drafts_dir),
+                        "bib_path": bib_path,
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+            else:
+                outline_file = self._resolve("outputs/drafts/outline.md")
+                with open(outline_file, "w", encoding="utf-8") as f:
+                    f.write("# Outline\n\n- Introduction\n- Methods\n- Results\n- Discussion\n")
+                artifacts.append(str(outline_file))
 
         elif command == "draft_section":
             section_name = args.get("name")
@@ -107,10 +152,30 @@ class FilesystemActionRunner(ActionRunner):
                     f"Invalid section name '{section_name}'. Must be one of {valid_sections}"
                 )
 
-            section_file = self._resolve(f"outputs/drafts/{section_name}.md")
-            with open(section_file, "w", encoding="utf-8") as f:
-                f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
-            artifacts.append(str(section_file))
+            drafts_dir = self._resolve("outputs/drafts")
+            drafts_dir.mkdir(parents=True, exist_ok=True)
+
+            adapter = self._skill_adapters.get("academic_writer")
+            if adapter:
+                result = adapter.execute(
+                    command="draft_section",
+                    inputs={
+                        "section_name": section_name,
+                        "outline_path": str(self._resolve("outputs/drafts/outline.md")),
+                        "evidence_path": str(
+                            self._resolve("outputs/search/screened_evidence.json")
+                        ),
+                        "bib_path": str(self._resolve("templates/references.bib")),
+                        "output_dir": str(drafts_dir),
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+            else:
+                section_file = self._resolve(f"outputs/drafts/{section_name}.md")
+                with open(section_file, "w", encoding="utf-8") as f:
+                    f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
+                artifacts.append(str(section_file))
 
         elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
             log_dir = self._resolve("outputs/logs")

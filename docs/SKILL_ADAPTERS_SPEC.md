@@ -79,8 +79,54 @@ Required fields:
 - Adapters may call imported or local skills, but the orchestrator only sees the adapter contract.
 - Skill adapters do not write workflow state directly; they return `gate_changes` for the orchestrator/state manager to apply.
 
+## Implemented Adapters
+
+### LiteratureSearchAdapter
+
+- **Location**: `skills/local/adapters.py`
+- **Wraps**: `skills/imported/literature_search/search.py` → `LiteratureSearchSkill`
+- **Adapter name**: `literature-search`
+
+| Command | Input Contract | Output Contract | Gate Change |
+|---|---|---|---|
+| `search` | `query: str`, `output_dir: str` (default `outputs/search`) | `artifacts`: `[search_plan.json, raw_results.json]`, `status: pass` | `search_completed: true` |
+| `screen` | `search_dir: str`, `output_dir: str` | `artifacts`: `[screened_evidence.json]`, `status: pass` | `screened_evidence: true` |
+
+Error handling: unknown commands return `SkillResult(status="fail")` with error summary and warnings.
+
+### AcademicWriterAdapter
+
+- **Location**: `skills/local/adapters.py`
+- **Wraps**: `skills/imported/academic_writer/drafting.py` → `AcademicWriterSkill`
+- **Adapter name**: `academic-writer`
+
+| Command | Input Contract | Output Contract | Gate Change |
+|---|---|---|---|
+| `draft_outline` | `evidence_path: str` (default `outputs/search/screened_evidence.json`), `output_dir: str`, `bib_path: str` | `artifacts`: `[outline.md]`, `status: pass` | `outline_drafted: true` |
+| `draft_section` | `section_name: str`, `outline_path: str`, `evidence_path: str`, `bib_path: str`, `output_dir: str` | `artifacts`: `[{section_name}.md]`, `status: pass` | `sections_completed: true` |
+
+Error handling: unknown commands return `SkillResult(status="fail")` with error summary and warnings.
+
+### Adapter Wiring
+
+The invocation path is:
+
+```text
+CLI (cli/paper/main.py)
+  → harness.ports.action_runner.ActionRunner (filesystem adapter)
+    → skills.local.adapters.LiteratureSearchAdapter / AcademicWriterAdapter
+      → skills.imported.*.Skill (concrete skill logic)
+        → returns SkillResult (normalized)
+```
+
+- The CLI remains thin and routes to `ActionRunner`.
+- `ActionRunner` delegates to adapter instances registered by command name.
+- Adapters translate normalized inputs into skill-specific method calls.
+- Skills return raw dicts; adapters wrap them in `SkillResult` with gate changes.
+- The orchestrator applies `gate_changes` through `StateManager`, never directly by skills.
+
 ## Audit Checklist
 
-- [ ] No orchestrator logic depends on physical skill folder layout.
-- [ ] Each skill-backed command has an adapter contract.
-- [ ] Adapter outputs are normalized and gate-aware.
+- [x] No orchestrator logic depends on physical skill folder layout.
+- [x] Each skill-backed command has an adapter contract.
+- [x] Adapter outputs are normalized and gate-aware.

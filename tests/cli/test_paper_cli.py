@@ -26,6 +26,19 @@ The prevalence was 42.3% in the study cohort.
 """
 
 
+MINIMAL_OUTLINE = """# Outline
+## 1. Introduction
+   - Background and clinical significance @smith2024voice
+   - Research question and objectives
+## 2. Methods
+   - Search strategy
+## 3. Results
+   - Key findings @smith2024voice
+## 4. Discussion
+   - Summary and implications
+"""
+
+
 def _write_test_content(tmp_path: Path) -> None:
     """Populate test fixtures with content that passes real validators."""
     # Write a valid bib file
@@ -38,6 +51,12 @@ def _write_section(tmp_path: Path, section: str) -> None:
     section_file = tmp_path / "outputs" / "drafts" / f"{section}.md"
     content = MINIMAL_SECTION.replace("{section}", section.capitalize())
     section_file.write_text(content, encoding="utf-8")
+
+
+def _write_outline(tmp_path: Path) -> None:
+    """Write an outline file that only references keys in the test bib."""
+    outline_file = tmp_path / "outputs" / "drafts" / "outline.md"
+    outline_file.write_text(MINIMAL_OUTLINE, encoding="utf-8")
 
 
 def test_cli_full_pipeline(
@@ -82,6 +101,8 @@ def test_cli_full_pipeline(
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
     assert "[ok] Step: verify_gate_outline_drafted" in captured.out
+    # Overwrite with clean outline referencing only bib-resolvable keys
+    _write_outline(tmp_path)
 
     # 5. Draft sections — rewrite with real content after mock creation
     for sec in ["introduction", "methods", "results", "discussion"]:

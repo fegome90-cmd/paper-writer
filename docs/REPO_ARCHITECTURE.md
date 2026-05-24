@@ -119,30 +119,45 @@ skills/local/
 
 ### `skills/imported/`
 
-Use this for skills copied or subtree-imported from other repos, for example:
+Use this for skills copied or subtree-imported from other repos:
 
 ```text
 skills/imported/
-  literature-search/
-  academic-writer/
-  research-skill-bank/
+  academic_writer/
+    __init__.py
+    drafting.py          # AcademicWriterSkill: draft_outline(), draft_section()
+  literature_search/
+    __init__.py
+    search.py            # LiteratureSearchSkill: search(), screen()
 ```
+
+Each imported skill is a self-contained module with no dependency on `harness/` or `cli/`. They accept typed Python arguments and return plain dicts with artifact paths.
 
 ### `skills/local/`
 
-Use this for repo-native skills created specifically for `paper-writer`, for example:
+Use this for repo-native adapters and orchestration surfaces:
 
 ```text
 skills/local/
-  reporting-audit/
-  citation-pipeline/
-  delivery-gate/
+  __init__.py
+  adapters.py            # LiteratureSearchAdapter, AcademicWriterAdapter
 ```
 
-Responsibility split:
+`skills/local/adapters.py` bridges imported skills into the `harness.ports.skill_adapter.SkillAdapter` contract. It imports from:
+- `harness.ports.skill_adapter` (the port interface)
+- `skills.imported.academic_writer.drafting` (the concrete skill)
+- `skills.imported.literature_search.search` (the concrete skill)
 
-- `imported/` = reused building blocks
-- `local/` = project-specific orchestration and enforcement
+### Dependency Direction (enforced)
+
+```text
+harness/  ← imports from nowhere in skills/
+skills/local/ ← imports from harness/ports/ and skills/imported/
+skills/imported/ ← imports from nowhere in harness/ or skills/local/
+cli/ ← imports from skills/local/ and harness/
+```
+
+Verified by: `grep -rn "^from skills" harness/` → empty, `grep -rn "^from harness" skills/imported/` → empty.
 
 ## 5. Vendored External Repositories
 
