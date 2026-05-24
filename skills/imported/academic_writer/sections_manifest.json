@@ -4,7 +4,7 @@
     "source_version": "1.2.0",
     "source_last_updated": "2026-05-20",
     "generated_by": "manual extraction from vendored SKILL.md",
-    "generated_date": "2026-05-25",
+    "generated_date": "2026-05-24",
     "method": "Each section's model, subsections, tone, placeholders, and word_count were extracted directly from the corresponding prompt in SKILL.md. No content was invented — only structure was captured."
   },
   "_adaptation_truth": {

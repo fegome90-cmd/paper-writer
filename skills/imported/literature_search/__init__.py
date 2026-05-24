@@ -6,9 +6,9 @@
 - ``resources/scoring.py`` → vendored as ``skills.imported.literature_search.scoring``
   Contains: PaperMetrics, ScoringWeights, calculate_d_score, calculate_final_score,
   classify_tier, get_default_weights, deduplicate, verify_citation
-- ``SKILL.md`` → vendored as ``skills/imported/literature-search/resources/SKILL.md``
+- ``SKILL.md`` → vendored as ``skills/imported/literature_search/resources/SKILL.md``
   Agent instructions for 5-phase systematic review (search, rank, export, synthesize)
-- ``resources/*.md`` → vendored as ``skills/imported/literature-search/resources/``
+- ``resources/*.md`` → vendored as ``skills/imported/literature_search/resources/``
   Protocol documentation (search-protocol, ranking-criteria, critical-appraisal,
   synthesis-protocol, citation-format, examples)
 

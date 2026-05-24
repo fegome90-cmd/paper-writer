@@ -326,7 +326,7 @@ flowchart TD
     T --> B[bibtex-tidy]
     T --> R[reference-validator or refchecker]
 
-    K --> LS[skills/imported/literature-search]
+    K --> LS[skills/imported/literature_search]
     K --> AW[skills/imported/academic_writer]
     K --> LA[skills/local/reporting-audit]
     K --> CP[skills/local/citation-pipeline]
