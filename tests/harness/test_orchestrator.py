@@ -6,6 +6,7 @@ from tests.harness.mocks import (
     InMemoryActionRunner,
     InMemoryArtifactChecker,
     InMemoryStateRepository,
+    create_mock_wrappers,
 )
 
 
@@ -19,7 +20,8 @@ def _create_orchestrator() -> tuple[
     manager = StateManager(repo)
     checker = InMemoryArtifactChecker()
     action_runner = InMemoryActionRunner(checker)
-    orch = Orchestrator(Path("/mock_root"), manager, checker, action_runner)
+    wrappers = create_mock_wrappers()
+    orch = Orchestrator(Path("/mock_root"), manager, checker, action_runner, wrappers)
     return orch, repo, checker, action_runner
 
 

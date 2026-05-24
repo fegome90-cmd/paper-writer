@@ -1,0 +1,27 @@
+---
+title: "Manuscript Title"
+author: "Author Name"
+date: today
+bibliography: references.bib
+format:
+  docx: default
+  pdf:
+    documentclass: article
+    keep-tex: true
+---
+
+# Introduction
+
+Placeholder — content will be drafted by the academic-writer skill.
+
+# Methods
+
+Placeholder — content will be drafted by the academic-writer skill.
+
+# Results
+
+Placeholder — content will be drafted by the academic-writer skill.
+
+# Discussion
+
+Placeholder — content will be drafted by the academic-writer skill.

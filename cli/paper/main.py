@@ -8,6 +8,13 @@ from harness.adapters.filesystem_artifact_checker import FilesystemArtifactCheck
 from harness.adapters.yaml_repository import YamlFileStateRepository
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.state_manager import StateManager
+from integrations.tools import (  # noqa: IRIX
+    BibliographyNormalizer,
+    RefsMetadataValidator,
+    RefsValidator,
+    ReportingAuditor,
+    StyleLinter,
+)
 
 
 def main() -> None:
@@ -105,7 +112,16 @@ def main() -> None:
     checker = FilesystemArtifactChecker(repo_path)
     action_runner = FilesystemActionRunner(repo_path)
 
-    orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner)
+    # Wire tool wrappers
+    wrappers = {
+        "lint_bib": BibliographyNormalizer(),
+        "check_refs": RefsValidator(),
+        "check_refs_metadata": RefsMetadataValidator(),
+        "lint_style": StyleLinter(),
+        "audit_reporting": ReportingAuditor(),
+    }
+
+    orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner, wrappers)
     result = orchestrator.execute(request)
 
     # Format outputs

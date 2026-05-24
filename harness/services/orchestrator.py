@@ -5,6 +5,7 @@ from typing import Any
 from harness.domain.state import ManuscriptState
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
+from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper
 from harness.services.gates import (
     GateResult,
     validate_outline_drafted,
@@ -57,11 +58,13 @@ class Orchestrator:
         state_manager: StateManager,
         checker: ArtifactChecker,
         action_runner: ActionRunner,
+        wrappers: dict[str, ToolWrapper] | None = None,
     ) -> None:
         self.repo_path = repo_path
         self.state_manager = state_manager
         self.checker = checker
         self.action_runner = action_runner
+        self.wrappers = wrappers or {}
 
     def execute(self, request: OrchestratorRequest) -> OrchestratorResult:
         """Executes a command by loading state, validating, and updating gates."""
@@ -82,15 +85,14 @@ class Orchestrator:
         # 1. PREPARE PHASE: Load state and check preconditions
         # ----------------------------------------------------
 
-        # Bootstrap state if command is init and state does not exist yet
+        # Bootstrap state if command is init and state does not exist yet.
+        # IMPORTANT: all gates start False. repo_initialized is only set
+        # AFTER the verify phase confirms the scaffold exists.
         if request.command == "init" and not self.state_manager.exists():
             try:
                 self.state_manager.state = ManuscriptState(
                     stage="bootstrap",
-                    gates={
-                        gate: (gate == "repo_initialized")
-                        for gate in ManuscriptState.REQUIRED_GATES
-                    },
+                    gates=dict.fromkeys(ManuscriptState.REQUIRED_GATES, False),
                 )
                 self.state_manager.save_state()
             except Exception as e:
@@ -278,7 +280,12 @@ class Orchestrator:
             )
 
     def _run_gate_verification(self, request: OrchestratorRequest) -> list[GateResult]:
-        """Invokes the gate verifiers corresponding to the executed command."""
+        """Invokes the gate verifiers corresponding to the executed command.
+
+        For validation commands (lint_bib, check_refs, lint_style, audit_reporting),
+        uses real ToolWrapper instances instead of inline mocked results.
+        If no wrapper is registered for a command, fails closed with an explicit blocker.
+        """
         cmd = request.command
 
         if cmd == "init":
@@ -292,29 +299,16 @@ class Orchestrator:
         elif cmd == "draft_section":
             return [validate_sections_completed(self.checker)]
         elif cmd == "lint_bib":
-            result_mock = {
-                "status": "pass",
-                "findings": [],
-                "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
-            }
-            return [validate_validator_gate("bib_normalized", result_mock)]
+            return [self._run_wrapper_gate("lint_bib")]
         elif cmd == "check_refs":
-            result_mock = {
-                "status": "pass",
-                "findings": [],
-                "artifacts_checked": [self.checker.get_full_path_str("templates/references.bib")],
-            }
-            # Return both gates explicitly rather than side-effecting inside the verifier
             return [
-                validate_validator_gate("citations_resolved", result_mock),
-                validate_validator_gate("refs_validated", result_mock),
+                self._run_wrapper_gate("check_refs", gate_override="citations_resolved"),
+                self._run_wrapper_gate("check_refs_metadata", gate_override="refs_validated"),
             ]
         elif cmd == "lint_style":
-            result_mock = {"status": "pass", "findings": [], "artifacts_checked": []}
-            return [validate_validator_gate("style_passed", result_mock)]
+            return [self._run_wrapper_gate("lint_style")]
         elif cmd == "audit_reporting":
-            result_mock = {"status": "pass", "findings": [], "artifacts_checked": []}
-            return [validate_validator_gate("reporting_passed", result_mock)]
+            return [self._run_wrapper_gate("audit_reporting")]
         elif cmd == "render":
             return [validate_render_passed(self.checker)]
         elif cmd == "verify":
@@ -353,6 +347,77 @@ class Orchestrator:
         elif command == "verify":
             return "verified"
         return None
+
+    def _run_wrapper_gate(self, command: str, gate_override: str | None = None) -> GateResult:
+        """Run a tool wrapper and convert its ValidatorResult to a GateResult.
+
+        Fails closed if:
+        - No wrapper is registered for the command
+        - The wrapper raises ToolNotAvailableError
+        - The wrapper returns status=fail
+        """
+        wrapper = self.wrappers.get(command)
+
+        if wrapper is None:
+            gate_name = gate_override or command
+            return GateResult(
+                gate=gate_name,
+                status="fail",
+                blockers=[f"No tool wrapper registered for command '{command}'."],
+                warnings=[],
+                artifacts=[],
+            )
+
+        gate_name = gate_override or wrapper.gate
+
+        try:
+            artifacts_input = self._build_wrapper_artifacts(command)
+            context = {"cwd": str(self.repo_path)}
+
+            validator_result = wrapper.run(artifacts_input, context)
+
+            # Convert ValidatorResult to the dict format expected by validate_validator_gate
+            result_dict = validator_result.to_dict()
+            return validate_validator_gate(gate_name, result_dict)
+
+        except ToolNotAvailableError as e:
+            return GateResult(
+                gate=gate_name,
+                status="fail",
+                blockers=[
+                    f"Tool not available for gate '{gate_name}': {e}. "
+                    f"Install '{e.tool_name}' to enable this validation."
+                ],
+                warnings=[],
+                artifacts=[],
+            )
+        except Exception as e:
+            return GateResult(
+                gate=gate_name,
+                status="fail",
+                blockers=[f"Wrapper '{wrapper.name}' failed: {e}"],
+                warnings=[],
+                artifacts=[],
+            )
+
+    def _build_wrapper_artifacts(self, command: str) -> dict[str, Any]:
+        """Build the artifacts input dict for a tool wrapper based on command."""
+        bib_path = self.checker.get_full_path_str("templates/references.bib")
+        draft_dir = self.repo_path / "outputs" / "drafts"
+        manuscript_files = (
+            [str(f) for f in sorted(draft_dir.glob("*.md"))] if draft_dir.is_dir() else []
+        )
+
+        base: dict[str, Any] = {
+            "bibliography": bib_path,
+            "manuscript_files": manuscript_files,
+        }
+
+        if command == "audit_reporting":
+            outline_path = self.checker.get_full_path_str("outputs/drafts/outline.md")
+            base["outline"] = outline_path
+
+        return base
 
     def _build_fail_result(
         self,

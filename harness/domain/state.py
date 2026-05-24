@@ -63,7 +63,14 @@ class ManuscriptState:
     }
 
     def validate(self) -> None:
-        """Enforces schema invariants of the manuscript state."""
+        """Enforces schema invariants and stage-gates consistency.
+
+        Checks:
+        1. Stage name is valid
+        2. All required gates present and boolean-typed
+        3. Stage preconditions are consistent with gate values
+           (a stage cannot be entered unless its precondition gates are True)
+        """
         if self.stage not in self.VALID_STAGES:
             raise DomainStateError(f"Invalid stage name: {self.stage}")
 
@@ -79,6 +86,31 @@ class ManuscriptState:
                 raise DomainStateError(f"Unknown gate key: {gate}")
             if not isinstance(value, bool):
                 raise DomainStateError(f"Gate '{gate}' value must be boolean.")
+
+        # Stage-gates consistency: precondition gates for the current stage
+        # must be True. This detects states where e.g. stage=rendering but
+        # bib_normalized=False (an impossible state if transitions are correct).
+        self._validate_stage_consistency()
+
+    def _validate_stage_consistency(self) -> None:
+        """Checks that the current stage's precondition gates are all True.
+
+        For each stage, STAGE_PRECONDITIONS defines the gates required to
+        ENTER that stage. If the system is AT a stage, those gates must be True.
+        The bootstrap stage has no preconditions, so it always passes.
+        """
+        preconditions = self.STAGE_PRECONDITIONS.get(self.stage, set())
+        violated: list[str] = []
+        for gate in preconditions:
+            if not self.gates.get(gate, False):
+                violated.append(gate)
+
+        if violated:
+            raise DomainStateError(
+                f"Stage-gates inconsistency at stage '{self.stage}': "
+                f"precondition gates not satisfied: {sorted(violated)}. "
+                f"A stage cannot be active unless its precondition gates are True."
+            )
 
     def set_gate(self, gate_name: str, value: bool) -> None:
         """Updates a single gate value."""

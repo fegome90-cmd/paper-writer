@@ -4,6 +4,7 @@ from harness.domain.state import ManuscriptState
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
 from harness.ports.state_repository import StateRepository, StateRepositoryError
+from integrations.tools.base import ToolWrapper, ValidatorResult
 
 
 class InMemoryStateRepository(StateRepository):
@@ -103,3 +104,50 @@ class InMemoryActionRunner(ActionRunner):
         manifest_path = "outputs/manifest.yaml"
         self.checker.existing_paths.add(manifest_path)
         return manifest_path
+
+
+class InMemoryToolWrapper(ToolWrapper):
+    """Mock tool wrapper for in-memory orchestrator tests.
+
+    Returns pass results for all validation commands.
+    Records calls for assertion in tests.
+    """
+
+    def __init__(self, gate: str, return_status: str = "pass") -> None:
+        self._gate = gate
+        self._return_status = return_status
+        self.calls: list[tuple[dict[str, Any], dict[str, Any]]] = []
+
+    @property
+    def name(self) -> str:
+        return f"mock-{self._gate}"
+
+    @property
+    def gate(self) -> str:
+        return self._gate
+
+    def is_available(self) -> bool:
+        return True
+
+    def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> "ValidatorResult":
+        from integrations.tools.base import ValidatorResult
+
+        self.calls.append((artifacts, context))
+        return ValidatorResult(
+            validator=self._gate,
+            status=self._return_status,
+            summary=f"Mock wrapper for {self._gate}: {self._return_status}",
+            findings=[],
+            artifacts_checked=artifacts.get("manuscript_files", []),
+        )
+
+
+def create_mock_wrappers() -> dict[str, ToolWrapper]:
+    """Create mock wrappers for all validation commands."""
+    return {
+        "lint_bib": InMemoryToolWrapper("bib_normalized"),
+        "check_refs": InMemoryToolWrapper("citations_resolved"),
+        "check_refs_metadata": InMemoryToolWrapper("refs_validated"),
+        "lint_style": InMemoryToolWrapper("style_passed"),
+        "audit_reporting": InMemoryToolWrapper("reporting_passed"),
+    }

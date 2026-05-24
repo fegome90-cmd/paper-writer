@@ -54,7 +54,8 @@ class StateManager:
         if not self.state:
             self.load_state()
 
-        assert self.state is not None  # for type checker
+        if self.state is None:
+            raise StateManagerError("State could not be loaded.")
         try:
             self.state.set_gate(gate_name, value)
             self.save_state()
@@ -66,7 +67,8 @@ class StateManager:
         if not self.state:
             self.load_state()
 
-        assert self.state is not None  # for type checker
+        if self.state is None:
+            raise StateManagerError("State could not be loaded.")
         try:
             self.state.transition_to(stage_name)
             self.save_state()
@@ -78,7 +80,8 @@ class StateManager:
         if not self.state:
             self.load_state()
 
-        assert self.state is not None  # for type checker
+        if self.state is None:
+            raise StateManagerError("State could not be loaded.")
         try:
             self.state.reset_downstream_gates(modified_artifact_type)
             self.save_state()
