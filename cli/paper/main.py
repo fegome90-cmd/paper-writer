@@ -10,6 +10,7 @@ from harness.services.orchestrator import Orchestrator, OrchestratorRequest, Orc
 from harness.services.state_manager import StateManager
 from integrations.tools import (  # noqa: IRIX
     BibliographyNormalizer,
+    PandocRenderer,
     RefsMetadataValidator,
     RefsValidator,
     ReportingAuditor,
@@ -119,6 +120,7 @@ def main() -> None:
         "check_refs_metadata": RefsMetadataValidator(),
         "lint_style": StyleLinter(),
         "audit_reporting": ReportingAuditor(),
+        "render": PandocRenderer(),
     }
 
     orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner, wrappers)

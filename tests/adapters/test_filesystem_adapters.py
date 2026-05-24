@@ -125,9 +125,8 @@ def test_action_runner_render(tmp_path: Path) -> None:
     runner = FilesystemActionRunner(tmp_path)
     artifacts = runner.run_action("render", {})
 
-    assert len(artifacts) == 2
-    assert (tmp_path / "outputs" / "render" / "manuscript.docx").is_file()
-    assert (tmp_path / "outputs" / "render" / "manuscript.pdf").is_file()
+    assert len(artifacts) == 1
+    assert (tmp_path / "outputs" / "render").is_dir()
 
 
 def test_action_runner_emit_manifest(tmp_path: Path) -> None:

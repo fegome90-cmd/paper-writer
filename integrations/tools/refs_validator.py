@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
+from validators.citations import validate_citation_consistency
 
 
 class RefsValidator(ToolWrapper):
@@ -53,11 +54,7 @@ class RefsValidator(ToolWrapper):
         artifacts_checked: list[str] = [str(bib_file)]
         findings: list[dict[str, Any]] = []
 
-        # Extract bib keys
-        bib_keys = self._extract_bib_keys(bib_file)
-        if bib_file.is_file():
-            pass  # keys extracted
-        else:
+        if not bib_file.is_file():
             findings.append(
                 {
                     "code": "file_not_found",
@@ -74,7 +71,10 @@ class RefsValidator(ToolWrapper):
                 artifacts_checked=artifacts_checked,
             )
 
-        # Extract citation keys from manuscript files
+        # Extract bib keys (I/O + parsing — wrapper responsibility)
+        bib_keys = self._extract_bib_keys(bib_file)
+
+        # Extract citation keys from manuscript files (I/O + parsing — wrapper responsibility)
         all_citation_keys: set[str] = set()
         for mf in manuscript_files:
             mf_path = Path(mf)
@@ -84,24 +84,15 @@ class RefsValidator(ToolWrapper):
             citation_keys = self._extract_citation_keys(mf_path)
             all_citation_keys.update(citation_keys)
 
-        # Check unresolved citations
-        unresolved = all_citation_keys - bib_keys
-        if unresolved:
-            for key in sorted(unresolved):
-                findings.append(
-                    {
-                        "code": "unresolved_citation",
-                        "severity": "error",
-                        "message": f"Citation key '{key}' not found in bibliography.",
-                        "location": key,
-                    }
-                )
+        # Delegate validation logic to domain validator
+        findings.extend(validate_citation_consistency(bib_keys, all_citation_keys))
 
         status = "fail" if any(f["severity"] == "error" for f in findings) else "pass"
+        unresolved_count = len(all_citation_keys - bib_keys)
         summary = (
             f"All {len(all_citation_keys)} citations resolve."
             if status == "pass"
-            else f"{len(unresolved)} unresolved citation(s) out of {len(all_citation_keys)}."
+            else f"{unresolved_count} unresolved citation(s) out of {len(all_citation_keys)}."
         )
 
         return ValidatorResult(
@@ -117,13 +108,11 @@ class RefsValidator(ToolWrapper):
         if not bib_file.is_file():
             return set()
         content = bib_file.read_text(encoding="utf-8", errors="replace")
-        # @type{key, or @type{key }
         return set(re.findall(r"@\w+\s*\{\s*([^,\s]+)", content, re.IGNORECASE))
 
     def _extract_citation_keys(self, manuscript_file: Path) -> set[str]:
         """Extract citation keys from a manuscript file."""
         content = manuscript_file.read_text(encoding="utf-8", errors="replace")
-        # \\cite{key1, key2} and @key patterns
         keys: set[str] = set()
         # LaTeX-style: \cite{key1, key2}
         for match in re.finditer(r"\\cite\{([^}]+)\}", content):

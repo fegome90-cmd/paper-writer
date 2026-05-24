@@ -1,10 +1,14 @@
 import datetime
+import logging
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from harness.ports.action_runner import ActionRunner
+from harness.services.assembler import assemble_manuscript
+
+logger = logging.getLogger(__name__)
 
 
 class FilesystemActionRunner(ActionRunner):
@@ -119,14 +123,11 @@ class FilesystemActionRunner(ActionRunner):
         elif command == "render":
             render_dir = self._resolve("outputs/render")
             render_dir.mkdir(parents=True, exist_ok=True)
-
-            docx_file = self._resolve("outputs/render/manuscript.docx")
-            docx_file.touch(exist_ok=True)
-
-            pdf_file = self._resolve("outputs/render/manuscript.pdf")
-            pdf_file.touch(exist_ok=True)
-
-            artifacts.extend([str(docx_file), str(pdf_file)])
+            draft_dir = self._resolve("outputs/drafts")
+            manuscript_path = assemble_manuscript(draft_dir)
+            if manuscript_path.is_file():
+                artifacts.append(str(manuscript_path))
+            artifacts.append(str(render_dir))
 
         return artifacts
 

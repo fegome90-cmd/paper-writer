@@ -150,4 +150,5 @@ def create_mock_wrappers() -> dict[str, ToolWrapper]:
         "check_refs_metadata": InMemoryToolWrapper("refs_validated"),
         "lint_style": InMemoryToolWrapper("style_passed"),
         "audit_reporting": InMemoryToolWrapper("reporting_passed"),
+        "render": InMemoryToolWrapper("render_passed"),
     }

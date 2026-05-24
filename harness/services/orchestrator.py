@@ -10,7 +10,6 @@ from harness.services.gates import (
     GateResult,
     validate_outline_drafted,
     validate_ready_for_delivery,
-    validate_render_passed,
     validate_repo_initialized,
     validate_screened_evidence,
     validate_search_completed,
@@ -310,7 +309,7 @@ class Orchestrator:
         elif cmd == "audit_reporting":
             return [self._run_wrapper_gate("audit_reporting")]
         elif cmd == "render":
-            return [validate_render_passed(self.checker)]
+            return [self._run_wrapper_gate("render")]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
             return [validate_ready_for_delivery(self.checker, state_gates)]
@@ -416,6 +415,19 @@ class Orchestrator:
         if command == "audit_reporting":
             outline_path = self.checker.get_full_path_str("outputs/drafts/outline.md")
             base["outline"] = outline_path
+
+        if command == "render":
+            render_dir = self.repo_path / "outputs" / "render"
+            base["output_dir"] = str(render_dir)
+            # Priority: assembled manuscript (real content) > placeholder template
+            assembled = draft_dir / "manuscript.md"
+            manuscript_qmd = self.repo_path / "templates" / "manuscript.qmd"
+            if assembled.is_file():
+                base["manuscript"] = str(assembled)
+            elif manuscript_qmd.is_file():
+                base["manuscript"] = str(manuscript_qmd)
+            elif manuscript_files:
+                base["manuscript"] = manuscript_files[0]
 
         return base
 

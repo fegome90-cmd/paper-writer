@@ -14,6 +14,7 @@ and return ValidatorResult objects consumed by the gate system.
 
 from integrations.tools.base import ToolNotAvailableError, ToolWrapper, ValidatorResult
 from integrations.tools.bibtex_tidy import BibliographyNormalizer
+from integrations.tools.pandoc import PandocRenderer
 from integrations.tools.refs_metadata_validator import RefsMetadataValidator
 from integrations.tools.refs_validator import RefsValidator
 from integrations.tools.reporting_auditor import ReportingAuditor
@@ -21,6 +22,7 @@ from integrations.tools.vale import StyleLinter
 
 __all__ = [
     "BibliographyNormalizer",
+    "PandocRenderer",
     "RefsMetadataValidator",
     "RefsValidator",
     "ReportingAuditor",

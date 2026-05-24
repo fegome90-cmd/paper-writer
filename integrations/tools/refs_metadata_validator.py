@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
+from validators.refs import validate_refs_metadata
 
 
 class RefsMetadataValidator(ToolWrapper):
@@ -73,7 +74,7 @@ class RefsMetadataValidator(ToolWrapper):
                 artifacts_checked=artifacts_checked,
             )
 
-        # Parse entries into key → dict of fields
+        # Parse entries (I/O + parsing — wrapper responsibility)
         content = bib_file.read_text(encoding="utf-8", errors="replace")
         entries = self._parse_entries(content)
 
@@ -94,34 +95,8 @@ class RefsMetadataValidator(ToolWrapper):
                 artifacts_checked=artifacts_checked,
             )
 
-        # Validate each entry
-        for key, fields in entries.items():
-            has_year = "year" in fields
-            has_doi = "doi" in fields
-            has_url = "url" in fields
-
-            if not has_year:
-                findings.append(
-                    {
-                        "code": "missing_year",
-                        "severity": "error",
-                        "message": f"Entry '{key}' is missing a 'year' field.",
-                        "location": key,
-                    }
-                )
-
-            if not has_doi and not has_url:
-                findings.append(
-                    {
-                        "code": "no_persistent_id",
-                        "severity": "error",
-                        "message": (
-                            f"Entry '{key}' has neither 'doi' nor 'url'. "
-                            f"At least one persistent identifier is required."
-                        ),
-                        "location": key,
-                    }
-                )
+        # Delegate validation logic to domain validator
+        findings.extend(validate_refs_metadata(entries))
 
         error_count = sum(1 for f in findings if f["severity"] == "error")
 

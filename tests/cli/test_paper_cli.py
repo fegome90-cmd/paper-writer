@@ -126,6 +126,14 @@ def test_cli_full_pipeline(
     captured = capsys.readouterr()
     assert "to 'verified'" in captured.out
 
+    # Verify the assembled manuscript was created and used for rendering
+    assembled = tmp_path / "outputs" / "drafts" / "manuscript.md"
+    assert assembled.is_file(), "Assembled manuscript should exist after render"
+    assembled_content = assembled.read_text(encoding="utf-8")
+    assert "smith2024voice" in assembled_content, (
+        "Assembled manuscript must contain real draft content with citation keys"
+    )
+
     # 8. Verify
     monkeypatch.setattr(sys, "argv", ["paper", "verify"])
     with pytest.raises(SystemExit) as exc_info:

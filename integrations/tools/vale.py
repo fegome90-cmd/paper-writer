@@ -4,11 +4,11 @@ Runs Vale (or built-in prose checks) against manuscript drafts.
 Returns structured findings for the style_passed gate.
 """
 
-import re
 from pathlib import Path
 from typing import Any
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
+from validators.style import validate_style
 
 
 class StyleLinter(ToolWrapper):
@@ -132,43 +132,6 @@ class StyleLinter(ToolWrapper):
         return findings
 
     def _builtin_lint(self, file_path: Path) -> list[dict[str, Any]]:
-        """Built-in prose checks when Vale is not available."""
-        findings: list[dict[str, Any]] = []
+        """Built-in prose checks using domain style validator."""
         content = file_path.read_text(encoding="utf-8", errors="replace")
-
-        # Check for passive voice patterns
-        passive_patterns = [
-            (r"\bwas\s+\w+ed\b", "passive_voice"),
-            (r"\bwere\s+\w+ed\b", "passive_voice"),
-            (r"\bis\s+\w+ed\b", "passive_voice"),
-            (r"\bare\s+\w+ed\b", "passive_voice"),
-            (r"\bbeen\s+\w+ed\b", "passive_voice"),
-        ]
-        for pattern, code in passive_patterns:
-            for match in re.finditer(pattern, content, re.IGNORECASE):
-                line_num = content[: match.start()].count("\n") + 1
-                findings.append(
-                    {
-                        "code": code,
-                        "severity": "warning",
-                        "message": f"Possible passive voice: '{match.group()}'",
-                        "artifact": str(file_path),
-                        "location": f"line {line_num}",
-                    }
-                )
-
-        # Check for very long sentences (>40 words)
-        sentences = re.split(r"[.!?]+", content)
-        for sentence in sentences:
-            words = sentence.split()
-            if len(words) > 40:
-                findings.append(
-                    {
-                        "code": "long_sentence",
-                        "severity": "warning",
-                        "message": f"Sentence has {len(words)} words (max 40 recommended).",
-                        "artifact": str(file_path),
-                    }
-                )
-
-        return findings
+        return validate_style(content, file_label=str(file_path))
