@@ -8,6 +8,7 @@ from harness.ports.artifact_checker import ArtifactChecker
 from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper
 from harness.services.gates import (
     GateResult,
+    validate_bib_normalized,
     validate_outline_drafted,
     validate_ready_for_delivery,
     validate_repo_initialized,
@@ -264,6 +265,7 @@ class Orchestrator:
             "lint_style": "validating",
             "audit_reporting": "validating",
             "render": "rendering",
+            "import_bib": "bootstrap",
             "verify": "verified",
         }
 
@@ -309,7 +311,12 @@ class Orchestrator:
         elif cmd == "audit_reporting":
             return [self._run_wrapper_gate("audit_reporting")]
         elif cmd == "render":
-            return [self._run_wrapper_gate("render")]
+            return [self._run_wrapper_gate("render", request_args=request.args)]
+        elif cmd == "import_bib":
+            return [
+                self._run_wrapper_gate("import_bib", request_args=request.args),
+                validate_bib_normalized(self.checker),
+            ]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
             return [validate_ready_for_delivery(self.checker, state_gates)]
@@ -347,7 +354,12 @@ class Orchestrator:
             return "verified"
         return None
 
-    def _run_wrapper_gate(self, command: str, gate_override: str | None = None) -> GateResult:
+    def _run_wrapper_gate(
+        self,
+        command: str,
+        gate_override: str | None = None,
+        request_args: dict[str, Any] | None = None,
+    ) -> GateResult:
         """Run a tool wrapper and convert its ValidatorResult to a GateResult.
 
         Fails closed if:
@@ -370,7 +382,12 @@ class Orchestrator:
         gate_name = gate_override or wrapper.gate
 
         try:
-            artifacts_input = self._build_wrapper_artifacts(command)
+            if request_args:
+                artifacts_input = self._build_wrapper_artifacts_with_args(
+                    command, request_args
+                )
+            else:
+                artifacts_input = self._build_wrapper_artifacts(command)
             context = {"cwd": str(self.repo_path)}
 
             validator_result = wrapper.run(artifacts_input, context)
@@ -428,6 +445,28 @@ class Orchestrator:
                 base["manuscript"] = str(manuscript_qmd)
             elif manuscript_files:
                 base["manuscript"] = manuscript_files[0]
+
+        return base
+
+    def _build_wrapper_artifacts_with_args(
+        self, command: str, request_args: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Build artifacts dict including CLI-passed render/import options."""
+        base = self._build_wrapper_artifacts(command)
+
+        if command == "render":
+            if "output_formats" in request_args:
+                base["output_formats"] = request_args["output_formats"]
+            if request_args.get("csl"):
+                base["csl"] = request_args["csl"]
+            if request_args.get("reference_doc"):
+                base["reference_doc"] = request_args["reference_doc"]
+
+        if command == "import_bib":
+            base["source_bib"] = request_args.get("source_bib", "")
+            base["target_bib"] = request_args.get(
+                "target_bib", "templates/references.bib"
+            )
 
         return base
 

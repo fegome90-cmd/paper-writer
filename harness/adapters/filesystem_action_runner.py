@@ -197,7 +197,7 @@ class FilesystemActionRunner(ActionRunner):
                     f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
-        elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
+        elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting", "import_bib"]:
             log_dir = self._resolve("outputs/logs")
             log_dir.mkdir(parents=True, exist_ok=True)
             log_file = self._resolve(f"outputs/logs/{command}.log")

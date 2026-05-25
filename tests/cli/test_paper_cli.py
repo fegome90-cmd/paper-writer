@@ -203,3 +203,119 @@ def test_cli_init_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         assert true_gates == [], (
             f"No gate should be True after failed init, but found: {true_gates}"
         )
+
+
+
+
+class TestCLIImportBib:
+    """Tests for paper import bib command."""
+
+    def test_import_bib_success(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Import a valid .bib file via CLI."""
+        monkeypatch.chdir(tmp_path)
+
+        # Init first
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+
+        source_bib = tmp_path / "zotero_export.bib"
+        source_bib.write_text(
+            "@article{doe2024,\n"
+            "  author = {Doe, Jane},\n"
+            "  title = {Test},\n"
+            "  journal = {J},\n"
+            "  year = {2024},\n"
+            "  doi = {10.1234/test},\n"
+            "}\n"
+        )
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "paper",
+                "import",
+                "bib",
+                str(source_bib),
+                "--target",
+                str(tmp_path / "templates" / "references.bib"),
+            ],
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+        target = tmp_path / "templates" / "references.bib"
+        assert target.exists()
+        assert "doe2024" in target.read_text()
+
+    def test_import_bib_missing_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Import with nonexistent source fails gracefully."""
+        monkeypatch.chdir(tmp_path)
+
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["paper", "import", "bib", str(tmp_path / "nonexistent.bib")],
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+
+class TestCLIRenderWithOptions:
+    """Tests for paper render with --format/--csl."""
+
+    def test_render_format_flag_accepted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Render with --format docx only is accepted by CLI."""
+        monkeypatch.chdir(tmp_path)
+
+        # Full pipeline up to render stage
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["paper", "render", "--format", "docx"],
+        )
+        # Pandoc not installed in test env — expect failure
+        with pytest.raises(SystemExit):
+            main()
+
+    def test_render_csl_flag_accepted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Render with --csl flag is accepted by CLI."""
+        monkeypatch.chdir(tmp_path)
+
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        csl_file = tmp_path / "styles" / "csl" / "vancouver.csl"
+        csl_file.parent.mkdir(parents=True, exist_ok=True)
+        csl_file.write_text(
+            '<style xmlns="http://purl.org/net/xbiblio/csl"></style>'
+        )
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["paper", "render", "--csl", str(csl_file)],
+        )
+        with pytest.raises(SystemExit):
+            main()

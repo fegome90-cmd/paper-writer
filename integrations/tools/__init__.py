@@ -19,6 +19,7 @@ from integrations.tools.refs_metadata_validator import RefsMetadataValidator
 from integrations.tools.refs_validator import RefsValidator
 from integrations.tools.reporting_auditor import ReportingAuditor
 from integrations.tools.vale import StyleLinter
+from integrations.tools.zotero_import import ZoteroImporter
 
 __all__ = [
     "BibliographyNormalizer",
@@ -30,4 +31,5 @@ __all__ = [
     "ToolNotAvailableError",
     "ToolWrapper",
     "ValidatorResult",
+    "ZoteroImporter",
 ]

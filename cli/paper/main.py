@@ -8,13 +8,14 @@ from harness.adapters.filesystem_artifact_checker import FilesystemArtifactCheck
 from harness.adapters.yaml_repository import YamlFileStateRepository
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.state_manager import StateManager
-from integrations.tools import (  # noqa: IRIX
+from integrations.tools import (
     BibliographyNormalizer,
     PandocRenderer,
     RefsMetadataValidator,
     RefsValidator,
     ReportingAuditor,
     StyleLinter,
+    ZoteroImporter,
 )
 from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
 
@@ -26,7 +27,12 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # paper init
-    subparsers.add_parser("init", help="Initialize repository and state.")
+    init_parser = subparsers.add_parser("init", help="Initialize repository and state.")
+    init_parser.add_argument(
+        "--preset",
+        default=None,
+        help="Journal preset name (e.g. 'nature'). Loads from templates/journals/<name>/.",
+    )
 
     # paper search
     subparsers.add_parser("search", help="Execute scientific literature search.")
@@ -61,8 +67,39 @@ def main() -> None:
     audit_sub = audit_parser.add_subparsers(dest="subcommand", required=True)
     audit_sub.add_parser("reporting", help="Audit manuscript against reporting checklists.")
 
+    # paper import
+    import_parser = subparsers.add_parser("import", help="Import external resources.")
+    import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
+    import_bib = import_sub.add_parser(
+        "bib", help="Import .bib from Zotero/Better BibTeX export."
+    )
+    import_bib.add_argument("source", help="Path to source .bib file to import.")
+    import_bib.add_argument(
+        "--target",
+        default="templates/references.bib",
+        help="Target bibliography path (default: templates/references.bib).",
+    )
+
     # paper render
-    subparsers.add_parser("render", help="Render final output formats.")
+    render_parser = subparsers.add_parser("render", help="Render final output formats.")
+    render_parser.add_argument(
+        "--format",
+        dest="formats",
+        action="append",
+        choices=["docx", "pdf"],
+        default=None,
+        help="Output format(s). Can be repeated. Default: docx and pdf.",
+    )
+    render_parser.add_argument(
+        "--csl",
+        default=None,
+        help="Path to CSL citation style file (e.g. styles/csl/vancouver.csl).",
+    )
+    render_parser.add_argument(
+        "--reference-doc",
+        default=None,
+        help="Path to reference docx for styling.",
+    )
 
     # paper verify
     subparsers.add_parser("verify", help="Run final verification check.")
@@ -77,7 +114,9 @@ def main() -> None:
     orch_args: dict[str, Any] = {}
     failure_policy = "stop_on_error"
 
-    if cmd_name == "draft":
+    if cmd_name == "init":
+        orch_args["preset"] = args.preset
+    elif cmd_name == "draft":
         if sub_name == "outline":
             orch_command = "draft_outline"
         elif sub_name == "section":
@@ -97,6 +136,15 @@ def main() -> None:
         failure_policy = "continue_on_error"
         if sub_name == "reporting":
             orch_command = "audit_reporting"
+    elif cmd_name == "import":
+        if sub_name == "bib":
+            orch_command = "import_bib"
+            orch_args["source_bib"] = args.source
+            orch_args["target_bib"] = args.target
+    elif cmd_name == "render":
+        orch_args["output_formats"] = args.formats if args.formats else ["docx", "pdf"]
+        orch_args["csl"] = args.csl
+        orch_args["reference_doc"] = args.reference_doc
 
     request = OrchestratorRequest(
         command=orch_command,
@@ -120,7 +168,7 @@ def main() -> None:
     }
     action_runner = FilesystemActionRunner(repo_path, skill_adapters=skill_adapters)
 
-    # Wire tool wrappers
+    # Wire tool wrappers — includes ZoteroImporter
     wrappers = {
         "lint_bib": BibliographyNormalizer(),
         "check_refs": RefsValidator(),
@@ -128,6 +176,7 @@ def main() -> None:
         "lint_style": StyleLinter(),
         "audit_reporting": ReportingAuditor(),
         "render": PandocRenderer(),
+        "import_bib": ZoteroImporter(),
     }
 
     orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner, wrappers)
