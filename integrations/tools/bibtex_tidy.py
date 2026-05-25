@@ -5,6 +5,7 @@ and validate the references.bib file. Returns structured findings
 consumed by the gate system.
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -66,8 +67,6 @@ class BibliographyNormalizer(ToolWrapper):
 
         # Try bibtex-tidy first
         try:
-            import subprocess
-
             result = subprocess.run(
                 ["bibtex-tidy", str(bib_file), "--modify", "--sort"],
                 capture_output=True,
@@ -85,7 +84,7 @@ class BibliographyNormalizer(ToolWrapper):
         except FileNotFoundError:
             # bibtex-tidy not installed — run built-in validation
             return self._builtin_validate(bib_file, bib_path)
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             return ValidatorResult(
                 validator="bibliography",
                 status="fail",

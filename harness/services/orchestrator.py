@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from harness.domain.state import ManuscriptState
+from harness.domain.state import DomainStateError, ManuscriptState
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
 from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper
@@ -94,7 +94,7 @@ class Orchestrator:
                     gates=dict.fromkeys(ManuscriptState.REQUIRED_GATES, False),
                 )
                 self.state_manager.save_state()
-            except Exception as e:
+            except (DomainStateError, StateManagerError) as e:
                 msg = f"Failed to bootstrap state: {e}"
                 blockers.append(msg)
                 steps.append({"step_id": "bootstrap_state", "status": "failed", "error": msg})
@@ -121,7 +121,7 @@ class Orchestrator:
         try:
             self._validate_preconditions(request.command, stage_before)
             steps.append({"step_id": "validate_preconditions", "status": "succeeded"})
-        except Exception as e:
+        except ValueError as e:
             msg = f"Precondition failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "validate_preconditions", "status": "failed", "error": msg})
@@ -138,7 +138,7 @@ class Orchestrator:
             action_artifacts = self.action_runner.run_action(request.command, request.args)
             artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
-        except Exception as e:
+        except (ValueError, StateManagerError, DomainStateError, OSError) as e:
             msg = f"Action failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "run_core_action", "status": "failed", "error": msg})
@@ -212,7 +212,7 @@ class Orchestrator:
 
             steps.append({"step_id": "persist_state", "status": "succeeded"})
 
-        except Exception as e:
+        except (ValueError, StateManagerError, DomainStateError) as e:
             msg = f"Verification/Persistence failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "persist_state", "status": "failed", "error": msg})
@@ -390,7 +390,7 @@ class Orchestrator:
                 warnings=[],
                 artifacts=[],
             )
-        except Exception as e:
+        except (ValueError, OSError, RuntimeError) as e:
             return GateResult(
                 gate=gate_name,
                 status="fail",

@@ -18,48 +18,54 @@ class ManuscriptState:
     stage: str
     gates: dict[str, bool] = field(default_factory=dict)
 
-    VALID_STAGES: ClassVar[set[str]] = {
-        "bootstrap",
-        "search",
-        "screen",
-        "outline",
-        "drafting",
-        "validating",
-        "rendering",
-        "verified",
-    }
+    VALID_STAGES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "bootstrap",
+            "search",
+            "screen",
+            "outline",
+            "drafting",
+            "validating",
+            "rendering",
+            "verified",
+        }
+    )
 
-    REQUIRED_GATES: ClassVar[set[str]] = {
-        "repo_initialized",
-        "search_completed",
-        "screened_evidence",
-        "outline_drafted",
-        "sections_completed",
-        "bib_normalized",
-        "citations_resolved",
-        "refs_validated",
-        "style_passed",
-        "reporting_passed",
-        "render_passed",
-        "ready_for_delivery",
-    }
-
-    # Preconditions required to ENTER a stage
-    STAGE_PRECONDITIONS: ClassVar[dict[str, set[str]]] = {
-        "bootstrap": set(),
-        "search": {"repo_initialized"},
-        "screen": {"search_completed"},
-        "outline": {"screened_evidence"},
-        "drafting": {"outline_drafted"},
-        "validating": {"sections_completed"},
-        "rendering": {
+    REQUIRED_GATES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "repo_initialized",
+            "search_completed",
+            "screened_evidence",
+            "outline_drafted",
+            "sections_completed",
             "bib_normalized",
             "citations_resolved",
             "refs_validated",
             "style_passed",
             "reporting_passed",
-        },
-        "verified": {"render_passed"},
+            "render_passed",
+            "ready_for_delivery",
+        }
+    )
+
+    # Preconditions required to ENTER a stage
+    STAGE_PRECONDITIONS: ClassVar[dict[str, frozenset[str]]] = {
+        "bootstrap": frozenset(),
+        "search": frozenset({"repo_initialized"}),
+        "screen": frozenset({"search_completed"}),
+        "outline": frozenset({"screened_evidence"}),
+        "drafting": frozenset({"outline_drafted"}),
+        "validating": frozenset({"sections_completed"}),
+        "rendering": frozenset(
+            {
+                "bib_normalized",
+                "citations_resolved",
+                "refs_validated",
+                "style_passed",
+                "reporting_passed",
+            }
+        ),
+        "verified": frozenset({"render_passed"}),
     }
 
     def validate(self) -> None:
@@ -99,7 +105,7 @@ class ManuscriptState:
         ENTER that stage. If the system is AT a stage, those gates must be True.
         The bootstrap stage has no preconditions, so it always passes.
         """
-        preconditions = self.STAGE_PRECONDITIONS.get(self.stage, set())
+        preconditions = self.STAGE_PRECONDITIONS.get(self.stage, frozenset())
         violated: list[str] = []
         for gate in preconditions:
             if not self.gates.get(gate, False):
@@ -123,7 +129,7 @@ class ManuscriptState:
         if stage_name not in self.VALID_STAGES:
             raise DomainStateError(f"Invalid target stage: {stage_name}")
 
-        preconditions = self.STAGE_PRECONDITIONS.get(stage_name, set())
+        preconditions = self.STAGE_PRECONDITIONS.get(stage_name, frozenset())
         for gate in preconditions:
             if not self.gates.get(gate, False):
                 raise DomainStateError(

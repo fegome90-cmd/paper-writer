@@ -59,9 +59,7 @@ class TestPandocMissingArtifact:
             renderer.run({}, {})
 
     @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
-    def test_missing_manuscript_file_raises(
-        self, mock_which: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_missing_manuscript_file_raises(self, mock_which: MagicMock, tmp_path: Path) -> None:
         renderer = PandocRenderer()
         with pytest.raises(ValueError, match="not found"):
             renderer.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})

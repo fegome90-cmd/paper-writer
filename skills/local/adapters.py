@@ -55,7 +55,7 @@ class LiteratureSearchAdapter(SkillAdapter):
             if command == "screen":
                 return self._handle_screen(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
-        except Exception as exc:
+        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
             return SkillResult(
                 adapter=self.name,
                 status="fail",
@@ -141,7 +141,7 @@ class AcademicWriterAdapter(SkillAdapter):
             if command == "draft_section":
                 return self._handle_draft_section(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
-        except Exception as exc:
+        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
             return SkillResult(
                 adapter=self.name,
                 status="fail",

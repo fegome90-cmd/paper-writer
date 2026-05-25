@@ -34,7 +34,7 @@ def run_gate(gate_name: str, checks: list[Check], artifacts: list[str]) -> GateR
     for check in checks:
         try:
             check.run_fn()
-        except Exception as e:
+        except (ValueError, FileNotFoundError, RuntimeError) as e:
             msg = f"{check.id}: {e}"
             if check.soft:
                 warnings.append(msg)

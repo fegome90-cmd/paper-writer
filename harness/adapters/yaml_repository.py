@@ -22,7 +22,7 @@ class YamlFileStateRepository(StateRepository):
         try:
             with open(self.file_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-        except Exception as e:
+        except (OSError, yaml.YAMLError) as e:
             raise StateRepositoryError(f"Failed to read/parse state file: {e}") from e
 
         if not isinstance(data, dict):
@@ -59,7 +59,7 @@ class YamlFileStateRepository(StateRepository):
                     sort_keys=False,
                 )
             tmp_path.replace(self.file_path)
-        except Exception as e:
+        except OSError as e:
             if tmp_path.exists():
                 tmp_path.unlink()
             raise StateRepositoryError(f"Failed to write state file atomically: {e}") from e

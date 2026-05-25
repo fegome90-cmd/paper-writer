@@ -4,8 +4,6 @@ Covers validators/refs.py, validators/citations.py, validators/style.py,
 validators/reporting.py, and validators/structure.py.
 """
 
-
-
 from validators.citations import validate_citation_consistency
 from validators.refs import validate_refs_metadata
 from validators.reporting import validate_reporting
@@ -210,9 +208,7 @@ class TestValidateReporting:
     def test_empty_section_error(self) -> None:
         sections = {"methods": ""}
         findings = validate_reporting(sections)
-        assert any(
-            f["code"] == "empty_section" and f["severity"] == "error" for f in findings
-        )
+        assert any(f["code"] == "empty_section" and f["severity"] == "error" for f in findings)
 
     def test_missing_study_design_keywords_warns(self) -> None:
         sections = {"methods": "We enrolled 50 participants. We discuss limitations."}
@@ -220,9 +216,7 @@ class TestValidateReporting:
         assert any(f["code"] == "missing_study_design" for f in findings)
 
     def test_missing_sample_size_keywords_warns(self) -> None:
-        sections = {
-            "methods": "A cross-sectional study. We acknowledge potential confounders."
-        }
+        sections = {"methods": "A cross-sectional study. We acknowledge potential confounders."}
         findings = validate_reporting(sections)
         assert any(f["code"] == "missing_sample_size" for f in findings)
 

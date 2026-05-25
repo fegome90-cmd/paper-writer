@@ -111,43 +111,45 @@ class PandocRenderer(ToolWrapper):
         """Run Pandoc for a single output format. Returns True on success."""
         cmd = self._build_command(manuscript, output_path, bibliography)
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120, check=False
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
             if result.returncode == 0 and output_path.exists():
                 artifacts_checked.append(str(output_path))
                 return True
 
             msg = result.stderr.strip() or f"Pandoc exited with code {result.returncode}"
-            findings.append({
-                "code": "pandoc_render_error",
-                "severity": "warning" if output_path.suffix == ".pdf" else "error",
-                "message": f"Failed to render {output_path.suffix}: {msg}",
-                "artifact": str(output_path),
-            })
+            findings.append(
+                {
+                    "code": "pandoc_render_error",
+                    "severity": "warning" if output_path.suffix == ".pdf" else "error",
+                    "message": f"Failed to render {output_path.suffix}: {msg}",
+                    "artifact": str(output_path),
+                }
+            )
             return False
 
         except subprocess.TimeoutExpired:
-            findings.append({
-                "code": "pandoc_timeout",
-                "severity": "error",
-                "message": f"Pandoc timed out rendering {output_path.suffix}.",
-                "artifact": str(output_path),
-            })
+            findings.append(
+                {
+                    "code": "pandoc_timeout",
+                    "severity": "error",
+                    "message": f"Pandoc timed out rendering {output_path.suffix}.",
+                    "artifact": str(output_path),
+                }
+            )
             return False
-        except Exception as exc:
-            findings.append({
-                "code": "pandoc_error",
-                "severity": "error",
-                "message": f"Unexpected error rendering {output_path.suffix}: {exc}",
-                "artifact": str(output_path),
-            })
+        except (OSError, subprocess.SubprocessError) as exc:
+            findings.append(
+                {
+                    "code": "pandoc_error",
+                    "severity": "error",
+                    "message": f"Unexpected error rendering {output_path.suffix}: {exc}",
+                    "artifact": str(output_path),
+                }
+            )
             return False
 
     @staticmethod
-    def _build_command(
-        manuscript: Path, output_path: Path, bibliography: str | None
-    ) -> list[str]:
+    def _build_command(manuscript: Path, output_path: Path, bibliography: str | None) -> list[str]:
         """Construct the Pandoc command-line invocation."""
         cmd: list[str] = ["pandoc", str(manuscript)]
         if bibliography:

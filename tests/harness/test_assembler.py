@@ -66,9 +66,10 @@ class TestAssembleManuscript:
 
         result = assemble_manuscript(draft_dir)
 
-        assert not result.is_file() or result.read_text(
-            encoding="utf-8"
-        ) == "Previous content that must survive"
+        assert (
+            not result.is_file()
+            or result.read_text(encoding="utf-8") == "Previous content that must survive"
+        )
 
     def test_handles_sections_with_existing_headers(self, tmp_path: Path) -> None:
         """Sections that already have markdown headers are included as-is."""

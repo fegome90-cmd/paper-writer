@@ -1,5 +1,5 @@
 # ruff: noqa: RUF002 N806
-"""  # noqa: RUF002
+"""# noqa: RUF002
 Scoring engine for literature-search skill.
 
 Provides domain models and scoring functions for systematic literature review:
@@ -63,13 +63,7 @@ class ScoringWeights:
     E_weight: float  # context applicability
 
     def __post_init__(self) -> None:
-        total = (
-            self.A_weight
-            + self.B_weight
-            + self.C_weight
-            + self.D_weight
-            + self.E_weight
-        )
+        total = self.A_weight + self.B_weight + self.C_weight + self.D_weight + self.E_weight
         if abs(total - 1.0) > 0.01:
             raise ValueError(f"Weights must sum to 1.0 (±0.01), got {total:.4f}")
 
@@ -415,9 +409,7 @@ def deduplicate(
                     # If this is below threshold, SequenceMatcher can
                     # never reach threshold. Integer arithmetic.
                     short, long = (
-                        (title_len, ptl_len)
-                        if title_len <= ptl_len
-                        else (ptl_len, title_len)
+                        (title_len, ptl_len) if title_len <= ptl_len else (ptl_len, title_len)
                     )
                     if short == 0 or (short * 200) < (short + long) * _t100:
                         continue

@@ -4,6 +4,7 @@ Runs Vale (or built-in prose checks) against manuscript drafts.
 Returns structured findings for the style_passed gate.
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -89,14 +90,13 @@ class StyleLinter(ToolWrapper):
 
     def _vale_available(self) -> bool:
         """Check if Vale CLI is installed."""
-        import subprocess
 
         try:
             result = subprocess.run(
                 ["vale", "--version"], capture_output=True, text=True, timeout=5
             )
             return result.returncode == 0
-        except (FileNotFoundError, Exception):
+        except (FileNotFoundError, OSError, subprocess.SubprocessError):
             return False
 
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
@@ -126,7 +126,7 @@ class StyleLinter(ToolWrapper):
                                 "location": f"line {alert.get('Line', '?')}",
                             }
                         )
-        except (json.JSONDecodeError, Exception):
+        except (json.JSONDecodeError, OSError, subprocess.SubprocessError):
             # Vale failed — fall back to built-in
             findings.extend(self._builtin_lint(file_path))
         return findings

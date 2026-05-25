@@ -87,23 +87,25 @@ def search(
         d_score = calculate_d_score(metrics)
         final_score = calculate_final_score(metrics, weights)
         tier = classify_tier(final_score)
-        scored_papers.append({
-            **paper,
-            "scoring": {
-                "d_score": d_score,
-                "final_score": final_score,
-                "tier": tier,
-                "population_score": metrics.population_score,
-                "intervention_score": metrics.intervention_score,
-                "outcome_score": metrics.outcome_score,
-                "context_score": metrics.context_score,
-                "evidence_score": metrics.evidence_score,
-                "sample_score": metrics.sample_score,
-                "journal_score": metrics.journal_score,
-                "citations_score": metrics.citations_score,
-                "coi_penalty": metrics.coi_penalty,
-            },
-        })
+        scored_papers.append(
+            {
+                **paper,
+                "scoring": {
+                    "d_score": d_score,
+                    "final_score": final_score,
+                    "tier": tier,
+                    "population_score": metrics.population_score,
+                    "intervention_score": metrics.intervention_score,
+                    "outcome_score": metrics.outcome_score,
+                    "context_score": metrics.context_score,
+                    "evidence_score": metrics.evidence_score,
+                    "sample_score": metrics.sample_score,
+                    "journal_score": metrics.journal_score,
+                    "citations_score": metrics.citations_score,
+                    "coi_penalty": metrics.coi_penalty,
+                },
+            }
+        )
 
     # 4. Write raw results (post-dedup, scored)
     results = {
@@ -179,7 +181,8 @@ def screen(
     tier_order = {"Tier 1": 1, "Tier 2": 2, "Tier 3": 3, "Discard": 4}
     min_level = tier_order.get(min_tier, 3)
     screened = [
-        p for p in all_papers
+        p
+        for p in all_papers
         if tier_order.get(p.get("scoring", {}).get("tier", "Discard"), 4) <= min_level
     ]
 

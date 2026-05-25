@@ -361,8 +361,13 @@ class TestManifestDrivenDrafting:
         manifest = load_manifest()
         sections = manifest["sections"]
         expected = [
-            "abstract", "introduction", "literature_review",
-            "methods", "results", "discussion", "conclusion",
+            "abstract",
+            "introduction",
+            "literature_review",
+            "methods",
+            "results",
+            "discussion",
+            "conclusion",
         ]
         for name in expected:
             assert name in sections, f"Missing section: {name}"
@@ -398,12 +403,12 @@ class TestManifestDrivenDrafting:
         drafts_dir.mkdir(parents=True)
 
         evidence = {
-            "query": "test", "total_raw": 0, "total_screened": 0,
+            "query": "test",
+            "total_raw": 0,
+            "total_screened": 0,
             "evidence": [],
         }
-        (search_dir / "screened_evidence.json").write_text(
-            json.dumps(evidence), encoding="utf-8"
-        )
+        (search_dir / "screened_evidence.json").write_text(json.dumps(evidence), encoding="utf-8")
         (drafts_dir / "outline.md").write_text("# Outline\n", encoding="utf-8")
         bib_path = tmp_path / "ref.bib"
         bib_path.write_text("", encoding="utf-8")
