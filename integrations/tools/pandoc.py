@@ -1,6 +1,7 @@
 """Pandoc rendering wrapper.
 
 Runs Pandoc to produce .docx and .pdf from manuscript sources.
+Supports CSL citation styles and reference doc templates.
 Returns structured findings for the render_passed gate.
 """
 
@@ -11,12 +12,26 @@ from typing import Any
 
 from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper, ValidatorResult
 
+# Supported output formats and their extensions
+SUPPORTED_FORMATS: dict[str, str] = {
+    "docx": ".docx",
+    "pdf": ".pdf",
+}
+
+# Default formats when output_formats is not specified
+DEFAULT_FORMATS: list[str] = ["docx", "pdf"]
+
 
 class PandocRenderer(ToolWrapper):
     """Renders manuscript to .docx and .pdf via Pandoc.
 
     Uses Pandoc if installed. Falls back to docx-only output if
     LaTeX (required for PDF) is not available.
+
+    Supports:
+    - ``output_formats``: list of formats to render (default: docx, pdf)
+    - ``csl``: path to a CSL citation style file
+    - ``reference_doc``: path to a reference docx for styling
     """
 
     @property
@@ -43,32 +58,43 @@ class PandocRenderer(ToolWrapper):
         manuscript = self._resolve_manuscript(artifacts)
         output_dir = self._resolve_output_dir(artifacts, manuscript)
         bibliography = artifacts.get("bibliography")
+        csl = artifacts.get("csl")
+        reference_doc = artifacts.get("reference_doc")
+        output_formats = self._resolve_formats(artifacts)
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         artifacts_checked: list[str] = [str(manuscript)]
         findings: list[dict[str, Any]] = []
 
-        # --- Render DOCX ---
-        docx_path = output_dir / "manuscript.docx"
-        docx_ok = self._render_format(
-            manuscript, docx_path, bibliography, artifacts_checked, findings
-        )
+        # Render each requested format
+        results: dict[str, bool] = {}
+        for fmt in output_formats:
+            ext = SUPPORTED_FORMATS.get(fmt, f".{fmt}")
+            output_path = output_dir / f"manuscript{ext}"
+            ok = self._render_format(
+                manuscript,
+                output_path,
+                bibliography,
+                csl,
+                reference_doc,
+                artifacts_checked,
+                findings,
+            )
+            results[fmt] = ok
 
-        # --- Render PDF ---
-        pdf_path = output_dir / "manuscript.pdf"
-        pdf_ok = self._render_format(
-            manuscript, pdf_path, bibliography, artifacts_checked, findings
-        )
+        # Determine status: docx must succeed, pdf is optional
+        docx_ok = results.get("docx", False)
+        pdf_ok = results.get("pdf", True)  # No pdf requested = not a failure
 
-        # Determine status
-        if not docx_ok:
+        if not docx_ok and "docx" in output_formats:
             status = "fail"
-        elif not pdf_ok:
+        elif not pdf_ok and "pdf" in output_formats:
             status = "warn"
         else:
             status = "pass"
 
-        summary = self._build_summary(docx_ok, pdf_ok, output_dir)
+        summary = self._build_summary(results, output_dir, output_formats)
         return ValidatorResult(
             validator="pandoc-renderer",
             status=status,
@@ -100,18 +126,30 @@ class PandocRenderer(ToolWrapper):
             return Path(output_dir)
         return manuscript.parent.parent / "render"
 
+    @staticmethod
+    def _resolve_formats(artifacts: dict[str, Any]) -> list[str]:
+        """Determine which formats to render from artifacts."""
+        formats = artifacts.get("output_formats")
+        if formats and isinstance(formats, list):
+            return [f for f in formats if f in SUPPORTED_FORMATS]
+        return DEFAULT_FORMATS
+
     def _render_format(
         self,
         manuscript: Path,
         output_path: Path,
         bibliography: str | None,
+        csl: str | None,
+        reference_doc: str | None,
         artifacts_checked: list[str],
         findings: list[dict[str, Any]],
     ) -> bool:
         """Run Pandoc for a single output format. Returns True on success."""
-        cmd = self._build_command(manuscript, output_path, bibliography)
+        cmd = self._build_command(manuscript, output_path, bibliography, csl, reference_doc)
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=120, check=False
+            )
             if result.returncode == 0 and output_path.exists():
                 artifacts_checked.append(str(output_path))
                 return True
@@ -142,31 +180,50 @@ class PandocRenderer(ToolWrapper):
                 {
                     "code": "pandoc_error",
                     "severity": "error",
-                    "message": f"Unexpected error rendering {output_path.suffix}: {exc}",
+                    "message": (
+                        f"Unexpected error rendering {output_path.suffix}: {exc}"
+                    ),
                     "artifact": str(output_path),
                 }
             )
             return False
 
     @staticmethod
-    def _build_command(manuscript: Path, output_path: Path, bibliography: str | None) -> list[str]:
+    def _build_command(
+        manuscript: Path,
+        output_path: Path,
+        bibliography: str | None,
+        csl: str | None = None,
+        reference_doc: str | None = None,
+    ) -> list[str]:
         """Construct the Pandoc command-line invocation."""
         cmd: list[str] = ["pandoc", str(manuscript)]
         if bibliography:
             cmd.extend(["--bibliography", bibliography])
+        if csl:
+            csl_path = Path(csl)
+            if csl_path.is_file():
+                cmd.extend(["--csl", str(csl_path)])
+        if reference_doc:
+            ref_path = Path(reference_doc)
+            if ref_path.is_file() and output_path.suffix == ".docx":
+                cmd.extend(["--reference-doc", str(ref_path)])
         cmd.extend(["-o", str(output_path)])
         return cmd
 
     @staticmethod
-    def _build_summary(docx_ok: bool, pdf_ok: bool, output_dir: Path) -> str:
+    def _build_summary(
+        results: dict[str, bool],
+        output_dir: Path,
+        requested_formats: list[str],
+    ) -> str:
         """Produce a human-readable summary of the rendering outcome."""
         parts: list[str] = []
-        if docx_ok:
-            parts.append(f"DOCX → {output_dir / 'manuscript.docx'}")
-        else:
-            parts.append("DOCX: failed")
-        if pdf_ok:
-            parts.append(f"PDF → {output_dir / 'manuscript.pdf'}")
-        else:
-            parts.append("PDF: skipped (missing LaTeX or pandoc error)")
+        for fmt in requested_formats:
+            ext = SUPPORTED_FORMATS.get(fmt, f".{fmt}")
+            if results.get(fmt, False):
+                parts.append(f"{fmt.upper()} → {output_dir / f'manuscript{ext}'}")
+            else:
+                reason = "failed" if fmt == "docx" else "skipped (missing LaTeX or error)"
+                parts.append(f"{fmt.upper()}: {reason}")
         return "Pandoc render: " + "; ".join(parts)

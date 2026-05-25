@@ -1,0 +1,43 @@
+# Nature Manuscript Template
+
+## {title}
+
+{author_names_affiliations}
+
+{corresponding_author}
+
+---
+
+## Abstract
+
+{abstract_max_150_words}
+
+---
+
+## Introduction
+
+{introduction_text}
+
+---
+
+## Results
+
+{results_text}
+
+---
+
+## Discussion
+
+{discussion_text}
+
+---
+
+## Methods
+
+{methods_text}
+
+---
+
+## References
+
+{references}

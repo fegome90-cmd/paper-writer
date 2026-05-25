@@ -1,0 +1,22 @@
+{
+  "extends": "existence",
+  "message": "Forbidden phrase in academic writing. Remove or replace with precise language.",
+  "level": "error",
+  "ignorecase": true,
+  "tokens": [
+    "in order to",
+    "due to the fact that",
+    "for the purpose of",
+    "in the event that",
+    "in spite of the fact that",
+    "on account of",
+    "the reason why is that",
+    "it is important to note that",
+    "it should be noted that",
+    "it is worth mentioning that",
+    "as a matter of fact",
+    "at the end of the day",
+    "needless to say",
+    "it goes without saying"
+  ]
+}

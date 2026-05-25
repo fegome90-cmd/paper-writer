@@ -95,8 +95,19 @@ class RefsMetadataValidator(ToolWrapper):
                 artifacts_checked=artifacts_checked,
             )
 
-        # Delegate validation logic to domain validator
+        # Delegate validation logic to domain validators
         findings.extend(validate_refs_metadata(entries))
+
+        # Additional metadata checks from bibliography domain rules
+        from validators.bibliography import validate_bibliography
+
+        # Parse entry types for type-aware validation
+        entry_types: dict[str, str] = {}
+        type_pattern = re.compile(r"@(\w+)\s*\{\s*([^,\s]+)\s*,", re.IGNORECASE)
+        for match in type_pattern.finditer(content):
+            entry_types[match.group(2).strip()] = match.group(1)
+
+        findings.extend(validate_bibliography(entries, entry_types))
 
         error_count = sum(1 for f in findings if f["severity"] == "error")
 

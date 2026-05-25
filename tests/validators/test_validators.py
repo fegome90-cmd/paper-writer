@@ -4,6 +4,15 @@ Covers validators/refs.py, validators/citations.py, validators/style.py,
 validators/reporting.py, and validators/structure.py.
 """
 
+from validators.bibliography import (
+    detect_duplicate_keys,
+    normalize_entry_fields,
+    validate_bibliography,
+    validate_doi_format,
+    validate_entry_type,
+    validate_required_fields,
+    validate_year_range,
+)
 from validators.citations import validate_citation_consistency
 from validators.refs import validate_refs_metadata
 from validators.reporting import validate_reporting
@@ -184,6 +193,69 @@ class TestValidateStyle:
         findings = validate_style(text)
         assert all(f["location"] == "manuscript" for f in findings)
 
+    def test_unbacked_claim_detected(self) -> None:
+        text = "This study proves that the intervention works perfectly."
+        findings = validate_style(text)
+        claims = [f for f in findings if f["code"] == "unbacked_claim"]
+        assert len(claims) >= 1
+        assert claims[0]["severity"] == "warning"
+        assert "proves that" in claims[0]["message"]
+
+    def test_unbacked_claim_first_time(self) -> None:
+        text = "This is the first ever demonstration of the effect."
+        findings = validate_style(text)
+        claims = [f for f in findings if f["code"] == "unbacked_claim"]
+        assert len(claims) >= 1
+        assert any("first ever" in f["message"] for f in claims)
+
+    def test_forbidden_phrase_detected(self) -> None:
+        text = "In order to analyze the data, we used regression."
+        findings = validate_style(text)
+        forbidden = [f for f in findings if f["code"] == "forbidden_phrase"]
+        assert len(forbidden) >= 1
+        assert forbidden[0]["severity"] == "error"
+        assert "in order to" in forbidden[0]["message"]
+
+    def test_forbidden_phrase_due_to_the_fact(self) -> None:
+        text = "Due to the fact that the sample was small, we could not generalize."
+        findings = validate_style(text)
+        forbidden = [f for f in findings if f["code"] == "forbidden_phrase"]
+        assert len(forbidden) >= 1
+        assert "due to the fact that" in forbidden[0]["message"]
+
+    def test_informal_language_detected(self) -> None:
+        text = "The results basically show a significant difference."
+        findings = validate_style(text)
+        informal = [f for f in findings if f["code"] == "informal_language"]
+        assert len(informal) >= 1
+        assert informal[0]["severity"] == "warning"
+        assert "basically" in informal[0]["message"]
+
+    def test_informal_stuff_and_things(self) -> None:
+        text = "We measured lots of stuff and things in the experiment."
+        findings = validate_style(text)
+        informal = [f for f in findings if f["code"] == "informal_language"]
+        words = [f["message"].split("'")[1] for f in informal]
+        assert "lots of" in words or "stuff" in words
+
+    def test_hedged_claim_no_unbacked_finding(self) -> None:
+        text = "Our findings suggest that the intervention may improve outcomes."
+        findings = validate_style(text)
+        claims = [f for f in findings if f["code"] == "unbacked_claim"]
+        assert len(claims) == 0
+
+    def test_formal_text_no_forbidden_or_informal(self) -> None:
+        text = (
+            "We conducted a cross-sectional study to examine the association "
+            "between exposure and outcome. Our findings suggest a potential "
+            "relationship, though further research is warranted."
+        )
+        findings = validate_style(text)
+        forbidden = [f for f in findings if f["code"] == "forbidden_phrase"]
+        informal = [f for f in findings if f["code"] == "informal_language"]
+        assert len(forbidden) == 0
+        assert len(informal) == 0
+
 
 # ---------------------------------------------------------------------------
 # validate_reporting
@@ -293,3 +365,230 @@ class TestValidateSectionStructure:
         findings = validate_section_structure(sections)
         locations = {f["location"] for f in findings}
         assert locations == {"results", "discussion"}
+
+
+# ---------------------------------------------------------------------------
+# validate_bibliography (validators/bibliography.py)
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeEntryFields:
+    """Tests for field normalization."""
+
+    def test_lowercase_keys(self) -> None:
+        fields = {"Title": "A Study", "AUTHOR": "Smith"}
+        result = normalize_entry_fields(fields)
+        assert "title" in result
+        assert "author" in result
+
+    def test_strip_whitespace(self) -> None:
+        fields = {"  title  ": "  A Study  "}
+        result = normalize_entry_fields(fields)
+        assert result == {"title": "A Study"}
+
+
+class TestDetectDuplicateKeys:
+    """Tests for duplicate key detection."""
+
+    def test_no_duplicates(self) -> None:
+        entries: dict[str, dict[str, str]] = {"smith2024": {}, "doe2023": {}}
+        assert detect_duplicate_keys(entries) == []
+
+    def test_case_insensitive_duplicate(self) -> None:
+        entries: dict[str, dict[str, str]] = {"Smith2024": {}, "smith2024": {}}
+        dups = detect_duplicate_keys(entries)
+        assert len(dups) == 1
+
+    def test_multiple_duplicates(self) -> None:
+        entries: dict[str, dict[str, str]] = {"A": {}, "a": {}, "B": {}, "b": {}}
+        dups = detect_duplicate_keys(entries)
+        assert len(dups) == 2
+
+
+class TestValidateEntryType:
+    """Tests for entry type validation."""
+
+    def test_valid_type_no_findings(self) -> None:
+        findings = validate_entry_type("article")
+        assert findings == []
+
+    def test_invalid_type_warning(self) -> None:
+        findings = validate_entry_type("newspaper")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "unknown_entry_type"
+        assert findings[0]["severity"] == "warning"
+
+
+class TestValidateRequiredFields:
+    """Tests for required field validation."""
+
+    def test_article_with_all_fields(self) -> None:
+        fields = {"author": "Smith", "title": "A Study", "journal": "Nature", "year": "2024"}
+        findings = validate_required_fields("article", fields, "smith2024")
+        assert findings == []
+
+    def test_article_missing_journal(self) -> None:
+        fields = {"author": "Smith", "title": "A Study", "year": "2024"}
+        findings = validate_required_fields("article", fields, "smith2024")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "missing_required_field"
+        assert "journal" in findings[0]["message"]
+
+    def test_unknown_type_no_findings(self) -> None:
+        findings = validate_required_fields("newspaper", {}, "key")
+        assert findings == []
+
+
+class TestValidateDoiFormat:
+    """Tests for DOI format validation."""
+
+    def test_valid_doi(self) -> None:
+        findings = validate_doi_format("10.1000/xyz123", "key")
+        assert findings == []
+
+    def test_invalid_doi(self) -> None:
+        findings = validate_doi_format("not-a-doi", "key")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "malformed_doi"
+
+    def test_doi_missing_prefix(self) -> None:
+        findings = validate_doi_format("1000/xyz", "key")
+        assert len(findings) == 1
+
+
+class TestValidateYearRange:
+    """Tests for year range validation."""
+
+    def test_valid_year(self) -> None:
+        findings = validate_year_range("2024", "key")
+        assert findings == []
+
+    def test_non_numeric_year(self) -> None:
+        findings = validate_year_range("abc", "key")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "invalid_year"
+
+    def test_suspicious_old_year(self) -> None:
+        findings = validate_year_range("1800", "key")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "suspicious_year"
+
+    def test_future_year(self) -> None:
+        findings = validate_year_range("2050", "key")
+        assert len(findings) == 1
+        assert findings[0]["code"] == "suspicious_year"
+
+
+class TestValidateBibliography:
+    """Tests for full bibliography validation."""
+
+    def test_clean_entries_no_findings(self) -> None:
+        entries = {
+            "smith2024": {
+                "author": "Smith",
+                "title": "A Study",
+                "journal": "Nature",
+                "year": "2024",
+                "doi": "10.1000/abc",
+            },
+        }
+        entry_types = {"smith2024": "article"}
+        findings = validate_bibliography(entries, entry_types)
+        assert findings == []
+
+    def test_multiple_issues(self) -> None:
+        entries = {
+            "bad2024": {"year": "1800", "doi": "invalid"},
+            "alsobad": {"year": "1800", "doi": "invalid"},
+        }
+        findings = validate_bibliography(entries)
+        # Should find DOI and year issues for both entries
+        codes = [f["code"] for f in findings]
+        assert "malformed_doi" in codes
+        assert "suspicious_year" in codes
+
+
+# ---------------------------------------------------------------------------
+# validate_preset (validators/preset.py)
+# ---------------------------------------------------------------------------
+
+
+class TestValidatePreset:
+    """Tests for journal preset validation."""
+
+    def test_valid_preset_no_findings(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {
+            "name": "Nature",
+            "format": "docx",
+            "citation_style": "vancouver",
+            "required_sections": ["abstract", "introduction", "results", "discussion", "methods"],
+        }
+        findings = validate_preset(preset)
+        assert findings == []
+
+    def test_missing_required_field(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {"name": "Test"}
+        findings = validate_preset(preset)
+        codes = [f["code"] for f in findings]
+        assert "missing_preset_field" in codes
+        assert len(findings) >= 3  # format, citation_style, required_sections
+
+    def test_empty_preset(self) -> None:
+        from validators.preset import validate_preset
+
+        findings = validate_preset({})
+        assert len(findings) == 1
+        assert findings[0]["code"] == "empty_preset"
+
+    def test_empty_sections_list(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {
+            "name": "Test",
+            "format": "docx",
+            "citation_style": "vancouver",
+            "required_sections": [],
+        }
+        findings = validate_preset(preset)
+        assert any(f["code"] == "empty_sections" for f in findings)
+
+    def test_invalid_format_warning(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {
+            "name": "Test",
+            "format": "epub",
+            "citation_style": "vancouver",
+            "required_sections": ["intro"],
+        }
+        findings = validate_preset(preset)
+        assert any(f["code"] == "invalid_format" for f in findings)
+
+    def test_invalid_max_words(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {
+            "name": "Test",
+            "format": "docx",
+            "citation_style": "vancouver",
+            "required_sections": ["intro"],
+            "max_words": -100,
+        }
+        findings = validate_preset(preset)
+        assert any(f["code"] == "invalid_max_words" for f in findings)
+
+    def test_sections_not_list(self) -> None:
+        from validators.preset import validate_preset
+
+        preset = {
+            "name": "Test",
+            "format": "docx",
+            "citation_style": "vancouver",
+            "required_sections": "intro",
+        }
+        findings = validate_preset(preset)
+        assert any(f["code"] == "invalid_sections" for f in findings)

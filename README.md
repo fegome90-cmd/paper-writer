@@ -4,25 +4,36 @@ A dedicated repository for automated scientific search, drafting, validation, an
 
 ## Current Status
 
-Phases 1–3 are complete and verified.
+Phases 1–4 are complete and verified.
 
 Verification evidence:
 
-- `pytest` — 216 passing
+- `pytest` — 265 passing
 - `ruff check .` — clean
-- `mypy strict` — 0 issues in 65 source files
+- `mypy strict` — 0 issues in 69 source files
 
 The repository has:
 
 - a thin `paper` CLI (`cli/paper/main.py`)
 - a hexagonal harness (`state_manager`, `gates`, `orchestrator`, `assembler`)
 - domain validators (`validators/`) — pure functions, no I/O
-- tool wrappers (`integrations/tools/`) — Pandoc render, bibtex-tidy, vale, refs validation
+  - `refs.py` — metadata completeness (year, DOI/URL)
+  - `citations.py` — key consistency
+  - `style.py` — passive voice, strong claims, forbidden phrases, informal language
+  - `bibliography.py` — entry type, required fields, DOI format, year range, duplicates
+  - `reporting.py` — study design, sample size, limitations
+  - `structure.py` — required section presence
+  - `preset.py` — journal preset schema validation
+- tool wrappers (`integrations/tools/`) — Pandoc, bibtex-tidy, Vale, refs validation, Zotero import
+- Vale style packs (`styles/vale/paper-writer/`) — strong claims, informal language, forbidden phrases, unbacked claims
+- CSL citation styles (`styles/csl/`) — Vancouver, APA 7th
+- journal presets (`templates/journals/nature/`) — template, preset.yaml, seeded references
 - imported skills with provenance-tracked adapters:
   - `literature-search` — real scoring engine (dedup, tier classification, citation verify)
   - `academic-writer` — section structures from manifest derived from SKILL.md
 - fail-closed gate system — no gate passes without evidence
-- assembled draft-to-render flow using `outputs/drafts/manuscript.md`
+- multi-output render (docx, pdf) with CSL and reference-doc support
+- optional Zotero/Better BibTeX ingestion surface
 
 ## Phase Status
 
@@ -31,19 +42,18 @@ The repository has:
 - **Phase 1** — Repository Base (hexagonal harness, CLI, state machine, gates)
 - **Phase 2** — Harness and Verification (domain validators, Pandoc render, assembler)
 - **Phase 3** — Domain Skill Integration (real imports, manifest-driven adapters)
+- **Phase 4** — Editorial Gates and Hardening (style rules, bib normalization, ref validation, presets, multi-output render, Zotero)
 
 ### Next
 
-- **Phase 4** — Editorial Gates and Hardening
+- **Phase 5** — Production Readiness
 
-Immediate Phase 4 focus:
-
-- Vale rules for style gate
-- `.bib` normalization step
-- Reference validation wiring
-- Zotero/Better BibTeX integration
-- Journal presets
-- Multi-output render (docx/pdf)
+  Focus areas:
+  - CLI command wiring for all validators
+  - Vale configuration auto-detection
+  - Full end-to-end integration tests
+  - CI pipeline (GitHub Actions)
+  - Documentation finalization
 
 ## Documentation
 

@@ -109,7 +109,15 @@ class BibliographyNormalizer(ToolWrapper):
         )
 
     def _builtin_validate(self, bib_file: Path, bib_path: str) -> ValidatorResult:
-        """Built-in BibTeX validation when bibtex-tidy is not available."""
+        """Built-in BibTeX validation when bibtex-tidy is not available.
+
+        Parses entries and delegates domain validation to
+        validators.bibliography.
+        """
+        import re
+
+        from validators.bibliography import validate_bibliography
+
         findings: list[dict[str, Any]] = []
         content = bib_file.read_text(encoding="utf-8", errors="replace")
 
@@ -122,39 +130,66 @@ class BibliographyNormalizer(ToolWrapper):
                     "artifact": bib_path,
                 }
             )
+            return ValidatorResult(
+                validator="bibliography",
+                status="fail",
+                summary="Bibliography file is empty.",
+                findings=findings,
+                artifacts_checked=[bib_path],
+            )
+
+        # Basic brace balance check
+        open_braces = content.count("{")
+        close_braces = content.count("}")
+        if open_braces != close_braces:
+            findings.append(
+                {
+                    "code": "unbalanced_braces",
+                    "severity": "error",
+                    "message": f"Unbalanced braces: {open_braces} open, {close_braces} close.",
+                    "artifact": bib_path,
+                }
+            )
+
+        # Parse entries and entry types for domain validation
+        entry_pattern = re.compile(
+            r"@(\w+)\s*\{\s*([^,\s]+)\s*,\s*(.*?)\n\s*\}",
+            re.DOTALL | re.IGNORECASE,
+        )
+        entries: dict[str, dict[str, str]] = {}
+        entry_types: dict[str, str] = {}
+
+        for match in entry_pattern.finditer(content):
+            entry_type = match.group(1)
+            key = match.group(2).strip()
+            body = match.group(3)
+            fields: dict[str, str] = {}
+            for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body, re.IGNORECASE):
+                fields[field_match.group(1).lower().strip()] = field_match.group(2).strip()
+            entries[key] = fields
+            entry_types[key] = entry_type
+
+        if not entries:
+            findings.append(
+                {
+                    "code": "no_entries",
+                    "severity": "error",
+                    "message": "No BibTeX entries found.",
+                    "artifact": bib_path,
+                }
+            )
         else:
-            # Basic brace balance check
-            open_braces = content.count("{")
-            close_braces = content.count("}")
-            if open_braces != close_braces:
-                findings.append(
-                    {
-                        "code": "unbalanced_braces",
-                        "severity": "error",
-                        "message": f"Unbalanced braces: {open_braces} open, {close_braces} close.",
-                        "artifact": bib_path,
-                    }
-                )
-
-            # Check for @type{ entries
-            import re
-
-            entries = re.findall(r"@(\w+)\s*\{", content, re.IGNORECASE)
-            if not entries:
-                findings.append(
-                    {
-                        "code": "no_entries",
-                        "severity": "error",
-                        "message": "No BibTeX entries found.",
-                        "artifact": bib_path,
-                    }
-                )
+            # Delegate to domain validator
+            findings.extend(validate_bibliography(entries, entry_types))
 
         status = "fail" if any(f["severity"] == "error" for f in findings) else "pass"
         return ValidatorResult(
             validator="bibliography",
             status=status,
-            summary="Built-in BibTeX validation complete (bibtex-tidy not installed).",
+            summary=(
+                f"Built-in BibTeX validation: {len(entries)} entries checked"
+                f" (bibtex-tidy not installed)."
+            ),
             findings=findings,
             artifacts_checked=[bib_path],
         )

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0" default-locale="en-US">
+  <info>
+    <title>Vancouver</title>
+    <id>http://www.zotero.org/styles/vancouver</id>
+    <updated>2024-01-01T00:00:00+00:00</updated>
+  </info>
+  <citation collapse="citation-number">
+    <sort>
+      <key variable="citation-number"/>
+    </sort>
+    <layout prefix="[" suffix="]" delimiter=",">
+      <text variable="citation-number"/>
+    </layout>
+  </citation>
+  <macro name="author">
+    <names variable="author">
+      <name sort-separator=" " initialize-with="" delimiter=", " delimiter-precedes-last="always"/>
+    </names>
+  </macro>
+  <macro name="title">
+    <text variable="title"/>
+  </macro>
+  <macro name="container-title">
+    <text variable="container-title" font-style="italic"/>
+  </macro>
+  <macro name="year-date">
+    <date variable="issued">
+      <date-part name="year"/>
+    </date>
+  </macro>
+  <bibliography et-al-min="7" et-al-use-first="6" second-field-align="flush">
+    <layout suffix=".">
+      <text variable="citation-number" prefix="[" suffix="]"/>
+      <text macro="author" suffix=". "/>
+      <text macro="title" suffix=". "/>
+      <text macro="container-title" suffix=", "/>
+      <text macro="year-date" suffix=";"/>
+      <text variable="volume"/>
+      <text variable="page" prefix=":" suffix="."/>
+    </layout>
+  </bibliography>
+</style>

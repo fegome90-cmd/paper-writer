@@ -208,3 +208,174 @@ class TestPandocFailure:
         result = renderer.run({"manuscript": str(manuscript)}, {})
         assert result.status == "warn"
         assert any("pdf" in f["message"].lower() for f in result.findings)
+
+
+class TestPandocMultiOutput:
+    """Tests for multi-output rendering with format selection."""
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_single_format_docx_only(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {"manuscript": str(manuscript), "output_formats": ["docx"]},
+            {},
+        )
+        assert result.status == "pass"
+        assert mock_run.call_count == 1
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_csl_flag_passed_to_command(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+        csl = tmp_path / "vancouver.csl"
+        csl.write_text('<style xmlns="http://purl.org/net/xbiblio/csl"></style>')
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {"manuscript": str(manuscript), "csl": str(csl), "output_formats": ["docx"]},
+            {},
+        )
+        assert result.status == "pass"
+        # Verify CSL is in the command
+        cmd = mock_run.call_args[0][0]
+        assert "--csl" in cmd
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_reference_doc_passed_for_docx(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+        ref_doc = tmp_path / "template.docx"
+        ref_doc.write_bytes(b"PK fake docx")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {
+                "manuscript": str(manuscript),
+                "reference_doc": str(ref_doc),
+                "output_formats": ["docx"],
+            },
+            {},
+        )
+        assert result.status == "pass"
+        cmd = mock_run.call_args[0][0]
+        assert "--reference-doc" in cmd
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_reference_doc_not_passed_for_pdf(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+        ref_doc = tmp_path / "template.docx"
+        ref_doc.write_bytes(b"PK fake docx")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {
+                "manuscript": str(manuscript),
+                "reference_doc": str(ref_doc),
+                "output_formats": ["pdf"],
+            },
+            {},
+        )
+        assert result.status == "pass"
+        cmd = mock_run.call_args[0][0]
+        assert "--reference-doc" not in cmd
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_unknown_format_filtered_out(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        renderer = renderer
+        renderer.run(
+            {
+                "manuscript": str(manuscript),
+                "output_formats": ["docx", "epub"],
+            },
+            {},
+        )
+        # epub should be filtered out, only docx rendered
+        assert mock_run.call_count == 1

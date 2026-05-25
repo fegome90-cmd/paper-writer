@@ -1,0 +1,17 @@
+# Nature journal preset
+name: Nature
+format: docx
+max_words: 8000
+citation_style: vancouver
+numbered_references: true
+required_sections:
+  - abstract
+  - introduction
+  - results
+  - discussion
+  - methods
+  - references
+abstract_max_words: 150
+figure_format: tiff
+figure_dpi: 300
+columns: double

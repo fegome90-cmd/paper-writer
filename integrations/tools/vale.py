@@ -99,6 +99,13 @@ class StyleLinter(ToolWrapper):
         except (FileNotFoundError, OSError, subprocess.SubprocessError):
             return False
 
+    @staticmethod
+    def _styles_path() -> str:
+        """Return the path to Vale style packs."""
+        from pathlib import Path
+
+        return str(Path(__file__).resolve().parents[2] / "styles" / "vale")
+
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
         """Run Vale and parse JSON output into findings."""
         import json
@@ -107,7 +114,12 @@ class StyleLinter(ToolWrapper):
         findings: list[dict[str, Any]] = []
         try:
             result = subprocess.run(
-                ["vale", "--output=JSON", str(file_path)],
+                [
+                    "vale",
+                    "--output=JSON",
+                    f"--stylesPath={self._styles_path()}",
+                    str(file_path),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=30,
