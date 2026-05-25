@@ -61,11 +61,46 @@ class FilesystemActionRunner(ActionRunner):
                 self._resolve(d).mkdir(parents=True, exist_ok=True)
 
             state_file = self._resolve("outputs/state.yaml")
-            manuscript_qmd = self._resolve("templates/manuscript.qmd")
-            manuscript_qmd.touch(exist_ok=True)
 
+            preset_name = args.get("preset")
+            if preset_name:
+                preset_dir = self.repo_path / "templates" / "journals" / preset_name
+                if preset_dir.is_dir():
+                    # Copy preset template files into templates/
+                    import shutil
+
+                    for src in preset_dir.iterdir():
+                        if src.name == "preset.yaml":
+                            # Copy preset.yaml as-is for reference
+                            dst = self._resolve(f"templates/{src.name}")
+                            shutil.copy2(src, dst)
+                            artifacts.append(str(dst))
+                        elif src.name == "template.qmd":
+                            # Use preset template as manuscript template
+                            dst = self._resolve("templates/manuscript.qmd")
+                            shutil.copy2(src, dst)
+                            artifacts.append(str(dst))
+                        elif src.name == "references.bib":
+                            # Use preset references as base bibliography
+                            dst = self._resolve("templates/references.bib")
+                            shutil.copy2(src, dst)
+                            artifacts.append(str(dst))
+
+                    logger.info("Scaffolded from preset '%s'.", preset_name)
+                else:
+                    logger.warning(
+                        "Preset '%s' not found at %s. Using empty templates.",
+                        preset_name,
+                        preset_dir,
+                    )
+
+            # Ensure template files exist (empty fallback if preset didn't provide them)
+            manuscript_qmd = self._resolve("templates/manuscript.qmd")
+            if not manuscript_qmd.exists():
+                manuscript_qmd.touch()
             references_bib = self._resolve("templates/references.bib")
-            references_bib.touch(exist_ok=True)
+            if not references_bib.exists():
+                references_bib.touch()
 
             artifacts.extend([str(state_file), str(manuscript_qmd), str(references_bib)])
 
