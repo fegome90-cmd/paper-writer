@@ -64,10 +64,18 @@ class FilesystemActionRunner(ActionRunner):
 
             preset_name = args.get("preset")
             if preset_name:
+                # Search preset in cwd first, then in package install directory
+                import shutil
+
                 preset_dir = self.repo_path / "templates" / "journals" / preset_name
+                if not preset_dir.is_dir():
+                    # Fallback: look relative to the package source
+                    pkg_dir = Path(__file__).resolve().parents[2]  # paper-writer root
+                    alt_dir = pkg_dir / "templates" / "journals" / preset_name
+                    if alt_dir.is_dir():
+                        preset_dir = alt_dir
+
                 if preset_dir.is_dir():
-                    # Copy preset template files into templates/
-                    import shutil
 
                     for src in preset_dir.iterdir():
                         if src.name == "preset.yaml":

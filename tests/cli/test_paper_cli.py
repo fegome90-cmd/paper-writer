@@ -380,3 +380,119 @@ class TestCLIInitPreset:
         assert refs.exists()
         # preset.yaml should NOT exist (no preset to copy)
         assert not (tmp_path / "templates" / "preset.yaml").exists()
+
+
+class TestCLINegativePaths:
+    """Negative path tests — verify fail-closed behavior."""
+
+    def test_init_preset_nonexistent_uses_empty(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper init --preset nonexistent uses empty templates."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            sys, "argv", ["paper", "init", "--preset", "nonexistent"]
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+        # Empty templates created, no preset.yaml
+        assert (tmp_path / "templates" / "manuscript.qmd").exists()
+        assert not (tmp_path / "templates" / "preset.yaml").exists()
+
+    def test_import_bib_nonexistent_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper import bib with nonexistent file fails."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["paper", "import", "bib", "/no/such/file.bib"],
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_import_bib_invalid_content_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper import bib with garbage content fails."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        garbage_bib = tmp_path / "garbage.bib"
+        garbage_bib.write_text("this is not bibtex at all")
+
+        monkeypatch.setattr(
+            sys, "argv", ["paper", "import", "bib", str(garbage_bib)]
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_import_bib_malformed_doi_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper import bib with malformed DOI is rejected."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        bad_bib = tmp_path / "bad_doi.bib"
+        bad_bib.write_text(
+            "@article{bad2024,\n"
+            "  author = {Bad},\n"
+            "  title = {Bad DOI},\n"
+            "  journal = {J},\n"
+            "  year = {2024},\n"
+            "  doi = {not-a-doi}\n"
+            "}\n"
+        )
+
+        monkeypatch.setattr(
+            sys, "argv", ["paper", "import", "bib", str(bad_bib)]
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+
+    def test_render_format_epub_rejected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper render --format epub is rejected by argparse."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        monkeypatch.setattr(
+            sys, "argv", ["paper", "render", "--format", "epub"]
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        # argparse exits with code 2 for invalid choice
+        assert exc_info.value.code == 2
+
+    def test_render_requires_rendering_stage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper render fails when not in rendering stage."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        monkeypatch.setattr(
+            sys, "argv", ["paper", "render", "--format", "docx"]
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
