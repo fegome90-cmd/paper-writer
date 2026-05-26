@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from harness.domain.state import ManuscriptState
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest
 from harness.services.state_manager import StateManager
 from tests.harness.mocks import (
     InMemoryActionRunner,
     InMemoryArtifactChecker,
     InMemoryStateRepository,
+    InMemoryToolWrapper,
     create_mock_wrappers,
 )
 
@@ -195,3 +197,54 @@ def test_orchestrator_gate_reset_on_re_draft() -> None:
     state_data = orch.state_manager.load_state()
     assert state_data["gates"]["citations_resolved"] is False
     assert state_data["gates"]["style_passed"] is False
+
+
+def _create_orchestrator_in_stage(stage: str, render_wrapper_status: str) -> Orchestrator:
+    repo = InMemoryStateRepository(
+        ManuscriptState(
+            stage=stage,
+            gates=dict.fromkeys(ManuscriptState.REQUIRED_GATES, False),
+        )
+    )
+    manager = StateManager(repo)
+    checker = InMemoryArtifactChecker()
+    action_runner = InMemoryActionRunner(checker)
+    wrappers = create_mock_wrappers()
+    wrappers["render"] = InMemoryToolWrapper("render_passed", return_status=render_wrapper_status)
+    return Orchestrator(Path("/mock_root"), manager, checker, action_runner, wrappers)
+
+
+def test_orchestrator_render_warn_is_success_and_transitions_to_verified() -> None:
+    orch = _create_orchestrator_in_stage("rendering", render_wrapper_status="warn")
+
+    result = orch.execute(
+        OrchestratorRequest(
+            command="render",
+            requested_stage="verified",
+            failure_policy="stop_on_error",
+        )
+    )
+
+    assert result.success is True
+    assert result.exit_code == 0
+    assert result.stage_before == "rendering"
+    assert result.stage_after == "verified"
+    assert result.gate_changes["render_passed"] is True
+
+
+def test_orchestrator_render_fail_blocks_and_keeps_rendering_stage() -> None:
+    orch = _create_orchestrator_in_stage("rendering", render_wrapper_status="fail")
+
+    result = orch.execute(
+        OrchestratorRequest(
+            command="render",
+            requested_stage="verified",
+            failure_policy="stop_on_error",
+        )
+    )
+
+    assert result.success is False
+    assert result.exit_code == 1
+    assert result.stage_before == "rendering"
+    assert result.stage_after == "rendering"
+    assert result.gate_changes["render_passed"] is False

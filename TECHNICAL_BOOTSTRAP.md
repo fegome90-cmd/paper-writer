@@ -269,17 +269,18 @@ Verified deliverables:
 
 ### Phase 4 - Editorial Gates and Hardening
 
-Deliverables:
+Status: COMPLETE
 
-- Vale rules
-- `.bib` normalization step
-- reference validation step
-- manuscript structure checks
-- reporting checklist audit step
-- Zotero/Better BibTeX integration
-- journal presets
-- multi-output render (docx/pdf)
-- reusable project scaffolds
+Verified deliverables:
+
+- Vale rule packs added under `styles/vale/` and connected to the style wrapper
+- bibliography normalization hardened with domain validation fallback rules
+- reference validation preserved as distinct gates (`bib_normalized`, `citations_resolved`, `refs_validated`)
+- journal presets added under `templates/journals/` with preset schema validation
+- multi-output render wired through Pandoc with `output_formats`, `csl`, and `reference_doc`
+- optional Zotero/Better BibTeX `.bib` ingestion wired through CLI → orchestrator → wrapper
+- negative-path behavior verified for preset fallback, bad imports, malformed DOI, and invalid render formats
+- smoke-level real artifact generation verified for scaffold copy, `.bib` import, and DOCX render
 
 ## First Implementation Decisions
 
@@ -384,10 +385,10 @@ That is enough to create a serious MVP.
 
 ## Recommended Next Work
 
-After Phase 2, do Phase 3 in this order:
+After Phase 4, do Phase 5 in this order:
 
-1. import `literature-search` into `skills/imported/` and document its authority boundaries
-2. import `academic-writer` into `skills/imported/` and document its drafting boundaries
-3. implement `skills/local/` adapters so the CLI and orchestrator call skills through normalized contracts
-4. wire search outputs into drafting inputs without letting imported skills mutate state directly
-5. keep `paper` thin and the harness authoritative while domain skills are added incrementally
+1. build a full end-to-end smoke pipeline covering `init -> import/search/screen/draft/lint/render/verify`
+2. add CI automation (GitHub Actions) for `ruff`, `mypy`, `pytest`, and smoke checks
+3. make external-tool degraded mode explicit for Vale, LaTeX, and `bibtex-tidy` so production readiness is observable
+4. strengthen render verification for CSL and `reference_doc` outputs, ideally with artifact inspection or golden checks
+5. finalize operator-facing documentation so `smoke-verified`, `degraded mode`, and `production-ready` have precise meanings

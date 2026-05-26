@@ -147,11 +147,10 @@ class PandocRenderer(ToolWrapper):
         """Run Pandoc for a single output format. Returns True on success."""
         cmd = self._build_command(manuscript, output_path, bibliography, csl, reference_doc)
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120, check=False
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
             if result.returncode == 0 and output_path.exists():
                 artifacts_checked.append(str(output_path))
+                self._verify_render_artifact(output_path, findings)
                 return True
 
             msg = result.stderr.strip() or f"Pandoc exited with code {result.returncode}"
@@ -180,13 +179,53 @@ class PandocRenderer(ToolWrapper):
                 {
                     "code": "pandoc_error",
                     "severity": "error",
-                    "message": (
-                        f"Unexpected error rendering {output_path.suffix}: {exc}"
-                    ),
+                    "message": (f"Unexpected error rendering {output_path.suffix}: {exc}"),
                     "artifact": str(output_path),
                 }
             )
             return False
+
+    @staticmethod
+    def _verify_render_artifact(output_path: Path, findings: list[dict[str, Any]]) -> None:
+        """Verify rendered artifact integrity after Pandoc completes."""
+        size = output_path.stat().st_size
+        if size < 500:
+            findings.append(
+                {
+                    "code": "render_artifact_too_small",
+                    "severity": "warning",
+                    "message": f"Rendered {output_path.name} is only {size}B — likely empty.",
+                    "artifact": str(output_path),
+                }
+            )
+
+        if output_path.suffix == ".docx":
+            # DOCX must be a valid ZIP containing word/document.xml
+            import zipfile
+
+            try:
+                with zipfile.ZipFile(output_path, "r") as zf:
+                    names = zf.namelist()
+                    if "word/document.xml" not in names:
+                        findings.append(
+                            {
+                                "code": "render_artifact_malformed_docx",
+                                "severity": "error",
+                                "message": (
+                                    "DOCX missing word/document.xml — not a valid Word file."
+                                ),
+                                "artifact": str(output_path),
+                            }
+                        )
+            except zipfile.BadZipFile:
+                findings.append(
+                    {
+                        "code": "render_artifact_not_zip",
+                        "severity": "error",
+                        "message": "DOCX is not a valid ZIP file.",
+                        "artifact": str(output_path),
+                    }
+                )
 
     @staticmethod
     def _build_command(

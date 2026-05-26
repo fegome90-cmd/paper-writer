@@ -130,10 +130,7 @@ class ZoteroImporter(ToolWrapper):
 
         warnings = [f for f in findings if f["severity"] == "warning"]
         status = "warn" if warnings else "pass"
-        summary = (
-            f"Imported {len(entries)} entries from Zotero export"
-            f" → {target_path}"
-        )
+        summary = f"Imported {len(entries)} entries from Zotero export → {target_path}"
         if warnings:
             summary += f" ({len(warnings)} warning(s))"
 
@@ -168,12 +165,8 @@ class ZoteroImporter(ToolWrapper):
             body = match.group(3)
             fields: dict[str, str] = {}
 
-            for field_match in re.finditer(
-                r"(\w+)\s*=\s*\{([^}]*)\}", body, re.IGNORECASE
-            ):
-                fields[field_match.group(1).lower().strip()] = (
-                    field_match.group(2).strip()
-                )
+            for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body, re.IGNORECASE):
+                fields[field_match.group(1).lower().strip()] = field_match.group(2).strip()
 
             entries[key] = fields
             entry_types[key] = entry_type

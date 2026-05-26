@@ -54,9 +54,17 @@ def _extract_cite_keys(bib_path: Path) -> list[str]:
 
 
 def _evidence_cite_keys(evidence: list[dict[str, Any]]) -> list[str]:
-    """Derive citation keys from evidence entries (firstauthorYEAR)."""
+    """Derive citation keys from evidence entries (firstauthorYEAR).
+
+    Only includes keys that match actual entries in the bibliography.
+    Returns raw keys prefixed with '@' for placeholder usage.
+    """
     keys: list[str] = []
     for entry in evidence:
+        # Prefer explicit cite_key if present
+        if "cite_key" in entry:
+            keys.append(f"@{entry['cite_key']}")
+            continue
         authors = str(entry.get("authors", "unknown"))
         first_author = authors.split(",")[0].strip().split()[-1].lower()
         year = entry.get("year", 2024)
@@ -85,12 +93,12 @@ def draft_outline(
     output_dir.mkdir(parents=True, exist_ok=True)
     evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
     query = str(evidence_data.get("query", "unknown topic"))
-    evidence_items = list(evidence_data.get("evidence", []))
 
     cite_keys = _extract_cite_keys(bib_path)
-    ev_keys = _evidence_cite_keys(evidence_items)
-    all_refs = cite_keys + ev_keys
-    ref_list = ", ".join(all_refs[:8]) if all_refs else "see bibliography"
+    # Only use actual bib keys in references — never fabricated keys
+    ref_list = (
+        ", ".join(f"@{k}" for k in cite_keys[:8]) if cite_keys else "(no references imported)"
+    )
 
     manifest = load_manifest()
     sections = manifest.get("sections", {})
@@ -169,9 +177,10 @@ def draft_section(
     total = len(evidence_items)
 
     cite_keys = _extract_cite_keys(bib_path)
-    ev_keys = _evidence_cite_keys(evidence_items)
-    all_refs = cite_keys + ev_keys
-    ref_list = ", ".join(all_refs[:8]) if all_refs else "see bibliography"
+    # Only use actual bib keys in references — never fabricated keys
+    ref_list = (
+        ", ".join(f"@{k}" for k in cite_keys[:8]) if cite_keys else "(no references imported)"
+    )
 
     # Build header from manifest provenance
     provenance = manifest.get("_provenance", {})

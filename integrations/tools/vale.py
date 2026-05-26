@@ -49,6 +49,21 @@ class StyleLinter(ToolWrapper):
         # Try Vale first
         vale_available = self._vale_available()
 
+        # Explicit degraded-mode notice when Vale is missing
+        if not vale_available:
+            findings.append(
+                {
+                    "code": "degraded_mode",
+                    "severity": "warning",
+                    "message": (
+                        "Vale not installed. Using built-in style checks only "
+                        "(passive voice, strong claims, forbidden phrases, "
+                        "informal language). Install: brew install vale"
+                    ),
+                    "location": "environment",
+                }
+            )
+
         for mf in manuscript_files:
             mf_path = Path(mf)
             if not mf_path.is_file():

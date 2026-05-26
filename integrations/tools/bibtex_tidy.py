@@ -112,7 +112,7 @@ class BibliographyNormalizer(ToolWrapper):
         """Built-in BibTeX validation when bibtex-tidy is not available.
 
         Parses entries and delegates domain validation to
-        validators.bibliography.
+        validators.bibliography. Emits explicit degraded-mode notice.
         """
         import re
 
@@ -120,6 +120,19 @@ class BibliographyNormalizer(ToolWrapper):
 
         findings: list[dict[str, Any]] = []
         content = bib_file.read_text(encoding="utf-8", errors="replace")
+
+        # Explicit degraded-mode notice
+        findings.append(
+            {
+                "code": "degraded_mode",
+                "severity": "warning",
+                "message": (
+                    "bibtex-tidy not installed. Using built-in validation. "
+                    "Install: npm install -g bibtex-tidy"
+                ),
+                "artifact": bib_path,
+            }
+        )
 
         if not content.strip():
             findings.append(

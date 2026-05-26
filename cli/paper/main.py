@@ -70,9 +70,7 @@ def main() -> None:
     # paper import
     import_parser = subparsers.add_parser("import", help="Import external resources.")
     import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
-    import_bib = import_sub.add_parser(
-        "bib", help="Import .bib from Zotero/Better BibTeX export."
-    )
+    import_bib = import_sub.add_parser("bib", help="Import .bib from Zotero/Better BibTeX export.")
     import_bib.add_argument("source", help="Path to source .bib file to import.")
     import_bib.add_argument(
         "--target",
@@ -103,6 +101,9 @@ def main() -> None:
 
     # paper verify
     subparsers.add_parser("verify", help="Run final verification check.")
+
+    # paper doctor
+    subparsers.add_parser("doctor", help="Check environment and report tool status.")
 
     args = parser.parse_args()
 
@@ -145,6 +146,20 @@ def main() -> None:
         orch_args["output_formats"] = args.formats if args.formats else ["docx", "pdf"]
         orch_args["csl"] = args.csl
         orch_args["reference_doc"] = args.reference_doc
+
+    # paper doctor — runs before orchestrator, exits directly
+    if cmd_name == "doctor":
+        from harness.services.doctor import (
+            check_all_tools,
+            check_internal_capabilities,
+            format_doctor_report,
+        )
+
+        repo_path = Path.cwd()
+        tools = check_all_tools()
+        caps = check_internal_capabilities(repo_path)
+        print(format_doctor_report(tools, caps))
+        sys.exit(0)
 
     request = OrchestratorRequest(
         command=orch_command,

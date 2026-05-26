@@ -76,7 +76,6 @@ class FilesystemActionRunner(ActionRunner):
                         preset_dir = alt_dir
 
                 if preset_dir.is_dir():
-
                     for src in preset_dir.iterdir():
                         if src.name == "preset.yaml":
                             # Copy preset.yaml as-is for reference

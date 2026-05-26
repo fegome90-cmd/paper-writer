@@ -383,9 +383,7 @@ class Orchestrator:
 
         try:
             if request_args:
-                artifacts_input = self._build_wrapper_artifacts_with_args(
-                    command, request_args
-                )
+                artifacts_input = self._build_wrapper_artifacts_with_args(command, request_args)
             else:
                 artifacts_input = self._build_wrapper_artifacts(command)
             context = {"cwd": str(self.repo_path)}
@@ -464,9 +462,7 @@ class Orchestrator:
 
         if command == "import_bib":
             base["source_bib"] = request_args.get("source_bib", "")
-            base["target_bib"] = request_args.get(
-                "target_bib", "templates/references.bib"
-            )
+            base["target_bib"] = request_args.get("target_bib", "templates/references.bib")
 
         return base
 

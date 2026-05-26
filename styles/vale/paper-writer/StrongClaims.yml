@@ -2,5 +2,5 @@
   "extends": "Vale.Typography",
   "message": "Avoid unbacked strong claims. Use hedging language (e.g., 'suggests', 'indicates') and cite supporting evidence.",
   "level": "warning",
-  "code": false
+  "code": false,
 }

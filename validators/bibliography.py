@@ -9,22 +9,24 @@ import re
 from typing import Any
 
 # Valid BibTeX entry types
-VALID_ENTRY_TYPES: frozenset[str] = frozenset({
-    "article",
-    "book",
-    "booklet",
-    "conference",
-    "inbook",
-    "incollection",
-    "inproceedings",
-    "manual",
-    "mastersthesis",
-    "misc",
-    "phdthesis",
-    "proceedings",
-    "techreport",
-    "unpublished",
-})
+VALID_ENTRY_TYPES: frozenset[str] = frozenset(
+    {
+        "article",
+        "book",
+        "booklet",
+        "conference",
+        "inbook",
+        "incollection",
+        "inproceedings",
+        "manual",
+        "mastersthesis",
+        "misc",
+        "phdthesis",
+        "proceedings",
+        "techreport",
+        "unpublished",
+    }
+)
 
 # Required fields per entry type
 REQUIRED_FIELDS: dict[str, frozenset[str]] = {

@@ -95,7 +95,9 @@ class TestPandocSuccess:
         result = renderer.run({"manuscript": str(manuscript)}, {})
         assert result.status == "pass"
         assert result.validator == "pandoc-renderer"
-        assert len(result.findings) == 0
+        # Verification warnings for tiny test artifacts are expected
+        verify_warnings = [f for f in result.findings if f["code"].startswith("render_artifact_")]
+        assert len(verify_warnings) > 0  # Small test files trigger verification
 
     @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
     @patch("integrations.tools.pandoc.subprocess.run")

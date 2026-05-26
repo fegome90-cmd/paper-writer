@@ -7,12 +7,14 @@ No file I/O or subprocess calls.
 from typing import Any
 
 # Required fields in preset.yaml
-REQUIRED_PRESET_FIELDS: frozenset[str] = frozenset({
-    "name",
-    "format",
-    "citation_style",
-    "required_sections",
-})
+REQUIRED_PRESET_FIELDS: frozenset[str] = frozenset(
+    {
+        "name",
+        "format",
+        "citation_style",
+        "required_sections",
+    }
+)
 
 
 def validate_preset(preset: dict[str, Any]) -> list[dict[str, Any]]:
@@ -96,9 +98,8 @@ def validate_preset(preset: dict[str, Any]) -> list[dict[str, Any]]:
                     "code": "invalid_max_words",
                     "severity": "warning",
                     "message": (
-                    f"Preset 'max_words' should be a positive"
-                    f" integer, got: {max_words}."
-                ),
+                        f"Preset 'max_words' should be a positive integer, got: {max_words}."
+                    ),
                     "location": "max_words",
                 }
             )
