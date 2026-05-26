@@ -122,9 +122,9 @@ class TestBuilderContract:
         """MappingProxyType fields reject mutation even though they wrap dicts."""
         deps = build_orchestrator_dependencies(project_root=tmp_path)
         with pytest.raises(TypeError):
-            deps.wrappers["new_key"] = MagicMock()  # type: ignore[index,misc]
+            deps.wrappers["new_key"] = MagicMock()  # type: ignore[index]
         with pytest.raises(TypeError):
-            deps.skill_adapters["new_key"] = MagicMock()  # type: ignore[index,misc]
+            deps.skill_adapters["new_key"] = MagicMock()  # type: ignore[index]
 
     def test_builder_copies_dicts_before_wrapping(self, tmp_path: Path) -> None:
         """External dict reference cannot mutate the returned data."""
@@ -136,7 +136,7 @@ class TestBuilderContract:
         original_dict["injected"] = MagicMock(spec=SkillAdapter)
         assert "injected" not in deps.skill_adapters
         # Also verify action_runner holds an independent copy, not the original reference
-        assert "injected" not in getattr(deps.action_runner, "_skill_adapters")
+        assert "injected" not in deps.action_runner._skill_adapters  # type: ignore[attr-defined]
 
     def test_builder_returns_concrete_wrapper_types(self, tmp_path: Path) -> None:
         """Verify each wrapper key maps to the expected concrete type."""
