@@ -4,6 +4,7 @@ Runs Vale (or built-in prose checks) against manuscript drafts.
 Returns structured findings for the style_passed gate.
 """
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -123,7 +124,6 @@ class StyleLinter(ToolWrapper):
 
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
         """Run Vale and parse JSON output into findings."""
-        import json
 
         findings: list[dict[str, Any]] = []
         try:

@@ -21,6 +21,7 @@ For real content generation, use SKILL.md prompts with an LLM.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +48,6 @@ def _extract_cite_keys(bib_path: Path) -> list[str]:
     """Extract citation keys from a BibTeX file."""
     if not bib_path.exists():
         return []
-    import re
 
     content = bib_path.read_text(encoding="utf-8", errors="replace")
     return re.findall(r"@\w+\{(\w+)", content)

@@ -8,6 +8,7 @@ This is an OPTIONAL integration surface. It is not required for MVP
 delivery. The bibliography truth always remains inspectable and auditable.
 """
 
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -149,8 +150,6 @@ class ZoteroImporter(ToolWrapper):
         Returns:
             Tuple of (entries dict, entry_types dict).
         """
-        import re
-
         entries: dict[str, dict[str, str]] = {}
         entry_types: dict[str, str] = {}
 
