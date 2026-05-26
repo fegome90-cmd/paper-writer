@@ -77,8 +77,48 @@ class TestBibtexTidyHardening:
         assert BibliographyNormalizer._parse_version("") is None
         assert BibliographyNormalizer._parse_version("  ") is None
 
-    def test_parse_version_single_segment(self) -> None:
-        assert BibliographyNormalizer._parse_version("1") == (1,)
+    def test_parse_version_padding(self) -> None:
+        """Short versions are padded to 3 segments."""
+        assert BibliographyNormalizer._parse_version("1") == (1, 0, 0)
+        assert BibliographyNormalizer._parse_version("1.11") == (1, 11, 0)
+
+    def test_parse_version_truncation(self) -> None:
+        """Extra segments are truncated to 3."""
+        assert BibliographyNormalizer._parse_version("1.12.0.1") == (1, 12, 0)
+
+    def test_version_single_segment_below_minimum(
+        self, normalizer: BibliographyNormalizer, tmp_path: Path
+    ) -> None:
+        """Version "1" (padded to (1,0,0)) is below minimum (1,11,0)."""
+        dummy = tmp_path / "dummy"
+        dummy.touch()
+        mock = MagicMock(returncode=0, stdout="1\n")
+        with patch("subprocess.run", return_value=mock):
+            ok, msg = normalizer._verify_version(dummy, "local")
+            assert ok is False
+            assert "unsupported" in msg.lower()
+
+    def test_version_two_segments_below_minimum(
+        self, normalizer: BibliographyNormalizer, tmp_path: Path
+    ) -> None:
+        """Version "1.10" (padded to (1,10,0)) is below minimum (1,11,0)."""
+        dummy = tmp_path / "dummy"
+        dummy.touch()
+        mock = MagicMock(returncode=0, stdout="1.10\n")
+        with patch("subprocess.run", return_value=mock):
+            ok, _ = normalizer._verify_version(dummy, "env")
+            assert ok is False
+
+    def test_version_two_segments_at_minimum(
+        self, normalizer: BibliographyNormalizer, tmp_path: Path
+    ) -> None:
+        """Version "1.11" (padded to (1,11,0)) meets minimum."""
+        dummy = tmp_path / "dummy"
+        dummy.touch()
+        mock = MagicMock(returncode=0, stdout="1.11\n")
+        with patch("subprocess.run", return_value=mock):
+            ok, _ = normalizer._verify_version(dummy, "local")
+            assert ok is True
 
     # --- Minimum-version policy ---
 
@@ -103,7 +143,7 @@ class TestBibtexTidyHardening:
         for ver in ("1.12.0", "v1.13.0", "2.0.0", "1.11.1"):
             mock = MagicMock(returncode=0, stdout=ver + "\n")
             with patch("subprocess.run", return_value=mock):
-                ok, _msg = normalizer._verify_version(dummy, "env")
+                ok, _ = normalizer._verify_version(dummy, "env")
                 assert ok is True, f"{ver} should pass"
 
     def test_version_below_minimum_fails(
@@ -128,9 +168,9 @@ class TestBibtexTidyHardening:
         for bad in ("abc", "", "  "):
             mock = MagicMock(returncode=0, stdout=bad + "\n")
             with patch("subprocess.run", return_value=mock):
-                ok, _msg = normalizer._verify_version(dummy, "env")
+                ok, msg = normalizer._verify_version(dummy, "env")
                 assert ok is False
-                assert "malformed" in _msg.lower()
+                assert "malformed" in msg.lower()
 
     def test_version_timeout_handled(
         self, normalizer: BibliographyNormalizer, tmp_path: Path

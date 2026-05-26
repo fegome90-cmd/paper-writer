@@ -26,9 +26,10 @@ class BibliographyNormalizer(ToolWrapper):
     _MINIMUM_VERSION: ClassVar[tuple[int, int, int]] = (1, 11, 0)
 
     @classmethod
-    def _parse_version(cls, version_str: str) -> tuple[int, ...] | None:
-        """Parse a version string like '1.12.0' or 'v1.11.0' into an int tuple.
+    def _parse_version(cls, version_str: str) -> tuple[int, int, int] | None:
+        """Parse a version string like '1.12.0' or 'v1.11.0' into a 3-element int tuple.
 
+        Pads shorter tuples with zeros: "1.11" → (1, 11, 0), "2" → (2, 0, 0).
         Returns None for malformed strings.
         """
         cleaned = version_str.strip().lstrip("v")
@@ -36,9 +37,14 @@ class BibliographyNormalizer(ToolWrapper):
             return None
         parts = cleaned.split(".")
         try:
-            return tuple(int(p) for p in parts)
+            int_parts = [int(p) for p in parts]
         except ValueError:
             return None
+        # Normalize to 3 segments (major.minor.patch), pad with zeros
+        major = int_parts[0] if len(int_parts) > 0 else 0
+        minor = int_parts[1] if len(int_parts) > 1 else 0
+        patch = int_parts[2] if len(int_parts) > 2 else 0
+        return (major, minor, patch)
 
     @property
     def name(self) -> str:
@@ -248,8 +254,8 @@ class BibliographyNormalizer(ToolWrapper):
         """Verify bibtex-tidy meets the minimum supported version.
 
         Uses semver tuple comparison: any version >= _MINIMUM_VERSION passes.
-        The ``source`` parameter is retained for diagnostic purposes but does
-        NOT affect version validation -- the same minimum applies everywhere.
+        The ``source`` parameter is included in error messages for diagnostics
+        but does NOT affect the version threshold -- same minimum everywhere.
 
         Returns:
             Tuple of (success: bool, version_string_or_error: str).
@@ -265,17 +271,24 @@ class BibliographyNormalizer(ToolWrapper):
                 timeout=5,
             )
             if result.returncode != 0:
-                return False, f"Failed to run version check (exit code {result.returncode})"
+                return False, (
+                    f"Failed to run version check for {executable} "
+                    f"(source={source}, exit code {result.returncode})"
+                )
 
             raw = result.stdout.strip()
             parsed = self._parse_version(raw)
             if parsed is None:
                 return False, (
-                    f"Malformed version output: {raw!r} (expected semver, minimum {min_str})"
+                    f"Malformed version output from {source}: {raw!r} "
+                    f"(expected semver, minimum {min_str})"
                 )
 
             if parsed < min_v:
-                return False, f"Unsupported version {raw}: minimum required is {min_str}"
+                return False, (
+                    f"Unsupported version {raw} from {source}: "
+                    f"minimum required is {min_str}"
+                )
             return True, raw
 
         except subprocess.TimeoutExpired:
