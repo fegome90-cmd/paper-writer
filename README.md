@@ -8,9 +8,9 @@ Phases 1–5 are complete and verified.
 
 Verification evidence:
 
-- `pytest` — 316 passing (unit, integration, E2E)
+- `pytest` — 340 passing (unit, integration, E2E)
 - `ruff check .` — clean
-- `mypy strict` — 0 issues in 73 source files
+- `mypy strict` — 0 issues in 75 source files
 - Full pipeline E2E verified: `init → import → search → screen → draft → validate → render → verify`
 - Pandoc produces real DOCX (12KB+, Word 2007+)
 
@@ -48,6 +48,13 @@ The repository has:
 - **Phase 3** — Domain Skill Integration (real imports, manifest-driven adapters)
 - **Phase 4** — Editorial Gates and Hardening (style rules, bib normalization, ref validation, presets, multi-output render, Zotero)
 - **Phase 5** — Production Readiness (E2E smoke, CI, degraded mode, render verification, operational docs)
+
+### Optional Next Phase
+
+- **Phase 6** — Real Material Validation (opt-in, local-only, non-CI)
+  - uses real source documents without committing them to the repository
+  - runs from `verification/` manifests and local gitignored inputs
+  - adds manual-review evidence on top of automated gates
 
 ## Quick Start
 
@@ -98,6 +105,7 @@ make verify
 | `docs/VALIDATOR_CONTRACTS.md` | Validator inputs, outputs, severities |
 | `docs/TESTING_STRATEGY.md` | Testing approach and coverage |
 | `docs/PRODUCTION_READINESS.md` | Operational criteria, degraded mode, CI |
+| `verification/REAL_MATERIAL_VALIDATION.md` | Local-only validation with real source material |
 
 ## Principle
 

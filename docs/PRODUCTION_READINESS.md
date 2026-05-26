@@ -103,9 +103,9 @@ E2E tests run as subprocess with real I/O — not mocked.
 
 - [x] `paper doctor` reports all tools and capabilities
 - [x] Degraded mode explicit in wrapper output (code: `degraded_mode`)
-- [x] Full E2E pipeline: init → render → verify (316 tests, 0 failed, 0 skipped)
+- [x] Full E2E pipeline: init → render → verify (340 tests, 0 failed, 0 skipped)
 - [x] CI pipeline: lint + typecheck + unit + E2E
 - [x] Render artifact verification (size + DOCX ZIP integrity)
-- [x] 316 tests passing (unit + integration + E2E + doctor)
-- [x] mypy strict clean (73 source files), ruff clean
+- [x] 340 tests passing (unit + integration + E2E + doctor)
+- [x] mypy strict clean (75 source files), ruff clean
 - [x] README.md and docs reflect real state
