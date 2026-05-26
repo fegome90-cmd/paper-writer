@@ -4,7 +4,7 @@ A dedicated repository for automated scientific search, drafting, validation, an
 
 ## Current Status
 
-Phases 1–5 are complete and verified.
+The system is verified and ready for controlled validation.
 
 Verification evidence:
 
@@ -47,7 +47,7 @@ The repository has:
 - **Phase 2** — Harness and Verification (domain validators, Pandoc render, assembler)
 - **Phase 3** — Domain Skill Integration (real imports, manifest-driven adapters)
 - **Phase 4** — Editorial Gates and Hardening (style rules, bib normalization, ref validation, presets, multi-output render, Zotero)
-- **Phase 5** — Production Readiness (E2E smoke, CI, degraded mode, render verification, operational docs)
+- **Phase 5** — Controlled Validation Readiness (E2E smoke, CI, degraded mode, render verification, operational docs)
 
 ### Optional Next Phase
 

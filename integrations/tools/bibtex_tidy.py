@@ -40,6 +40,9 @@ class BibliographyNormalizer(ToolWrapper):
             int_parts = [int(p) for p in parts]
         except ValueError:
             return None
+        # Reject negative segments (semver components are non-negative)
+        if any(p < 0 for p in int_parts):
+            return None
         # Normalize to 3 segments (major.minor.patch), pad with zeros
         major = int_parts[0] if len(int_parts) > 0 else 0
         minor = int_parts[1] if len(int_parts) > 1 else 0
@@ -286,15 +289,14 @@ class BibliographyNormalizer(ToolWrapper):
 
             if parsed < min_v:
                 return False, (
-                    f"Unsupported version {raw} from {source}: "
-                    f"minimum required is {min_str}"
+                    f"Unsupported version {raw} from {source}: minimum required is {min_str}"
                 )
             return True, raw
 
         except subprocess.TimeoutExpired:
-            return False, f"Version check timed out for {executable}"
+            return False, f"Version check timed out for {executable} (source={source})"
         except OSError as e:
-            return False, f"Error running version check: {e}"
+            return False, f"Error running version check for {executable} (source={source}): {e}"
 
     def _builtin_validate(self, bib_file: Path, bib_path: str) -> ValidatorResult:
         """Built-in BibTeX validation when bibtex-tidy is not available.

@@ -22,7 +22,11 @@ def main() -> None:
     )
 
     # paper search
-    subparsers.add_parser("search", help="Execute scientific literature search.")
+    search_parser = subparsers.add_parser("search", help="Execute scientific literature search.")
+    search_parser.add_argument(
+        "--raw-papers",
+        help="Path to JSON file containing raw paper candidates.",
+    )
 
     # paper screen
     subparsers.add_parser("screen", help="Screen search results to evidence set.")
@@ -104,6 +108,9 @@ def main() -> None:
 
     if cmd_name == "init":
         orch_args["preset"] = args.preset
+    elif cmd_name == "search":
+        if args.raw_papers:
+            orch_args["raw_papers"] = args.raw_papers
     elif cmd_name == "draft":
         if sub_name == "outline":
             orch_command = "draft_outline"
@@ -159,8 +166,11 @@ def main() -> None:
 
     deps = build_orchestrator_dependencies(project_root=repo_path)
     orchestrator = Orchestrator(
-        deps.repo_path, deps.state_manager, deps.checker,
-        deps.action_runner, deps.wrappers,
+        deps.repo_path,
+        deps.state_manager,
+        deps.checker,
+        deps.action_runner,
+        dict(deps.wrappers),
     )
     result = orchestrator.execute(request)
 

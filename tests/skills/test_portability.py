@@ -14,6 +14,7 @@ def test_no_users_path_in_executable_code() -> None:
     # but fail if they appear in executable logic.
     users_pat = re.compile(r"(['\"])/Users/.*?(['\"])")
     examen_pat = re.compile(r"\bexamen_grado\b")
+    file_pat = re.compile(r"(['\"])file://.*?(['\"])")
 
     for f in py_files:
         content = f.read_text(encoding="utf-8")
@@ -31,6 +32,9 @@ def test_no_users_path_in_executable_code() -> None:
         )
         assert not examen_pat.search(cleaned_code), (
             f"examen_grado reference found in executable code of {rel_path}"
+        )
+        assert not file_pat.search(cleaned_code), (
+            f"file:// protocol path found in executable code of {rel_path}"
         )
 
 

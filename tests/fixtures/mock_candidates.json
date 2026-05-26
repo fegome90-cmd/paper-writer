@@ -1,0 +1,121 @@
+[
+  {
+    "title": "Advanced agentic systems for scientific writing: A randomized trial",
+    "doi": "10.1000/rct123",
+    "year": 2023,
+    "authors": "Smith et al.",
+    "metrics": {
+      "population_score": 9.0,
+      "intervention_score": 9.0,
+      "outcome_score": 8.0,
+      "evidence_score": 9.0,
+      "sample_score": 0.9,
+      "journal_score": 9.5,
+      "citations_score": 9.0,
+      "coi_penalty": 0.0,
+      "context_score": 8.0
+    }
+  },
+  {
+    "title": "Advanced agentic systems for scientific writing: A randomized trial",
+    "doi": "10.1000/rct123",
+    "year": 2023,
+    "authors": "Smith A, Jones B.",
+    "metrics": {
+      "population_score": 9.0,
+      "intervention_score": 9.0,
+      "outcome_score": 8.0,
+      "evidence_score": 9.0,
+      "sample_score": 0.9,
+      "journal_score": 9.5,
+      "citations_score": 9.0,
+      "coi_penalty": 0.0,
+      "context_score": 8.0
+    }
+  },
+  {
+    "title": "Advanced Agentic Systems for Scientific Writing: A Randomized Trial",
+    "doi": "10.1000/dup999",
+    "year": 2023,
+    "authors": "Smith et al.",
+    "metrics": {
+      "population_score": 9.0,
+      "intervention_score": 9.0,
+      "outcome_score": 8.0,
+      "evidence_score": 9.0,
+      "sample_score": 0.9,
+      "journal_score": 9.5,
+      "citations_score": 9.0,
+      "coi_penalty": 0.0,
+      "context_score": 8.0
+    }
+  },
+  {
+    "title": "Why AI writing is the absolute best thing ever",
+    "doi": "",
+    "year": 2024,
+    "authors": "Hype Bro",
+    "metrics": {
+      "population_score": 2.0,
+      "intervention_score": 2.0,
+      "outcome_score": 2.0,
+      "evidence_score": 1.0,
+      "sample_score": 0.1,
+      "journal_score": 1.0,
+      "citations_score": 0.0,
+      "coi_penalty": 5.0,
+      "context_score": 2.0
+    }
+  },
+  {
+    "title": "",
+    "doi": "",
+    "year": 0,
+    "authors": "",
+    "metrics": {
+      "population_score": 0.0,
+      "intervention_score": 0.0,
+      "outcome_score": 0.0,
+      "evidence_score": 0.0,
+      "sample_score": 0.0,
+      "journal_score": 0.0,
+      "citations_score": 0.0,
+      "coi_penalty": 0.0,
+      "context_score": 0.0
+    }
+  },
+  {
+    "title": "Systematic evaluation of citation analysis",
+    "doi": "10.1000/medium",
+    "year": 2022,
+    "authors": "Johnson et al.",
+    "metrics": {
+      "population_score": 6.0,
+      "intervention_score": 5.0,
+      "outcome_score": 5.0,
+      "evidence_score": 5.0,
+      "sample_score": 0.5,
+      "journal_score": 5.0,
+      "citations_score": 2.0,
+      "coi_penalty": 0.0,
+      "context_score": 5.0
+    }
+  },
+  {
+    "title": "Corporate AI systems are superior",
+    "doi": "10.1000/coi_paper",
+    "year": 2024,
+    "authors": "Funding Corp et al.",
+    "metrics": {
+      "population_score": 8.0,
+      "intervention_score": 8.0,
+      "outcome_score": 8.0,
+      "evidence_score": 7.0,
+      "sample_score": 0.8,
+      "journal_score": 8.0,
+      "citations_score": 5.0,
+      "coi_penalty": 4.0,
+      "context_score": 7.0
+    }
+  }
+]

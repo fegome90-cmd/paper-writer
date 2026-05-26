@@ -86,6 +86,12 @@ class TestBibtexTidyHardening:
         """Extra segments are truncated to 3."""
         assert BibliographyNormalizer._parse_version("1.12.0.1") == (1, 12, 0)
 
+    def test_parse_version_rejects_negative(self) -> None:
+        """Negative segments are rejected as malformed."""
+        assert BibliographyNormalizer._parse_version("-1.0.0") is None
+        assert BibliographyNormalizer._parse_version("1.-2.0") is None
+        assert BibliographyNormalizer._parse_version("0.0.-1") is None
+
     def test_version_single_segment_below_minimum(
         self, normalizer: BibliographyNormalizer, tmp_path: Path
     ) -> None:

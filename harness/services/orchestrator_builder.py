@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import types
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,21 +28,37 @@ __all__ = ["OrchestratorDependencies", "build_orchestrator_dependencies"]
 
 @dataclass(frozen=True)
 class OrchestratorDependencies:
+    """Frozen container of assembled dependencies for Orchestrator construction.
+
+    Both `wrappers` and `skill_adapters` are wrapped in MappingProxyType for
+    true immutability at the container level. Dicts are copied before wrapping
+    so external references cannot mutate the data through the proxy.
+
+    Note on `skill_adapters`: This field is NOT consumed by the Orchestrator
+    constructor — the CLI uses default skill_adapters (None) and never reads
+    deps.skill_adapters back from the builder result. It exists for testability
+    and decoupling: tests can inject fakes and assert on what was wired, and
+    FilesystemActionRunner consumes the adapters internally during builder
+    assembly (step 7). This is an intentional tradeoff accepted in the design.
+    """
+
     repo_path: Path
     state_manager: StateManager
     checker: ArtifactChecker
     action_runner: ActionRunner
-    wrappers: dict[str, ToolWrapper]
-    skill_adapters: dict[str, SkillAdapter]
+    wrappers: types.MappingProxyType[str, ToolWrapper]
+    skill_adapters: types.MappingProxyType[str, SkillAdapter]
 
 
 def build_orchestrator_dependencies(
     project_root: Path | None = None,
     skill_adapters: dict[str, SkillAdapter] | None = None,
 ) -> OrchestratorDependencies:
-    # 1. Resolve project_root
+    # 1. Resolve and validate project_root
     if project_root is None:
         project_root = Path.cwd()
+    if not project_root.is_dir():
+        raise ValueError(f"Project root does not exist or is not a directory: {project_root}")
 
     # 2-4. State infrastructure (internal, not exposed)
     state_file_path = project_root / "outputs" / "state.yaml"
@@ -51,10 +68,10 @@ def build_orchestrator_dependencies(
     # 5. Artifact checker
     checker = FilesystemArtifactChecker(project_root)
 
-    # 6. Skill adapters: use provided dict as-is, or create defaults
+    # 6. Skill adapters: copy once to sever external reference, or create defaults
     resolved_skill_adapters: dict[str, SkillAdapter]
     if skill_adapters is not None:
-        resolved_skill_adapters = skill_adapters
+        resolved_skill_adapters = dict(skill_adapters)
     else:
         resolved_skill_adapters = {
             "literature_search": LiteratureSearchAdapter(),
@@ -75,12 +92,14 @@ def build_orchestrator_dependencies(
         "import_bib": ZoteroImporter(),
     }
 
-    # 9. Return assembled dependencies
+    # 9. Return assembled dependencies with immutable dict wrappers.
+    # Copy dicts before wrapping so external references cannot mutate
+    # the data through the proxy.
     return OrchestratorDependencies(
         repo_path=project_root,
         state_manager=state_manager,
         checker=checker,
         action_runner=action_runner,
-        wrappers=wrappers,
-        skill_adapters=resolved_skill_adapters,
+        wrappers=types.MappingProxyType(dict(wrappers)),
+        skill_adapters=types.MappingProxyType(resolved_skill_adapters),
     )
