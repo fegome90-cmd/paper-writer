@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
+from validators.bibliography import validate_bibliography
 
 
 class BibliographyNormalizer(ToolWrapper):
@@ -69,13 +70,15 @@ class BibliographyNormalizer(ToolWrapper):
             )
 
         # Resolve path to bibtex-tidy
-        executable = self._resolve_executable(context)
-        if not executable:
+        executable_info = self._resolve_executable(context)
+        if not executable_info:
             # Fall back to built-in validation
             return self._builtin_validate(bib_file, bib_path)
 
+        executable, source = executable_info
+
         # Verify version
-        version_ok, version_msg = self._verify_version(executable)
+        version_ok, version_msg = self._verify_version(executable, source)
         if not version_ok:
             return ValidatorResult(
                 validator="bibliography",
@@ -173,19 +176,40 @@ class BibliographyNormalizer(ToolWrapper):
                 artifacts_checked=[bib_path],
             )
 
+        findings: list[dict[str, Any]] = []
+        if source == "local" and version_msg == "1.11.0":
+            findings.append(
+                {
+                    "code": "known_version_mismatch",
+                    "severity": "warning",
+                    "message": (
+                        "Known local package version-report mismatch: "
+                        "package.json specifies 1.12.0 but CLI reports v1.11.0."
+                    ),
+                    "artifact": bib_path,
+                }
+            )
+            summary = "Bibliography normalized (with known version mismatch)."
+        else:
+            summary = "Bibliography normalized successfully."
+
         return ValidatorResult(
             validator="bibliography",
             status="pass",
-            summary="Bibliography normalized successfully.",
-            findings=[],
+            summary=summary,
+            findings=findings,
             artifacts_checked=[bib_path],
         )
 
-    def _resolve_executable(self, context: dict[str, Any]) -> Path | None:
+    def _resolve_executable(self, context: dict[str, Any]) -> tuple[Path, str] | None:
         """Resolve path to bibtex-tidy in order of preference:
         1. Environment override: BIBTEX_TIDY_BIN (wins first, fails fast)
         2. Local toolchain: repo_path/tools/node/node_modules/.bin/bibtex-tidy
         3. Global PATH fallback (only if BIBTEX_TIDY_ALLOW_GLOBAL=true)
+
+        Returns:
+            Tuple of (Path to executable, source label) or None.
+            source label is one of: "env", "local", "global"
         """
 
         # 1. Environment override (Wins first)
@@ -193,7 +217,7 @@ class BibliographyNormalizer(ToolWrapper):
         if env_bin:
             env_path = Path(env_bin)
             if env_path.exists() and os.access(env_path, os.X_OK):
-                return env_path
+                return env_path, "env"
             raise FileNotFoundError(
                 f"BIBTEX_TIDY_BIN specified but not found or not executable: {env_bin}"
             )
@@ -202,7 +226,7 @@ class BibliographyNormalizer(ToolWrapper):
         repo_path = Path(context.get("repo_path", Path.cwd()))
         local_path = repo_path / "tools" / "node" / "node_modules" / ".bin" / "bibtex-tidy"
         if local_path.exists() and os.access(local_path, os.X_OK):
-            return local_path
+            return local_path, "local"
 
         # 3. Global PATH fallback (only if allowed by config)
         allow_global = os.environ.get("BIBTEX_TIDY_ALLOW_GLOBAL", "").lower() in (
@@ -213,13 +237,16 @@ class BibliographyNormalizer(ToolWrapper):
         if allow_global:
             global_bin = shutil.which("bibtex-tidy")
             if global_bin:
-                return Path(global_bin)
+                return Path(global_bin), "global"
 
         return None
 
-    def _verify_version(self, executable: Path) -> tuple[bool, str]:
-        """Verify bibtex-tidy version meets minimum requirement (>= 1.11.0)."""
-        min_version = (1, 11, 0)
+    def _verify_version(self, executable: Path, source: str) -> tuple[bool, str]:
+        """Verify bibtex-tidy version based on its resolution source.
+
+        - local toolchain: package/lock expects 1.12.0, CLI may report 1.12.0 or 1.11.0.
+        - env/global: expects exactly 1.12.0.
+        """
         try:
             result = subprocess.run(
                 [str(executable), "--version"],
@@ -231,18 +258,22 @@ class BibliographyNormalizer(ToolWrapper):
                 return False, f"Failed to run version check (exit code {result.returncode})"
 
             version_str = result.stdout.strip().lstrip("v")
-            try:
-                parts = tuple(int(p) for p in version_str.split("."))
-            except (ValueError, AttributeError):
-                return False, f"Cannot parse version: {version_str!r}"
 
-            if parts < min_version:
-                return (
-                    False,
-                    f"Version too old: need >={'.'.join(str(p) for p in min_version)},"
-                    f" got {version_str}",
-                )
-            return True, version_str
+            if source == "local":
+                if version_str not in ("1.12.0", "1.11.0"):
+                    return (
+                        False,
+                        f"Invalid local version: expected 1.12.0 or 1.11.0, got {version_str}",
+                    )
+                return True, version_str
+            else:
+                # Env override or global PATH: Must be exactly 1.12.0
+                if version_str != "1.12.0":
+                    return (
+                        False,
+                        f"Invalid external version: expected exactly 1.12.0, got {version_str}",
+                    )
+                return True, version_str
         except Exception as e:
             return False, f"Error running version check: {e}"
 
@@ -253,7 +284,6 @@ class BibliographyNormalizer(ToolWrapper):
         validators.bibliography. Emits explicit degraded-mode notice.
         """
 
-        from validators.bibliography import validate_bibliography
 
         findings: list[dict[str, Any]] = []
         content = bib_file.read_text(encoding="utf-8", errors="replace")

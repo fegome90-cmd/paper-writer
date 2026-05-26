@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
+from validators.bibliography import validate_bibliography
 from validators.refs import validate_refs_metadata
 
 
@@ -99,7 +100,6 @@ class RefsMetadataValidator(ToolWrapper):
         findings.extend(validate_refs_metadata(entries))
 
         # Additional metadata checks from bibliography domain rules
-        from validators.bibliography import validate_bibliography
 
         # Parse entry types for type-aware validation
         entry_types: dict[str, str] = {}

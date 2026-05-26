@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from skills.imported.literature_search.scoring import (
+    PaperMetrics,
     calculate_d_score,
     calculate_final_score,
     classify_tier,
@@ -211,8 +212,6 @@ def _extract_metrics(paper: dict[str, Any]) -> Any:
     Falls back to zero scores if not provided — the adapter can populate
     these from external data before calling search().
     """
-    from skills.imported.literature_search.scoring import PaperMetrics
-
     m = paper.get("metrics", {})
     return PaperMetrics(
         population_score=float(m.get("population_score", 0.0)),

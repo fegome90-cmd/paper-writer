@@ -118,8 +118,6 @@ class StyleLinter(ToolWrapper):
     @staticmethod
     def _styles_path() -> str:
         """Return the path to Vale style packs."""
-        from pathlib import Path
-
         return str(Path(__file__).resolve().parents[2] / "styles" / "vale")
 
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
