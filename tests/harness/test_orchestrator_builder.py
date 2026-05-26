@@ -17,7 +17,9 @@ from harness.services.orchestrator_builder import (
 class TestBuilderContract:
     """Contract tests for build_orchestrator_dependencies."""
 
-    def test_builder_returns_correct_types(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_builder_returns_correct_types(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         deps = build_orchestrator_dependencies()
 
@@ -29,7 +31,9 @@ class TestBuilderContract:
         assert isinstance(deps.wrappers, dict)
         assert isinstance(deps.skill_adapters, dict)
 
-    def test_builder_resolves_cwd_when_none(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_builder_resolves_cwd_when_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         deps = build_orchestrator_dependencies()
         assert deps.repo_path == tmp_path
@@ -71,7 +75,15 @@ class TestBuilderContract:
 
     def test_wrappers_has_seven_keys(self, tmp_path: Path) -> None:
         deps = build_orchestrator_dependencies(project_root=tmp_path)
-        expected_keys = {"lint_bib", "check_refs", "check_refs_metadata", "lint_style", "audit_reporting", "render", "import_bib"}
+        expected_keys = {
+            "lint_bib",
+            "check_refs",
+            "check_refs_metadata",
+            "lint_style",
+            "audit_reporting",
+            "render",
+            "import_bib",
+        }
         assert set(deps.wrappers.keys()) == expected_keys
 
     def test_wrappers_are_independent_instances(self, tmp_path: Path) -> None:
@@ -85,8 +97,11 @@ class TestBuilderContract:
         deps = build_orchestrator_dependencies(project_root=tmp_path)
         # Orchestrator accepts 5 args, skill_adapters is NOT one of them
         orchestrator = Orchestrator(
-            deps.repo_path, deps.state_manager, deps.checker,
-            deps.action_runner, deps.wrappers,
+            deps.repo_path,
+            deps.state_manager,
+            deps.checker,
+            deps.action_runner,
+            deps.wrappers,
         )
         assert orchestrator is not None
 
@@ -94,8 +109,11 @@ class TestBuilderContract:
     def test_builder_to_orchestrator_end_to_end(self, tmp_path: Path) -> None:
         deps = build_orchestrator_dependencies(project_root=tmp_path)
         orchestrator = Orchestrator(
-            deps.repo_path, deps.state_manager, deps.checker,
-            deps.action_runner, deps.wrappers,
+            deps.repo_path,
+            deps.state_manager,
+            deps.checker,
+            deps.action_runner,
+            deps.wrappers,
         )
         request = OrchestratorRequest(
             command="init",

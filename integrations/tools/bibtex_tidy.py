@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from integrations.tools.base import ToolWrapper, ValidatorResult
 from validators.bibliography import validate_bibliography
@@ -22,6 +22,23 @@ class BibliographyNormalizer(ToolWrapper):
     Uses bibtex-tidy if available. Falls back to a built-in syntax
     check that detects unclosed braces and malformed entries.
     """
+
+    _MINIMUM_VERSION: ClassVar[tuple[int, int, int]] = (1, 11, 0)
+
+    @classmethod
+    def _parse_version(cls, version_str: str) -> tuple[int, ...] | None:
+        """Parse a version string like '1.12.0' or 'v1.11.0' into an int tuple.
+
+        Returns None for malformed strings.
+        """
+        cleaned = version_str.strip().lstrip("v")
+        if not cleaned:
+            return None
+        parts = cleaned.split(".")
+        try:
+            return tuple(int(p) for p in parts)
+        except ValueError:
+            return None
 
     @property
     def name(self) -> str:
@@ -177,21 +194,7 @@ class BibliographyNormalizer(ToolWrapper):
             )
 
         findings: list[dict[str, Any]] = []
-        if source == "local" and version_msg == "1.11.0":
-            findings.append(
-                {
-                    "code": "known_version_mismatch",
-                    "severity": "warning",
-                    "message": (
-                        "Known local package version-report mismatch: "
-                        "package.json specifies 1.12.0 but CLI reports v1.11.0."
-                    ),
-                    "artifact": bib_path,
-                }
-            )
-            summary = "Bibliography normalized (with known version mismatch)."
-        else:
-            summary = "Bibliography normalized successfully."
+        summary = "Bibliography normalized successfully."
 
         return ValidatorResult(
             validator="bibliography",
@@ -242,11 +245,18 @@ class BibliographyNormalizer(ToolWrapper):
         return None
 
     def _verify_version(self, executable: Path, source: str) -> tuple[bool, str]:
-        """Verify bibtex-tidy version based on its resolution source.
+        """Verify bibtex-tidy meets the minimum supported version.
 
-        - local toolchain: package/lock expects 1.12.0, CLI may report 1.12.0 or 1.11.0.
-        - env/global: expects exactly 1.12.0.
+        Uses semver tuple comparison: any version >= _MINIMUM_VERSION passes.
+        The ``source`` parameter is retained for diagnostic purposes but does
+        NOT affect version validation -- the same minimum applies everywhere.
+
+        Returns:
+            Tuple of (success: bool, version_string_or_error: str).
         """
+        min_v = self._MINIMUM_VERSION
+        min_str = ".".join(str(p) for p in min_v)
+
         try:
             result = subprocess.run(
                 [str(executable), "--version"],
@@ -257,24 +267,20 @@ class BibliographyNormalizer(ToolWrapper):
             if result.returncode != 0:
                 return False, f"Failed to run version check (exit code {result.returncode})"
 
-            version_str = result.stdout.strip().lstrip("v")
+            raw = result.stdout.strip()
+            parsed = self._parse_version(raw)
+            if parsed is None:
+                return False, (
+                    f"Malformed version output: {raw!r} (expected semver, minimum {min_str})"
+                )
 
-            if source == "local":
-                if version_str not in ("1.12.0", "1.11.0"):
-                    return (
-                        False,
-                        f"Invalid local version: expected 1.12.0 or 1.11.0, got {version_str}",
-                    )
-                return True, version_str
-            else:
-                # Env override or global PATH: Must be exactly 1.12.0
-                if version_str != "1.12.0":
-                    return (
-                        False,
-                        f"Invalid external version: expected exactly 1.12.0, got {version_str}",
-                    )
-                return True, version_str
-        except Exception as e:
+            if parsed < min_v:
+                return False, f"Unsupported version {raw}: minimum required is {min_str}"
+            return True, raw
+
+        except subprocess.TimeoutExpired:
+            return False, f"Version check timed out for {executable}"
+        except OSError as e:
             return False, f"Error running version check: {e}"
 
     def _builtin_validate(self, bib_file: Path, bib_path: str) -> ValidatorResult:

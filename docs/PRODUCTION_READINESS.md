@@ -11,6 +11,8 @@
 | Vale | Style linting (vale rules) | `brew install vale` | ✅ Built-in style checks only |
 | bibtex-tidy | Bibliography normalization | `npm install -g bibtex-tidy` | ✅ Built-in BibTeX validation |
 
+> **Version policy**: minimum-version check (>= 1.11.0). Any semver-compatible version at or above the minimum is accepted, regardless of source (local, env, global).
+
 ### Check Commands
 
 ```bash
