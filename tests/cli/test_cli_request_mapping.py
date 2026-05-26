@@ -18,7 +18,8 @@ def _capture_request(
 
     class FakeOrchestrator:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
-            return None
+            # Constructor intentionally no-op for monkeypatched test double.
+            pass
 
         def execute(self, request: OrchestratorRequest) -> OrchestratorResult:
             captured["request"] = request

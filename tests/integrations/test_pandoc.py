@@ -211,6 +211,53 @@ class TestPandocFailure:
         assert result.status == "warn"
         assert any("pdf" in f["message"].lower() for f in result.findings)
 
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_pdf_only_failure_is_fail(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            result = MagicMock()
+            result.returncode = 1
+            result.stderr = "pdf engine not found"
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {"manuscript": str(manuscript), "output_formats": ["pdf"]},
+            {},
+        )
+        assert result.status == "fail"
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_both_formats_fail_is_fail(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            result = MagicMock()
+            result.returncode = 1
+            result.stderr = "render failed"
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run({"manuscript": str(manuscript)}, {})
+        assert result.status == "fail"
+
 
 class TestPandocMultiOutput:
     """Tests for multi-output rendering with format selection."""
@@ -371,7 +418,6 @@ class TestPandocMultiOutput:
             return result
 
         mock_run.side_effect = fake_run
-        renderer = renderer
         renderer.run(
             {
                 "manuscript": str(manuscript),
@@ -381,3 +427,71 @@ class TestPandocMultiOutput:
         )
         # epub should be filtered out, only docx rendered
         assert mock_run.call_count == 1
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_missing_csl_path_emits_warning(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {
+                "manuscript": str(manuscript),
+                "csl": str(tmp_path / "missing.csl"),
+                "output_formats": ["docx"],
+            },
+            {},
+        )
+
+        assert result.status == "pass"
+        assert any(f["code"] == "missing_csl_file" for f in result.findings)
+
+    @patch("integrations.tools.pandoc.shutil.which", return_value="/usr/bin/pandoc")
+    @patch("integrations.tools.pandoc.subprocess.run")
+    def test_missing_reference_doc_emits_warning_for_docx(
+        self,
+        mock_run: MagicMock,
+        mock_which: MagicMock,
+        renderer: PandocRenderer,
+        tmp_path: Path,
+    ) -> None:
+        manuscript = tmp_path / "manuscript.md"
+        manuscript.write_text("# Title")
+
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("rendered")
+            result = MagicMock()
+            result.returncode = 0
+            result.stderr = ""
+            return result
+
+        mock_run.side_effect = fake_run
+        result = renderer.run(
+            {
+                "manuscript": str(manuscript),
+                "reference_doc": str(tmp_path / "missing.docx"),
+                "output_formats": ["docx"],
+            },
+            {},
+        )
+
+        assert result.status == "pass"
+        assert any(f["code"] == "missing_reference_doc" for f in result.findings)

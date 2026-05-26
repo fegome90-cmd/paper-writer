@@ -5,6 +5,9 @@ and validate the references.bib file. Returns structured findings
 consumed by the gate system.
 """
 
+import os
+import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -65,30 +68,100 @@ class BibliographyNormalizer(ToolWrapper):
                 artifacts_checked=[],
             )
 
-        # Try bibtex-tidy first
+        # Resolve path to bibtex-tidy
+        executable = self._resolve_executable(context)
+        if not executable:
+            # Fall back to built-in validation
+            return self._builtin_validate(bib_file, bib_path)
+
+        # Verify version
+        version_ok, version_msg = self._verify_version(executable)
+        if not version_ok:
+            return ValidatorResult(
+                validator="bibliography",
+                status="fail",
+                summary=f"bibtex-tidy version verification failed: {version_msg}",
+                findings=[
+                    {
+                        "code": "version_mismatch",
+                        "severity": "error",
+                        "message": version_msg,
+                        "artifact": bib_path,
+                    }
+                ],
+                artifacts_checked=[bib_path],
+            )
+
+        # Backup the original bibliography file to protect against corruption during --modify
+        # Apply strict collision protection
+        backup_path = bib_file.with_suffix(".bib.bak")
+        if backup_path.exists():
+            return ValidatorResult(
+                validator="bibliography",
+                status="fail",
+                summary="Backup collision detected: references.bib.bak already exists.",
+                findings=[
+                    {
+                        "code": "backup_collision",
+                        "severity": "error",
+                        "message": (
+                            "A temporary backup file already exists. Aborting to prevent data loss."
+                        ),
+                        "artifact": bib_path,
+                    }
+                ],
+                artifacts_checked=[bib_path],
+            )
+
+        try:
+            shutil.copy2(bib_file, backup_path)
+        except OSError as e:
+            return ValidatorResult(
+                validator="bibliography",
+                status="fail",
+                summary=f"Failed to create backup of bibliography file: {e}",
+                findings=[
+                    {
+                        "code": "backup_error",
+                        "severity": "error",
+                        "message": f"Could not copy {bib_path} to backup: {e}",
+                        "artifact": bib_path,
+                    }
+                ],
+                artifacts_checked=[bib_path],
+            )
+
+        # Execute bibtex-tidy with strict parameters
         try:
             result = subprocess.run(
-                ["bibtex-tidy", str(bib_file), "--modify", "--sort"],
+                [str(executable), str(bib_file), "--modify", "--sort"],
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
             if result.returncode != 0:
+                # Restore original file from backup
+                if backup_path.exists():
+                    shutil.move(str(backup_path), str(bib_file))
                 return ValidatorResult(
                     validator="bibliography",
                     status="fail",
-                    summary="bibtex-tidy reported errors.",
+                    summary="bibtex-tidy reported errors. Restored bibliography from backup.",
                     findings=self._parse_bibtex_tidy_errors(result.stderr, bib_path),
                     artifacts_checked=[bib_path],
                 )
-        except FileNotFoundError:
-            # bibtex-tidy not installed — run built-in validation
-            return self._builtin_validate(bib_file, bib_path)
+
+            # Success, remove backup file
+            if backup_path.exists():
+                backup_path.unlink()
         except (OSError, subprocess.SubprocessError) as e:
+            # Restore original file from backup
+            if backup_path.exists():
+                shutil.move(str(backup_path), str(bib_file))
             return ValidatorResult(
                 validator="bibliography",
                 status="fail",
-                summary=f"bibtex-tidy execution failed: {e}",
+                summary=f"bibtex-tidy execution failed: {e}. Restored backup.",
                 findings=[
                     {
                         "code": "tool_error",
@@ -108,13 +181,77 @@ class BibliographyNormalizer(ToolWrapper):
             artifacts_checked=[bib_path],
         )
 
+    def _resolve_executable(self, context: dict[str, Any]) -> Path | None:
+        """Resolve path to bibtex-tidy in order of preference:
+        1. Environment override: BIBTEX_TIDY_BIN (wins first, fails fast)
+        2. Local toolchain: repo_path/tools/node/node_modules/.bin/bibtex-tidy
+        3. Global PATH fallback (only if BIBTEX_TIDY_ALLOW_GLOBAL=true)
+        """
+
+        # 1. Environment override (Wins first)
+        env_bin = os.environ.get("BIBTEX_TIDY_BIN")
+        if env_bin:
+            env_path = Path(env_bin)
+            if env_path.exists() and os.access(env_path, os.X_OK):
+                return env_path
+            raise FileNotFoundError(
+                f"BIBTEX_TIDY_BIN specified but not found or not executable: {env_bin}"
+            )
+
+        # 2. Local toolchain (relative to repo root)
+        repo_path = Path(context.get("repo_path", Path.cwd()))
+        local_path = repo_path / "tools" / "node" / "node_modules" / ".bin" / "bibtex-tidy"
+        if local_path.exists() and os.access(local_path, os.X_OK):
+            return local_path
+
+        # 3. Global PATH fallback (only if allowed by config)
+        allow_global = os.environ.get("BIBTEX_TIDY_ALLOW_GLOBAL", "").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+        if allow_global:
+            global_bin = shutil.which("bibtex-tidy")
+            if global_bin:
+                return Path(global_bin)
+
+        return None
+
+    def _verify_version(self, executable: Path) -> tuple[bool, str]:
+        """Verify bibtex-tidy version meets minimum requirement (>= 1.11.0)."""
+        min_version = (1, 11, 0)
+        try:
+            result = subprocess.run(
+                [str(executable), "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return False, f"Failed to run version check (exit code {result.returncode})"
+
+            version_str = result.stdout.strip().lstrip("v")
+            try:
+                parts = tuple(int(p) for p in version_str.split("."))
+            except (ValueError, AttributeError):
+                return False, f"Cannot parse version: {version_str!r}"
+
+            if parts < min_version:
+                return (
+                    False,
+                    f"Version too old: need >={'.'.join(str(p) for p in min_version)},"
+                    f" got {version_str}",
+                )
+            return True, version_str
+        except Exception as e:
+            return False, f"Error running version check: {e}"
+
     def _builtin_validate(self, bib_file: Path, bib_path: str) -> ValidatorResult:
         """Built-in BibTeX validation when bibtex-tidy is not available.
 
         Parses entries and delegates domain validation to
         validators.bibliography. Emits explicit degraded-mode notice.
         """
-        import re
 
         from validators.bibliography import validate_bibliography
 
@@ -199,10 +336,7 @@ class BibliographyNormalizer(ToolWrapper):
         return ValidatorResult(
             validator="bibliography",
             status=status,
-            summary=(
-                f"Built-in BibTeX validation: {len(entries)} entries checked"
-                f" (bibtex-tidy not installed)."
-            ),
+            summary="normalization skipped / builtin validation used",
             findings=findings,
             artifacts_checked=[bib_path],
         )

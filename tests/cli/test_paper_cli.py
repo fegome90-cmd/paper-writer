@@ -366,9 +366,7 @@ class TestCLIInitPreset:
         """paper init --preset nonexistent uses empty templates."""
         monkeypatch.chdir(tmp_path)
 
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "init", "--preset", "nonexistent"]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "init", "--preset", "nonexistent"])
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 0
@@ -390,9 +388,7 @@ class TestCLINegativePaths:
     ) -> None:
         """paper init --preset nonexistent uses empty templates."""
         monkeypatch.chdir(tmp_path)
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "init", "--preset", "nonexistent"]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "init", "--preset", "nonexistent"])
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 0
@@ -430,9 +426,7 @@ class TestCLINegativePaths:
         garbage_bib = tmp_path / "garbage.bib"
         garbage_bib.write_text("this is not bibtex at all")
 
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "import", "bib", str(garbage_bib)]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "import", "bib", str(garbage_bib)])
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
@@ -457,9 +451,7 @@ class TestCLINegativePaths:
             "}\n"
         )
 
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "import", "bib", str(bad_bib)]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "import", "bib", str(bad_bib)])
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1
@@ -473,9 +465,7 @@ class TestCLINegativePaths:
         with pytest.raises(SystemExit):
             main()
 
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "render", "--format", "epub"]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "render", "--format", "epub"])
         with pytest.raises(SystemExit) as exc_info:
             main()
         # argparse exits with code 2 for invalid choice
@@ -490,9 +480,7 @@ class TestCLINegativePaths:
         with pytest.raises(SystemExit):
             main()
 
-        monkeypatch.setattr(
-            sys, "argv", ["paper", "render", "--format", "docx"]
-        )
+        monkeypatch.setattr(sys, "argv", ["paper", "render", "--format", "docx"])
         with pytest.raises(SystemExit) as exc_info:
             main()
         assert exc_info.value.code == 1

@@ -1,0 +1,3 @@
+{"operation":"read","ts":1779745279,"source":"hook","file_path":"validators/bibliography.py","tool":"Read","tool_input":"{\"file_path\": \"/Users/felipe_gonzalez/Developer/paper-writer/validators/bibliography.py\"}"}
+{"operation":"read","ts":1779745279,"source":"hook","file_path":"skills/imported/academic_writer/drafting.py","tool":"Read","tool_input":"{\"file_path\": \"/Users/felipe_gonzalez/Developer/paper-writer/skills/imported/academic_writer/drafting.py\", \"limit\": 100}"}
+{"operation":"read","ts":1779745279,"source":"hook","file_path":"validators/style.py","tool":"Read","tool_input":"{\"file_path\": \"/Users/felipe_gonzalez/Developer/paper-writer/validators/style.py\"}"}

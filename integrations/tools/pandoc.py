@@ -7,15 +7,19 @@ Returns structured findings for the render_passed gate.
 
 import shutil
 import subprocess
+import zipfile
 from pathlib import Path
 from typing import Any
 
 from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper, ValidatorResult
 
 # Supported output formats and their extensions
+DOCX_EXTENSION = ".docx"
+PDF_EXTENSION = ".pdf"
+
 SUPPORTED_FORMATS: dict[str, str] = {
-    "docx": ".docx",
-    "pdf": ".pdf",
+    "docx": DOCX_EXTENSION,
+    "pdf": PDF_EXTENSION,
 }
 
 # Default formats when output_formats is not specified
@@ -32,6 +36,12 @@ class PandocRenderer(ToolWrapper):
     - ``output_formats``: list of formats to render (default: docx, pdf)
     - ``csl``: path to a CSL citation style file
     - ``reference_doc``: path to a reference docx for styling
+
+    Render policy:
+    - At least one requested format must succeed.
+    - ``warn`` is emitted only for partial success in mixed requests
+      (currently: DOCX succeeds and PDF fails).
+    - If all requested formats fail, status is ``fail``.
     """
 
     @property
@@ -66,6 +76,7 @@ class PandocRenderer(ToolWrapper):
 
         artifacts_checked: list[str] = [str(manuscript)]
         findings: list[dict[str, Any]] = []
+        self._collect_optional_input_warnings(csl, reference_doc, output_formats, findings)
 
         # Render each requested format
         results: dict[str, bool] = {}
@@ -83,16 +94,7 @@ class PandocRenderer(ToolWrapper):
             )
             results[fmt] = ok
 
-        # Determine status: docx must succeed, pdf is optional
-        docx_ok = results.get("docx", False)
-        pdf_ok = results.get("pdf", True)  # No pdf requested = not a failure
-
-        if not docx_ok and "docx" in output_formats:
-            status = "fail"
-        elif not pdf_ok and "pdf" in output_formats:
-            status = "warn"
-        else:
-            status = "pass"
+        status = self._determine_status(output_formats, results)
 
         summary = self._build_summary(results, output_dir, output_formats)
         return ValidatorResult(
@@ -106,6 +108,60 @@ class PandocRenderer(ToolWrapper):
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _determine_status(output_formats: list[str], results: dict[str, bool]) -> str:
+        """Compute render status from requested formats and per-format outcomes.
+
+        Rules:
+        - Fail when none of the requested formats succeeded.
+        - Warn only on partial success in mixed requests.
+        - Pass when all requested formats succeeded.
+        """
+        requested = [fmt for fmt in output_formats if fmt in SUPPORTED_FORMATS]
+        if not requested:
+            return "fail"
+
+        succeeded = [fmt for fmt in requested if results.get(fmt, False)]
+        failed = [fmt for fmt in requested if not results.get(fmt, False)]
+
+        if not succeeded:
+            return "fail"
+        if failed:
+            return "warn"
+        return "pass"
+
+    @staticmethod
+    def _collect_optional_input_warnings(
+        csl: str | None,
+        reference_doc: str | None,
+        output_formats: list[str],
+        findings: list[dict[str, Any]],
+    ) -> None:
+        """Report missing optional files as warnings instead of ignoring silently."""
+        if csl:
+            csl_path = Path(csl)
+            if not csl_path.is_file():
+                findings.append(
+                    {
+                        "code": "missing_csl_file",
+                        "severity": "warning",
+                        "message": f"Provided CSL file does not exist: {csl}",
+                        "artifact": str(csl_path),
+                    }
+                )
+
+        if reference_doc and "docx" in output_formats:
+            ref_path = Path(reference_doc)
+            if not ref_path.is_file():
+                findings.append(
+                    {
+                        "code": "missing_reference_doc",
+                        "severity": "warning",
+                        "message": f"Provided reference doc does not exist: {reference_doc}",
+                        "artifact": str(ref_path),
+                    }
+                )
 
     @staticmethod
     def _resolve_manuscript(artifacts: dict[str, Any]) -> Path:
@@ -201,8 +257,6 @@ class PandocRenderer(ToolWrapper):
 
         if output_path.suffix == ".docx":
             # DOCX must be a valid ZIP containing word/document.xml
-            import zipfile
-
             try:
                 with zipfile.ZipFile(output_path, "r") as zf:
                     names = zf.namelist()
@@ -227,6 +281,22 @@ class PandocRenderer(ToolWrapper):
                     }
                 )
 
+        elif output_path.suffix == ".pdf":
+            # PDF must start with %PDF magic bytes
+            try:
+                header = output_path.read_bytes()[:5]
+                if not header.startswith(b"%PDF-"):
+                    findings.append(
+                        {
+                            "code": "render_artifact_not_pdf",
+                            "severity": "error",
+                            "message": "PDF missing %PDF magic header — not a valid PDF file.",
+                            "artifact": str(output_path),
+                        }
+                    )
+            except OSError:
+                pass  # File read error already caught by size check
+
     @staticmethod
     def _build_command(
         manuscript: Path,
@@ -245,7 +315,7 @@ class PandocRenderer(ToolWrapper):
                 cmd.extend(["--csl", str(csl_path)])
         if reference_doc:
             ref_path = Path(reference_doc)
-            if ref_path.is_file() and output_path.suffix == ".docx":
+            if ref_path.is_file() and output_path.suffix == DOCX_EXTENSION:
                 cmd.extend(["--reference-doc", str(ref_path)])
         cmd.extend(["-o", str(output_path)])
         return cmd

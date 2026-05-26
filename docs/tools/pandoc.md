@@ -41,6 +41,10 @@ It is the first real external tool in the stack because it already exists on the
 - Pandoc is called through the wrapper, never directly from the CLI.
 - Missing bibliography or broken citation keys should fail the render gate.
 - If Quarto is added later, Pandoc remains the lowest-level backend.
+- At least one requested output format must succeed (`render_passed`).
+- Mixed requests can return warning on partial success (example: docx OK, pdf fail).
+- If all requested formats fail, render status is failure.
+- If optional paths (`--csl`, `--reference-doc`) are provided but missing, the wrapper emits warnings (no silent ignore).
 
 ## Next step
 

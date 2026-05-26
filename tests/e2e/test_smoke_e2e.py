@@ -11,15 +11,19 @@ Marked with @pytest.mark.e2e for optional filtering.
 import os
 import shutil
 import subprocess
+import sys
+import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 # Marker for E2E tests — run with: pytest -m e2e
 pytestmark = pytest.mark.e2e
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLI_CMD = [str(REPO_ROOT / ".venv" / "bin" / "python"), "-m", "cli.paper.main"]
+# Use sys.executable for portability across venv setups (local + CI)
+CLI_CMD = [sys.executable, "-m", "cli.paper.main"]
 ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
 
 # Minimal valid .bib with DOI
@@ -64,26 +68,24 @@ def _write_bib(project: Path) -> str:
     return str(bib_file)
 
 
-def _setup_full_pipeline(project: Path) -> None:
-    """Run the complete pipeline: init → import → search → screen → draft → validate."""
-    # 1. Init
+def _setup_to_validating(project: Path) -> None:
+    """Run pipeline: init → import → search → screen → draft (all 4 sections).
+
+    Leaves the project at 'validating' stage, ready for any validation test.
+    """
     r = _run(CLI_CMD + ["init"], project)
     assert r.returncode == 0, f"init failed: {r.stdout}"
 
-    # 2. Import valid .bib (sets bib_normalized gate)
     bib_path = _write_bib(project)
     r = _run(CLI_CMD + ["import", "bib", bib_path], project)
     assert r.returncode == 0, f"import bib failed: {r.stdout}"
 
-    # 3. Search
     r = _run(CLI_CMD + ["search"], project)
     assert r.returncode == 0, f"search failed: {r.stdout}"
 
-    # 4. Screen
     r = _run(CLI_CMD + ["screen"], project)
     assert r.returncode == 0, f"screen failed: {r.stdout}"
 
-    # 5. Draft outline + sections
     r = _run(CLI_CMD + ["draft", "outline"], project)
     assert r.returncode == 0, f"draft outline failed: {r.stdout}"
 
@@ -91,18 +93,19 @@ def _setup_full_pipeline(project: Path) -> None:
         r = _run(CLI_CMD + ["draft", "section", sec], project)
         assert r.returncode == 0, f"draft section {sec} failed: {r.stdout}"
 
-    # 6. Validation gates
-    r = _run(CLI_CMD + ["lint", "bib"], project)
-    assert "Step:" in r.stdout, f"lint bib crashed: {r.stdout}"
 
-    r = _run(CLI_CMD + ["check", "refs"], project)
-    assert "Step:" in r.stdout, f"check refs crashed: {r.stdout}"
+def _setup_full_pipeline(project: Path) -> None:
+    """Run the complete pipeline: init → import → search → screen → draft → validate."""
+    _setup_to_validating(project)
 
-    r = _run(CLI_CMD + ["lint", "style"], project)
-    assert "Step:" in r.stdout, f"lint style crashed: {r.stdout}"
-
-    r = _run(CLI_CMD + ["audit", "reporting"], project)
-    assert "Step:" in r.stdout, f"audit reporting crashed: {r.stdout}"
+    for cmd_args in [
+        ["lint", "bib"],
+        ["check", "refs"],
+        ["lint", "style"],
+        ["audit", "reporting"],
+    ]:
+        r = _run(CLI_CMD + cmd_args, project)
+        assert "Step:" in r.stdout, f"{cmd_args} crashed: {r.stdout}"
 
 
 @pytest.fixture
@@ -207,45 +210,21 @@ class TestE2EDrafting:
 
 
 class TestE2EValidation:
-    """Test individual validation stages."""
+    """Test individual validation stages — shared setup via _setup_to_validating."""
 
     def test_lint_bib_with_content(self, project: Path) -> None:
-        """Lint bib with a real .bib imported — should pass."""
-        _run(CLI_CMD + ["init"], project)
-        bib_path = _write_bib(project)
-        _run(CLI_CMD + ["import", "bib", bib_path], project)
-        _run(CLI_CMD + ["search"], project)
-        _run(CLI_CMD + ["screen"], project)
-        _run(CLI_CMD + ["draft", "outline"], project)
-        for sec in ["introduction", "methods", "results", "discussion"]:
-            _run(CLI_CMD + ["draft", "section", sec], project)
-
+        """Lint bib with a real .bib imported."""
+        _setup_to_validating(project)
         result = _run(CLI_CMD + ["lint", "bib"], project)
         assert "Step:" in result.stdout
 
     def test_lint_style(self, project: Path) -> None:
-        _run(CLI_CMD + ["init"], project)
-        bib_path = _write_bib(project)
-        _run(CLI_CMD + ["import", "bib", bib_path], project)
-        _run(CLI_CMD + ["search"], project)
-        _run(CLI_CMD + ["screen"], project)
-        _run(CLI_CMD + ["draft", "outline"], project)
-        for sec in ["introduction", "methods", "results", "discussion"]:
-            _run(CLI_CMD + ["draft", "section", sec], project)
-
+        _setup_to_validating(project)
         result = _run(CLI_CMD + ["lint", "style"], project)
         assert "Step:" in result.stdout
 
     def test_check_refs(self, project: Path) -> None:
-        _run(CLI_CMD + ["init"], project)
-        bib_path = _write_bib(project)
-        _run(CLI_CMD + ["import", "bib", bib_path], project)
-        _run(CLI_CMD + ["search"], project)
-        _run(CLI_CMD + ["screen"], project)
-        _run(CLI_CMD + ["draft", "outline"], project)
-        for sec in ["introduction", "methods", "results", "discussion"]:
-            _run(CLI_CMD + ["draft", "section", sec], project)
-
+        _setup_to_validating(project)
         result = _run(CLI_CMD + ["check", "refs"], project)
         assert "Step:" in result.stdout
 
@@ -254,7 +233,7 @@ class TestE2EFullPipeline:
     """Test the complete pipeline end-to-end with real Pandoc render."""
 
     def test_full_pipeline_to_docx(self, project: Path) -> None:
-        """init → import → search → screen → draft → validate → render → verify DOCX."""
+        """init -> import -> search -> screen -> draft -> validate -> render -> verify DOCX."""
         if shutil.which("pandoc") is None:
             pytest.skip("Pandoc not installed — cannot verify real render.")
 
@@ -262,18 +241,13 @@ class TestE2EFullPipeline:
         _setup_full_pipeline(project)
 
         # Check if we reached 'rendering' stage
-        import yaml
-
         state_file = project / "outputs" / "state.yaml"
         assert state_file.exists(), "state.yaml should exist after pipeline"
         state = yaml.safe_load(state_file.read_text())
         stage = state.get("stage", "")
         gates = state.get("gates", {})
 
-        # If validation gates didn't all pass, the pipeline stays at 'validating'.
-        # This is correct behavior — the test documents what happened.
-        # For full render, ALL 5 validation gates must be True:
-        # bib_normalized, citations_resolved, refs_validated, style_passed, reporting_passed
+        # For full render, ALL 5 validation gates must be True
         validation_gates = [
             "bib_normalized",
             "citations_resolved",
@@ -284,10 +258,6 @@ class TestE2EFullPipeline:
         all_validation_passed = all(gates.get(g, False) for g in validation_gates)
 
         if not all_validation_passed:
-            # The pipeline correctly stayed at 'validating' because some
-            # validation wrappers returned findings (e.g., degraded mode warnings,
-            # or draft content doesn't reference citations properly).
-            # This is NOT a bug — it's the pipeline being honest.
             failed_gates = [g for g in validation_gates if not gates.get(g, False)]
             pytest.skip(
                 f"Pipeline at '{stage}'. Validation gates not all satisfied: "
@@ -306,8 +276,6 @@ class TestE2EFullPipeline:
         assert docx.stat().st_size > 1000, f"DOCX too small: {docx.stat().st_size}B"
 
         # Verify it's a real Word file (ZIP-based with word/document.xml)
-        import zipfile
-
         with zipfile.ZipFile(docx, "r") as zf:
             assert "word/document.xml" in zf.namelist(), "DOCX missing word/document.xml"
 
@@ -324,5 +292,4 @@ class TestE2EDoctor:
         assert result.returncode == 0
         assert "EXTERNAL TOOLS" in result.stdout
         assert "INTERNAL CAPABILITIES" in result.stdout
-        # Should report degraded mode since tools are missing
         assert "DEGRADED MODE ACTIVE" in result.stdout or "ALL TOOLS" in result.stdout

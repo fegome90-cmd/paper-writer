@@ -1,0 +1,8 @@
+{
+  "name": "paper-writer-toolchain",
+  "private": true,
+  "description": "Local node toolchain for reproducibility in scientific writing editorial pipelines",
+  "devDependencies": {
+    "bibtex-tidy": "1.12.0"
+  }
+}

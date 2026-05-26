@@ -1,0 +1,24 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      bibtex-tidy:
+        specifier: 1.12.0
+        version: 1.12.0
+
+packages:
+
+  bibtex-tidy@1.12.0:
+    resolution: {integrity: sha512-4bwLRfh1+OY/Frv0nE2rqcdhwf4FQPjFYPaQlEpCkD0kEwaGxPSqfjqIWD0cyvQP3AzB05UeXe4jW6Sv+RLhxA==}
+    engines: {node: '>12'}
+    hasBin: true
+
+snapshots:
+
+  bibtex-tidy@1.12.0: {}

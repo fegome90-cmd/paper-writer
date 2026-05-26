@@ -1,0 +1,12 @@
+change: domain-skills-integration
+status: planning
+current_phase: spec
+phases:
+  explore: completed
+  proposal: completed
+  spec: pending
+  design: pending
+  tasks: pending
+  apply: pending
+  verify: pending
+  archive: pending

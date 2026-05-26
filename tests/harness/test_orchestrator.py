@@ -57,7 +57,9 @@ def test_orchestrator_precondition_failure() -> None:
     result = orch.execute(req)
     assert result.success is False
     assert result.exit_code == 1
-    assert any("does not exist" in b for b in result.blockers)
+    assert result.blockers
+    assert result.stage_before == "unknown"
+    assert result.stage_after == "unknown"
 
 
 def test_orchestrator_sequential_flow() -> None:
@@ -150,8 +152,8 @@ def test_orchestrator_sequential_flow() -> None:
     # Check manifest emitted snapshot in action runner mock
     assert action_runner.manifest_emitted is not None
     snapshot = action_runner.manifest_emitted
-    # Assert full snapshot contains all 12 gates
-    assert len(snapshot) == 12
+    # Assert snapshot keys match the domain gate contract
+    assert set(snapshot.keys()) == set(ManuscriptState.REQUIRED_GATES)
     assert snapshot["ready_for_delivery"] is True
     assert snapshot["style_passed"] is True
     assert snapshot["bib_normalized"] is True
@@ -248,3 +250,31 @@ def test_orchestrator_render_fail_blocks_and_keeps_rendering_stage() -> None:
     assert result.stage_before == "rendering"
     assert result.stage_after == "rendering"
     assert result.gate_changes["render_passed"] is False
+
+
+def test_orchestrator_verify_requires_render_passed_gate() -> None:
+    repo = InMemoryStateRepository(
+        ManuscriptState(
+            stage="verified",
+            gates=dict.fromkeys(ManuscriptState.REQUIRED_GATES, False),
+        )
+    )
+    manager = StateManager(repo)
+    checker = InMemoryArtifactChecker()
+    action_runner = InMemoryActionRunner(checker)
+    wrappers = create_mock_wrappers()
+    orch = Orchestrator(Path("/mock_root"), manager, checker, action_runner, wrappers)
+
+    result = orch.execute(
+        OrchestratorRequest(
+            command="verify",
+            requested_stage="verified",
+            failure_policy="stop_on_error",
+        )
+    )
+
+    assert result.success is False
+    assert result.exit_code == 1
+    assert result.stage_before == "verified"
+    assert result.stage_after == "verified"
+    assert any("render_passed" in blocker for blocker in result.blockers)

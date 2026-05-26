@@ -120,7 +120,11 @@ class Orchestrator:
 
         # Validate Preconditions
         try:
-            self._validate_preconditions(request.command, stage_before)
+            self._validate_preconditions(
+                request.command,
+                stage_before,
+                state_dict.get("gates", {}) if request.command != "init" else {},
+            )
             steps.append({"step_id": "validate_preconditions", "status": "succeeded"})
         except ValueError as e:
             msg = f"Precondition failed: {e}"
@@ -235,7 +239,12 @@ class Orchestrator:
         result.exit_code = 0 if result.success else 1
         return result
 
-    def _validate_preconditions(self, command: str, current_stage: str) -> None:
+    def _validate_preconditions(
+        self,
+        command: str,
+        current_stage: str,
+        current_gates: dict[str, Any] | None = None,
+    ) -> None:
         """Verifies if the command is allowed in the current stage."""
         stage_order = [
             "bootstrap",
@@ -279,6 +288,14 @@ class Orchestrator:
                 f"Command '{command}' requires stage '{min_stage}' or later. "
                 f"Current stage is '{current_stage}'."
             )
+
+        if command == "verify":
+            gates = current_gates or {}
+            if not gates.get("render_passed", False):
+                raise ValueError(
+                    "Command 'verify' requires gate 'render_passed' to be True. "
+                    "Run 'paper render' successfully before verification."
+                )
 
     def _run_gate_verification(self, request: OrchestratorRequest) -> list[GateResult]:
         """Invokes the gate verifiers corresponding to the executed command.

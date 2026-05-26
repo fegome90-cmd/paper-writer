@@ -20,6 +20,7 @@ class ToolStatus:
     install_hint: str = ""
     required_for: list[str] = field(default_factory=list)
     degraded_message: str = ""
+    version_args: list[str] = field(default_factory=list)
 
 
 def check_tool(name: str, version_args: list[str] | None = None) -> ToolStatus:
@@ -52,18 +53,8 @@ def check_all_tools() -> list[ToolStatus]:
     """Check all external tools used by the pipeline."""
     tools = [
         _make("pandoc", ["--version"], "Render (docx/pdf)", "brew install pandoc"),
-        _make(
-            "pdflatex",
-            ["--version"],
-            "PDF render",
-            "brew install --cask mactex-no-gui (or basictex)",
-        ),
-        _make(
-            "vale",
-            ["--version"],
-            "Style linting (vale rules)",
-            "brew install vale",
-        ),
+        _make("pdflatex", [], "PDF render", "brew install --cask mactex-no-gui (or basictex)"),
+        _make("vale", ["--version"], "Style linting (vale rules)", "brew install vale"),
         _make(
             "bibtex-tidy",
             ["--version"],
@@ -73,7 +64,8 @@ def check_all_tools() -> list[ToolStatus]:
     ]
 
     for t in tools:
-        status = check_tool(t.name, ["--version"] if t.name != "pdflatex" else [])
+        args = t.version_args if t.version_args else None
+        status = check_tool(t.name, args)
         t.installed = status.installed
         t.version = status.version
         if not t.installed:
@@ -199,6 +191,7 @@ def _make(
         installed=False,
         install_hint=install_hint,
         required_for=[required_for],
+        version_args=version_args,
     )
 
 

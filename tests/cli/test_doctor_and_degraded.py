@@ -143,10 +143,7 @@ class TestDegradedModeInWrappers:
         )
 
         normalizer = BibliographyNormalizer()
-        with patch(
-            "integrations.tools.bibtex_tidy.subprocess.run",
-            side_effect=FileNotFoundError,
-        ):
+        with patch.object(normalizer, "_resolve_executable", return_value=None):
             result = normalizer.run(
                 {"bibliography": str(bib)},
                 {},

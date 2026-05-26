@@ -47,29 +47,10 @@ def _extract_cite_keys(bib_path: Path) -> list[str]:
     """Extract citation keys from a BibTeX file."""
     if not bib_path.exists():
         return []
-    content = bib_path.read_text(encoding="utf-8")
     import re
 
+    content = bib_path.read_text(encoding="utf-8", errors="replace")
     return re.findall(r"@\w+\{(\w+)", content)
-
-
-def _evidence_cite_keys(evidence: list[dict[str, Any]]) -> list[str]:
-    """Derive citation keys from evidence entries (firstauthorYEAR).
-
-    Only includes keys that match actual entries in the bibliography.
-    Returns raw keys prefixed with '@' for placeholder usage.
-    """
-    keys: list[str] = []
-    for entry in evidence:
-        # Prefer explicit cite_key if present
-        if "cite_key" in entry:
-            keys.append(f"@{entry['cite_key']}")
-            continue
-        authors = str(entry.get("authors", "unknown"))
-        first_author = authors.split(",")[0].strip().split()[-1].lower()
-        year = entry.get("year", 2024)
-        keys.append(f"@{first_author}{year}")
-    return keys
 
 
 def draft_outline(

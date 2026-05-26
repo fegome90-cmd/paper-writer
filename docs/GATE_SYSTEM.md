@@ -46,12 +46,18 @@ Required fields:
 | `render_passed` | Render completed successfully | Pandoc wrapper |
 | `ready_for_delivery` | Final verification and manifest succeeded | `paper verify` |
 
+Render policy for `render_passed`:
+- At least one requested output format must render successfully.
+- Partial success in mixed format requests is allowed as `warn` (for example, docx success + pdf fail).
+- If all requested formats fail, `render_passed` is `fail`.
+
 ## Fail-Closed Rules
 
 - Missing required dependencies -> gate fails.
 - Missing required artifacts -> gate fails.
 - Error-severity findings on required validators -> gate fails.
 - A warning-only result may still fail if the gate policy explicitly says so.
+- `paper verify` requires `render_passed=True` as precondition, even if stage is `verified`.
 
 ## Evaluation Order
 
