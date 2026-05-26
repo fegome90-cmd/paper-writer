@@ -1,4 +1,7 @@
-# Production Readiness Criteria
+# Controlled Validation Readiness Criteria
+
+> [!IMPORTANT]
+> **Status**: Ready for controlled validation. This repository is not certified as fully "production-ready" for autonomous drafting. It is built as an evidence-first pipeline designed for human-in-the-loop controlled execution.
 
 ## Operational Prerequisites
 
@@ -11,7 +14,7 @@
 | Vale | Style linting (vale rules) | `brew install vale` | ✅ Built-in style checks only |
 | bibtex-tidy | Bibliography normalization | `npm install -g bibtex-tidy` | ✅ Built-in BibTeX validation |
 
-> **Version policy**: minimum-version check (>= 1.11.0). Any semver-compatible version at or above the minimum is accepted, regardless of source (local, env, global).
+> **Version policy**: minimum-version check (`>= 1.11.0`). Any semver-compatible version at or above the minimum is accepted, regardless of resolution source (local toolchain, `BIBTEX_TIDY_BIN` env override, or global PATH).
 
 ### Check Commands
 
@@ -105,9 +108,9 @@ E2E tests run as subprocess with real I/O — not mocked.
 
 - [x] `paper doctor` reports all tools and capabilities
 - [x] Degraded mode explicit in wrapper output (code: `degraded_mode`)
-- [x] Full E2E pipeline: init → render → verify (340 tests, 0 failed, 0 skipped)
+- [x] Full E2E pipeline: init → render → verify (362 tests, 0 failed)
 - [x] CI pipeline: lint + typecheck + unit + E2E
 - [x] Render artifact verification (size + DOCX ZIP integrity)
-- [x] 340 tests passing (unit + integration + E2E + doctor)
-- [x] mypy strict clean (75 source files), ruff clean
+- [x] 362 tests passing (unit + integration + E2E + doctor)
+- [x] mypy strict clean (78 source files), ruff clean
 - [x] README.md and docs reflect real state
