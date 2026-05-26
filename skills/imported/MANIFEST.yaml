@@ -1,0 +1,24 @@
+skills:
+  - id: literature_search
+    local_path: skills/imported/literature_search
+    source_repo: examen_grado
+    source_commit: "82cdd421c2365382f06ae314c8c085f7cefcd9d1"
+    imported_at: "2026-05-26"
+    import_mode: "vendor_snapshot"
+    modified_locally: true
+    owner: "paper-writer"
+    update_policy: "manual_pr_only"
+    runtime_authority: "local_repo"
+    external_fetch_at_install: false
+
+  - id: academic_writer
+    local_path: skills/imported/academic_writer
+    source_repo: examen_grado
+    source_commit: "82cdd421c2365382f06ae314c8c085f7cefcd9d1"
+    imported_at: "2026-05-26"
+    import_mode: "vendor_snapshot"
+    modified_locally: true
+    owner: "paper-writer"
+    update_policy: "manual_pr_only"
+    runtime_authority: "local_repo"
+    external_fetch_at_install: false
