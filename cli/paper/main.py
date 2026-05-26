@@ -3,21 +3,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from harness.adapters.filesystem_action_runner import FilesystemActionRunner
-from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
-from harness.adapters.yaml_repository import YamlFileStateRepository
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
-from harness.services.state_manager import StateManager
-from integrations.tools import (
-    BibliographyNormalizer,
-    PandocRenderer,
-    RefsMetadataValidator,
-    RefsValidator,
-    ReportingAuditor,
-    StyleLinter,
-    ZoteroImporter,
-)
-from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
+from harness.services.orchestrator_builder import build_orchestrator_dependencies
 
 
 def main() -> None:
@@ -161,40 +148,20 @@ def main() -> None:
         print(format_doctor_report(tools, caps))
         sys.exit(0)
 
+    repo_path = Path.cwd()
     request = OrchestratorRequest(
         command=orch_command,
         requested_stage="unknown",
         failure_policy=failure_policy,
         args=orch_args,
-        context={"cwd": str(Path.cwd()), "actor": "cli"},
+        context={"cwd": str(repo_path), "actor": "cli"},
     )
 
-    # Execute orchestrator
-    repo_path = Path.cwd()
-    state_file_path = repo_path / "outputs" / "state.yaml"
-    repository = YamlFileStateRepository(state_file_path)
-    state_manager = StateManager(repository)
-    checker = FilesystemArtifactChecker(repo_path)
-
-    # Wire skill adapters
-    skill_adapters = {
-        "literature_search": LiteratureSearchAdapter(),
-        "academic_writer": AcademicWriterAdapter(),
-    }
-    action_runner = FilesystemActionRunner(repo_path, skill_adapters=skill_adapters)
-
-    # Wire tool wrappers — includes ZoteroImporter
-    wrappers = {
-        "lint_bib": BibliographyNormalizer(),
-        "check_refs": RefsValidator(),
-        "check_refs_metadata": RefsMetadataValidator(),
-        "lint_style": StyleLinter(),
-        "audit_reporting": ReportingAuditor(),
-        "render": PandocRenderer(),
-        "import_bib": ZoteroImporter(),
-    }
-
-    orchestrator = Orchestrator(repo_path, state_manager, checker, action_runner, wrappers)
+    deps = build_orchestrator_dependencies(project_root=repo_path)
+    orchestrator = Orchestrator(
+        deps.repo_path, deps.state_manager, deps.checker,
+        deps.action_runner, deps.wrappers,
+    )
     result = orchestrator.execute(request)
 
     # Format outputs

@@ -400,3 +400,7 @@ paper-writer/
 - Skills are invoked through adapters, not ad hoc path reads from commands.
 - Outputs must stay inside this repository.
 - The system must fail closed if a required dependency or gate is missing.
+
+## Dependency Assembly
+
+The CLI delegates all concrete dependency construction to `harness/services/orchestrator_builder.py`. This module exposes `build_orchestrator_dependencies()` which assembles the state manager, artifact checker, action runner, tool wrappers, and skill adapters into a frozen `OrchestratorDependencies` container. The CLI imports only the builder function and `Orchestrator` — no concrete adapter or wrapper imports leak into the entrypoint.
