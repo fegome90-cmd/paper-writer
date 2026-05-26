@@ -1,5 +1,6 @@
 import datetime
 import logging
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +66,6 @@ class FilesystemActionRunner(ActionRunner):
             preset_name = args.get("preset")
             if preset_name:
                 # Search preset in cwd first, then in package install directory
-                import shutil
 
                 preset_dir = self.repo_path / "templates" / "journals" / preset_name
                 if not preset_dir.is_dir():

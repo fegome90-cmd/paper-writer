@@ -124,7 +124,6 @@ class StyleLinter(ToolWrapper):
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
         """Run Vale and parse JSON output into findings."""
         import json
-        import subprocess
 
         findings: list[dict[str, Any]] = []
         try:
