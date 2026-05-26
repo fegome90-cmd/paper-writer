@@ -31,7 +31,7 @@ class TestBibtexTidyHardening:
 
         with patch.dict(os.environ, {"BIBTEX_TIDY_BIN": str(custom_bin)}):
             resolved = normalizer._resolve_executable({"repo_path": str(tmp_path)})
-            assert resolved == custom_bin
+            assert resolved == (custom_bin, "env")
 
     def test_invalid_env_override_fails_fast(
         self, normalizer: BibliographyNormalizer, tmp_path: Path
@@ -55,7 +55,7 @@ class TestBibtexTidyHardening:
 
         with patch.dict(os.environ, {}, clear=True):
             resolved = normalizer._resolve_executable({"repo_path": str(tmp_path)})
-            assert resolved == local_bin
+            assert resolved == (local_bin, "local")
 
     def test_global_path_ignored_unless_explicitly_allowed(
         self, normalizer: BibliographyNormalizer, tmp_path: Path
@@ -69,7 +69,7 @@ class TestBibtexTidyHardening:
         with patch.dict(os.environ, {"BIBTEX_TIDY_ALLOW_GLOBAL": "true"}):
             with patch("shutil.which", return_value="/usr/bin/bibtex-tidy"):
                 resolved = normalizer._resolve_executable({"repo_path": str(tmp_path)})
-                assert resolved == Path("/usr/bin/bibtex-tidy")
+                assert resolved == (Path("/usr/bin/bibtex-tidy"), "global")
 
     def test_version_match_succeeds(
         self, normalizer: BibliographyNormalizer, tmp_path: Path
@@ -83,7 +83,7 @@ class TestBibtexTidyHardening:
         mock_process.stdout = "v1.11.0\n"
 
         with patch("subprocess.run", return_value=mock_process) as mock_run:
-            ok, msg = normalizer._verify_version(dummy_bin)
+            ok, msg = normalizer._verify_version(dummy_bin, "local")
             assert ok is True
             assert msg == "1.11.0"
             mock_run.assert_called_once_with(
@@ -103,7 +103,7 @@ class TestBibtexTidyHardening:
 
         # Mock resolve and verify_version to mismatch
         with (
-            patch.object(normalizer, "_resolve_executable", return_value=custom_bin),
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "local")),
             patch.object(
                 normalizer,
                 "_verify_version",
@@ -126,7 +126,7 @@ class TestBibtexTidyHardening:
         dummy_bin.touch()
 
         with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(["--version"], 5)):
-            ok, msg = normalizer._verify_version(dummy_bin)
+            ok, msg = normalizer._verify_version(dummy_bin, "local")
             assert ok is False
             assert "version check" in msg.lower()
 
@@ -146,7 +146,7 @@ class TestBibtexTidyHardening:
         mock_process.stderr = "Syntax Error on line 2\n"
 
         with (
-            patch.object(normalizer, "_resolve_executable", return_value=custom_bin),
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "local")),
             patch.object(normalizer, "_verify_version", return_value=(True, "1.11.0")),
             patch("subprocess.run", return_value=mock_process),
         ):
@@ -172,7 +172,7 @@ class TestBibtexTidyHardening:
         collision_file.write_text("Stale backup content", encoding="utf-8")
 
         with (
-            patch.object(normalizer, "_resolve_executable", return_value=custom_bin),
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "local")),
             patch.object(normalizer, "_verify_version", return_value=(True, "1.11.0")),
         ):
             result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(tmp_path)})
@@ -199,3 +199,84 @@ class TestBibtexTidyHardening:
 
         assert result.status == "pass"  # valid file contents
         assert "normalization skipped / builtin validation used" in result.summary
+
+    def test_local_toolchain_emits_known_version_mismatch_warning(
+        self, normalizer: BibliographyNormalizer, bib_file: Path, tmp_path: Path
+    ) -> None:
+        """If local toolchain resolves and CLI reports 1.11.0, run succeeds with a warning."""
+        custom_bin = tmp_path / "custom-bin"
+        custom_bin.touch()
+        os.chmod(custom_bin, 0o755)
+
+        # Write a fully valid bib entry
+        bib_file.write_text(
+            "@article{test,\n"
+            "  author = {John Doe},\n"
+            "  title = {Test},\n"
+            "  journal = {Journal of Tests},\n"
+            "  year = {2024}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_process.stdout = ""
+
+        with (
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "local")),
+            patch.object(normalizer, "_verify_version", return_value=(True, "1.11.0")),
+            patch("subprocess.run", return_value=mock_process),
+        ):
+            result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(tmp_path)})
+
+        assert result.status == "pass"
+        assert "known version mismatch" in result.summary.lower()
+        warnings = [f for f in result.findings if f["code"] == "known_version_mismatch"]
+        assert len(warnings) == 1
+
+    def test_env_override_v111_fails(
+        self, normalizer: BibliographyNormalizer, bib_file: Path, tmp_path: Path
+    ) -> None:
+        """If env override is used but reports 1.11.0, validation must fail."""
+        custom_bin = tmp_path / "custom-bin"
+        custom_bin.touch()
+        os.chmod(custom_bin, 0o755)
+
+        # Mock resolve to be env source
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = "v1.11.0\n"
+
+        with (
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "env")),
+            patch("subprocess.run", return_value=mock_run),
+        ):
+            result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(tmp_path)})
+
+        assert result.status == "fail"
+        assert "version verification failed" in result.summary
+        assert any("expected exactly 1.12.0" in f["message"] for f in result.findings)
+
+    def test_global_path_v111_fails(
+        self, normalizer: BibliographyNormalizer, bib_file: Path, tmp_path: Path
+    ) -> None:
+        """If global path is allowed but reports 1.11.0, validation must fail."""
+        custom_bin = tmp_path / "custom-bin"
+        custom_bin.touch()
+        os.chmod(custom_bin, 0o755)
+
+        # Mock resolve to be global source
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = "v1.11.0\n"
+
+        with (
+            patch.object(normalizer, "_resolve_executable", return_value=(custom_bin, "global")),
+            patch("subprocess.run", return_value=mock_run),
+        ):
+            result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(tmp_path)})
+
+        assert result.status == "fail"
+        assert "version verification failed" in result.summary
+        assert any("expected exactly 1.12.0" in f["message"] for f in result.findings)

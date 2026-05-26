@@ -284,7 +284,6 @@ class BibliographyNormalizer(ToolWrapper):
         validators.bibliography. Emits explicit degraded-mode notice.
         """
 
-
         findings: list[dict[str, Any]] = []
         content = bib_file.read_text(encoding="utf-8", errors="replace")
 
