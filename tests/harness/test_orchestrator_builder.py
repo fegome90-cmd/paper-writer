@@ -6,12 +6,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from harness.ports.action_runner import ActionRunner
+from harness.ports.artifact_checker import ArtifactChecker
 from harness.ports.skill_adapter import SkillAdapter
+from harness.ports.tool_wrapper import ToolWrapper
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest
 from harness.services.orchestrator_builder import (
     OrchestratorDependencies,
     build_orchestrator_dependencies,
 )
+from harness.services.state_manager import StateManager
 
 
 class TestBuilderContract:
@@ -25,10 +29,12 @@ class TestBuilderContract:
 
         assert isinstance(deps, OrchestratorDependencies)
         assert isinstance(deps.repo_path, Path)
-        assert isinstance(deps.state_manager, type(deps.state_manager))  # StateManager
-        assert isinstance(deps.checker, type(deps.checker))  # ArtifactChecker
-        assert isinstance(deps.action_runner, type(deps.action_runner))  # ActionRunner
+        assert isinstance(deps.state_manager, StateManager)
+        assert isinstance(deps.checker, ArtifactChecker)
+        assert isinstance(deps.action_runner, ActionRunner)
         assert isinstance(deps.wrappers, dict)
+        for w in deps.wrappers.values():
+            assert isinstance(w, ToolWrapper)
         assert isinstance(deps.skill_adapters, dict)
 
     def test_builder_resolves_cwd_when_none(

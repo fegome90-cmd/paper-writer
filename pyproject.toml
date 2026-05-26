@@ -33,4 +33,7 @@ minversion = "8.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["e2e: end-to-end smoke tests (subprocess, real I/O)"]
+markers = [
+    "e2e: end-to-end smoke tests (subprocess, real I/O)",
+    "integration: integration tests with real adapters on tmp_path",
+]
