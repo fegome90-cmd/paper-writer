@@ -280,3 +280,62 @@ class TestBibtexTidyHardening:
         assert result.status == "fail"
         assert "version verification failed" in result.summary
         assert any("expected exactly 1.12.0" in f["message"] for f in result.findings)
+
+    def test_real_local_toolchain_smoke_positive(
+        self, normalizer: BibliographyNormalizer, bib_file: Path
+    ) -> None:
+        """E2E smoke test verifying that the real local toolchain normalizes correctly."""
+        repo_root = Path(__file__).parents[2]
+        bib_file.write_text(
+            "@article{test,\n"
+            "  author = {Doe, John},\n"
+            "  title = {A Great Test},\n"
+            "  journal = {Journal of Tests},\n"
+            "  year = {2026}\n"
+            "}\n",
+            encoding="utf-8",
+        )
+
+        result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(repo_root)})
+
+        # It must pass and clean up backup file
+        assert result.status == "pass"
+        assert "known version mismatch" in result.summary.lower()
+        assert any(f["code"] == "known_version_mismatch" for f in result.findings)
+        assert not bib_file.with_suffix(".bib.bak").exists()
+
+    def test_real_local_toolchain_smoke_negative(
+        self, normalizer: BibliographyNormalizer, bib_file: Path
+    ) -> None:
+        """E2E smoke test verifying that the wrapper restores original file on failure."""
+        repo_root = Path(__file__).parents[2]
+        orig_content = (
+            "@article{test,\n"
+            "  author = {Doe, John},\n"
+            "  title = {A Great Test},\n"
+            "  journal = {Journal of Tests},\n"
+            "  year = {2026}\n"
+            "}\n"
+        )
+        bib_file.write_text(orig_content, encoding="utf-8")
+
+        from typing import Any
+
+        real_run = subprocess.run
+
+        def mock_subprocess_run(args: Any, **kwargs: Any) -> Any:
+            if "--modify" in args:
+                mock_proc = MagicMock()
+                mock_proc.returncode = 1
+                mock_proc.stderr = "Syntax Error: simulated failure"
+                return mock_proc
+            return real_run(args, **kwargs)
+
+        with patch("subprocess.run", side_effect=mock_subprocess_run):
+            result = normalizer.run({"bibliography": str(bib_file)}, {"repo_path": str(repo_root)})
+
+        assert result.status == "fail"
+        assert "restored bibliography from backup" in result.summary.lower()
+        # Verify content was restored and backup deleted
+        assert bib_file.read_text(encoding="utf-8") == orig_content
+        assert not bib_file.with_suffix(".bib.bak").exists()
