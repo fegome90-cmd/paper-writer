@@ -129,6 +129,7 @@ acceptance:
   render_output_exists: true
   # DOCX is valid ZIP with word/document.xml.
   docx_integrity: true
+  metadata_quality: true
 
 # Manual review required after automated phase.
 manual_review:

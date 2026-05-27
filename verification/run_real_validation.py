@@ -155,7 +155,7 @@ def _extract_pdf_text(pdf_path: Path, output_path: Path) -> tuple[bool, int, lis
     warnings: list[str] = []
     try:
         result = subprocess.run(
-            ["pdftotext", "-layout", str(pdf_path), str(output_path)],
+            ["pdftotext", str(pdf_path), str(output_path)],
             capture_output=True, text=True, timeout=30,
         )
         if result.returncode != 0:
@@ -178,64 +178,153 @@ def _extract_pdf_text(pdf_path: Path, output_path: Path) -> tuple[bool, int, lis
     return True, len(text), warnings
 
 
-def _parse_pdf_metadata(text: str, manifest: dict[str, Any]) -> tuple[str, str, str]:
-    """Best-effort metadata extraction from PDF text.
+def _is_email(line: str) -> bool:
+    """Check if a line looks like an email address."""
+    return bool(re.match(r"^\S+@\S+\.\S+$", line.strip()))
 
-    Returns (title, authors, year).
-    Falls back to manifest values if parsing fails.
+
+def _is_arxiv_header(line: str) -> bool:
+    """Check if line is an arXiv header."""
+    return line.strip().startswith("arXiv:") or "arXiv:" in line[:20]
+
+
+def _is_section_header(line: str) -> bool:
+    """Check if line looks like a section header (Abstract, Introduction, etc.)."""
+    headers = {
+        "abstract", "introduction", "conclusion", "references",
+        "acknowledgments", "acknowledgements", "related work",
+        "background", "methods", "results", "discussion",
+        "1 ", "2 ", "3 ", "4 ", "5 ", "6 ", "7 ", "8 ", "9 ",
+    }
+    lower = line.strip().lower()
+    return any(lower.startswith(h) for h in headers)
+
+
+def _is_affiliation(line: str) -> bool:
+    """Check if line looks like an institutional affiliation."""
+    markers = ["university", "institute", "research", "lab", "google", "meta",
+               "microsoft", "deepmind", "department", "school", "college"]
+    lower = line.strip().lower()
+    return any(m in lower for m in markers)
+
+
+def _extract_arxiv_year(text: str) -> str:
+    """Extract original submission year from arXiv ID.
+
+    arXiv IDs are YYMM.NNNNN — the first 2 digits of the number encode the
+    submission year within the 2000s (arXiv started in 1991, so 91-99 are
+    1991-1999, 00-25 are 2000-2025). The *v7* or version suffix date is the
+    *update* date, not the original publication date.
     """
-    title = manifest.get("title", "")
-    authors = ""
+    # Match arXiv:YYMM.NNNNN pattern
+    m = re.search(r"arXiv:(\d{2})(\d{2})\.\d+", text[:300])
+    if m:
+        yy = int(m.group(1))
+        if 91 <= yy <= 99:
+            return f"19{yy}"
+        return f"20{yy:02d}"
+    return ""
+
+
+def _parse_pdf_metadata(text: str, manifest: dict[str, Any]) -> tuple[str, str, str]:
+    """Extract title, authors, and year from PDF text.
+
+    Strategy for academic papers (best-effort):
+    1. Find arXiv header → title is the next non-header, non-email line
+    2. Authors are lines between title and first section header (Abstract)
+       that are NOT emails and NOT affiliations
+    3. Year from arXiv ID (YYMM = submission year), not from version date
+    4. Fallback to manifest values
+    """
+    title = ""
+    authors_list: list[str] = []
     year = ""
 
     lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
-    if len(lines) >= 2:
-        # Title is typically one of the first non-empty lines
-        # Skip arXiv headers
-        start = 0
-        for i, line in enumerate(lines):
-            if line.startswith("arXiv:") or "arXiv:" in line:
-                start = i + 1
-                break
-        # Find title after arXiv header
-        for i in range(start, min(start + 5, len(lines))):
-            if len(lines[i]) > 10 and not lines[i].startswith("http") and "@" not in lines[i]:
-                title = lines[i]
-                break
-        # Authors typically follow title
-        for i in range(start, min(start + 10, len(lines))):
-            if "@" in lines[i] and "," not in lines[i][:5]:
-                authors = lines[i]
-                break
 
-    # Extract year from arXiv ID or text
-    arxiv_match = re.search(r"arXiv:\d+\.\d+v\d+.*?(\d{4})", text[:500])
-    if arxiv_match:
-        year = arxiv_match.group(1)
-    else:
-        year_match = re.search(r"\b(19|20)\d{2}\b", text[:1000])
-        if year_match:
-            year = year_match.group(0)
+    # Find arXiv header position
+    arxiv_idx = -1
+    for i, line in enumerate(lines):
+        if _is_arxiv_header(line):
+            arxiv_idx = i
+            year = _extract_arxiv_year(line)
+            break
 
-    return title, authors, year
+    # Title: first non-trivial line after arXiv header (skip emails/URLs)
+    title_idx = -1
+    search_start = arxiv_idx + 1 if arxiv_idx >= 0 else 0
+    for i in range(search_start, min(search_start + 10, len(lines))):
+        ln = lines[i]
+        if (len(ln) > 5
+                and not _is_email(ln)
+                and not _is_arxiv_header(ln)
+                and not ln.startswith("http")
+                and not _is_section_header(ln)
+                and not _is_affiliation(ln)):
+            title = ln
+            title_idx = i
+            break
+
+    # Authors: lines between title and Abstract that are person names
+    # (not emails, not affiliations, not section headers)
+    if title_idx >= 0:
+        for i in range(title_idx + 1, min(title_idx + 40, len(lines))):
+            ln = lines[i]
+            if _is_section_header(ln):
+                break
+            if _is_email(ln):
+                continue
+            if _is_affiliation(ln):
+                continue
+            if len(ln) < 3:
+                continue
+            # A person-name line typically: contains letters, maybe *+*, no @
+            if "@" in ln:
+                continue
+            # Skip lines that look like prose (long sentences)
+            if len(ln) > 120:
+                continue
+            # Skip pure numbers, whitespace, or footnote markers
+            if re.match(r"^[\d\s*+*]+$", ln):
+                continue
+            authors_list.append(ln)
+
+    # Clean author names: remove trailing *+* markers
+    authors_cleaned = []
+    for a in authors_list:
+        clean = re.sub("[\u2217\u2020\u2021*+]", "", a).strip()
+        if clean:
+            authors_cleaned.append(clean)
+
+    # Fallback to manifest
+    if not title:
+        title = manifest.get("title", "")
+    if not year:
+        year_match = re.search(r"\b((?:19|20)\d{2})\b", text[:1000])
+        year = year_match.group(1) if year_match else ""
+
+    return title, " and ".join(authors_cleaned), year
 
 
 def _generate_bib_entry(
     case_id: str, title: str, authors: str, year: str, source_url: str,
 ) -> str:
     """Generate a BibTeX entry from extracted metadata."""
-    # Create a safe citation key
-    first_author = authors.split(",")[0].split(" and ")[0].strip() if authors else "unknown"
-    # Remove non-alpha
-    safe_name = re.sub(r"[^a-zA-Z]", "", first_author.split("@")[0].strip())[:20]
-    cite_key = f"{safe_name}{year}" if year and safe_name else case_id
+    # Create citation key from first author surname + year
+    if authors:
+        first = authors.split(" and ")[0].split(",")[0].strip()
+        surname = first.split()[-1] if first.split() else first
+        safe = re.sub(r"[^a-zA-Z]", "", surname)
+    else:
+        safe = case_id
+    cite_key = f"{safe}{year}" if year and safe else case_id
 
     return f"""@article{{{cite_key},
   title = {{{title}}},
   author = {{{authors}}},
   year = {{{year}}},
   url = {{{source_url}}},
-  note = {{Extracted from source PDF by Phase 6 validation runner}}
+  note = {{Auto-generated from source PDF by validation runner}}
 }}
 """
 
@@ -255,6 +344,38 @@ def _count_pdf_pages(pdf_path: Path) -> int:
         pass
     # Fallback: count page breaks in extracted text
     return 0
+
+
+def _validate_metadata_quality(
+    title: str, authors: str, year: str,
+) -> list[str]:
+    """Validate that extracted metadata looks plausible.
+
+    Returns list of quality warnings. Empty = good.
+    """
+    warnings: list[str] = []
+
+    if not title:
+        warnings.append("No title extracted from PDF")
+    elif "@" in title:
+        warnings.append(f"Title looks like email/username: {title[:50]}...")
+    elif len(title) < 5:
+        warnings.append(f"Title suspiciously short: {title!r}")
+
+    if not authors:
+        warnings.append("No authors extracted from PDF")
+    elif "@" in authors:
+        # Authors should be names, not email addresses
+        email_count = authors.count("@")
+        if email_count > 1 or (email_count == 1 and "." not in authors.split("@")[0]):
+            warnings.append("Authors field contains email addresses, not names")
+
+    if not year:
+        warnings.append("No year extracted from PDF")
+    elif not re.match(r"^(19|20)\d{2}$", year):
+        warnings.append(f"Year does not look like a 4-digit year: {year!r}")
+
+    return warnings
 
 
 def consume_source(
@@ -299,6 +420,10 @@ def consume_source(
     text = text_path.read_text()
     title, authors, year = _parse_pdf_metadata(text, manifest)
 
+    # Step 2b: Validate metadata quality
+    quality_warnings = _validate_metadata_quality(title, authors, year)
+    all_warnings = list(text_warnings) + quality_warnings
+
     # Step 3: Generate bib entry
     bib_content = _generate_bib_entry(case_id, title, authors, year, source_url)
     bib_path.write_text(bib_content)
@@ -307,12 +432,7 @@ def consume_source(
     pages = _count_pdf_pages(pdf_path)
 
     all_warnings = list(text_warnings)
-    if not title:
-        all_warnings.append("Could not extract title from PDF")
-    if not authors:
-        all_warnings.append("Could not extract authors from PDF")
-    if not year:
-        all_warnings.append("Could not extract year from PDF")
+# Quality warnings already added above
 
     return SourceConsumption(
         pdf_path=str(pdf_path),
@@ -553,6 +673,25 @@ def check_acceptance(
                 checks["docx_integrity"] = False
         else:
             checks["docx_integrity"] = False
+
+    # 5. Source metadata quality (if source was consumed)
+    if criteria.get("metadata_quality", True) and result.source_consumption:
+        sc = result.source_consumption
+        quality_ok = True
+        if not sc.title or "@" in sc.title:
+            quality_ok = False
+            result.notes.append(
+                f"Source metadata: title is missing or looks wrong: {sc.title[:40]!r}"
+            )
+        if not sc.authors or "@" in sc.authors:
+            quality_ok = False
+            result.notes.append(
+                "Source metadata: authors field contains emails instead of names"
+            )
+        if sc.year and not re.match(r"^(19|20)\d{2}$", sc.year):
+            quality_ok = False
+            result.notes.append(f"Source metadata: year looks wrong: {sc.year!r}")
+        checks["metadata_quality"] = quality_ok
 
     return checks
 

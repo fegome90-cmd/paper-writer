@@ -427,7 +427,7 @@ class TestConsumeSource:
         assert sc.text_extracted is True
         assert sc.text_length > 1000
         assert sc.bib_generated is True
-        assert sc.year == "2023"
+        assert sc.year == "2017"
         assert sc.pages > 0
         assert (tmp_path / "outputs" / "source_text.txt").exists()
         assert (tmp_path / "outputs" / "source_references.bib").exists()
@@ -502,8 +502,8 @@ class TestConsumeSource:
         sc = consume_source(pdf, tmp_path, manifest)
         assert sc.text_extracted is True
         assert sc.title  # Something was extracted
-        assert sc.year == "2023"  # From arXiv header
+        assert sc.year == "2017"  # From arXiv header
         assert sc.bib_generated is True
         bib = (tmp_path / "outputs" / "source_references.bib").read_text()
         assert "@article{" in bib
-        assert "2023" in bib
+        assert "2017" in bib
