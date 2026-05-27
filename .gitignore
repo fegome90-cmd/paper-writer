@@ -38,6 +38,23 @@ coverage/
 # Node (pandoc filters, etc.)
 node_modules/
 
-# Generated outputs can be kept, but nested transient files should stay out
-outputs/**/__pycache__/
-outputs/**/*.tmp
+# Generated pipeline outputs (outputs/state.yaml is tracked)
+outputs/drafts/
+outputs/logs/
+outputs/render/
+outputs/search/
+
+# Pipeline runtime artifact (duplicated from templates/journals/nature/)
+templates/preset.yaml
+
+# Local verification data and reports
+verification/local-data/*.local.yaml
+verification/local-data/*.pdf
+verification/reports/
+
+# Other agent tooling
+.claude/
+openspec/
+
+# Node toolchain deps (package.json and lock are tracked)
+tools/node/node_modules/

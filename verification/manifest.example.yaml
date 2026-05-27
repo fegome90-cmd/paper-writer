@@ -1,0 +1,45 @@
+schema_version: 1
+case_id: attention-is-all-you-need
+case_type: public-paper
+description: >-
+  Validate the paper-writer pipeline with a real public PDF kept outside git.
+source_material:
+  pdf_path: /absolute/path/to/attention-is-all-you-need.pdf
+  source_url: https://arxiv.org/abs/1706.03762
+  title: Attention Is All You Need
+  sensitivity: public
+  commit_to_repo: false
+bibliography:
+  mode: optional
+  bib_path: /absolute/path/to/references.bib
+project:
+  preset: nature
+  working_mode: local-only
+commands:
+  - paper doctor
+  - paper init --preset nature
+  - paper import bib /absolute/path/to/references.bib
+  - paper search
+  - paper screen
+  - paper draft outline
+  - paper draft section introduction
+  - paper lint bib
+  - paper lint style
+  - paper check refs
+  - paper render --format docx --csl styles/csl/vancouver.csl
+expected_degraded_mode:
+  allow_missing_vale: true
+  allow_missing_pdflatex: true
+  allow_missing_bibtex_tidy: true
+manual_review:
+  required: true
+  checklist:
+    - DOCX opens successfully in a real editor
+    - Citations render with the expected CSL style
+    - No fabricated references appear
+    - Section structure remains coherent
+verdict_levels:
+  - pass
+  - pass_with_degraded_mode
+  - manual_review_required
+  - fail
