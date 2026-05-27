@@ -1,45 +1,148 @@
+# Phase 6 — Real Material Validation Manifest
+# This file IS consumed by run_real_validation.py.
+# Copy to verification/local-data/<case_id>.local.yaml and fill real paths.
+
 schema_version: 1
-case_id: attention-is-all-you-need
-case_type: public-paper
-description: >-
-  Validate the paper-writer pipeline with a real public PDF kept outside git.
+
+# Unique identifier for this validation case.
+case_id: "example-case"
+
+# Human-readable title.
+title: "Example Validation Case"
+
+# Source material (at least one source required).
 source_material:
-  pdf_path: /absolute/path/to/attention-is-all-you-need.pdf
-  source_url: https://arxiv.org/abs/1706.03762
-  title: Attention Is All You Need
+  # Path to local PDF or text file. Must exist on disk at run time.
+  pdf_path: "/absolute/path/to/source.pdf"
+  # Provenance URL (informational, not fetched).
+  source_url: ""
+  # public | licensed | private
   sensitivity: public
+  # NEVER commit source material to the repo.
   commit_to_repo: false
+
+# Optional bibliography source.
 bibliography:
+  # required | optional | skip
   mode: optional
-  bib_path: /absolute/path/to/references.bib
+  # Path to .bib file. Required if mode is "required".
+  bib_path: ""
+
+# Project configuration applied to the isolated workspace.
 project:
-  preset: nature
+  preset: "nature"
+  # local-only means no network, no API calls.
   working_mode: local-only
-commands:
-  - paper doctor
-  - paper init --preset nature
-  - paper import bib /absolute/path/to/references.bib
-  - paper search
-  - paper screen
-  - paper draft outline
-  - paper draft section introduction
-  - paper lint bib
-  - paper lint style
-  - paper check refs
-  - paper render --format docx --csl styles/csl/vancouver.csl
-expected_degraded_mode:
-  allow_missing_vale: true
-  allow_missing_pdflatex: true
-  allow_missing_bibtex_tidy: true
+
+# Ordered pipeline stages to execute.
+# Each stage maps to a paper CLI command.
+# The runner executes them in order. A stage failure stops the pipeline.
+stages:
+  - name: "doctor"
+    command: "doctor"
+    args: []
+    allow_degraded: false
+    description: "Check tool availability"
+
+  - name: "init"
+    command: "init"
+    args: ["--preset", "nature"]
+    allow_degraded: false
+    description: "Initialize workspace with preset"
+
+  - name: "import_bib"
+    command: "import"
+    args: ["bib", "{bib_path}"]
+    allow_degraded: false
+    description: "Import bibliography"
+    # skip_if: skip this stage when condition is true
+    skip_if: "bibliography.mode == skip"
+
+  - name: "search"
+    command: "search"
+    args: []
+    allow_degraded: false
+    description: "Execute literature search"
+
+  - name: "screen"
+    command: "screen"
+    args: []
+    allow_degraded: false
+    description: "Screen search results"
+
+  - name: "draft_outline"
+    command: "draft"
+    args: ["outline"]
+    allow_degraded: false
+    description: "Draft manuscript outline"
+
+  - name: "draft_introduction"
+    command: "draft"
+    args: ["section", "introduction"]
+    allow_degraded: false
+    description: "Draft introduction section"
+
+  - name: "lint_bib"
+    command: "lint"
+    args: ["bib"]
+    allow_degraded: true
+    description: "Lint and normalize bibliography"
+    degraded_reason: "bibtex-tidy may be unavailable"
+
+  - name: "lint_style"
+    command: "lint"
+    args: ["style"]
+    allow_degraded: true
+    description: "Lint prose style"
+    degraded_reason: "Vale may be unavailable"
+
+  - name: "check_refs"
+    command: "check"
+    args: ["refs"]
+    allow_degraded: false
+    description: "Check citation-reference consistency"
+
+  - name: "render_docx"
+    command: "render"
+    args: ["--format", "docx", "--csl", "styles/csl/vancouver.csl"]
+    allow_degraded: false
+    description: "Render DOCX output"
+
+# Tools that are allowed to be missing (degraded mode).
+# The runner warns but does not fail the pipeline.
+allowed_degraded:
+  - tool: vale
+    reason: "Vale is optional for prose linting"
+  - tool: bibtex-tidy
+    reason: "Built-in BibTeX validation available as fallback"
+  - tool: pdflatex
+    reason: "Only needed for PDF output, not DOCX"
+
+# Acceptance criteria for automated verdict.
+# ALL must pass for "pass". Any failure → "fail" or "pass_with_degraded_mode".
+acceptance:
+  # Pipeline completed all stages without error.
+  pipeline_completed: true
+  # No fabricated references detected (checked automatically).
+  no_fabricated_refs: true
+  # Rendered output file exists and has non-trivial size.
+  render_output_exists: true
+  # DOCX is valid ZIP with word/document.xml.
+  docx_integrity: true
+
+# Manual review required after automated phase.
 manual_review:
   required: true
   checklist:
-    - DOCX opens successfully in a real editor
-    - Citations render with the expected CSL style
-    - No fabricated references appear
-    - Section structure remains coherent
-verdict_levels:
-  - pass
-  - pass_with_degraded_mode
-  - manual_review_required
-  - fail
+    - item: "DOCX opens successfully in Word/LibreOffice"
+      category: render
+    - item: "Citations render with expected CSL style"
+      category: citations
+    - item: "No fabricated references in bibliography"
+      category: bibliography
+    - item: "Section structure is coherent and complete"
+      category: structure
+    - item: "Bibliography entries match inline citations"
+      category: bibliography
+    - item: "Degraded-mode warnings are visible and acceptable"
+      category: degraded
