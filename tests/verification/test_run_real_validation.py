@@ -30,6 +30,7 @@ from verification.run_real_validation import (
     ValidationResult,
     check_acceptance,
     compute_verdict,
+    consume_source,
     generate_report,
     load_manifest,
     prepare_workspace,
@@ -137,14 +138,16 @@ class TestLoadManifest:
 
     def test_missing_pdf_path_exits(self, tmp_path: Path) -> None:
         bad = tmp_path / "bad.yaml"
-        bad.write_text(textwrap.dedent("""\
+        bad.write_text(
+            textwrap.dedent("""\
             schema_version: 1
             case_id: x
             title: X
             source_material:
               source_url: ""
             stages: []
-        """))
+        """)
+        )
         with pytest.raises(SystemExit) as exc_info:
             load_manifest(bad)
         assert exc_info.value.code == 2
@@ -233,9 +236,7 @@ class TestRunStage:
 
     @patch("verification.run_real_validation.subprocess.run")
     def test_degraded_stage_treated_as_success(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        mock_run.return_value = MagicMock(
-            returncode=1, stdout="", stderr="Error: tool unavailable"
-        )
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Error: tool unavailable")
         stage = {
             "name": "lint_bib",
             "command": "lint",
@@ -249,9 +250,7 @@ class TestRunStage:
 
     @patch("verification.run_real_validation.subprocess.run")
     def test_hard_failure_stops_pipeline(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        mock_run.return_value = MagicMock(
-            returncode=1, stdout="", stderr="fatal error"
-        )
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="fatal error")
         stage = {"name": "init", "command": "init", "args": []}
         result = run_stage(tmp_path, stage, bib_path=None)
         assert result.success is False
@@ -350,8 +349,9 @@ class TestComputeVerdict:
 
     def test_degraded_mode(self, empty_result: ValidationResult) -> None:
         empty_result.stages = [
-            StageResult("a", "x", True, 0, "", "", 0.1, degraded=True,
-                degraded_reason="missing tool"),
+            StageResult(
+                "a", "x", True, 0, "", "", 0.1, degraded=True, degraded_reason="missing tool"
+            ),
         ]
         empty_result.acceptance = {"pipeline_completed": True}
         manifest = {"manual_review": {"required": True}}
@@ -375,7 +375,9 @@ class TestGenerateReport:
         assert "0.3s" in report
 
     def test_contains_manual_checklist(
-        self, manifest_file: Path, empty_result: ValidationResult,
+        self,
+        manifest_file: Path,
+        empty_result: ValidationResult,
     ) -> None:
         empty_result.manifest_path = str(manifest_file)
         report = generate_report(empty_result)
@@ -402,3 +404,106 @@ class TestSourceValidation:
         result = run_validation(manifest_file, dry_run=True)
         assert result.verdict == VERDICT_MANUAL
         assert any("DRY RUN" in n for n in result.notes)
+
+
+
+# ── Source consumption ────────────────────────────────────────────────────
+
+
+class TestConsumeSource:
+    def test_extracts_text_from_real_pdf(self, tmp_path: Path) -> None:
+        """Consume a real PDF and verify text extraction."""
+        # Use the real Vaswani PDF if it exists
+        pdf = Path("/Users/felipe_gonzalez/Downloads/attention-is-all-you-need.pdf")
+        if not pdf.exists():
+            pytest.skip("Real PDF not available")
+
+        manifest = {
+            "case_id": "test",
+            "title": "Attention Is All You Need",
+            "source_material": {"source_url": "https://arxiv.org/abs/1706.03762"},
+        }
+        sc = consume_source(pdf, tmp_path, manifest)
+        assert sc.text_extracted is True
+        assert sc.text_length > 1000
+        assert sc.bib_generated is True
+        assert sc.year == "2023"
+        assert sc.pages > 0
+        assert (tmp_path / "outputs" / "source_text.txt").exists()
+        assert (tmp_path / "outputs" / "source_references.bib").exists()
+        # Verify extracted text contains known paper content
+        text = (tmp_path / "outputs" / "source_text.txt").read_text()
+        assert "Attention" in text or "transformer" in text.lower()
+
+    @patch("verification.run_real_validation.subprocess.run")
+    def test_fails_gracefully_without_pdftotext(
+        self, mock_run: MagicMock, tmp_path: Path,
+    ) -> None:
+        """Returns failure when pdftotext and pandoc are both unavailable."""
+        mock_run.side_effect = FileNotFoundError("no pdftotext")
+        manifest = {
+            "case_id": "test",
+            "title": "Test",
+            "source_material": {"source_url": ""},
+        }
+        pdf = tmp_path / "fake.pdf"
+        pdf.write_text("not a real pdf")
+        sc = consume_source(pdf, tmp_path, manifest)
+        assert sc.text_extracted is False
+        assert sc.bib_generated is False
+        assert len(sc.warnings) > 0
+
+    @patch("verification.run_real_validation.subprocess.run")
+    def test_generates_bib_from_metadata(
+        self, mock_run: MagicMock, tmp_path: Path,
+    ) -> None:
+        """Verify bib entry is generated from extracted text."""
+        # Mock pdftotext to produce controlled output
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        # Write a fake text output that pdftotext would produce
+        text_output = tmp_path / "outputs"
+        text_output.mkdir()
+        (text_output / "source_text.txt").write_text(
+            "arXiv:1706.03762v7 [cs.CL] 2 Aug 2023\n\n"
+            "Attention Is All You Need\n\n"
+            "Ashish Vaswani\navaa@google.com\n\n"
+            "Abstract\nTransformer model.\n"
+        )
+        # pdftotext writes to output_path, so mock it writing there
+        def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
+            if "pdftotext" in cmd[0]:
+                # Write text to the output file
+                out_path = Path(cmd[-1])
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(
+                    "arXiv:1706.03762v7 [cs.CL] 2 Aug 2023\n\n"
+                    "Attention Is All You Need\n\n"
+                    "Ashish Vaswani\navaa@google.com\n\n"
+                    "Abstract\nTransformer model.\n"
+                )
+                return MagicMock(returncode=0, stdout="", stderr="")
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = fake_run
+        manifest = {
+            "case_id": "test",
+            "title": "Attention Is All You Need",
+            "source_material": {"source_url": "https://arxiv.org/abs/1706.03762"},
+        }
+        pdf = tmp_path / "fake.pdf"
+        pdf.write_text("fake")
+        # Clean and re-create outputs dir
+        outputs = tmp_path / "outputs"
+        if outputs.exists():
+            shutil.rmtree(outputs)
+        outputs.mkdir()
+
+        sc = consume_source(pdf, tmp_path, manifest)
+        assert sc.text_extracted is True
+        assert sc.title  # Something was extracted
+        assert sc.year == "2023"  # From arXiv header
+        assert sc.bib_generated is True
+        bib = (tmp_path / "outputs" / "source_references.bib").read_text()
+        assert "@article{" in bib
+        assert "2023" in bib

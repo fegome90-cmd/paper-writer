@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -47,6 +48,23 @@ VALID_VERDICTS = {VERDICT_PASS, VERDICT_DEGRADED, VERDICT_MANUAL, VERDICT_FAIL}
 
 
 # ── Data structures ────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SourceConsumption:
+    """Result of consuming (reading + extracting from) the source PDF."""
+
+    pdf_path: str
+    text_extracted: bool
+    text_path: str
+    bib_generated: bool
+    bib_path: str
+    title: str
+    authors: str
+    year: str
+    pages: int
+    text_length: int
+    warnings: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -81,6 +99,7 @@ class ValidationResult:
     finished_at: str = ""
     duration_s: float = 0.0
     notes: list[str] = field(default_factory=list)
+    source_consumption: SourceConsumption | None = None
 
 
 # ── Manifest loading ───────────────────────────────────────────────────────
@@ -124,6 +143,191 @@ def resolve_bib_path(manifest: dict[str, Any]) -> str | None:
         print("ERROR: bibliography mode is 'required' but bib_path is empty", file=sys.stderr)
         sys.exit(2)
     return path if path else None
+
+
+# ── Source consumption ─────────────────────────────────────────────────────
+
+def _extract_pdf_text(pdf_path: Path, output_path: Path) -> tuple[bool, int, list[str]]:
+    """Extract text from PDF using pdftotext (poppler).
+
+    Returns (success, text_length, warnings).
+    """
+    warnings: list[str] = []
+    try:
+        result = subprocess.run(
+            ["pdftotext", "-layout", str(pdf_path), str(output_path)],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            # Try pandoc as fallback
+            result2 = subprocess.run(
+                ["pandoc", str(pdf_path), "-t", "plain", "-o", str(output_path)],
+                capture_output=True, text=True, timeout=30,
+            )
+            if result2.returncode != 0:
+                err = f"pdftotext exit {result.returncode}, pandoc exit {result2.returncode}"
+                return False, 0, [err]
+            warnings.append("pdftotext unavailable, used pandoc fallback")
+    except FileNotFoundError:
+        # Neither pdftotext nor pandoc available
+        return False, 0, ["pdftotext not found — install poppler for PDF consumption"]
+    except subprocess.TimeoutExpired:
+        return False, 0, ["PDF text extraction timed out"]
+
+    text = output_path.read_text() if output_path.exists() else ""
+    return True, len(text), warnings
+
+
+def _parse_pdf_metadata(text: str, manifest: dict[str, Any]) -> tuple[str, str, str]:
+    """Best-effort metadata extraction from PDF text.
+
+    Returns (title, authors, year).
+    Falls back to manifest values if parsing fails.
+    """
+    title = manifest.get("title", "")
+    authors = ""
+    year = ""
+
+    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+    if len(lines) >= 2:
+        # Title is typically one of the first non-empty lines
+        # Skip arXiv headers
+        start = 0
+        for i, line in enumerate(lines):
+            if line.startswith("arXiv:") or "arXiv:" in line:
+                start = i + 1
+                break
+        # Find title after arXiv header
+        for i in range(start, min(start + 5, len(lines))):
+            if len(lines[i]) > 10 and not lines[i].startswith("http") and "@" not in lines[i]:
+                title = lines[i]
+                break
+        # Authors typically follow title
+        for i in range(start, min(start + 10, len(lines))):
+            if "@" in lines[i] and "," not in lines[i][:5]:
+                authors = lines[i]
+                break
+
+    # Extract year from arXiv ID or text
+    arxiv_match = re.search(r"arXiv:\d+\.\d+v\d+.*?(\d{4})", text[:500])
+    if arxiv_match:
+        year = arxiv_match.group(1)
+    else:
+        year_match = re.search(r"\b(19|20)\d{2}\b", text[:1000])
+        if year_match:
+            year = year_match.group(0)
+
+    return title, authors, year
+
+
+def _generate_bib_entry(
+    case_id: str, title: str, authors: str, year: str, source_url: str,
+) -> str:
+    """Generate a BibTeX entry from extracted metadata."""
+    # Create a safe citation key
+    first_author = authors.split(",")[0].split(" and ")[0].strip() if authors else "unknown"
+    # Remove non-alpha
+    safe_name = re.sub(r"[^a-zA-Z]", "", first_author.split("@")[0].strip())[:20]
+    cite_key = f"{safe_name}{year}" if year and safe_name else case_id
+
+    return f"""@article{{{cite_key},
+  title = {{{title}}},
+  author = {{{authors}}},
+  year = {{{year}}},
+  url = {{{source_url}}},
+  note = {{Extracted from source PDF by Phase 6 validation runner}}
+}}
+"""
+
+
+def _count_pdf_pages(pdf_path: Path) -> int:
+    """Estimate page count from PDF file."""
+    try:
+        # Use pdfinfo if available
+        result = subprocess.run(
+            ["pdfinfo", str(pdf_path)],
+            capture_output=True, text=True, timeout=10,
+        )
+        for line in result.stdout.split("\n"):
+            if line.startswith("Pages:"):
+                return int(line.split(":")[1].strip())
+    except (FileNotFoundError, ValueError):
+        pass
+    # Fallback: count page breaks in extracted text
+    return 0
+
+
+def consume_source(
+    pdf_path: Path, workspace: Path, manifest: dict[str, Any],
+) -> SourceConsumption:
+    """Consume the source PDF: extract text, parse metadata, generate bib.
+
+    This is the real material consumption step. The PDF is:
+    1. Text-extracted via pdftotext (or pandoc fallback)
+    2. Metadata parsed from the extracted text
+    3. A .bib entry generated from the metadata
+    4. The .bib placed in the workspace for pipeline consumption
+    5. Extracted text saved in workspace for reference
+
+    Returns SourceConsumption with extraction results.
+    """
+    text_path = workspace / "outputs" / "source_text.txt"
+    text_path.parent.mkdir(parents=True, exist_ok=True)
+    bib_path = workspace / "outputs" / "source_references.bib"
+    source_url = manifest.get("source_material", {}).get("source_url", "")
+    case_id = str(manifest.get("case_id", "unknown"))
+
+    # Step 1: Extract text
+    text_ok, text_len, text_warnings = _extract_pdf_text(pdf_path, text_path)
+
+    if not text_ok:
+        return SourceConsumption(
+            pdf_path=str(pdf_path),
+            text_extracted=False,
+            text_path="",
+            bib_generated=False,
+            bib_path="",
+            title=manifest.get("title", ""),
+            authors="",
+            year="",
+            pages=0,
+            text_length=0,
+            warnings=tuple(text_warnings),
+        )
+
+    # Step 2: Parse metadata
+    text = text_path.read_text()
+    title, authors, year = _parse_pdf_metadata(text, manifest)
+
+    # Step 3: Generate bib entry
+    bib_content = _generate_bib_entry(case_id, title, authors, year, source_url)
+    bib_path.write_text(bib_content)
+
+    # Step 4: Count pages
+    pages = _count_pdf_pages(pdf_path)
+
+    all_warnings = list(text_warnings)
+    if not title:
+        all_warnings.append("Could not extract title from PDF")
+    if not authors:
+        all_warnings.append("Could not extract authors from PDF")
+    if not year:
+        all_warnings.append("Could not extract year from PDF")
+
+    return SourceConsumption(
+        pdf_path=str(pdf_path),
+        text_extracted=True,
+        text_path=str(text_path),
+        bib_generated=True,
+        bib_path=str(bib_path),
+        title=title,
+        authors=authors,
+        year=year,
+        pages=pages,
+        text_length=text_len,
+        warnings=tuple(all_warnings),
+    )
+
 
 
 # ── Workspace isolation ────────────────────────────────────────────────────
@@ -174,16 +378,22 @@ def prepare_workspace(manifest: dict[str, Any], tmp_root: Path | None = None) ->
 
     # Fresh state.yaml with all required gates initialized to false
     all_gates = [
-        "repo_initialized", "search_completed", "screened_evidence",
-        "outline_drafted", "sections_completed", "bib_normalized",
-        "citations_resolved", "refs_validated", "style_passed",
-        "reporting_passed", "render_passed", "ready_for_delivery",
+        "repo_initialized",
+        "search_completed",
+        "screened_evidence",
+        "outline_drafted",
+        "sections_completed",
+        "bib_normalized",
+        "citations_resolved",
+        "refs_validated",
+        "style_passed",
+        "reporting_passed",
+        "render_passed",
+        "ready_for_delivery",
     ]
     gates_yaml = "\n".join(f"  {g}: false" for g in all_gates)
     state_yaml = ws / "outputs" / "state.yaml"
-    state_yaml.write_text(
-        f"repo_initialized: false\ngates:\n{gates_yaml}\nstage: bootstrap\n"
-    )
+    state_yaml.write_text(f"repo_initialized: false\ngates:\n{gates_yaml}\nstage: bootstrap\n")
 
     return ws
 
@@ -355,17 +565,13 @@ def compute_verdict(
     # All stages must succeed
     failed_stages = [s for s in result.stages if not s.success and not s.skipped]
     if failed_stages:
-        result.notes.append(
-            f"Failed stages: {', '.join(s.name for s in failed_stages)}"
-        )
+        result.notes.append(f"Failed stages: {', '.join(s.name for s in failed_stages)}")
         return VERDICT_FAIL
 
     # All acceptance criteria must pass
     failed_checks = [k for k, v in result.acceptance.items() if not v]
     if failed_checks:
-        result.notes.append(
-            f"Failed acceptance: {', '.join(failed_checks)}"
-        )
+        result.notes.append(f"Failed acceptance: {', '.join(failed_checks)}")
         return VERDICT_FAIL
 
     # Degraded mode?
@@ -409,6 +615,28 @@ def generate_report(result: ValidationResult) -> str:
     }
     lines.append(f"## Verdict: {verdict_emoji.get(result.verdict, '?')} {result.verdict}")
     lines.append("")
+
+    # Source consumption
+    sc = result.source_consumption
+    if sc:
+        lines.append("## Source Material Consumption")
+        lines.append("")
+        lines.append("| Field | Value |")
+        lines.append("|-------|-------|")
+        lines.append(f"| PDF | `{sc.pdf_path}` |")
+        status = "✅ yes" if sc.text_extracted else "❌ no"
+        lines.append(f"| Text extracted | {status} ({sc.text_length} chars) |")
+        lines.append(f"| Bib generated | {'✅ yes' if sc.bib_generated else '❌ no'} |")
+        lines.append(f"| Title | {sc.title[:60]} |")
+        lines.append(f"| Authors | {sc.authors[:60] if sc.authors else '(not extracted)'} |")
+        lines.append(f"| Year | {sc.year or '(not extracted)'} |")
+        lines.append(f"| Pages | {sc.pages or 'unknown'} |")
+        if sc.warnings:
+            lines.append("")
+            lines.append("**Warnings:**")
+            for w in sc.warnings:
+                lines.append(f"- ⚠️ {w}")
+        lines.append("")
 
     # Stage results
     lines.append("## Pipeline Stages")
@@ -476,13 +704,29 @@ def load_manifest_checklist(manifest_path: str) -> list[str]:
             data = yaml.safe_load(f)
         items = data.get("manual_review", {}).get("checklist", [])
         if isinstance(items, list):
-            return [
-                i if isinstance(i, str) else i.get("item", str(i))
-                for i in items
-            ]
+            return [i if isinstance(i, str) else i.get("item", str(i)) for i in items]
     except Exception:
         pass
     return []
+
+
+
+def _serialize_consumption(sc: SourceConsumption | None) -> dict[str, Any]:
+    """Serialize source consumption to JSON-safe dict."""
+    if sc is None:
+        return {}
+    return {
+        "pdf_path": sc.pdf_path,
+        "text_extracted": sc.text_extracted,
+        "text_length": sc.text_length,
+        "bib_generated": sc.bib_generated,
+        "bib_path": sc.bib_path,
+        "title": sc.title,
+        "authors": sc.authors,
+        "year": sc.year,
+        "pages": sc.pages,
+        "warnings": list(sc.warnings),
+    }
 
 
 # ── Main runner ────────────────────────────────────────────────────────────
@@ -549,10 +793,42 @@ def run_validation(
 
         atexit.register(_cleanup)
 
+    # ── Source consumption ──
+    # Extract text from PDF, parse metadata, generate .bib entry.
+    # This is the real material processing step — the PDF is READ,
+    # not just checked for existence.
+    print("  [source] Consuming source PDF...")
+    consumption = consume_source(pdf_path, workspace, manifest)
+    result.source_consumption = consumption
+
+    if consumption.text_extracted:
+        print(
+            f"  [source] ✅ text={consumption.text_length} chars, "
+            f"bib={'yes' if consumption.bib_generated else 'no'}, "
+            f"meta: {consumption.title[:50]}... ({consumption.year})"
+        )
+        for w in consumption.warnings:
+            result.notes.append(f"Source warning: {w}")
+            print(f"  [source]   ⚠️ {w}")
+    else:
+        print("  [source] ❌ text extraction failed")
+        for w in consumption.warnings:
+            print(f"  [source]   ⚠️ {w}")
+        result.notes.append("Source PDF text extraction failed")
+        # Not fatal — pipeline can still run without extracted text
+
+    # Resolve bib_path: prefer manifest bib, fall back to generated bib
+    effective_bib = bib_path
+    if not effective_bib and consumption.bib_generated:
+        effective_bib = consumption.bib_path
+        result.notes.append(
+            f"Using auto-generated .bib from source PDF ({consumption.bib_path})"
+        )
+
     # Execute stages
     stages = manifest.get("stages", [])
     for stage_def in stages:
-        sr = run_stage(workspace, stage_def, bib_path)
+        sr = run_stage(workspace, stage_def, effective_bib)
         result.stages.append(sr)
         print(
             f"  [{sr.name}] {'✅' if sr.success else '❌'} "
@@ -607,6 +883,7 @@ def run_validation(
         "acceptance": result.acceptance,
         "degraded_warnings": result.degraded_warnings,
         "notes": result.notes,
+        "source_consumption": _serialize_consumption(result.source_consumption),
     }
     json_path.write_text(json.dumps(json_data, indent=2))
 
