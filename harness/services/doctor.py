@@ -77,11 +77,24 @@ def check_all_tools() -> list[ToolStatus]:
     return tools
 
 
+def _looks_like_project_root(path: Path) -> bool:
+    """Heuristic: does this path look like a real project root?
+
+    Used to gate package-bundled fallback — we only fall back to
+    site-packages assets when the caller appears to be a real project,
+    not a test tmp_path.
+    """
+    return (path / ".git").exists() or (path / "pyproject.toml").exists()
+
+
 def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
     """Check internal capabilities (no external deps).
 
     Resolves assets first from repo_path (cwd), then from package-bundled
     assets via the centralized resolver for portable installations.
+    The package-bundled fallback only activates when repo_path looks like
+    a real project root (has .git or pyproject.toml), so that test
+    fixtures with empty tmp_path directories don't get false positives.
     """
     from harness.ports.assets import (
         get_csl_styles_dir,
@@ -89,12 +102,13 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
         get_vale_styles_dir,
     )
 
+    use_bundled_fallback = _looks_like_project_root(repo_path)
     caps: list[ToolStatus] = []
 
     # Check Vale style packs exist
     # Try repo_path first, then package-bundled fallback
     styles_dir = repo_path / "styles" / "vale" / "paper-writer"
-    if not styles_dir.is_dir():
+    if not styles_dir.is_dir() and use_bundled_fallback:
         bundled = get_vale_styles_dir() / "paper-writer"
         if bundled.is_dir():
             styles_dir = bundled
@@ -116,7 +130,7 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
 
     # Check CSL styles exist
     csl_dir = repo_path / "styles" / "csl"
-    if not csl_dir.is_dir():
+    if not csl_dir.is_dir() and use_bundled_fallback:
         csl_dir = get_csl_styles_dir()
     has_csl = csl_dir.is_dir() and any(csl_dir.glob("*.csl"))
     caps.append(
@@ -135,10 +149,10 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
 
     # Check journal presets exist
     journals_dir = repo_path / "templates" / "journals"
-    if not journals_dir.is_dir():
-        journals_dir = get_preset_dir("")  # parent of any preset
-        if not journals_dir.is_dir():
-            journals_dir = repo_path / "templates" / "journals"
+    if not journals_dir.is_dir() and use_bundled_fallback:
+        bundled_journals = get_preset_dir("")
+        if bundled_journals.is_dir():
+            journals_dir = bundled_journals
     has_presets = journals_dir.is_dir() and any(journals_dir.iterdir())
     caps.append(
         ToolStatus(

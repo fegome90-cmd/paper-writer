@@ -259,6 +259,18 @@ class FilesystemActionRunner(ActionRunner):
 
         return artifacts
 
+    def write_command_log(self, command: str, payload: dict[str, Any]) -> str:
+        """Persist a structured command log entry as YAML."""
+        import datetime as dt
+
+        log_dir = self._resolve("outputs/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S")
+        log_path = log_dir / f"{command}_{timestamp}.yaml"
+        with open(log_path, "w", encoding="utf-8") as f:
+            yaml.dump(payload, f, default_flow_style=False, sort_keys=False)
+        return str(log_path)
+
     def emit_manifest(self, gate_snapshot: dict[str, bool]) -> str:
         manifest_path = self._resolve("outputs/manifest.yaml")
         manifest_data = {

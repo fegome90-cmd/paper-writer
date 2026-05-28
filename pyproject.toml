@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "paper-writer"
 version = "0.1.0"
@@ -21,6 +25,7 @@ include = [
   "skills*",
   "templates*",
   "styles*",
+  "verification*",
 ]
 
 [tool.setuptools.package-data]
@@ -35,10 +40,16 @@ include = [
 "skills.imported" = ["*.*", "**/*.*"]
 "skills.imported.academic_writer" = ["*.json", "*.md"]
 "skills.imported.literature_search" = ["*.*", "**/*.*"]
+"skills.imported.literature_search.resources" = ["*.*"]
 "skills.local" = ["*.*"]
+"verification" = ["*.*", "**/*.*"]
+
+[tool.uv]
+package = true
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["_scratch", "tools"]
 target-version = "py310"
 
 [tool.ruff.lint]
@@ -49,6 +60,10 @@ ignore = []
 python_version = "3.10"
 strict = true
 ignore_missing_imports = true
+# NOTE: Do not run `mypy .` — the repo directory name "paper-writer" contains
+# a hyphen and mypy rejects it as a package. Run with explicit package list:
+#   mypy harness/ cli/ validators/ integrations/ verification/
+exclude = ["^(paper-writer|tests)/"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
