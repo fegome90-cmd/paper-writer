@@ -8,9 +8,9 @@ The system is verified and ready for controlled validation.
 
 Verification evidence:
 
-- `pytest` — 371 passing (unit, integration, E2E)
+- `pytest` — 435 passing (unit, integration, E2E)
 - `ruff check .` — clean
-- `mypy strict` — 0 issues in 78 source files
+- `mypy strict` — 0 issues in 82 source files
 - Full pipeline E2E verified: `init → import → search → screen → draft → validate → render → verify`
 - Pandoc produces real DOCX (12KB+, Word 2007+)
 

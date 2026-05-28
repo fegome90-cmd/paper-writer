@@ -13,7 +13,23 @@ paper = "cli.paper.main:main"
 dev = ["pytest>=8.0.0", "ruff>=0.3.0", "mypy>=1.9.0", "types-pyyaml>=6.0.12.12"]
 
 [tool.setuptools.packages.find]
-include = ["cli*", "harness*", "integrations*", "validators*"]
+include = [
+    "cli*",
+    "harness*",
+    "integrations*",
+    "validators*",
+    "templates*",
+    "styles*",
+]
+
+[tool.setuptools.package-data]
+"templates" = ["*.*", "**/*.*"]
+"templates.journals" = ["*.*", "**/*.*"]
+"templates.journals.nature" = ["*.*"]
+"styles" = ["*.*", "**/*.*"]
+"styles.csl" = ["*.*"]
+"styles.vale" = ["*.*", "**/*.*"]
+"styles.vale.paper-writer" = ["*.*"]
 
 [tool.ruff]
 line-length = 100

@@ -117,8 +117,13 @@ class StyleLinter(ToolWrapper):
 
     @staticmethod
     def _styles_path() -> str:
-        """Return the path to Vale style packs."""
-        return str(Path(__file__).resolve().parents[2] / "styles" / "vale")
+        """Return the path to Vale style packs.
+
+        Uses the centralized asset resolver for portability.
+        """
+        from harness.ports.assets import get_vale_styles_dir
+
+        return str(get_vale_styles_dir())
 
     def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
         """Run Vale and parse JSON output into findings."""

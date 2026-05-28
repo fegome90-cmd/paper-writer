@@ -69,9 +69,10 @@ class FilesystemActionRunner(ActionRunner):
 
                 preset_dir = self.repo_path / "templates" / "journals" / preset_name
                 if not preset_dir.is_dir():
-                    # Fallback: look relative to the package source
-                    pkg_dir = Path(__file__).resolve().parents[2]  # paper-writer root
-                    alt_dir = pkg_dir / "templates" / "journals" / preset_name
+                    # Fallback: look in package-bundled assets
+                    from harness.ports.assets import get_preset_dir
+
+                    alt_dir = get_preset_dir(preset_name)
                     if alt_dir.is_dir():
                         preset_dir = alt_dir
 

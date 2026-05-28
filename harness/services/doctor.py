@@ -78,11 +78,26 @@ def check_all_tools() -> list[ToolStatus]:
 
 
 def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
-    """Check internal capabilities (no external deps)."""
+    """Check internal capabilities (no external deps).
+
+    Resolves assets first from repo_path (cwd), then from package-bundled
+    assets via the centralized resolver for portable installations.
+    """
+    from harness.ports.assets import (
+        get_csl_styles_dir,
+        get_preset_dir,
+        get_vale_styles_dir,
+    )
+
     caps: list[ToolStatus] = []
 
     # Check Vale style packs exist
+    # Try repo_path first, then package-bundled fallback
     styles_dir = repo_path / "styles" / "vale" / "paper-writer"
+    if not styles_dir.is_dir():
+        bundled = get_vale_styles_dir() / "paper-writer"
+        if bundled.is_dir():
+            styles_dir = bundled
     has_rules = styles_dir.is_dir() and any(styles_dir.glob("*.yml"))
     caps.append(
         ToolStatus(
@@ -101,6 +116,8 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
 
     # Check CSL styles exist
     csl_dir = repo_path / "styles" / "csl"
+    if not csl_dir.is_dir():
+        csl_dir = get_csl_styles_dir()
     has_csl = csl_dir.is_dir() and any(csl_dir.glob("*.csl"))
     caps.append(
         ToolStatus(
@@ -118,6 +135,10 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
 
     # Check journal presets exist
     journals_dir = repo_path / "templates" / "journals"
+    if not journals_dir.is_dir():
+        journals_dir = get_preset_dir("")  # parent of any preset
+        if not journals_dir.is_dir():
+            journals_dir = repo_path / "templates" / "journals"
     has_presets = journals_dir.is_dir() and any(journals_dir.iterdir())
     caps.append(
         ToolStatus(
