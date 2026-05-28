@@ -14,12 +14,13 @@ dev = ["pytest>=8.0.0", "ruff>=0.3.0", "mypy>=1.9.0", "types-pyyaml>=6.0.12.12"]
 
 [tool.setuptools.packages.find]
 include = [
-    "cli*",
-    "harness*",
-    "integrations*",
-    "validators*",
-    "templates*",
-    "styles*",
+  "cli*",
+  "harness*",
+  "integrations*",
+  "validators*",
+  "skills*",
+  "templates*",
+  "styles*",
 ]
 
 [tool.setuptools.package-data]
@@ -28,8 +29,13 @@ include = [
 "templates.journals.nature" = ["*.*"]
 "styles" = ["*.*", "**/*.*"]
 "styles.csl" = ["*.*"]
-"styles.vale" = ["*.*", "**/*.*"]
+"styles.vale" = ["*.*", "**/*.*", ".vale.ini"]
 "styles.vale.paper-writer" = ["*.*"]
+"skills" = ["*.*", "**/*.*"]
+"skills.imported" = ["*.*", "**/*.*"]
+"skills.imported.academic_writer" = ["*.json", "*.md"]
+"skills.imported.literature_search" = ["*.*", "**/*.*"]
+"skills.local" = ["*.*"]
 
 [tool.ruff]
 line-length = 100
@@ -50,6 +56,6 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
-    "e2e: end-to-end smoke tests (subprocess, real I/O)",
-    "integration: integration tests with real adapters on tmp_path",
+  "e2e: end-to-end smoke tests (subprocess, real I/O)",
+  "integration: integration tests with real adapters on tmp_path",
 ]
