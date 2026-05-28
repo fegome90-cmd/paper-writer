@@ -104,8 +104,9 @@ class TestZoteroImportValidBib:
             "  doi = {10.1234/ok},\n"
             "}\n"
         )
+        # Explicitly set target to tmp_path to avoid writing into repo tree
         result = ZoteroImporter().run(
-            {"source_bib": str(source)},
+            {"source_bib": str(source), "target_bib": str(tmp_path / "references.bib")},
             {},
         )
         assert result.status == "pass"
