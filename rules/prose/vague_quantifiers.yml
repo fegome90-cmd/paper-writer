@@ -1,0 +1,41 @@
+# rules/prose/vague_quantifiers.yml
+# Vague/imprecise quantity expressions commonly found in academic writing.
+# These obscure the actual magnitude of effects, sample sizes, or relationships.
+
+rule_group: prose.quantifier
+description: "Detect vague and imprecise quantity expressions."
+severity_default: P2
+
+rules:
+  - id: prose.quantifier.approximate_count
+    patterns:
+      - "\\b(a|an)\\s+(large|small|substantial|considerable|significant)\\s+(number|amount|proportion|fraction|percentage)\\b"
+    message: "Imprecise quantity — how large/small?"
+    severity: P2
+    recommendation: "Replace with a specific value or range."
+    scope: sentence
+
+  - id: prose.quantifier.vague_frequency
+    patterns:
+      - "\\b(often|frequently|sometimes|rarely|occasionally|commonly)\\b"
+    message: "Vague frequency — how often?"
+    severity: P2
+    recommendation: "Provide a specific proportion or rate."
+    scope: sentence
+
+  - id: prose.quantifier.indefinite_degree
+    patterns:
+      - "\\b(somewhat|slightly|moderately|markedly|substantially|dramatically)\\b"
+    message: "Indefinite degree — how much?"
+    severity: P2
+    recommendation: "Report the effect size or magnitude explicitly."
+    scope: sentence
+
+  - id: prose.quantifier.overwhelming
+    patterns:
+      - "\\boverwhelming(ly)?\\b"
+      - "\\bvast majority\\b"
+    message: "Overwhelming language — implies near-unanimity."
+    severity: P1
+    recommendation: "Provide the exact proportion. 'Vast majority' should be >90% — is it?"
+    scope: sentence

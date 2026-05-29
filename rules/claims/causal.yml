@@ -1,0 +1,59 @@
+# rules/claims/causal.yml
+# Causal/definitive claim language triggers.
+# Phase 0: trigger-lexicon based. Post-MVP: semantic decomposition.
+
+rule_group: claims.causal
+description: "Detect causal claim language in scientific prose."
+severity_default: P1
+
+rules:
+  - id: claims.causal.definitive_verb
+    patterns:
+      - "\\bproves?\\b"
+      - "\\bdemonstrates?\\b"
+      - "\\bestablishes?\\b"
+      - "\\bconfirms?\\b"
+    message: "Definitive causal verb detected."
+    severity: P0
+    recommendation: "Replace with proportionate language (e.g., 'suggests', 'indicates') unless study design supports causal inference."
+    scope: sentence
+    evidence_required: ["study_design", "effect_size", "confidence_interval"]
+
+  - id: claims.causal.effect_verb
+    patterns:
+      - "\\b(reduced?|increased?|improved?|decreased?)\\b"
+    message: "Effect verb detected — possible causal claim."
+    severity: P1
+    recommendation: "Verify that the study design supports causal attribution."
+    scope: sentence
+    evidence_required: ["comparator", "effect_size", "design_compatible"]
+
+  - id: claims.causal.result_prep
+    patterns:
+      - "\\bled? to\\b"
+      - "\\bresulted? in\\b"
+      - "\\bassociated with\\b"
+    message: "Causal/associative language detected."
+    severity: P1
+    recommendation: "Specify whether the design supports causal or only associative interpretation."
+    scope: sentence
+    evidence_required: ["study_design"]
+
+  - id: claims.causal.dose_response
+    patterns:
+      - "\\bdose[- ]?dependent\\b"
+      - "\\bmonotonic\\b"
+    message: "Dose-response language detected — implies causal gradient."
+    severity: P1
+    recommendation: "Verify that the trend test supports a monotonic relationship."
+    scope: sentence
+    evidence_required: ["trend_test", "dose_levels"]
+
+  - id: claims.causal.attribution
+    patterns:
+      - "\\b(due to|attributed to|explained by|accounted for by)\\b"
+    message: "Causal attribution language detected."
+    severity: P1
+    recommendation: "Ensure the study design supports causal attribution (not just association)."
+    scope: sentence
+    evidence_required: ["study_design", "confounder_control"]

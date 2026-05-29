@@ -1,0 +1,50 @@
+# rules/prose/overclaim.yml
+# Overclaiming language — statements that exceed available evidence.
+# Inspired by: proselint (garner), RIGOURATE (evidential proportionality concept)
+
+rule_group: prose.overclaim
+description: "Detect language that overstates what the evidence supports."
+severity_default: P1
+
+rules:
+  - id: prose.overclaim.definitive_causal
+    patterns:
+      - "\\bproves?\\b"
+      - "\\b(unequivocally|conclusively|definitively)\\s+(shows?|demonstrates?|establishes?)\\b"
+      - "\\bindisputably\\b"
+      - "\\birrefutably\\b"
+    message: "Definitive causal language — verify against evidence."
+    severity: P0
+    recommendation: "Use proportionate language (e.g., 'suggests', 'indicates') unless the study design and effect size support definitive causal inference."
+    scope: sentence
+
+  - id: prose.overclaim.absolute
+    patterns:
+      - "\\ball\\b.*\\b(patients|subjects|participants|samples)\\b"
+      - "\\bnever\\b"
+      - "\\balways\\b"
+      - "\\bevery\\b"
+      - "\\bnone\\b"
+    message: "Absolute language — consider if exceptions exist."
+    severity: P1
+    recommendation: "Qualify with limits (e.g., 'most', 'the majority of', 'in our sample')."
+    scope: sentence
+
+  - id: prose.overclaim.first_superlative
+    patterns:
+      - "\\b(first|novel|unique)\\s+(report|study|demonstration|evidence|finding)\\b"
+      - "\\bto our knowledge\\b.*\\b(first|only)\\b"
+    message: "Novelty/first claim detected."
+    severity: P1
+    recommendation: "Verify that no prior work has reported this finding. Consider 'to our knowledge' qualification."
+    scope: sentence
+
+  - id: prose.overclaim.significance_drift
+    patterns:
+      - "\\bhighly significant\\b"
+      - "\\bvery significant\\b"
+      - "\\bextremely significant\\b"
+    message: "Magnitude-boosted significance language."
+    severity: P2
+    recommendation: "Report exact p-values rather than boosting significance language. Statistical significance is binary per threshold."
+    scope: sentence

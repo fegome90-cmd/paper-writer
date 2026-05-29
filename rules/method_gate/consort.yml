@@ -1,0 +1,122 @@
+# rules/method_gate/consort.yml
+# CONSORT 2025 checklist for randomized controlled trials.
+# Source: https://www.equator-network.org/reporting-guidelines/consort/
+
+guideline: CONSORT
+version: "2025"
+study_types: ["rct", "randomized_controlled_trial", "randomised_controlled_trial"]
+description: "CONSORT 2025 checklist for randomized trial reporting."
+
+critical_items:
+  - id: "consort.1a"
+    section: "Title and abstract"
+    description: "Identification as a randomised trial in the title"
+    expected_location: "Title"
+    check_type: keyword_presence
+    keywords: ["randomised", "randomized", "RCT", "trial", "random"]
+    severity_if_missing: P0
+    message: "Title does not identify this as a randomized trial."
+
+  - id: "consort.1b"
+    section: "Title and abstract"
+    description: "Structured abstract"
+    expected_location: "Abstract"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "No structured abstract found."
+
+  - id: "consort.2"
+    section: "Open science"
+    description: "Trial registration number and registry name"
+    expected_location: "Abstract"
+    check_type: keyword_presence
+    keywords: ["NCT", "trial registration", "registered at", "registry", "clinicaltrials", "ISRCTN", "ChiCTR"]
+    severity_if_missing: P0
+    message: "Trial registration number not found. Prospective registration is required for RCTs."
+
+  - id: "consort.3"
+    section: "Open science"
+    description: "Protocol and statistical analysis plan access"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["protocol", "statistical analysis plan", "SAP", "analysis plan"]
+    severity_if_missing: P1
+    message: "No protocol or analysis plan reference found."
+
+  - id: "consort.16a"
+    section: "Methods"
+    description: "How sample size was determined"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["power", "sample size", "calculation", "a priori", "power analysis"]
+    severity_if_missing: P0
+    message: "Sample size determination not described."
+
+  - id: "consort.17a"
+    section: "Methods"
+    description: "Randomization: sequence generation method"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["random", "randomization", "randomly assigned", "random allocation", "random sequence"]
+    severity_if_missing: P0
+    message: "Randomization method not described."
+
+  - id: "consort.18"
+    section: "Methods"
+    description: "Allocation concealment method"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["allocation concealment", "sealed envelope", "central allocation", "masked", "concealed"]
+    severity_if_missing: P1
+    message: "Allocation concealment method not described."
+
+  - id: "consort.20a"
+    section: "Methods"
+    description: "Blinding: who was blinded"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["blind", "masked", "placebo", "sham", "double-blind", "single-blind", "open-label"]
+    severity_if_missing: P1
+    message: "Blinding status not described."
+
+  - id: "consort.14"
+    section: "Methods"
+    description: "Pre-specified primary and secondary outcomes"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["primary outcome", "secondary outcome", "primary endpoint", "secondary endpoint", "outcome measure"]
+    severity_if_missing: P0
+    message: "Primary and secondary outcomes not pre-specified in Methods."
+
+  - id: "consort.22a"
+    section: "Results"
+    description: "Participant flow diagram or description"
+    expected_location: "Results"
+    check_type: keyword_presence
+    keywords: ["flow", "participant flow", "CONSORT flow", "enrolled", "randomized", "allocated", "follow-up", "analyzed", "withdrew", "lost to follow-up"]
+    severity_if_missing: P1
+    message: "Participant flow not described. CONSORT flow diagram recommended."
+
+  - id: "consort.26"
+    section: "Results"
+    description: "Outcomes per group with effect size and precision"
+    expected_location: "Results"
+    check_type: keyword_presence
+    keywords: ["effect size", "confidence interval", "difference between groups", "mean difference", "risk ratio", "odds ratio", "hazard ratio"]
+    severity_if_missing: P0
+    message: "Effect sizes and precision (confidence intervals) not reported for outcomes."
+
+non_critical_items:
+  - id: "consort.4"
+    section: "Open science"
+    description: "Data sharing statement"
+    check_type: keyword_presence
+    keywords: ["data sharing", "data availability", "data are available"]
+    severity_if_missing: P2
+
+  - id: "consort.30"
+    section: "Discussion"
+    description: "Limitations at multiple levels"
+    check_type: keyword_presence
+    keywords: ["limitation", "limitations", "caveat", "bias"]
+    severity_if_missing: P1

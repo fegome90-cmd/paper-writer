@@ -1,0 +1,49 @@
+# rules/prose/unsupported_certainty.yml
+# Certainty markers that imply confidence without evidentiary support.
+# These phrases signal to the reader that the author is asserting certainty
+# without providing the evidence that would justify it.
+
+rule_group: prose.certainty
+description: "Detect unsupported certainty markers."
+severity_default: P1
+
+rules:
+  - id: prose.certainty.undoubtedly
+    patterns:
+      - "\\bundoubtedly\\b"
+      - "\\bwithout (a )?doubt\\b"
+      - "\\bcertainly\\b"
+      - "\\bassuredly\\b"
+    message: "Unsupported certainty marker — 'undoubtedly' requires evidence."
+    severity: P1
+    recommendation: "Remove or replace with the level of certainty supported by the evidence. If there is doubt, acknowledge it."
+    scope: sentence
+
+  - id: prose.certainty.of_course
+    patterns:
+      - "\\bof course\\b"
+      - "\\bnaturally\\b"
+      - "\\bit goes without saying\\b"
+      - "\\bneedless to say\\b"
+    message: "Dismissive certainty — assumes reader agreement without evidence."
+    severity: P1
+    recommendation: "Remove. If it goes without saying, you don't need to say it. If evidence exists, cite it."
+    scope: sentence
+
+  - id: prose.certainty.self_evidence
+    patterns:
+      - "\\b(evidently|manifestly|patently|transparently)\\b"
+    message: "Self-evident claim — 'evidently' assumes visible proof."
+    severity: P2
+    recommendation: "Present the evidence rather than claiming it is evident."
+    scope: sentence
+
+  - id: prose.certainty.striking
+    patterns:
+      - "\\bstriking(ly)?\\b"
+      - "\\bremarkable?\\b"
+      - "\\bnotable?\\b"
+    message: "Emphatic evaluation — 'striking' is the author's judgment."
+    severity: P2
+    recommendation: "Let the data speak for itself. If the result is striking, the effect size should make that clear."
+    scope: sentence

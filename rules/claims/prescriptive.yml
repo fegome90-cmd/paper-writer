@@ -1,0 +1,40 @@
+# rules/claims/prescriptive.yml
+# Prescriptive/recommendation claim language.
+# Phase 0: detects prescriptive statements. Post-MVP: links to evidence strength.
+
+rule_group: claims.prescriptive
+description: "Detect prescriptive/recommendation claim language."
+severity_default: P1
+
+rules:
+  - id: claims.prescriptive.should
+    patterns:
+      - "\\bshould\\b"
+      - "\\bmust\\b"
+      - "\\bought to\\b"
+    message: "Prescriptive language detected."
+    severity: P1
+    recommendation: "Ensure that prescriptive statements are supported by the evidence presented. Consider indirect language unless clinical guidelines support the recommendation."
+    scope: sentence
+    evidence_required: ["evidence_strength", "guideline_reference"]
+
+  - id: claims.prescriptive.recommend
+    patterns:
+      - "\\brecommend?\\b"
+      - "\\badvocate?\\b"
+      - "\\burge?\\b"
+    message: "Recommendation language detected."
+    severity: P1
+    recommendation: "Specify the strength of the recommendation and the quality of supporting evidence."
+    scope: sentence
+    evidence_required: ["recommendation_strength", "evidence_quality"]
+
+  - id: claims.prescriptive.clinical_practice
+    patterns:
+      - "\\b(clinical|practice)\\s+(should|must|needs? to)\\b"
+      - "\\bstandard of care\\b"
+    message: "Clinical practice prescription detected."
+    severity: P0
+    recommendation: "Clinical practice prescriptions require strong evidence. Verify that the study design and results support practice change."
+    scope: sentence
+    evidence_required: ["guideline_support", "evidence_level", "reproducibility"]

@@ -1,0 +1,43 @@
+# rules/prose/nominalization.yml
+# Nominalization — verbs converted to nouns, obscuring agency and action.
+# Common in academic writing: "conducted an analysis" instead of "analyzed".
+# Reducing nominalization improves clarity and reduces word count.
+
+rule_group: prose.nominalization
+description: "Detect nominalized constructions that obscure agency."
+severity_default: P2
+
+rules:
+  - id: prose.nominalization.performed
+    patterns:
+      - "\\b(performed?|conducted?|carried out|undertook?)\\s+(a|the|an)\\s+(analysis|assessment|evaluation|examination|investigation|study|test|measurement)\\b"
+    message: "Nominalization — consider using the verb directly."
+    severity: P2
+    recommendation: "Replace with the active verb: 'analyzed', 'assessed', 'evaluated', 'tested', 'measured'."
+    scope: sentence
+
+  - id: prose.nominalization.verb_noun
+    patterns:
+      - "\\b(reached?|arrived at|come to)\\s+(a|the)\\s+(conclusion|decision|finding)\\b"
+      - "\\b(showed?|demonstrated?|exhibited?)\\s+(a|the|an)\\s+(increase|decrease|reduction|improvement|change|effect|difference)\\b"
+    message: "Noun-heavy construction — use verb form."
+    severity: P2
+    recommendation: "Replace with direct verb: 'concluded', 'decided', 'increased', 'decreased', 'improved', 'changed'."
+    scope: sentence
+
+  - id: prose.nominalization.abstract_noun
+    patterns:
+      - "\\b(implementation|utilization|visualization|quantification|operationalization|standardization|categorization)\\s+(of|in)\\b"
+    message: "Abstract nominalization in '-ization' or '-ation'."
+    severity: P2
+    recommendation: "Replace with verb: 'implement', 'use', 'visualize', 'quantify', 'operationalize', 'standardize', 'categorize'."
+    scope: sentence
+
+  - id: prose.nominalization.making_observation
+    patterns:
+      - "\\bmade?\\s+(a|an|the)?\\s*(observation|finding|discovery|remark|note)\\b"
+      - "\\btook?\\s+(a|an|the)?\\s*(measurement|reading|sample)\\b"
+    message: "Nominalization — 'made an observation' → 'observed'."
+    severity: P2
+    recommendation: "Use the direct verb form for clarity and concision."
+    scope: sentence

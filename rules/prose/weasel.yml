@@ -1,0 +1,63 @@
+# rules/prose/weasel.yml
+# Weasel words — vague terms that imply authority or generality without evidence.
+# Inspired by: write-good (weasel), proselint (weasel, butterick), Vale.
+
+rule_group: prose.weasel
+description: "Detect weasel words and vague authoritative language."
+severity_default: P2
+
+rules:
+  - id: prose.weasel.clearly
+    patterns:
+      - "\\bclearly\\b"
+      - "\\bobviously\\b"
+      - "\\bmanifestly\\b"
+    message: "Empty authoritative adverb — 'clearly' adds no information."
+    severity: P1
+    recommendation: "Remove or replace with specific evidence. If it were clear, you wouldn't need to say so."
+    scope: sentence
+
+  - id: prose.weasel.well_known
+    patterns:
+      - "\\bit is well known\\b"
+      - "\\bit is widely accepted\\b"
+      - "\\bas everyone knows\\b"
+      - "\\bconventional wisdom\\b"
+    message: "Unsupported generality — 'it is well known' is not a citation."
+    severity: P1
+    recommendation: "Replace with a specific citation or remove. If it's well known, you can cite evidence."
+    scope: sentence
+
+  - id: prose.weasel.vague_authority
+    patterns:
+      - "\\bstudies have shown\\b"
+      - "\\bresearch suggests\\b"
+      - "\\bsome studies\\b"
+      - "\\bmany researchers\\b"
+    message: "Vague scholarly authority — which studies? which researchers?"
+    severity: P1
+    recommendation: "Cite specific studies that support the claim. Vague references cannot be verified."
+    scope: sentence
+
+  - id: prose.weasel.overgeneralization
+    patterns:
+      - "\\bin general\\b"
+      - "\\bas a rule\\b"
+      - "\\btypically\\b"
+      - "\\busually\\b"
+    message: "Overgeneralization detected."
+    severity: P2
+    recommendation: "Specify scope or provide supporting evidence for the generalization."
+    scope: sentence
+
+  - id: prose.weasel.hidden_quantifier
+    patterns:
+      - "\\bmany\\b"
+      - "\\bmost\\b"
+      - "\\bseveral\\b"
+      - "\\ba number of\\b"
+      - "\\bvarious\\b"
+    message: "Vague quantifier — how many?"
+    severity: P2
+    recommendation: "Replace with specific numbers or proportions where possible."
+    scope: sentence

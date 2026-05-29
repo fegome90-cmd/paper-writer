@@ -1,0 +1,146 @@
+# rules/method_gate/prisma.yml
+# PRISMA 2020 checklist for systematic reviews and meta-analyses.
+# Source: https://www.equator-network.org/reporting-guidelines/prisma/
+
+guideline: PRISMA
+version: "2020"
+study_types:
+  - systematic_review
+  - meta_analysis
+  - scoping_review
+  - literature_review
+  - narrative_review
+description: "PRISMA 2020 checklist for systematic review reporting."
+
+critical_items:
+  - id: "prisma.1"
+    section: "Title"
+    description: "Identify as systematic review in title"
+    expected_location: "Title"
+    check_type: keyword_presence
+    keywords:
+      - "systematic review"
+      - "meta-analysis"
+      - "meta analysis"
+      - "scoping review"
+      - "literature review"
+    severity_if_missing: P0
+    message: "Title does not identify this as a systematic review."
+
+  - id: "prisma.5"
+    section: "Methods"
+    description: "Eligibility criteria specified"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "eligibility"
+      - "inclusion criteria"
+      - "exclusion criteria"
+      - "included"
+      - "selection criteria"
+    severity_if_missing: P0
+    message: "Eligibility criteria not specified."
+
+  - id: "prisma.7"
+    section: "Methods"
+    description: "Search strategy with date limits"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "search"
+      - "database"
+      - "PubMed"
+      - "Scopus"
+      - "Web of Science"
+      - "search strategy"
+      - "MEDLINE"
+    severity_if_missing: P0
+    message: "Search strategy not described."
+
+  - id: "prisma.8"
+    section: "Methods"
+    description: "Selection process (screening)"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "screening"
+      - "title and abstract"
+      - "full text"
+      - "reviewed"
+      - "screened"
+      - "two reviewers"
+      - "independent"
+    severity_if_missing: P1
+    message: "Selection/screening process not described."
+
+  - id: "prisma.9"
+    section: "Methods"
+    description: "Data collection process"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "data extraction"
+      - "extracted"
+      - "data collection"
+      - "two reviewers"
+      - "independent"
+    severity_if_missing: P1
+    message: "Data collection/extraction process not described."
+
+  - id: "prisma.13"
+    section: "Methods"
+    description: "Risk of bias assessment"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "risk of bias"
+      - "quality assessment"
+      - "quality appraisal"
+      - "Cochrane"
+      - "Newcastle-Ottawa"
+      - "JBI"
+      - "AMSTAR"
+      - "SIGN"
+    severity_if_missing: P1
+    message: "Risk of bias assessment method not described."
+
+  - id: "prisma.16"
+    section: "Results"
+    description: "Study selection results (PRISMA flow diagram)"
+    expected_location: "Results"
+    check_type: keyword_presence
+    keywords:
+      - "PRISMA"
+      - "flow diagram"
+      - "study selection"
+      - "identification"
+      - "screening"
+      - "included"
+      - "records identified"
+      - "records screened"
+    severity_if_missing: P0
+    message: "Study selection results (PRISMA flow) not reported."
+
+  - id: "prisma.24"
+    section: "Other information"
+    description: "Registration and protocol"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "PROSPERO"
+      - "registration"
+      - "protocol"
+      - "registered"
+      - "CRD"
+      - "preregister"
+      - "pre-register"
+    severity_if_missing: P1
+    message: "Review registration and protocol not mentioned."
+
+non_critical_items:
+  - id: "prisma.27"
+    section: "Other information"
+    description: "Data availability statement"
+    check_type: keyword_presence
+    keywords: ["data availability", "data sharing", "data are available"]
+    severity_if_missing: P2

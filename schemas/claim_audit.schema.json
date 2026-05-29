@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/07/schema#",
+  "$id": "https://paper-writer.dev/schemas/claim_audit.schema.json",
+  "title": "ClaimAuditResult",
+  "description": "Output from paper audit claims command.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "enum": ["audit_claims"]
+    },
+    "file": {
+      "type": "string",
+      "description": "Source file analyzed."
+    },
+    "format": {
+      "type": "string",
+      "enum": ["markdown", "latex", "txt"]
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "description": "Claim candidate identifier (CC-001)."
+          },
+          "text": {
+            "type": "string",
+            "description": "The claim candidate text snippet."
+          },
+          "claim_type": {
+            "type": "string",
+            "enum": ["causal", "comparative", "descriptive", "prescriptive", "unknown"],
+            "description": "Detected claim type."
+          },
+          "section": {
+            "type": "string",
+            "description": "Section where the claim appears (Abstract, Introduction, Methods, Results, Discussion, Conclusions, unknown)."
+          },
+          "risk": {
+            "type": "string",
+            "enum": ["high", "medium", "low", "info"],
+            "description": "Section-adjusted risk level."
+          },
+          "triggers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Specific trigger patterns that matched."
+          },
+          "evidence_required": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "What evidence would be needed (post-MVP)."
+          },
+          "line": { "type": "integer" },
+          "column": { "type": "integer" },
+          "span": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "required": ["claim_id", "text", "claim_type", "section", "risk"]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_candidates": { "type": "integer" },
+        "by_type": {
+          "type": "object",
+          "properties": {
+            "causal": { "type": "integer" },
+            "comparative": { "type": "integer" },
+            "descriptive": { "type": "integer" },
+            "prescriptive": { "type": "integer" },
+            "unknown": { "type": "integer" }
+          },
+          "required": ["causal", "comparative", "descriptive", "prescriptive", "unknown"]
+        },
+        "by_risk": {
+          "type": "object",
+          "properties": {
+            "high": { "type": "integer" },
+            "medium": { "type": "integer" },
+            "low": { "type": "integer" },
+            "info": { "type": "integer" }
+          },
+          "required": ["high", "medium", "low", "info"]
+        },
+        "by_section": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        }
+      },
+      "required": ["total_candidates", "by_type", "by_risk"]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "parser_version": { "type": "string" },
+        "rules_loaded": { "type": "integer" },
+        "execution_time_ms": { "type": "integer" }
+      }
+    },
+    "disclaimer": {
+      "type": "string",
+      "description": "Phase 0 notice: candidates are trigger-detected, not semantically verified.",
+      "default": "Phase 0: claims are candidate detections based on linguistic triggers. This is NOT claim verification. Each candidate should be manually reviewed."
+    }
+  },
+  "required": ["command", "file", "candidates", "summary", "disclaimer"]
+}

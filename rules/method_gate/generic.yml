@@ -1,0 +1,112 @@
+# rules/method_gate/generic.yml
+# Generic methodological gate — applies to ANY study type.
+# These are universal reporting requirements regardless of design.
+
+guideline: Generic
+version: "1.0"
+study_types: ["*"]
+description: "Universal reporting requirements applicable to any study type."
+
+critical_items:
+  - id: "structure.introduction"
+    section: "Structure"
+    description: "Introduction section must be present"
+    expected_location: "Introduction"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "Introduction section is missing."
+
+  - id: "structure.methods"
+    section: "Structure"
+    description: "Methods section must be present"
+    expected_location: "Methods"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "Methods section is missing."
+
+  - id: "structure.results"
+    section: "Structure"
+    description: "Results section must be present"
+    expected_location: "Results"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "Results section is missing."
+
+  - id: "structure.discussion"
+    section: "Structure"
+    description: "Discussion section must be present"
+    expected_location: "Discussion"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "Discussion section is missing."
+
+  - id: "ethics.approval"
+    section: "Ethics"
+    description: "Ethics approval or exemption statement"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["ethics", "ethical approval", "institutional review", "IRB", "ethics committee", "exempt"]
+    severity_if_missing: P0
+    message: "No ethics approval or exemption statement found in Methods."
+
+  - id: "ethics.consent"
+    section: "Ethics"
+    description: "Informed consent or exemption statement"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords: ["consent", "informed consent", "consented"]
+    severity_if_missing: P1
+    message: "No informed consent statement found."
+
+  - id: "ethics.conflict_of_interest"
+    section: "Ethics"
+    description: "Conflict of interest disclosure"
+    expected_location: "Declarations"
+    check_type: keyword_presence
+    keywords: ["conflict of interest", "competing interests", "COI", "no conflicts", "no competing"]
+    severity_if_missing: P1
+    message: "No conflict of interest disclosure found."
+
+  - id: "ethics.funding"
+    section: "Ethics"
+    description: "Funding source disclosure"
+    expected_location: "Declarations"
+    check_type: keyword_presence
+    keywords: ["funding", "grant", "supported by", "funded by", "no funding"]
+    severity_if_missing: P1
+    message: "No funding disclosure found."
+
+  - id: "ethics.data_availability"
+    section: "Ethics"
+    description: "Data availability statement"
+    expected_location: "Declarations"
+    check_type: keyword_presence
+    keywords: ["data availability", "data sharing", "data are available", "data is available", "code availability", "available upon request"]
+    severity_if_missing: P1
+    message: "No data availability statement found."
+
+  - id: "ethics.author_contributions"
+    section: "Ethics"
+    description: "Author contribution statement"
+    expected_location: "Declarations"
+    check_type: keyword_presence
+    keywords: ["contribution", "author contributions", "CRediT", "conceptualization", "writing"]
+    severity_if_missing: P2
+    message: "No author contribution statement found."
+
+  - id: "content.limitations"
+    section: "Content"
+    description: "Limitations paragraph in discussion"
+    expected_location: "Discussion"
+    check_type: keyword_presence
+    keywords: ["limitation", "limitations", "caveat", "several limitations", "this study has"]
+    severity_if_missing: P1
+    message: "No explicit limitations paragraph found in Discussion."
+
+  - id: "content.references"
+    section: "Content"
+    description: "References section must be present"
+    expected_location: "References"
+    check_type: section_presence
+    severity_if_missing: P0
+    message: "References section is missing."

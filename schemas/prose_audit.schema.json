@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/07/schema#",
+  "$id": "https://paper-writer.dev/schemas/prose_audit.schema.json",
+  "title": "ProseAuditResult",
+  "description": "Output from paper audit prose command.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "enum": ["audit_prose"]
+    },
+    "file": {
+      "type": "string",
+      "description": "Source file analyzed."
+    },
+    "format": {
+      "type": "string",
+      "enum": ["markdown", "latex", "txt"],
+      "description": "Detected source format."
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "finding.schema.json" }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_findings": { "type": "integer" },
+        "by_severity": {
+          "type": "object",
+          "properties": {
+            "P0": { "type": "integer" },
+            "P1": { "type": "integer" },
+            "P2": { "type": "integer" }
+          },
+          "required": ["P0", "P1", "P2"]
+        },
+        "by_category": {
+          "type": "object",
+          "description": "Counts per rule_group, e.g. { 'prose.overclaim': 3, 'prose.weasel': 5 }",
+          "additionalProperties": { "type": "integer" }
+        }
+      },
+      "required": ["total_findings", "by_severity", "by_category"]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "parser_version": { "type": "string" },
+        "rules_loaded": { "type": "integer" },
+        "rules_enabled": { "type": "integer" },
+        "execution_time_ms": { "type": "integer" }
+      }
+    }
+  },
+  "required": ["command", "file", "findings", "summary"]
+}

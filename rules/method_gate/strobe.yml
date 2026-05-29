@@ -1,0 +1,143 @@
+# rules/method_gate/strobe.yml
+# STROBE checklist for observational studies (cohort, case-control, cross-sectional).
+# Source: https://www.equator-network.org/reporting-guidelines/strobe/
+
+guideline: STROBE
+version: "2007"
+study_types:
+  - cohort
+  - case_control
+  - cross_sectional
+  - observational
+  - prospective
+  - retrospective
+description: "STROBE checklist for observational study reporting."
+
+critical_items:
+  - id: "strobe.1"
+    section: "Title and abstract"
+    description: "Study design identified in title/abstract"
+    expected_location: "Title"
+    check_type: keyword_presence
+    keywords:
+      - "cohort"
+      - "case-control"
+      - "cross-sectional"
+      - "case control"
+      - "longitudinal"
+      - "observational"
+      - "prospective"
+      - "retrospective"
+    severity_if_missing: P0
+    message: "Study design not identified in title or abstract."
+
+  - id: "strobe.6"
+    section: "Methods"
+    description: "Eligibility criteria and source/selection of participants"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "eligibility"
+      - "inclusion criteria"
+      - "exclusion criteria"
+      - "included"
+      - "recruited"
+      - "enrolled"
+    severity_if_missing: P0
+    message: "Eligibility criteria not described."
+
+  - id: "strobe.7"
+    section: "Methods"
+    description: "Matching criteria (for case-control) or follow-up time (for cohort)"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "matched"
+      - "matching"
+      - "follow-up"
+      - "follow up"
+      - "observation period"
+    severity_if_missing: P1
+    message: "Matching or follow-up details not described."
+
+  - id: "strobe.8"
+    section: "Methods"
+    description: "Data source and measurement method for each variable"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "data source"
+      - "data collection"
+      - "measurement"
+      - "registry"
+      - "database"
+      - "questionnaire"
+      - "survey"
+      - "record"
+    severity_if_missing: P1
+    message: "Data sources and measurement methods not fully described."
+
+  - id: "strobe.12"
+    section: "Methods"
+    description: "Statistical methods described"
+    expected_location: "Methods"
+    check_type: keyword_presence
+    keywords:
+      - "statistical"
+      - "analysis"
+      - "regression"
+      - "logistic"
+      - "Cox"
+      - "Kaplan-Meier"
+      - "t-test"
+      - "chi-square"
+      - "chi-squared"
+    severity_if_missing: P0
+    message: "Statistical methods not described."
+
+  - id: "strobe.14"
+    section: "Results"
+    description: "Number of participants at each stage"
+    expected_location: "Results"
+    check_type: keyword_presence
+    keywords:
+      - "total of"
+      - "participants"
+      - "subjects"
+      - "sample"
+      - "included"
+      - "analyzed"
+      - "eligible"
+    severity_if_missing: P1
+    message: "Number of participants at each stage not reported."
+
+  - id: "strobe.19"
+    section: "Discussion"
+    description: "Limitations including sources of bias"
+    expected_location: "Discussion"
+    check_type: keyword_presence
+    keywords:
+      - "limitation"
+      - "limitations"
+      - "bias"
+      - "confounding"
+      - "generalizability"
+      - "generalisability"
+      - "external validity"
+    severity_if_missing: P0
+    message: "Study limitations (bias, confounding, generalizability) not discussed."
+
+non_critical_items:
+  - id: "strobe.15"
+    section: "Results"
+    description: "Demographic/clinical characteristics table"
+    check_type: keyword_presence
+    keywords: ["baseline", "demographic", "characteristics", "Table 1"]
+    severity_if_missing: P2
+
+  - id: "strobe.22"
+    section: "Other"
+    description: "Funding source"
+    check_type: keyword_presence
+    keywords: ["funding", "grant", "supported by"]
+    severity_if_missing: P2

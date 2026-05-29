@@ -1,0 +1,37 @@
+# rules/claims/descriptive.yml
+# Descriptive claim language — observations, findings, measurements.
+# Phase 0: identifies claim-adjacent descriptive statements.
+
+rule_group: claims.descriptive
+description: "Detect descriptive/finding claim language."
+severity_default: P2
+
+rules:
+  - id: claims.descriptive.finding_verb
+    patterns:
+      - "\\bwe\\s+(observed?|found?|detected?|noted?|report\\b)"
+      - "\\bour\\s+(finding|observation|result|analysis)\\b"
+    message: "Descriptive finding statement detected."
+    severity: P2
+    recommendation: "Consider whether the finding is appropriately contextualized (limitations, comparison to prior work)."
+    scope: sentence
+    evidence_required: []
+
+  - id: claims.descriptive.prevalence
+    patterns:
+      - "\\b(prevalence|incidence|frequency|rate)\\s+(of|was|were)\\b"
+    message: "Prevalence/incidence claim detected."
+    severity: P2
+    recommendation: "Report the numerator, denominator, and confidence interval."
+    scope: sentence
+    evidence_required: ["numerator", "denominator", "confidence_interval"]
+
+  - id: claims.descriptive.temporal
+    patterns:
+      - "\\bover\\s+(time|follow.up|the study period)\\b"
+      - "\\b(during|throughout)\\s+(the\\s+)?(study|follow.up|observation)\\b"
+    message: "Temporal/observational claim detected."
+    severity: P2
+    recommendation: "Specify the observation period and any censoring."
+    scope: sentence
+    evidence_required: ["observation_period", "censoring"]

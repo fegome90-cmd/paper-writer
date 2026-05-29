@@ -1,0 +1,46 @@
+# rules/prose/hedging.yml
+# Hedging language — words/phrases that express caution or uncertainty.
+# Inspired by: write-good (weasel), proselint (weasel words), Hyland's hedging taxonomy.
+#
+# Phase 0: single-pattern detection per rule.
+# Post-MVP: hedging consistency scoring (does hedging level match evidence strength?).
+
+rule_group: prose.hedging
+description: "Detect hedging language and flag hedging conflicts."
+severity_default: P2
+
+rules:
+  - id: prose.hedging.qualifier
+    patterns:
+      - "\\b(may|might|could|perhaps|possibly|potentially)\\b"
+    message: "Hedging qualifier detected."
+    severity: P2
+    recommendation: "Consider whether the qualifier is appropriately cautious for the evidence level."
+    scope: sentence
+
+  - id: prose.hedging.appear
+    patterns:
+      - "\\b(appears?|seems?|suggests?|indicates?)\\b"
+    message: "Hedging verb detected."
+    severity: P2
+    recommendation: "These are appropriate for most scientific claims. Review if used with definitive outcomes."
+    scope: sentence
+
+  - id: prose.hedging.mixed_hedge_definitive
+    patterns:
+      - "\\b(may|could|perhaps|possibly)\\b.*\\b(proves?|demonstrates?|establishes?|confirms?)\\b"
+      - "\\b(proves?|demonstrates?|establishes?)\\b.*\\b(may|could|perhaps|possibly)\\b"
+    message: "Mixed hedging — hedge word combined with definitive claim."
+    severity: P1
+    recommendation: "Resolve the conflict: either hedge or assert, not both. If the evidence supports a definitive claim, remove the hedge. If uncertain, downgrade the claim language."
+    scope: sentence
+
+  - id: prose.hedging.inconsistent_hedging
+    patterns:
+      - "\\b(may|might|could)\\b"
+      - "\\b(suggests?|indicates?|appears?|seems?)\\b"
+      - "\\b(probably|likely|unlikely)\\b"
+    message: "Hedging language present."
+    severity: P2
+    recommendation: "Review for hedging consistency: adjacent sentences should use similar confidence levels unless justified by different evidence strength."
+    scope: document

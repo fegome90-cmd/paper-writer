@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/07/schema#",
+  "$id": "https://paper-writer.dev/schemas/method_gate.schema.json",
+  "title": "GateResult",
+  "description": "Output from paper gate method command — fail-closed methodological gate.",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "enum": ["gate_method"]
+    },
+    "file": {
+      "type": "string",
+      "description": "Source file analyzed."
+    },
+    "study_type": {
+      "type": "string",
+      "description": "Declared or auto-detected study type."
+    },
+    "guideline": {
+      "type": "string",
+      "description": "Guideline used for the gate, e.g. 'CONSORT 2025'."
+    },
+    "guideline_source": {
+      "type": "string",
+      "description": "URL or citation for the guideline."
+    },
+    "gate_passed": {
+      "type": "boolean",
+      "description": "False if any P0 items are missing. Fail-closed."
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": { "type": "string" },
+          "description": { "type": "string" },
+          "expected_location": { "type": "string" },
+          "check_type": {
+            "type": "string",
+            "enum": ["keyword_presence", "section_presence", "section_content", "subsection_presence", "pattern_match"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["missing", "not_detected"]
+          },
+          "severity": { "type": "string", "enum": ["P0"] },
+          "message": { "type": "string" }
+        },
+        "required": ["item_id", "description", "status", "severity", "message"]
+      },
+      "description": "P0 items that are missing — gate fails if this array is non-empty."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": { "type": "string" },
+          "description": { "type": "string" },
+          "expected_location": { "type": "string" },
+          "check_type": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["missing", "not_detected"]
+          },
+          "severity": { "type": "string", "enum": ["P1", "P2"] },
+          "message": { "type": "string" }
+        },
+        "required": ["item_id", "description", "status", "severity", "message"]
+      },
+      "description": "P1/P2 items that are missing — warnings only, do not block the gate."
+    },
+    "not_applicable": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": { "type": "string" },
+          "description": { "type": "string" },
+          "reason": { "type": "string" },
+          "status": { "type": "string", "enum": ["not_applicable"] }
+        },
+        "required": ["item_id", "description", "reason", "status"]
+      },
+      "description": "Items explicitly marked N/A. Recorded for audit trail."
+    },
+    "passed_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["present"] },
+          "evidence": { "type": "string", "description": "Snippet of supporting text." }
+        },
+        "required": ["item_id", "description", "status"]
+      },
+      "description": "Items that were successfully detected in the manuscript."
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_items": { "type": "integer" },
+        "passed": { "type": "integer" },
+        "blockers": { "type": "integer" },
+        "warnings": { "type": "integer" },
+        "not_applicable": { "type": "integer" }
+      },
+      "required": ["total_items", "passed", "blockers", "warnings", "not_applicable"]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "checklist_version": { "type": "string" },
+        "rules_loaded": { "type": "integer" },
+        "execution_time_ms": { "type": "integer" }
+      }
+    }
+  },
+  "required": ["command", "file", "study_type", "guideline", "gate_passed", "blockers", "warnings", "summary"]
+}

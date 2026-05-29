@@ -1,0 +1,45 @@
+# rules/prose/causal_language.yml
+# Causal verb detection — language that implies cause-effect relationships.
+# Overlaps with rules/claims/causal.yml but broader scope (any causal verb in prose,
+# not just claim-adjacent patterns).
+#
+# Phase 0: verb-pattern detection. Post-MVP: study-design-aware causal strength assessment.
+
+rule_group: prose.causal
+description: "Detect causal/effect language in prose."
+severity_default: P2
+
+rules:
+  - id: prose.causal.strong_verb
+    patterns:
+      - "\\b(causes?|triggered?|induced?|elicited?|evoked?)\\b"
+    message: "Strong causal verb detected."
+    severity: P1
+    recommendation: "Use weaker causal language unless the study design supports causal attribution (RCT, natural experiment, etc.)."
+    scope: sentence
+
+  - id: prose.causal.mediating
+    patterns:
+      - "\\b(mediated?|moderated?|facilitated?|promoted?)\\b"
+    message: "Mediating causal language detected."
+    severity: P1
+    recommendation: "Specify the mediation analysis method (e.g., Sobel test, bootstrapping, structural equation model)."
+    scope: sentence
+
+  - id: prose.causal.driven_by
+    patterns:
+      - "\\bdriven by\\b"
+      - "\\bexplained by\\b"
+      - "\\bdue to\\b"
+    message: "Causal attribution language — 'driven by' implies mechanism."
+    severity: P2
+    recommendation: "Verify that the mechanism evidence supports the attribution."
+    scope: sentence
+
+  - id: prose.causal.directional
+    patterns:
+      - "\\b(leading? to|resulting? in|contributing? to)\\b"
+    message: "Directional effect language detected."
+    severity: P2
+    recommendation: "Consider whether reverse causality or confounding could explain the direction."
+    scope: sentence

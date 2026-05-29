@@ -1,0 +1,54 @@
+# rules/claims/comparative.yml
+# Comparative claim language — comparisons between groups, treatments, conditions.
+# Phase 0: trigger-lexicon based. Post-MVP: effect size + CI verification.
+
+rule_group: claims.comparative
+description: "Detect comparative claim language in scientific prose."
+severity_default: P1
+
+rules:
+  - id: claims.comparative.superiority
+    patterns:
+      - "\\bsuperior to\\b"
+      - "\\bbetter than\\b"
+      - "\\bmore effective\\b"
+      - "\\boutperformed?\\b"
+    message: "Superiority claim detected."
+    severity: P0
+    recommendation: "Verify that the comparison is supported by appropriate statistical testing and the study design includes an appropriate comparator."
+    scope: sentence
+    evidence_required: ["comparator", "effect_size", "confidence_interval", "p_value"]
+
+  - id: claims.comparative.difference
+    patterns:
+      - "\\b(higher|lower|greater|smaller|faster|slower)\\s+than\\b"
+      - "\\bdiffered? significantly\\b"
+      - "\\bsignificant(ly)?\\s+(difference|increase|decrease|reduction|improvement)\\b"
+    message: "Comparative difference claim detected."
+    severity: P1
+    recommendation: "Report the effect size and confidence interval for the comparison."
+    scope: sentence
+    evidence_required: ["effect_size", "confidence_interval", "comparator"]
+
+  - id: claims.comparative.non_inferiority
+    patterns:
+      - "\\b(not|non)\\s*inferior\\b"
+      - "\\bas effective as\\b"
+      - "\\bcomparable to\\b"
+    message: "Non-inferiority/comparability claim detected."
+    severity: P1
+    recommendation: "Verify that a non-inferiority margin was pre-specified and the confidence interval excludes the margin."
+    scope: sentence
+    evidence_required: ["non_inferiority_margin", "confidence_interval", "pre_specified"]
+
+  - id: claims.comparative.ratio
+    patterns:
+      - "\\b(odds ratio|hazard ratio|risk ratio|relative risk)\\s*[:=]?\\s*[0-9]"
+      - "\\bOR\\s*[:=]?\\s*[0-9]"
+      - "\\bHR\\s*[:=]?\\s*[0-9]"
+      - "\\bRR\\s*[:=]?\\s*[0-9]"
+    message: "Ratio-based comparison detected."
+    severity: P2
+    recommendation: "Report the confidence interval alongside the point estimate."
+    scope: sentence
+    evidence_required: ["point_estimate", "confidence_interval"]

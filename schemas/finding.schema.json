@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/07/schema#",
+  "$id": "https://paper-writer.dev/schemas/finding.schema.json",
+  "title": "Finding",
+  "description": "A single finding from any Phase 0 command (audit claims, audit prose, gate method).",
+  "type": "object",
+  "properties": {
+    "finding_id": {
+      "type": "string",
+      "description": "Unique identifier (F-001, F-002, ...).",
+      "pattern": "^F\\-\\d+$"
+    },
+    "command": {
+      "type": "string",
+      "enum": ["audit_claims", "audit_prose", "gate_method"],
+      "description": "Which command generated this finding."
+    },
+    "rule_id": {
+      "type": "string",
+      "description": "Namespaced rule identifier, e.g. 'claims.causal.definitive_verb'",
+      "pattern": "^[a-z]+\\.[a-z]+\\.[a-z_]+$"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2"],
+      "description": "P0=critical (blocks gate), P1=warning, P2=suggestion/info"
+    },
+    "file": {
+      "type": "string",
+      "description": "Source file path (relative to project root)."
+    },
+    "line": {
+      "type": "integer",
+      "description": "Line number in original file (1-indexed).",
+      "minimum": 1
+    },
+    "column": {
+      "type": "integer",
+      "description": "Column offset in original file (0-indexed).",
+      "minimum": 0
+    },
+    "span": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Character offset span [start, end] in original file."
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the finding."
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "Actionable suggestion for the author."
+    },
+    "context": {
+      "type": "string",
+      "description": "Surrounding text snippet for context (optional)."
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What evidence would be needed to verify/resolve this finding (post-MVP)."
+    }
+  },
+  "required": ["finding_id", "command", "rule_id", "severity", "message"]
+}

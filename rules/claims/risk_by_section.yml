@@ -1,0 +1,44 @@
+# rules/claims/risk_by_section.yml
+# Section-aware risk modifiers for claims.
+# Claims in different manuscript sections carry different evidentiary weight
+# and therefore different risk of overclaiming.
+
+rule_group: claims.risk
+description: "Risk modifiers for claims based on manuscript section."
+
+modifiers:
+  - section: Abstract
+    multiplier: 2
+    rationale: "Claims in abstracts are most visible and often overcondensed. Highest scrutiny needed."
+    default_risk: high
+
+  - section: Introduction
+    multiplier: 1
+    rationale: "Contextual/literature claims. Generally lower risk as they reference existing work."
+    default_risk: low
+
+  - section: Methods
+    multiplier: 0
+    rationale: "Procedural descriptions; dispreferred for claims. Flag if claim language appears here."
+    default_risk: info
+    suppress_findings: false
+
+  - section: Results
+    multiplier: 1.5
+    rationale: "Results contain the strongest evidentiary claims. Risk increases with definitive language."
+    default_risk: medium
+
+  - section: Discussion
+    multiplier: 1.5
+    rationale: "Interpretation claims. Highest risk of overclaiming relative to evidence presented."
+    default_risk: high
+
+  - section: Conclusions
+    multiplier: 2
+    rationale: "Summary claims, often overstated for impact. Highest risk section."
+    default_risk: high
+
+  - section: unknown
+    multiplier: 1
+    rationale: "Section not identified; apply default risk."
+    default_risk: medium
