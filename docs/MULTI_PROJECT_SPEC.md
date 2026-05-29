@@ -11,7 +11,14 @@ Defines how paper-writer can be installed once and used to produce multiple inde
 
 ## Problem Statement
 
-Currently the CLI uses `Path.cwd()` as `project_root` in 3 places and has no `--project` flag. This means:
+Currently the CLI uses `Path.cwd()` as `project_root` in 4 places and has no `--project` flag:
+
+- `cli/paper/main.py:276` — doctor command
+- `cli/paper/main.py:325` — all other commands
+- `harness/services/orchestrator_builder.py:59` — fallback when `project_root is None`
+- `integrations/tools/bibtex_tidy.py:238` — context fallback
+
+This means:
 
 1. The user must always run `paper` from inside their paper project directory.
 2. `validate_repo_initialized` checks for **source code directories** (`cli/`, `harness/`, `validators/`) that only exist in the source tree.
@@ -102,17 +109,18 @@ A project is "initialized" when it has `templates/`, `outputs/`, and `outputs/st
 
 ### Decision 4: Asset resolution waterfall
 
-All asset reads follow a single pattern:
+All asset reads should follow a single pattern:
 
 ```text
 project_dir / "templates" / ...    → if exists, use project-local version
 package_assets / "templates" / ... → fallback to installed package
 ```
 
-The `harness/ports/assets.py` module already implements `importlib.resources` correctly.
-The gap is that most code bypasses it and constructs paths directly via `repo_path / "templates/..."`.
+**Current state**: `harness/ports/assets.py` resolves from the installed package only via `importlib.resources.files("harness")`. It has **no project-local fallback**. The dual-resolution pattern (project-local → package) exists **only** for presets in `filesystem_action_runner.py:66-77` and in `harness/services/doctor.py` for capability checks.
 
-Fix: route all asset reads through `assets.py` or through the action runner (which already does dual resolution for presets).
+Most code bypasses `assets.py` entirely and constructs paths directly via `repo_path / "templates/..."`.
+
+Fix: (1) extend `assets.py` with project-local fallback, (2) route all asset reads through it.
 
 ## Affected Components
 
@@ -122,11 +130,12 @@ Fix: route all asset reads through `assets.py` or through the action runner (whi
 |----|------|--------|--------|
 | B1 | `cli/paper/main.py` | Add `--project/-C` flag; resolve project root via ascending search | CLI entry point |
 | B2 | `harness/services/gates.py` | `validate_repo_initialized`: check `templates/`, `outputs/`, `outputs/state.yaml` only | Gate logic |
-| B3 | `harness/adapters/filesystem_action_runner.py` | `init`: stop creating `cli/`, `harness/`, `validators/` stubs | Init behavior |
-| B4 | `harness/ports/assets.py` | Verify package install resolves correctly for all asset types | Asset resolution |
+| B3 | `harness/adapters/filesystem_action_runner.py` | `init`: stop creating `cli/`, `harness/`, `validators/`, `tests/` stubs | Init behavior |
+| B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (currently package-only) | Asset resolution |
 | B5 | `integrations/tools/bibtex_tidy.py` | Use `repo_path` from context, not `Path.cwd()` fallback | Tool wrapper |
 | B6 | `harness/adapters/filesystem_action_runner.py` | `emit_manifest`: use relative paths (already correct) but document | Manifest |
 | B7 | `harness/services/orchestrator.py` | Route render template lookup through asset resolver | Render logic |
+| B8 | `harness/services/orchestrator_builder.py` | Accept `project_root` from CLI instead of defaulting to `Path.cwd()` | Builder wiring |
 
 ### WARNING changes (should fix)
 
@@ -146,6 +155,10 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
     1. Explicit --project flag
     2. Ascending search for outputs/state.yaml
     3. CWD fallback
+
+    Caveat: ascending search can match a parent project if run from a
+    subdirectory of an initialized project. Consider adding a
+    .paper-root marker file (like .git) for unambiguous detection.
     """
     if explicit_path is not None:
         path = explicit_path.resolve()
@@ -155,18 +168,27 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
 
     # Ascending search for outputs/state.yaml
     current = cwd.resolve()
+    found_root = None
     for _ in range(20):  # safety limit
         candidate = current / "outputs" / "state.yaml"
         if candidate.is_file():
-            return current
+            found_root = current  # keep going up to find outermost
         parent = current.parent
         if parent == current:
             break
         current = parent
 
+    if found_root is not None:
+        return found_root
+
     # Fallback: use CWD (backward compatible for `paper init` in new dirs)
     return cwd.resolve()
 ```
+
+> **Open question**: should ascending search stop at the first (innermost) match
+> or find the outermost? The implementation above finds the outermost, matching
+> how `git` would behave with `--git-dir`. For most use cases, the innermost
+> match (first found ascending) is more intuitive. Resolve before implementation.
 
 ## CLI Changes
 
@@ -244,7 +266,7 @@ paper -C /workspace/paper search --raw-papers candidates.json
 3. **Init from outside project**: `paper -C /tmp/my-paper init` works
 4. **Asset resolution from installed package**: presets, CSL, Vale rules resolve
 5. **Full pipeline in project mode**: init → search → render → verify from a lean project dir
-6. **Backward compatibility**: existing tests pass without modification
+6. **Backward compatibility**: existing tests are updated to match new gate checks, zero regressions
 7. **Package install contract**: `pyproject.toml` package-data covers all runtime assets
 
 ## File Structure After Implementation
@@ -286,24 +308,29 @@ my-paper/                        # user directory
 
 | Task | Hours | Priority |
 |------|-------|----------|
-| Add `--project` flag + ascending resolution | 1.5h | P0 |
+| Add `--project` flag + ascending resolution | 2h | P0 |
 | Update `validate_repo_initialized` gate | 0.5h | P0 |
-| Remove source stubs from `paper init` | 0.5h | P0 |
+| Remove source stubs from `paper init` (cli/, harness/, validators/, tests/) | 0.5h | P0 |
+| Extend assets.py with project-local fallback | 1.5h | P0 |
 | Route orchestrator render through asset resolver | 1h | P1 |
 | Fix bibtex_tidy CWD fallback | 0.5h | P1 |
 | Fix default path assumptions (W1-W3) | 0.5h | P1 |
+| Fix orchestrator_builder Path.cwd() fallback (B8) | 0.5h | P1 |
 | Update `paper doctor` for dual mode | 0.5h | P2 |
-| Multi-project tests | 1.5h | P0 |
-| Update docs (README, REPO_ARCHITECTURE, Makefile) | 0.5h | P2 |
-| **Total** | **~7h** | |
+| Multi-project tests + update existing gate tests | 2h | P0 |
+| Update docs (README, REPO_ARCHITECTURE, HARNESS_AND_STATE_MACHINE, Makefile) | 1h | P2 |
+| **Total** | **~11h** | |
+
+> **Buffer**: Add 30% if this is a first pass on the codebase without prior multi-project experience. Realistic range: 11-14h.
 
 ## Audit Checklist
 
 - [ ] `paper -C /path init` works from any directory
 - [ ] Ascending search finds `outputs/state.yaml`
 - [ ] `validate_repo_initialized` checks project dirs, not source dirs
-- [ ] `paper init` does not create `cli/`, `harness/`, `validators/`
+- [ ] `paper init` does not create `cli/`, `harness/`, `validators/`, `tests/`
 - [ ] Assets resolve from installed package when not in project dir
-- [ ] Existing tests pass without modification
+- [ ] Existing tests updated for new gate checks, zero regressions
 - [ ] New project-mode tests cover resolution, init, full pipeline
 - [ ] `paper doctor` reports project root and package mode
+- [ ] `orchestrator_builder.py` receives project_root from CLI, no Path.cwd() fallback

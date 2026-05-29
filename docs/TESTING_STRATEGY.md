@@ -11,101 +11,113 @@ Defines how `paper-writer` is verified across all layers of the system.
 
 ## Current State
 
-**435 tests passing** across 5 layers:
+**509 tests passing** across unit, integration, contract, and E2E layers.
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 435 |
-| Source files (mypy strict) | 82 |
+| Total tests | 509 |
+| Python source files (all dirs) | 94 |
 | Linter | ruff clean |
 | Type checker | mypy strict, 0 issues |
 | CI | GitHub Actions (lint + typecheck + unit + E2E) |
+
+> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count.
+
+## Test Directory Structure
+
+```text
+tests/
+  adapters/        — Adapter layer tests (YAML repository, filesystem adapters)
+  cli/             — CLI integration and exit-code matrix tests
+  e2e/             — End-to-end subprocess tests (real I/O, real Pandoc)
+  harness/         — State manager, gates, orchestrator, assembler tests
+  integrations/    — Tool wrapper integration tests (Pandoc, bibtex-tidy, Zotero)
+  skills/          — Skill adapter, scoring engine, and portability tests
+  validators/      — Domain validator tests (refs, citations, style, bib, structure)
+  verification/    — Real material validation runner tests
+```
 
 ## Test Layers
 
 ### Unit Tests
 
-Target domain logic in isolation — no I/O, no subprocesses.
+Domain logic in isolation — no I/O, no subprocesses.
 
 | Module | What is tested | Location |
 |--------|---------------|----------|
-| `validators/refs.py` | DOI/URL metadata completeness | `tests/unit/validators/` |
-| `validators/citations.py` | Citation key consistency | `tests/unit/validators/` |
-| `validators/style.py` | Passive voice, strong claims, forbidden phrases | `tests/unit/validators/` |
-| `validators/bibliography.py` | Entry types, required fields, DOI format, year range, duplicates | `tests/unit/validators/` |
-| `validators/reporting.py` | Study design, sample size, limitations | `tests/unit/validators/` |
-| `validators/structure.py` | Required section presence | `tests/unit/validators/` |
-| `validators/preset.py` | Journal preset schema validation | `tests/unit/validators/` |
-| `harness/services/state_manager.py` | State transitions, schema validation, gate reset | `tests/unit/harness/` |
-| `harness/services/gates.py` | Gate evaluation, precondition checks | `tests/unit/harness/` |
-| `skills/imported/literature_search/scoring.py` | Scoring engine, dedup, tier classification (56 tests) | `tests/skills/` |
-| `skills/local/adapters.py` | Adapter normalization, SkillResult contract | `tests/skills/` |
+| `validators/refs.py` | DOI/URL metadata completeness | `tests/validators/test_validators.py` |
+| `validators/citations.py` | Citation key consistency | `tests/validators/test_validators.py` |
+| `validators/style.py` | Passive voice, strong claims, forbidden phrases | `tests/validators/test_validators.py` |
+| `validators/bibliography.py` | Entry types, required fields, DOI format, year range, duplicates | `tests/validators/test_validators.py` |
+| `validators/reporting.py` | Study design, sample size, limitations | `tests/validators/test_validators.py` |
+| `validators/structure.py` | Required section presence | `tests/validators/test_validators.py` |
+| `validators/preset.py` | Journal preset schema validation | `tests/validators/test_validators.py` |
+| `harness/services/state_manager.py` | State transitions, schema validation, gate reset | `tests/harness/test_state_manager.py` |
+| `harness/services/gates.py` | Gate evaluation, precondition checks | `tests/harness/test_gates.py` |
+| `skills/imported/literature_search/scoring.py` | Scoring engine, dedup, tier classification (56 tests) | `tests/skills/test_scoring.py` |
+| `skills/local/adapters.py` | Adapter normalization, SkillResult contract | `tests/skills/test_adapters.py` |
 
 ### Integration Tests
 
-Target component interaction — real adapters, real filesystem on `tmp_path`.
+Component interaction — real adapters, real filesystem on `tmp_path`.
 
 | Surface | What is tested | Location |
 |---------|---------------|----------|
-| Orchestrator + state manager + gates | Full stage transition flow | `tests/integration/` |
-| FilesystemActionRunner + skill adapters | Search/screen/draft with real scoring | `tests/integration/` |
-| Tool wrappers (Pandoc, bibtex-tidy, Vale) | Real tool invocation on temp dirs | `tests/integration/` |
-| Zotero import | .bib file ingestion | `tests/integration/` |
+| Orchestrator + state manager + gates | Full stage transition flow | `tests/harness/test_orchestrator.py` |
+| Orchestrator builder dependency wiring | Dependency assembly | `tests/harness/test_orchestrator_builder.py` |
+| FilesystemActionRunner + skill adapters | Search/screen/draft with real scoring | `tests/harness/test_orchestrator.py` |
+| Tool wrappers (Pandoc, bibtex-tidy, Vale) | Real tool invocation on temp dirs | `tests/integrations/test_pandoc.py`, `tests/integrations/test_bibtex_tidy_hardening.py` |
+| Zotero import | .bib file ingestion | `tests/integrations/test_zotero_import.py` |
+| CLI subprocess | Request mapping and exit codes | `tests/cli/test_cli_request_mapping.py`, `tests/cli/test_cli_exit_code_matrix.py` |
+| Adapters (YAML repo, filesystem) | Persistence and path resolution | `tests/adapters/test_yaml_repository.py`, `tests/adapters/test_filesystem_adapters.py` |
 
 ### Contract Tests
 
-Verify architectural invariants — dependency direction, port compliance.
+Architectural invariants — dependency direction, port compliance.
 
 | Invariant | Verification |
 |-----------|-------------|
 | `harness/` never imports from `skills/` | `tests/skills/test_portability.py` |
 | `skills/imported/` never imports from `harness/` | `tests/skills/test_portability.py` |
 | No absolute user paths in vendored skills | `tests/skills/test_portability.py` |
-| Adapter outputs are normalized `SkillResult` | `tests/skills/` |
+| Adapter outputs are normalized `SkillResult` | `tests/skills/test_adapters.py` |
+| Asset resolution from package install | `tests/harness/test_asset_resolution.py` |
 
 ### End-to-End Tests
 
 Full pipeline via subprocess — real CLI invocation, real I/O, real Pandoc.
 
-| Flow | What is verified |
-|------|-----------------|
-| `init → search → screen → draft → validate → render → verify` | Complete stage progression |
-| `paper init --preset nature` | Preset template scaffolding |
-| `paper render --format docx` | Pandoc produces real DOCX (12KB+) |
-| `paper doctor` | Environment check with degraded mode |
-| `paper import bib` | Bibliography import from external .bib |
+| Flow | What is verified | Location |
+|------|-----------------|----------|
+| `init → search → screen → draft → validate → render → verify` | Complete stage progression | `tests/e2e/test_smoke_e2e.py` |
+| `paper init --preset nature` | Preset template scaffolding | `tests/e2e/test_smoke_e2e.py` |
+| `paper render --format docx` | Pandoc produces real DOCX (12KB+) | `tests/e2e/test_smoke_e2e.py` |
+| `paper doctor` | Environment check with degraded mode | `tests/e2e/test_smoke_e2e.py` |
+| `paper import bib` | Bibliography import from external .bib | `tests/e2e/test_smoke_e2e.py` |
 
-E2E tests are marked `@pytest.mark.e2e` and run in CI with Pandoc installed.
+E2E tests are marked `pytestmark = pytest.mark.e2e` and run in CI with Pandoc installed.
 
-### Smoke Tests
+## Test Markers
 
-Target-specific real artifact generation — not full pipeline.
-
-| Surface | Verified |
-|---------|----------|
-| DOCX render output | ZIP integrity (`word/document.xml` present), size > 500B |
-| PDF render output | Size check (PDFs are not ZIP-based) |
-| Bibliography import | File copy + normalization |
-| Preset fallback | Package-bundled assets resolve correctly |
+| Marker | Usage | Purpose |
+|--------|-------|---------|
+| `@pytest.mark.e2e` | `tests/e2e/test_smoke_e2e.py` (module-level) | End-to-end tests with real subprocess I/O |
+| `@pytest.mark.integration` | `tests/harness/test_orchestrator_builder.py` (1 test) | Integration test with real dependency wiring |
+| `@pytest.mark.parametrize` | `tests/cli/`, `tests/harness/` | Parametrized test cases |
 
 ## CI Pipeline
 
 GitHub Actions runs on every push/PR to `main`:
 
 1. **Lint**: `ruff check .` + `ruff format --check .`
-2. **Type check**: `mypy harness/ cli/ validators/ integrations/ verification/` (strict mode)
-3. **Unit + integration tests**: `pytest` (excludes E2E)
+2. **Type check**: `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (strict mode)
+3. **Unit + integration tests**: `pytest tests/ -m "not e2e" --tb=short`
 4. **Install Pandoc**: required for E2E tests
 5. **E2E smoke tests**: subprocess, real I/O
 
 Matrix: Python 3.10, 3.11, 3.12, 3.13 on Ubuntu latest.
 
-## Test Markers
-
-| Marker | Purpose |
-|--------|---------|
-| `@pytest.mark.e2e` | End-to-end tests with real subprocess I/O |
-| `@pytest.mark.integration` | Integration tests with real adapters on `tmp_path` |
+> **Note**: Local `make typecheck` runs `mypy harness cli validators integrations verification` (without `tests/` and `skills/`). CI includes broader scope.
 
 ## Local Verification
 
@@ -116,7 +128,7 @@ make verify
 # Individual layers
 make test          # pytest
 make lint          # ruff check + format check
-make typecheck     # mypy strict
+make typecheck     # mypy strict (local scope)
 
 # Controlled validation (local-only, real material)
 make validate CASE=verification/local-data/<case>.local.yaml
@@ -131,8 +143,8 @@ make validate CASE=verification/local-data/<case>.local.yaml
 
 ## Audit Checklist
 
-- [x] Current docs reflect real test count and coverage.
-- [x] Test layers map to real implementation surfaces.
-- [x] Contract tests enforce architectural invariants.
-- [x] CI pipeline runs lint + typecheck + tests on every push.
-- [x] E2E tests use real subprocess I/O, not mocks.
+- [ ] Current docs reflect real test count (verify with `pytest --collect-only`).
+- [ ] Test directories match actual filesystem layout.
+- [ ] CI mypy scope matches documented scope.
+- [ ] Test markers are documented only if actually used.
+- [ ] New tests are added at the correct layer (unit / integration / e2e).
