@@ -8,8 +8,105 @@
 
 ---
 
+<a name="current-phase-0-recommendation"></a>
+## Current Phase 0 Recommendation — reconciled with implementation
+
+> **Last reconciled:** 2026-05-29  
+> **Reconciliation reason:** Corrected selection criteria applied post-implementation. The previous version mixed "useful today" tools with "interesting future" papers. This section supersedes the original "Projects by Influence" table (see §1) and select individual project recommendations marked throughout.
+
+### Selection Criteria
+
+For Phase 0, every referenced project must pass **all five** questions:
+
+| # | Question | Meaning |
+|---|----------|---------|
+| 1 | **¿Corre local?** | No SaaS, no cloud dependency, no API key required |
+| 2 | **¿Es determinístico o casi determinístico?** | Same input → same output, every time |
+| 3 | **¿Da hallazgos ubicables?** | Each finding has file/line/column/span |
+| 4 | **¿Tiene reglas auditables?** | Rules are readable YAML/regex, not black-box models |
+| 5 | **¿No requiere LLM, API ni búsqueda externa?** | Zero runtime network calls |
+
+Projects that fail any of these are **not** Phase 0 base material. They may still be conceptual references or future roadmap items.
+
+### Classification by Use in Phase 0
+
+| Proyecto | Categoría | Uso en Phase 0 | Comando relacionado | Qué tomar | Qué NO tomar | Estado |
+|---|---|---|---|---|---|---|
+| **LanguageCheck** | Arquitectura | Modelo de auditoría por niveles (word/sentence/paragraph/paper) | `audit prose` | Checks por nivel de granularidad; advertencia explícita de falsos positivos | Stack no reusable como librería; reglas no curadas para contexto biomédico | **adoptado** |
+| **Academic-Writing-Check** | Reglas directas | Checks chicos, explícitos, baratos y diff-friendly | `audit prose` | passive, weasel, dups, abbr, typography como checks independientes | Lista de reglas como autoridad absoluta (depende de disciplina/revista) | **adoptado** |
+| **Vale** | Arquitectura | Diseño del motor de reglas: YAML rules, severidad, scoping, check types | `audit prose` / `gate method` | Reglas externalizadas, severidad configurable, markup-aware, CI-friendly | Engine completo; reglas genéricas de documentación técnica no científicas | **adoptado** |
+| **write-good** | Schema | Schema mínimo de findings con ubicación | todos | `{reason, index, offset}` — ampliado a `{rule_id, severity, line, column, span, message, recommendation}` | Reglas naïve no científicas | **adoptado** |
+| **proselint** | Arquitectura | Check Registry pattern con namespacing | `audit prose` | Registro modular, namespacing (`scientific.hedging`), JSON output, configuración granular | Reglas literarias/generalistas; mixed JS/Python codebase | **adoptado** |
+| **TeXtidote** | Arquitectura | Offset mapping / source map | todos | Source map: limpiar markup → analizar → reubicar en original | Dependencia Java; LanguageTool bundling (100MB+) | **adoptado** |
+| **EQUATOR** | Contenido | Checklists YAML para method gate | `gate method` | Checklist-as-YAML, critical items, section-to-item mapping | Evaluación LLM; formatos propietarios | **adoptado** |
+| **Chrisper** | Pipeline | Pipeline LaTeX minimalista | `audit prose` | Flujo austero: LaTeX → detex → texto → reglas → salida | Dominio orientado a Computer Science; dependencia de `detex` | **inspiración** |
+| **detecting-scientific-claim** | Concepto | Claim detection conceptual y taxonomía de secciones | `audit claims` | Section-aware claim risk; sentence-level approach; trigger lexicon | AllenNLP, modelos BERT entrenados, Flask web demo | **inspiración** |
+| **markdownlint** | Pre-check | Higiene estructural de manuscritos Markdown | `audit format` (opcional) | Frontmatter handling, custom rules engine, CI integration | No audita contenido científico; solo estructura Markdown | **futuro** |
+| **statcheck** | Patrón | Extract-recompute-compare para estadísticas | `audit stats` (futuro) | Patrón de verificación estadística; APA regex battle-tested; rounding tolerance model | APA-only scope; no debe ser gate universal en Fase 0 | **futuro** |
+| **SciFact** | Taxonomía | SUPPORT/REFUTE/NOINFO schema para post-MVP | `audit claims` (post-MVP) | Taxonomía de verificación; pipeline retrieval → rationale → label | BERT/RoBERTa fine-tuning; evidence retrieval externo | **futuro** |
+| **RIGOURATE** | Concepto | Proporcionalidad evidencial como filosofía | `audit claims` (post-MVP) | Overstatement score como concepto; evidential proportionality | VLMs fine-tuned (Qwen3-VL, InternVL3.5, 8B params) | **futuro** |
+| **SciScore** | Producto cerrado | Taxonomía de rigor (blinding, randomization, power, sex, RRIDs) | `gate method` (inspiración taxonómica) | Rigor criteria checklist items; "Not Detected" vs "Not Applicable" | NLP propietario; SaaS (no corre local); código 100% cerrado | **descartado** |
+| **Penelope.ai** | Producto cerrado | Check taxonomy editorial y section mapping | `gate method` (inspiración taxonómica) | "Every check linked to evidence in text"; sección → ítem mapping | SaaS cerrado; 30+ check system no replicable sin LLM | **descartado** |
+| **sciwrite-lint** | Prototipo alpha | Visión de verificación científica local | `evidence-map` (roadmap lejano) | SHA-256 caching de manuscript + rules; claim verification vision | GPU requirement (vLLM); GROBID; 3★ alpha | **descartado** |
+| **Ripeta** | Producto cerrado | Dimensiones como weighted gates | `gate method` (concepto) | Dimensiones como weighted gates, no score global | Código cerrado; spaCy models por indicador; overengineered | **descartado** |
+
+### Implementation Alignment
+
+The current Phase 0 implementation maps directly to the reconciled recommendation:
+
+| Component | File(s) | Status |
+|---|---|---|
+| **Parser + Source Map** | `parsers/manuscript.py`, `parsers/source_map.py` | ✅ Implemented |
+| **Prose Validator** | `validators/prose.py` | ✅ Implemented (Check Registry, YAML rules, section-aware) |
+| **Method Gate** | `validators/method_gate.py` | ✅ Implemented (YAML checklists per study type, fail-closed) |
+| **Claims Validator** | `validators/claims.py` | ✅ Implemented (trigger lexicon, section-aware risk, evidence_required) |
+| **Deduplication SSOT** | `engine/deduplicator.py` | ✅ Implemented (sweep-line algorithm, single source of truth) |
+| **Rule Engine** | `engine/loader.py`, `engine/formatter.py` | ✅ Implemented |
+| **Rules (YAML)** | `rules/claims/*.yml`, `rules/prose/*.yml`, `rules/method_gate/*.yml` | ✅ 12+ rule files |
+| **Schemas** | `schemas/finding.schema.json`, `schemas/claim_audit.schema.json`, `schemas/prose_audit.schema.json`, `schemas/method_gate.schema.json` | ✅ 4 schemas |
+
+**Dead code removed:** `engine/registry.py` and `engine/matcher.py` were eliminated during Phase 0 cleanup — dedup is centralized in `engine/deduplicator.py` as the SSOT.
+
+**Current test status:** 522 tests passing (full project suite, 0 failures).
+
+### Phase 0 Boundary
+
+Phase 0 explicitly does **NOT** do:
+
+- ❌ No LLM (local or remote)
+- ❌ No APIs (no runtime network calls)
+- ❌ No external search (no PubMed, Semantic Scholar, OpenAlex, CrossRef)
+- ❌ No MCP (Model Context Protocol is out of scope)
+- ❌ No truth verification (Phase 0 detects risk, does not verify truth)
+- ❌ No global score (no "paper scored 8.5/10" — only per-finding severity + gate pass/fail)
+- ❌ No evidence retrieval (no abstract fetching, no full-text lookup)
+- ❌ No automatic support/refute (no claim-against-evidence classification)
+- ❌ No Phase 1 features (no LLM-assisted claim decomposition, no discourse-level analysis)
+
+**Governing principle:** Phase 0 detects risk; it does not verify truth.
+
+### Superseded or Weakened Recommendations
+
+The following original document positions are weakened or superseded by the reconciled classification above:
+
+| Original Position | Location | Superseded By | Action |
+|---|---|---|---|
+| SciFact listed as "Primary influence" in Projects by Influence table | §1, line 56 | Now classified as **futuro** — Phase 0 does not do evidence retrieval | Marked in §2.11 below |
+| RIGOURATE listed as "Conceptual only" without distinguishing philosophical value vs implementation incompatibility | §1, line 56 | Now classified as **futuro** — concept is valuable, implementation is antithetical to Phase 0 | Marked in §2.10 below |
+| sciwrite-lint classified only as "Not usable" / "Discard" without noting its vision value for later phases | §1, line 57, §2.12 | Now classified as **descartado** for Phase 0, but acknowledged as roadmap vision | Marked in §2.12 below |
+| SciScore and Penelope listed as "Secondary influence" suggesting they are base material | §1, line 56 | Both are **descartado** (closed SaaS, not auditable, not local) | Marked in §2.7 and §2.8 below |
+| statcheck suggested for Phase 0 `audit claims` and `gate method` | §2.5, line 249 | Deferred to post-MVP `paper audit stats`; not a Phase 0 gate | Marked in §2.5 below |
+| Score/global lint treated as risk but partially tolerated in original analysis | Throughout | Explicitly banned: ADR-005 strengthened, Phase 0 Boundary added | Confirmed in §4.1 and §10 |
+| Projects by Influence table used Primary/Secondary/Conceptual/Not Usable categories | §1, line 54 | Replaced by 5-state classification: adoptado / inspiración / futuro / descartado (with criterion-driven selection) | Original table kept for historical reference, deprecated by new section |
+
+---
+
 ## Table of Contents
 
+0. [Current Phase 0 Recommendation](#current-phase-0-recommendation)
+    - [Implementation Alignment](#implementation-alignment)
+    - [Phase 0 Boundary](#phase-0-boundary)
+    - [Superseded or Weakened Recommendations](#superseded-or-weakened-recommendations)
 1. [Executive Summary](#1-executive-summary)
 2. [Project Profiles](#2-project-profiles)
 3. [Cross-Cutting Synthesis](#3-cross-cutting-synthesis)
@@ -48,6 +145,8 @@ A **local scientific linting system** with three commands:
 | `gate method` | Missing methodological items per study type | Evaluate scientific validity |
 
 **Governing principle: Phase 0 detects risk; it does not verify truth.**
+
+> **⚠ Superseded by Current Phase 0 Recommendation** — see top of document for reconciled classification (5-state: adoptado / inspiración / futuro / descartado). The table below mixes auditable repos with closed SaaS products and assigns "Primary influence" to projects incompatible with Phase 0 (no LLM, no APIs, local-only constraint).
 
 ### Projects by Influence
 
@@ -217,6 +316,8 @@ passive, weasel, so, thereIs, adverbs, cliches, eprime, tooWordy, wordy, illusio
 
 ---
 
+> **⚠ Superseded by Current Phase 0 Recommendation** — statcheck is classified as **futuro** (`paper audit stats`). It is NOT a Phase 0 gate nor a base dependency. The "Fase 0 command" note below is weakened; only the "minimal rule: if manuscript reports effect without CI/p-value/estimator → warning/blocker" survives in Phase 0.
+
 ### 2.5 statcheck
 
 | Attribute | Value |
@@ -302,6 +403,8 @@ Title/Abstract, Open Science, Introduction, Methods, Results, Discussion
 
 ---
 
+> **⚠ Superseded by Current Phase 0 Recommendation** — SciScore is **descartado** for Phase 0. Closed SaaS, not auditable, not local. Only its rigor criteria taxonomy survives as inspiration.
+
 ### 2.7 SciScore
 
 | Attribute | Value |
@@ -319,6 +422,8 @@ Title/Abstract, Open Science, Introduction, Methods, Results, Discussion
 **Recommendation:** **Adapt** — take the rigor criteria taxonomy as YAML checklist items. Ignore the proprietary NLP.
 
 ---
+
+> **⚠ Superseded by Current Phase 0 Recommendation** — Penelope.ai is **descartado** for Phase 0. Closed SaaS, not auditable, not local. Only its section-to-item mapping pattern survives as architectural inspiration.
 
 ### 2.8 Penelope.ai
 
@@ -373,6 +478,8 @@ Title/Abstract, Open Science, Introduction, Methods, Results, Discussion
 
 ---
 
+> **⚠ Superseded by Current Phase 0 Recommendation** — RIGOURATE is **futuro** (conceptual only). Its implementation (fine-tuned VLMs, multimodal retrieval) is antithetical to Phase 0. Only the concept of evidential proportionality survives.
+
 ### 2.10 RIGOURATE
 
 | Attribute | Value |
@@ -389,6 +496,8 @@ Title/Abstract, Open Science, Introduction, Methods, Results, Discussion
 **Recommendation:** **Only inspiration** — the concept of evidential proportionality is the philosophical foundation for `audit claims`. But the implementation (fine-tuned VLMs, multimodal retrieval) is antithetical to Phase 0 constraints.
 
 ---
+
+> **⚠ Superseded by Current Phase 0 Recommendation** — SciFact is **futuro** (post-MVP taxonomía). Requires BERT/RoBERTa fine-tuning and evidence retrieval — incompatible with Phase 0 constraints. ReClaim/CLLM remain future references.
 
 ### 2.11 SciFact & ReClaim/CLLM (Grouped)
 
@@ -409,6 +518,8 @@ Title/Abstract, Open Science, Introduction, Methods, Results, Discussion
 **Recommendation (all three):** **Only inspiration** — save the taxonomies (SUPPORT/REFUTE/NOINFO, evidence types) for post-MVP when LLM becomes available. In Phase 0, these are architectural references, not code sources.
 
 ---
+
+> **⚠ Superseded by Current Phase 0 Recommendation** — sciwrite-lint is **descartado** for Phase 0 (alpha, GPU-dependent). Its vision of local claim verification is a roadmap reference, not a Phase 0 dependency. Ripeta remains **descartado** (closed code).
 
 ### 2.12 sciwrite-lint & Ripeta (Grouped)
 
@@ -1077,6 +1188,8 @@ Phase 0-d: paper audit claims (most valuable, highest risk)
 
 ## Appendix A: Quick Reference — Project Recommendations
 
+> **ℹ Historical terminology.** This table uses the original nomenclature (Adapt / Copy / Only inspiration / Discard). The current authority for all project classifications is the [Classification by Use in Phase 0](#classification-by-use-in-phase-0) table with states: **adoptado / inspiración / futuro / descartado**.
+
 | Project | Recommendation | Use Case |
 |---|---|---|
 | Vale | Adapt (architecture) | Rule engine, check types, scoping |
@@ -1096,52 +1209,35 @@ Phase 0-d: paper audit claims (most valuable, highest risk)
 
 ---
 
-## Appendix B: File Tree — Phase 0 Delivery
+## Appendix B: File Tree — Phase 0 Delivery (Original Design)
+
+> **⚠ Historical — superseded by [Implementation Alignment](#implementation-alignment).**  
+> The original design included `engine/registry.py` and `engine/matcher.py`, which were eliminated during Phase 0 cleanup. The SSOT for the current file tree is the Implementation Alignment table at the top of this document.
 
 ```
-paper-writer/
+paper-writer/                          # Original design tree — NOT current
 ├── parsers/
 │   ├── __init__.py
-│   ├── manuscript.py         # Manuscript dataclass + parsing pipeline
-│   └── source_map.py         # Position mapping
+│   ├── manuscript.py
+│   └── source_map.py
 ├── engine/
 │   ├── __init__.py
-│   ├── loader.py             # YAML rule loading
-│   ├── registry.py           # Check Registry
-│   ├── matcher.py            # Pattern matching
-│   ├── deduplicator.py       # Overlap resolution
-│   └── formatter.py          # Output formatting
+│   ├── loader.py
+│   ├── registry.py           ← REMOVED (dead code, Phase 0 cleanup)
+│   ├── matcher.py            ← REMOVED (dedup centralized in deduplicator.py)
+│   ├── deduplicator.py
+│   └── formatter.py
 ├── validators/
 │   ├── __init__.py
-│   ├── claims.py             # Claim candidate detection
-│   ├── prose.py              # Prose analysis
-│   └── method_gate.py        # Methodological gate
+│   ├── claims.py
+│   ├── prose.py
+│   └── method_gate.py
 ├── rules/
 │   ├── claims/
-│   │   ├── causal.yml
-│   │   ├── comparative.yml
-│   │   ├── descriptive.yml
-│   │   ├── prescriptive.yml
-│   │   └── risk_by_section.yml
 │   ├── prose/
-│   │   ├── overclaim.yml
-│   │   ├── hedging.yml
-│   │   ├── weasel.yml
-│   │   ├── causal_language.yml
-│   │   ├── vague_quantifiers.yml
-│   │   ├── nominalization.yml
-│   │   └── unsupported_certainty.yml
 │   └── method_gate/
-│       ├── consort.yml
-│       ├── strobe.yml
-│       ├── prisma.yml
-│       └── generic.yml
 ├── schemas/
-│   ├── finding.schema.json
-│   ├── claim_audit.schema.json
-│   ├── prose_audit.schema.json
-│   └── method_gate.schema.json
 └── docs/
     └── research/
-        └── phase-0-prior-art.md   # This file
+        └── phase-0-prior-art.md
 ```

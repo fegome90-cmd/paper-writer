@@ -15,11 +15,11 @@ Defines how `paper-writer` is verified across all layers of the system.
 
 | Metric | Value |
 |--------|-------|
-| Linter | ruff clean |
-| Type checker | mypy strict, 0 issues |
+| Linter | ruff (see `make lint` for current status) |
+| Type checker | mypy strict, 0 issues (source dirs) |
 | CI | GitHub Actions (lint + typecheck + unit + E2E) |
 
-> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count. Do not hardcode a specific number here — it drifts immediately.
+> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count.
 
 ## Test Directory Structure
 
@@ -32,10 +32,13 @@ tests/
   harness/         — State manager, gates, orchestrator, assembler tests
   integrations/    — Tool wrapper integration tests (Pandoc, bibtex-tidy, Zotero)
   skills/          — Skill adapter, scoring engine, and portability tests
-  validators/      — Domain validator tests (refs, citations, style, bib, structure)
+  validators/      — Domain validator tests + engine/parsers/rules cross-module tests
   verification/    — Real material validation runner tests
   test_packaging_contract.py — Package install asset resolution contract
 ```
+
+> **Note**: `tests/validators/` also covers `engine/`, `parsers/`, `rules/`, and `schemas/` modules.
+> These are separate top-level packages with their test files located under `tests/validators/`.
 
 ## Test Layers
 
@@ -109,14 +112,14 @@ E2E tests are marked `pytestmark = pytest.mark.e2e` and run in CI with Pandoc in
 
 GitHub Actions runs on every push/PR to `main`:
 
-1. **Lint**: `ruff check .` + `ruff format --check .`
+1. **Lint**: `ruff check .`
 2. **Type check**: `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (strict mode)
 3. **Unit + integration tests**: `pytest tests/ -m "not e2e" --tb=short`
 4. **E2E smoke tests**: subprocess, real I/O (requires Pandoc installed)
 
 Matrix: Python 3.10, 3.11, 3.12, 3.13 on Ubuntu latest.
 
-> **Note**: Local `make typecheck` runs `mypy harness cli validators integrations verification` (without `tests/` and `skills/`). CI includes broader scope.
+> **Scope differences**: Local `make typecheck` runs `mypy harness cli validators integrations verification` (local-only includes `verification/`). CI runs `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (CI includes `tests/` and `skills/` but NOT `verification/`). These are different scopes, not a strict superset. Note: `pyproject.toml` excludes `tests/` from mypy, so the CI step may produce warnings.
 
 ## Local Verification
 

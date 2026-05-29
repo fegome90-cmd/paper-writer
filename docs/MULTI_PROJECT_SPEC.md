@@ -11,7 +11,7 @@ Defines how paper-writer can be installed once and used to produce multiple inde
 
 ## Problem Statement
 
-Currently the CLI uses `Path.cwd()` as `project_root` in 4 places and has no `--project` flag:
+Currently the CLI uses `Path.cwd()` as `project_root` in 3 files at 4 call sites and has no `--project` flag:
 
 - `cli/paper/main.py` (doctor command) — `Path.cwd()` usage
 - `cli/paper/main.py` (all other commands) — `Path.cwd()` usage
@@ -116,7 +116,7 @@ project_dir / "templates" / ...    → if exists, use project-local version
 package_assets / "templates" / ... → fallback to installed package
 ```
 
-**Current state**: `harness/ports/assets.py` resolves from the installed package only via `importlib.resources.files("harness")`. It has **no project-local fallback**. The dual-resolution pattern (project-local → package) exists **only** for presets in `filesystem_action_runner.py:66-77` and in `harness/services/doctor.py` for capability checks.
+**Current state**: `harness/ports/assets.py` resolves from the installed package only via `importlib.resources.files("harness")`. It has **no project-local fallback**. The dual-resolution pattern (project-local → package) exists **only** for presets in `filesystem_action_runner.py` (~line 70) and in `harness/services/doctor.py` for capability checks.
 
 Most code bypasses `assets.py` entirely and constructs paths directly via `repo_path / "templates/..."`.
 
