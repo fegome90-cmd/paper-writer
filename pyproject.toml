@@ -26,6 +26,8 @@ include = [
   "templates*",
   "styles*",
   "verification*",
+  "parsers*",
+  "engine*",
 ]
 
 [tool.setuptools.package-data]

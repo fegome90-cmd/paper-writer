@@ -1,10 +1,125 @@
 import argparse
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
+
+
+def _cmd_audit_prose(args: argparse.Namespace) -> None:
+    """Run prose analysis (Phase 0)."""
+    import json
+
+    from engine.formatter import format_terminal
+    from parsers.manuscript import ManuscriptParser
+    from validators.prose import ProseValidator
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = ProseValidator(whitelist=set(args.whitelist or []))
+    findings = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    by_sev: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
+    by_cat: dict[str, int] = {}
+    for f in findings:
+        sev = f.get("severity", "P2")
+        by_sev[sev] = by_sev.get(sev, 0) + 1
+        rg = f.get("rule_id", "").rsplit(".", 1)[0]
+        by_cat[rg] = by_cat.get(rg, 0) + 1
+
+    result = {
+        "command": "audit_prose",
+        "file": str(path),
+        "format": manuscript.format,
+        "findings": findings,
+        "summary": {
+            "total_findings": len(findings),
+            "by_severity": by_sev,
+            "by_category": by_cat,
+        },
+        "metadata": {
+            "parser_version": "1.0",
+            "rules_loaded": validator.rules_count,
+            "rules_enabled": validator.rules_count,
+            "execution_time_ms": elapsed,
+        },
+    }
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(format_terminal(findings))
+
+
+def _cmd_audit_claims(args: argparse.Namespace) -> None:
+    """Run claim candidate detection (Phase 0)."""
+    import json
+
+    from parsers.manuscript import ManuscriptParser
+    from validators.claims import ClaimsValidator, build_claims_report
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = ClaimsValidator(whitelist=set(args.whitelist or []))
+    candidates = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    result = build_claims_report(manuscript, candidates, elapsed)
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        from engine.formatter import format_claims_output
+
+        print(format_claims_output(result))
+
+
+def _cmd_gate_method(args: argparse.Namespace) -> None:
+    """Run methodological gate (Phase 0)."""
+    import json
+
+    from engine.formatter import format_gate_result
+    from parsers.manuscript import ManuscriptParser
+    from validators.method_gate import MethodGateValidator
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = MethodGateValidator()
+    result = validator.validate(
+        manuscript=manuscript,
+        study_type=args.study_type,
+        checklist_name=args.checklist,
+        na_items=args.na,
+    )
+    elapsed = int((time.time() - t0) * 1000)
+    result["metadata"]["execution_time_ms"] = elapsed
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(format_gate_result(result))
+
+    # Fail-closed: exit code 1 if gate blocked
+    if not result.get("gate_passed", True):
+        sys.exit(1)
 
 
 def main() -> None:
@@ -53,10 +168,56 @@ def main() -> None:
     check_sub = check_parser.add_subparsers(dest="subcommand", required=True)
     check_sub.add_parser("refs", help="Check inline citations against references.bib.")
 
-    # paper audit
-    audit_parser = subparsers.add_parser("audit", help="Audit reporting guidelines.")
+    # paper audit (Phase 0 + existing)
+    audit_parser = subparsers.add_parser("audit", help="Audit manuscript quality.")
     audit_sub = audit_parser.add_subparsers(dest="subcommand", required=True)
     audit_sub.add_parser("reporting", help="Audit manuscript against reporting checklists.")
+    audit_prose = audit_sub.add_parser("prose", help="Analyze scientific prose quality (Phase 0).")
+    audit_prose.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_prose.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_prose.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
+    audit_prose.set_defaults(func=_cmd_audit_prose)
+    audit_claims = audit_sub.add_parser("claims", help="Detect claim candidates (Phase 0).")
+    audit_claims.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_claims.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_claims.add_argument(
+        "--whitelist", "-w", action="append", default=[], help="Terms to skip"
+    )
+    audit_claims.set_defaults(func=_cmd_audit_claims)
+
+    # paper gate (Phase 0)
+    gate_parser = subparsers.add_parser(
+        "gate", help="Run fail-closed methodological gates (Phase 0)."
+    )
+    gate_sub = gate_parser.add_subparsers(dest="subcommand", required=True)
+    gate_method = gate_sub.add_parser("method", help="Apply EQUATOR-derived checklist gate.")
+    gate_method.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    gate_method.add_argument(
+        "--study-type",
+        "-t",
+        default="*",
+        choices=[
+            "*",
+            "rct",
+            "cohort",
+            "case_control",
+            "cross_sectional",
+            "systematic_review",
+            "qualitative",
+        ],
+        help="Study type for checklist selection",
+    )
+    gate_method.add_argument(
+        "--checklist",
+        "-c",
+        default=None,
+        help="Explicit checklist name (e.g. 'consort', 'strobe', 'prisma')",
+    )
+    gate_method.add_argument(
+        "--na", action="append", default=[], help="Item ID to mark as not applicable (repeatable)"
+    )
+    gate_method.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    gate_method.set_defaults(func=_cmd_gate_method)
 
     # paper import
     import_parser = subparsers.add_parser("import", help="Import external resources.")
@@ -97,6 +258,26 @@ def main() -> None:
     subparsers.add_parser("doctor", help="Check environment and report tool status.")
 
     args = parser.parse_args()
+
+    # Phase 0 commands (audit prose, audit claims, gate method) — run directly
+    func = getattr(args, "func", None)
+    if func is not None:
+        func(args)
+        return
+
+    # paper doctor — runs directly, exits directly
+    if args.command == "doctor":
+        from harness.services.doctor import (
+            check_all_tools,
+            check_internal_capabilities,
+            format_doctor_report,
+        )
+
+        repo_path = Path.cwd()
+        tools = check_all_tools()
+        caps = check_internal_capabilities(repo_path)
+        print(format_doctor_report(tools, caps))
+        sys.exit(0)
 
     # Map parsed arguments to OrchestratorRequest
     cmd_name = args.command
@@ -140,20 +321,6 @@ def main() -> None:
         orch_args["output_formats"] = args.formats if args.formats else ["docx", "pdf"]
         orch_args["csl"] = args.csl
         orch_args["reference_doc"] = args.reference_doc
-
-    # paper doctor — runs before orchestrator, exits directly
-    if cmd_name == "doctor":
-        from harness.services.doctor import (
-            check_all_tools,
-            check_internal_capabilities,
-            format_doctor_report,
-        )
-
-        repo_path = Path.cwd()
-        tools = check_all_tools()
-        caps = check_internal_capabilities(repo_path)
-        print(format_doctor_report(tools, caps))
-        sys.exit(0)
 
     repo_path = Path.cwd()
     request = OrchestratorRequest(

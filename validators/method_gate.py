@@ -98,19 +98,23 @@ class MethodGateValidator:
         for item in checklist.get("critical_items", []):
             item_id = item["id"]
             if item_id in na_set:
-                not_applicable.append({
-                    "item_id": item_id,
-                    "description": item.get("description", ""),
-                    "reason": "User-declared not applicable",
-                    "status": "not_applicable",
-                })
+                not_applicable.append(
+                    {
+                        "item_id": item_id,
+                        "description": item.get("description", ""),
+                        "reason": "User-declared not applicable",
+                        "status": "not_applicable",
+                    }
+                )
                 continue
 
             result = self._check_item(item, manuscript)
             if result["status"] == "missing":
-                if item.get("severity_if_missing") == "P0":
+                severity = item.get("severity_if_missing", "P1")
+                if severity == "P0":
                     blockers.append(result)
-                elif item.get("severity_if_missing") == "P1":
+                else:
+                    # P1/P2 items in critical_items → warnings
                     warnings.append(result)
             else:
                 passed_items.append(result)
@@ -119,12 +123,14 @@ class MethodGateValidator:
         for item in checklist.get("non_critical_items", []):
             item_id = item["id"]
             if item_id in na_set:
-                not_applicable.append({
-                    "item_id": item_id,
-                    "description": item.get("description", ""),
-                    "reason": "User-declared not applicable",
-                    "status": "not_applicable",
-                })
+                not_applicable.append(
+                    {
+                        "item_id": item_id,
+                        "description": item.get("description", ""),
+                        "reason": "User-declared not applicable",
+                        "status": "not_applicable",
+                    }
+                )
                 continue
 
             result = self._check_item(item, manuscript)
@@ -138,9 +144,8 @@ class MethodGateValidator:
 
         # 4. Determine gate status
         gate_passed = len(blockers) == 0
-        total = (
-            len(checklist.get("critical_items", []))
-            + len(checklist.get("non_critical_items", []))
+        total = len(checklist.get("critical_items", [])) + len(
+            checklist.get("non_critical_items", [])
         )
 
         return {
@@ -179,19 +184,74 @@ class MethodGateValidator:
         """Select checklist based on study type.
 
         Args:
-            study_type: Declared study type
+            study_type: Declared study type (e.g. 'rct', 'cohort')
             checklist_name: Explicit checklist override
 
         Returns:
-            Checklist dict or None if no match
+            Merged checklist dict (generic + specific) or None if no match.
         """
-        # TODO: Phase 0-c — load YAML from rules/method_gate/
-        # Algorithm:
-        #   if checklist_name → load that specific file
-        #   else → match study_type against checklist.study_types
-        #   always load generic.yml as base
-        #   merge: generic items + specific items
-        raise NotImplementedError("Phase 0-c: implement when building gate module")
+        from pathlib import Path
+
+        from engine.loader import load_checklist
+
+        rules_dir = Path(__file__).resolve().parent.parent / "rules" / "method_gate"
+        generic_path = rules_dir / "generic.yml"
+
+        # Base: always load generic
+        base = load_checklist(generic_path)
+        if base is None:
+            base = {
+                "guideline": "Generic",
+                "version": "1.0",
+                "critical_items": [],
+                "non_critical_items": [],
+            }
+
+        # Specific checklist
+        specific = None
+        if checklist_name:
+            specific = load_checklist(rules_dir / f"{checklist_name}.yml")
+        else:
+            for fpath in sorted(str(p) for p in rules_dir.glob("*.yml")):
+                if fpath.endswith("generic.yml"):
+                    continue
+                cl = load_checklist(fpath)
+                if cl and study_type in cl.get("study_types", []):
+                    specific = cl
+                    break
+
+        if specific is None and checklist_name is None and study_type != "*":
+            return {
+                "guideline": "Generic",
+                "version": base.get("version", "1.0"),
+                "critical_items": list(base.get("critical_items", [])),
+                "non_critical_items": list(base.get("non_critical_items", [])),
+                "study_types": ["*"],
+            }
+
+        if specific is None:
+            specific = base
+
+        merged = dict(base)
+        merged["guideline"] = specific.get("guideline", base.get("guideline", "Generic"))
+        merged["version"] = specific.get("version", base.get("version", "1.0"))
+
+        seen_critical = {i["id"] for i in base.get("critical_items", [])}
+        seen_non_critical = {i["id"] for i in base.get("non_critical_items", [])}
+
+        merged["critical_items"] = list(base.get("critical_items", []))
+        for item in specific.get("critical_items", []):
+            if item["id"] not in seen_critical:
+                merged["critical_items"].append(item)
+                seen_critical.add(item["id"])
+
+        merged["non_critical_items"] = list(base.get("non_critical_items", []))
+        for item in specific.get("non_critical_items", []):
+            if item["id"] not in seen_non_critical:
+                merged["non_critical_items"].append(item)
+                seen_non_critical.add(item["id"])
+
+        return merged
 
     def _check_item(
         self,
@@ -236,6 +296,7 @@ class MethodGateValidator:
         elif check_type == "keyword_presence":
             # Check for keywords in the expected section
             import re
+
             keywords = item.get("keywords", [])
             for kw in keywords:
                 if re.search(re.escape(kw), section_text, re.IGNORECASE):
@@ -274,7 +335,10 @@ class MethodGateValidator:
                     "check_type": check_type,
                     "status": "missing",
                     "severity": item.get("severity_if_missing", "P1"),
-                    "message": f"Section appears to have insufficient content ({len(section_text.strip())} chars).",
+                    "message": (
+                        f"Section appears to have insufficient content "
+                        f"({len(section_text.strip())} chars)."
+                    ),
                 }
 
         else:

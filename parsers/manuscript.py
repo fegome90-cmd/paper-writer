@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from parsers.source_map import SourceMap
 
@@ -38,7 +37,11 @@ class Manuscript:
 IMRAD_HEADINGS: list[tuple[str, str]] = [
     ("abstract", r"^\s*(abstract|summary)\s*$"),
     ("introduction", r"^\s*(introduction|background)\s*$"),
-    ("methods", r"^\s*(methods?|materials?\s+(and|&)\s+methods?|methodology|patients?\s+(and|&)\s+methods?)\s*$"),
+    (
+        "methods",
+        r"^\s*(methods?|materials?\s+(and|&)\s+methods?|"
+        r"methodology|patients?\s+(and|&)\s+methods?)\s*$",
+    ),
     ("results", r"^\s*results?\s*$"),
     ("discussion", r"^\s*discussion\s*$"),
     ("conclusions", r"^\s*conclusions?\s*$"),
@@ -161,7 +164,7 @@ class ManuscriptParser:
 
             # IMRAD heading match
             if not matched_heading:
-                for name, pattern in IMRAD_HEADINGS:
+                for _name, pattern in IMRAD_HEADINGS:
                     if re.match(pattern, stripped, re.IGNORECASE):
                         matched_heading = stripped
                         break
@@ -193,11 +196,13 @@ class ManuscriptParser:
         sentences: list[Sentence] = []
         for char_start, char_end, sent_text in source_map.iter_sentences(text):
             pos = source_map.to_original(char_start)
-            sentences.append(Sentence(
-                text=sent_text,
-                line=pos.line,
-                col=pos.column,
-                char_start=char_start,
-                char_end=char_end,
-            ))
+            sentences.append(
+                Sentence(
+                    text=sent_text,
+                    line=pos.line,
+                    col=pos.column,
+                    char_start=char_start,
+                    char_end=char_end,
+                )
+            )
         return sentences

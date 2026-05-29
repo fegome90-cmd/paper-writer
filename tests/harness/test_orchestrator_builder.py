@@ -129,9 +129,7 @@ class TestBuilderContract:
     def test_builder_copies_dicts_before_wrapping(self, tmp_path: Path) -> None:
         """External dict reference cannot mutate the returned data."""
         original_dict: dict[str, SkillAdapter] = {"test": MagicMock(spec=SkillAdapter)}
-        deps = build_orchestrator_dependencies(
-            project_root=tmp_path, skill_adapters=original_dict
-        )
+        deps = build_orchestrator_dependencies(project_root=tmp_path, skill_adapters=original_dict)
         # Mutating the original should NOT affect the deps
         original_dict["injected"] = MagicMock(spec=SkillAdapter)
         assert "injected" not in deps.skill_adapters

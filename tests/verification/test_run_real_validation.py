@@ -406,7 +406,6 @@ class TestSourceValidation:
         assert any("DRY RUN" in n for n in result.notes)
 
 
-
 # ── Source consumption ────────────────────────────────────────────────────
 
 
@@ -437,7 +436,9 @@ class TestConsumeSource:
 
     @patch("verification.run_real_validation.subprocess.run")
     def test_fails_gracefully_without_pdftotext(
-        self, mock_run: MagicMock, tmp_path: Path,
+        self,
+        mock_run: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Returns failure when pdftotext and pandoc are both unavailable."""
         mock_run.side_effect = FileNotFoundError("no pdftotext")
@@ -455,7 +456,9 @@ class TestConsumeSource:
 
     @patch("verification.run_real_validation.subprocess.run")
     def test_generates_bib_from_metadata(
-        self, mock_run: MagicMock, tmp_path: Path,
+        self,
+        mock_run: MagicMock,
+        tmp_path: Path,
     ) -> None:
         """Verify bib entry is generated from extracted text."""
         # Mock pdftotext to produce controlled output
@@ -470,6 +473,7 @@ class TestConsumeSource:
             "Ashish Vaswani\navaa@google.com\n\n"
             "Abstract\nTransformer model.\n"
         )
+
         # pdftotext writes to output_path, so mock it writing there
         def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
             if "pdftotext" in cmd[0]:

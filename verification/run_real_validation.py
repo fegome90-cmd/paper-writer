@@ -147,6 +147,7 @@ def resolve_bib_path(manifest: dict[str, Any]) -> str | None:
 
 # ── Source consumption ─────────────────────────────────────────────────────
 
+
 def _extract_pdf_text(pdf_path: Path, output_path: Path) -> tuple[bool, int, list[str]]:
     """Extract text from PDF using pdftotext (poppler).
 
@@ -156,13 +157,17 @@ def _extract_pdf_text(pdf_path: Path, output_path: Path) -> tuple[bool, int, lis
     try:
         result = subprocess.run(
             ["pdftotext", str(pdf_path), str(output_path)],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode != 0:
             # Try pandoc as fallback
             result2 = subprocess.run(
                 ["pandoc", str(pdf_path), "-t", "plain", "-o", str(output_path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result2.returncode != 0:
                 err = f"pdftotext exit {result.returncode}, pandoc exit {result2.returncode}"
@@ -191,10 +196,26 @@ def _is_arxiv_header(line: str) -> bool:
 def _is_section_header(line: str) -> bool:
     """Check if line looks like a section header (Abstract, Introduction, etc.)."""
     headers = {
-        "abstract", "introduction", "conclusion", "references",
-        "acknowledgments", "acknowledgements", "related work",
-        "background", "methods", "results", "discussion",
-        "1 ", "2 ", "3 ", "4 ", "5 ", "6 ", "7 ", "8 ", "9 ",
+        "abstract",
+        "introduction",
+        "conclusion",
+        "references",
+        "acknowledgments",
+        "acknowledgements",
+        "related work",
+        "background",
+        "methods",
+        "results",
+        "discussion",
+        "1 ",
+        "2 ",
+        "3 ",
+        "4 ",
+        "5 ",
+        "6 ",
+        "7 ",
+        "8 ",
+        "9 ",
     }
     lower = line.strip().lower()
     return any(lower.startswith(h) for h in headers)
@@ -202,8 +223,19 @@ def _is_section_header(line: str) -> bool:
 
 def _is_affiliation(line: str) -> bool:
     """Check if line looks like an institutional affiliation."""
-    markers = ["university", "institute", "research", "lab", "google", "meta",
-               "microsoft", "deepmind", "department", "school", "college"]
+    markers = [
+        "university",
+        "institute",
+        "research",
+        "lab",
+        "google",
+        "meta",
+        "microsoft",
+        "deepmind",
+        "department",
+        "school",
+        "college",
+    ]
     lower = line.strip().lower()
     return any(m in lower for m in markers)
 
@@ -255,12 +287,14 @@ def _parse_pdf_metadata(text: str, manifest: dict[str, Any]) -> tuple[str, str, 
     search_start = arxiv_idx + 1 if arxiv_idx >= 0 else 0
     for i in range(search_start, min(search_start + 10, len(lines))):
         ln = lines[i]
-        if (len(ln) > 5
-                and not _is_email(ln)
-                and not _is_arxiv_header(ln)
-                and not ln.startswith("http")
-                and not _is_section_header(ln)
-                and not _is_affiliation(ln)):
+        if (
+            len(ln) > 5
+            and not _is_email(ln)
+            and not _is_arxiv_header(ln)
+            and not ln.startswith("http")
+            and not _is_section_header(ln)
+            and not _is_affiliation(ln)
+        ):
             title = ln
             title_idx = i
             break
@@ -307,7 +341,11 @@ def _parse_pdf_metadata(text: str, manifest: dict[str, Any]) -> tuple[str, str, 
 
 
 def _generate_bib_entry(
-    case_id: str, title: str, authors: str, year: str, source_url: str,
+    case_id: str,
+    title: str,
+    authors: str,
+    year: str,
+    source_url: str,
 ) -> str:
     """Generate a BibTeX entry from extracted metadata."""
     # Create citation key from first author surname + year
@@ -335,7 +373,9 @@ def _count_pdf_pages(pdf_path: Path) -> int:
         # Use pdfinfo if available
         result = subprocess.run(
             ["pdfinfo", str(pdf_path)],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         for line in result.stdout.split("\n"):
             if line.startswith("Pages:"):
@@ -347,7 +387,9 @@ def _count_pdf_pages(pdf_path: Path) -> int:
 
 
 def _validate_metadata_quality(
-    title: str, authors: str, year: str,
+    title: str,
+    authors: str,
+    year: str,
 ) -> list[str]:
     """Validate that extracted metadata looks plausible.
 
@@ -379,7 +421,9 @@ def _validate_metadata_quality(
 
 
 def consume_source(
-    pdf_path: Path, workspace: Path, manifest: dict[str, Any],
+    pdf_path: Path,
+    workspace: Path,
+    manifest: dict[str, Any],
 ) -> SourceConsumption:
     """Consume the source PDF: extract text, parse metadata, generate bib.
 
@@ -432,7 +476,7 @@ def consume_source(
     pages = _count_pdf_pages(pdf_path)
 
     all_warnings = list(text_warnings)
-# Quality warnings already added above
+    # Quality warnings already added above
 
     return SourceConsumption(
         pdf_path=str(pdf_path),
@@ -447,7 +491,6 @@ def consume_source(
         text_length=text_len,
         warnings=tuple(all_warnings),
     )
-
 
 
 # ── Workspace isolation ────────────────────────────────────────────────────
@@ -685,9 +728,7 @@ def check_acceptance(
             )
         if not sc.authors or "@" in sc.authors:
             quality_ok = False
-            result.notes.append(
-                "Source metadata: authors field contains emails instead of names"
-            )
+            result.notes.append("Source metadata: authors field contains emails instead of names")
         if sc.year and not re.match(r"^(19|20)\d{2}$", sc.year):
             quality_ok = False
             result.notes.append(f"Source metadata: year looks wrong: {sc.year!r}")
@@ -849,7 +890,6 @@ def load_manifest_checklist(manifest_path: str) -> list[str]:
     return []
 
 
-
 def _serialize_consumption(sc: SourceConsumption | None) -> dict[str, Any]:
     """Serialize source consumption to JSON-safe dict."""
     if sc is None:
@@ -960,9 +1000,7 @@ def run_validation(
     effective_bib = bib_path
     if not effective_bib and consumption.bib_generated:
         effective_bib = consumption.bib_path
-        result.notes.append(
-            f"Using auto-generated .bib from source PDF ({consumption.bib_path})"
-        )
+        result.notes.append(f"Using auto-generated .bib from source PDF ({consumption.bib_path})")
 
     # Execute stages
     stages = manifest.get("stages", [])

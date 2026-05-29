@@ -43,13 +43,21 @@ class ProseValidator:
         self.registry: list[dict[str, Any]] = []
         self._load_rules()
 
-    def _load_rules(self) -> None:
-        """Load all prose rules from rules/prose/*.yml.
+    @property
+    def rules_count(self) -> int:
+        return len(self.registry)
 
-        Uses engine/loader.py.
-        Each rule has: id, patterns[], message, severity, scope, recommendation
-        """
-        raise NotImplementedError("Phase 0-b: implement when building prose module")
+    def _load_rules(self) -> None:
+        """Load all prose rules from rules/prose/*.yml."""
+        from pathlib import Path
+
+        from engine.loader import load_rules
+
+        rules_dir = Path(__file__).resolve().parent.parent / "rules" / "prose"
+        rules = load_rules(rules_dir)
+        for rule in rules:
+            rule["command"] = "audit_prose"
+        self.registry = rules
 
     def validate(self, manuscript: Any) -> list[dict[str, Any]]:
         """Run all prose rules against the parsed manuscript.
@@ -87,9 +95,7 @@ class ProseValidator:
                 # Apply to specific sections
                 section = rule.get("target_section", "")
                 if section and section in manuscript.sections:
-                    matches = self._apply_rule(
-                        rule, manuscript.sections[section].text
-                    )
+                    matches = self._apply_rule(rule, manuscript.sections[section].text)
                     for m in matches:
                         findings.append(self._build_finding(rule, m, manuscript))
 
@@ -101,7 +107,7 @@ class ProseValidator:
         self,
         rule: dict[str, Any],
         text: str,
-    ) -> list[re.Match]:
+    ) -> list[re.Match[str]]:
         """Apply a single rule's patterns to text.
 
         Args:
@@ -111,7 +117,7 @@ class ProseValidator:
         Returns:
             List of regex matches
         """
-        matches: list[re.Match] = []
+        matches: list[re.Match[str]] = []
         for pattern in rule.get("patterns", []):
             for m in re.finditer(pattern, text, re.IGNORECASE):
                 if m.group().lower() in self.whitelist:
@@ -122,7 +128,7 @@ class ProseValidator:
     def _build_finding(
         self,
         rule: dict[str, Any],
-        match: re.Match,
+        match: re.Match[str],
         manuscript: Any,
     ) -> dict[str, Any]:
         """Build a Finding dict from a rule and match.
@@ -175,9 +181,10 @@ class ProseValidator:
         # Sort by span start, then by span length descending
         sorted_findings = sorted(
             findings,
-            key=lambda f: (f.get("span", [0, 0])[0], -(
-                f.get("span", [0, 0])[1] - f.get("span", [0, 0])[0]
-            )),
+            key=lambda f: (
+                f.get("span", [0, 0])[0],
+                -(f.get("span", [0, 0])[1] - f.get("span", [0, 0])[0]),
+            ),
         )
 
         # Greedy: take non-overlapping longest matches

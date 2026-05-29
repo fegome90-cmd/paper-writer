@@ -47,13 +47,16 @@ def load_checklist(checklist_path: str | Path) -> dict[str, Any] | None:
 
     Returns None if file does not exist or is invalid.
     """
+    from typing import cast
+
     path = Path(checklist_path)
     if not path.is_file():
         return None
     with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not data or "guideline" not in data:
+        raw = yaml.safe_load(f)
+    if not raw or "guideline" not in raw:
         return None
+    data = cast(dict[str, Any], raw)
     data["file"] = str(path)
     return data
 
