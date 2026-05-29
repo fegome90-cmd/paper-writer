@@ -13,10 +13,10 @@ Defines how paper-writer can be installed once and used to produce multiple inde
 
 Currently the CLI uses `Path.cwd()` as `project_root` in 4 places and has no `--project` flag:
 
-- `cli/paper/main.py:276` — doctor command
-- `cli/paper/main.py:325` — all other commands
-- `harness/services/orchestrator_builder.py:59` — fallback when `project_root is None`
-- `integrations/tools/bibtex_tidy.py:238` — context fallback
+- `cli/paper/main.py` (doctor command) — `Path.cwd()` usage
+- `cli/paper/main.py` (all other commands) — `Path.cwd()` usage
+- `harness/services/orchestrator_builder.py` — fallback when `project_root is None`
+- `integrations/tools/bibtex_tidy.py` — context fallback
 
 This means:
 
@@ -134,7 +134,7 @@ Fix: (1) extend `assets.py` with project-local fallback, (2) route all asset rea
 | B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (currently package-only) | Asset resolution |
 | B5 | `integrations/tools/bibtex_tidy.py` | Use `repo_path` from context, not `Path.cwd()` fallback | Tool wrapper |
 | B6 | `harness/adapters/filesystem_action_runner.py` | `emit_manifest`: use relative paths (already correct) but document | Manifest |
-| B7 | `harness/services/orchestrator.py` | Route render template lookup through asset resolver | Render logic |
+| B7 | `harness/services/orchestrator.py` + `harness/services/doctor.py` | Route all direct `repo_path / "templates/..."` and `repo_path / "styles/..."` construction through asset resolver | Render + doctor |
 | B8 | `harness/services/orchestrator_builder.py` | Accept `project_root` from CLI instead of defaulting to `Path.cwd()` | Builder wiring |
 
 ### WARNING changes (should fix)
@@ -156,9 +156,11 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
     2. Ascending search for outputs/state.yaml
     3. CWD fallback
 
-    Caveat: ascending search can match a parent project if run from a
-    subdirectory of an initialized project. Consider adding a
-    .paper-root marker file (like .git) for unambiguous detection.
+    Caveat: if a user runs `paper` from a subdirectory of an initialized
+    project, the ascending search will match the parent project. A
+    `.paper-root` marker file at the project root (like `.git`) would make
+    detection unambiguous. This spec resolves to **innermost match**
+    (first found ascending, like `git`) to minimize surprise.
     """
     if explicit_path is not None:
         path = explicit_path.resolve()
@@ -166,29 +168,20 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
             raise ValueError(f"Project path does not exist: {path}")
         return path
 
-    # Ascending search for outputs/state.yaml
+    # Ascending search for outputs/state.yaml (innermost match, like git)
     current = cwd.resolve()
-    found_root = None
     for _ in range(20):  # safety limit
         candidate = current / "outputs" / "state.yaml"
         if candidate.is_file():
-            found_root = current  # keep going up to find outermost
+            return current  # innermost match — stop immediately
         parent = current.parent
         if parent == current:
             break
         current = parent
 
-    if found_root is not None:
-        return found_root
-
     # Fallback: use CWD (backward compatible for `paper init` in new dirs)
     return cwd.resolve()
 ```
-
-> **Open question**: should ascending search stop at the first (innermost) match
-> or find the outermost? The implementation above finds the outermost, matching
-> how `git` would behave with `--git-dir`. For most use cases, the innermost
-> match (first found ascending) is more intuitive. Resolve before implementation.
 
 ## CLI Changes
 

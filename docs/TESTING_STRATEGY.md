@@ -11,17 +11,15 @@ Defines how `paper-writer` is verified across all layers of the system.
 
 ## Current State
 
-**509 tests passing** across unit, integration, contract, and E2E layers.
+**~520 tests passing** across unit, integration, contract, and E2E layers.
 
 | Metric | Value |
 |--------|-------|
-| Total tests | 509 |
-| Python source files (all dirs) | 94 |
 | Linter | ruff clean |
 | Type checker | mypy strict, 0 issues |
 | CI | GitHub Actions (lint + typecheck + unit + E2E) |
 
-> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count.
+> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count. Do not hardcode a specific number here — it drifts immediately.
 
 ## Test Directory Structure
 
@@ -30,11 +28,13 @@ tests/
   adapters/        — Adapter layer tests (YAML repository, filesystem adapters)
   cli/             — CLI integration and exit-code matrix tests
   e2e/             — End-to-end subprocess tests (real I/O, real Pandoc)
+  fixtures/        — Shared test fixtures
   harness/         — State manager, gates, orchestrator, assembler tests
   integrations/    — Tool wrapper integration tests (Pandoc, bibtex-tidy, Zotero)
   skills/          — Skill adapter, scoring engine, and portability tests
   validators/      — Domain validator tests (refs, citations, style, bib, structure)
   verification/    — Real material validation runner tests
+  test_packaging_contract.py — Package install asset resolution contract
 ```
 
 ## Test Layers
@@ -112,8 +112,7 @@ GitHub Actions runs on every push/PR to `main`:
 1. **Lint**: `ruff check .` + `ruff format --check .`
 2. **Type check**: `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (strict mode)
 3. **Unit + integration tests**: `pytest tests/ -m "not e2e" --tb=short`
-4. **Install Pandoc**: required for E2E tests
-5. **E2E smoke tests**: subprocess, real I/O
+4. **E2E smoke tests**: subprocess, real I/O (requires Pandoc installed)
 
 Matrix: Python 3.10, 3.11, 3.12, 3.13 on Ubuntu latest.
 
