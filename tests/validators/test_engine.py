@@ -1,4 +1,4 @@
-"""Tests for engine/ modules (loader, registry, matcher, deduplicator, formatter)."""
+"""Tests for engine/ modules (loader, deduplicator, formatter)."""
 
 import json
 from pathlib import Path
@@ -8,7 +8,6 @@ import yaml
 from engine.deduplicator import deduplicate_findings
 from engine.formatter import format_claims_output, format_gate_result, format_json, format_terminal
 from engine.loader import load_checklist, load_checklists, load_rules
-from engine.registry import CheckRegistry
 
 
 def _write_yaml(path: Path, data: dict) -> None:
@@ -115,62 +114,6 @@ class TestLoadChecklists:
 
     def test_empty_dir(self) -> None:
         assert load_checklists("/tmp/nonexistent_dir_67890") == {}
-
-
-# ---------------------------------------------------------------------------
-# registry tests
-# ---------------------------------------------------------------------------
-
-
-class TestCheckRegistry:
-    def test_register_and_get(self) -> None:
-        reg = CheckRegistry()
-        reg.register({"id": "prose.test.a", "severity": "P1"})
-        assert reg.get("prose.test.a") is not None
-        assert reg.get("nonexistent") is None
-
-    def test_register_no_id_skipped(self) -> None:
-        reg = CheckRegistry()
-        reg.register({"severity": "P1"})  # no id
-        assert reg.count == 0
-
-    def test_register_many(self) -> None:
-        reg = CheckRegistry()
-        reg.register_many(
-            [
-                {"id": "a", "severity": "P1"},
-                {"id": "b", "severity": "P2"},
-            ]
-        )
-        assert reg.count == 2
-
-    def test_disable_and_enable(self) -> None:
-        reg = CheckRegistry()
-        reg.register({"id": "test.rule", "severity": "P1"})
-        assert len(reg.active_rules()) == 1
-        reg.disable("test.rule")
-        assert len(reg.active_rules()) == 0
-        assert reg.enabled_count == 0
-        reg.enable("test.rule")
-        assert len(reg.active_rules()) == 1
-
-    def test_count_properties(self) -> None:
-        reg = CheckRegistry()
-        assert reg.count == 0
-        assert reg.enabled_count == 0
-        assert reg.all_ids == []
-
-        reg.register_many(
-            [
-                {"id": "a", "severity": "P1"},
-                {"id": "b", "severity": "P2"},
-                {"id": "c", "severity": "P0"},
-            ]
-        )
-        reg.disable("b")
-        assert reg.count == 3
-        assert reg.enabled_count == 2
-        assert reg.all_ids == ["a", "b", "c"]
 
 
 # ---------------------------------------------------------------------------

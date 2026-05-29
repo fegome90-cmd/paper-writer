@@ -247,31 +247,4 @@ def build_claims_report(
     }
 
 
-def format_claims_report(
-    findings: list[dict[str, Any]],
-    output_format: str = "json",
-) -> str:
-    """Format findings for output.
 
-    Args:
-        findings: List of finding dicts.
-        output_format: 'json' (default) or 'terminal'.
-
-    Returns:
-        Formatted string.
-    """
-    if output_format == "json":
-        import json
-
-        return json.dumps({"candidates": findings}, indent=2)
-    else:
-        lines: list[str] = []
-        icons = {"P0": "[!!]", "P1": "[!]", "P2": "[i]"}
-        for f in findings:
-            icon = icons.get(f.get("severity", "P2"), "[?]")
-            lines.append(
-                f"{icon} {f.get('rule_id', 'unknown')}: "
-                f"{f.get('message', '')} "
-                f"(line {f.get('line', '?')})"
-            )
-        return "\n".join(lines)
