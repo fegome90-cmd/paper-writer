@@ -24,6 +24,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from engine.deduplicator import deduplicate_findings
+
 
 class ProseValidator:
     """Analyze scientific prose for overclaim, hedging, weasel words.
@@ -92,12 +94,17 @@ class ProseValidator:
                         ]
                         findings.append(finding)
             elif scope == "section":
-                # Apply to specific sections
+                # Apply to specific sections.
+                # Search the FULL clean_text but filter matches to section boundaries.
+                # This ensures match.start() is a clean_text offset (correct for to_original).
                 section = rule.get("target_section", "")
                 if section and section in manuscript.sections:
-                    matches = self._apply_rule(rule, manuscript.sections[section].text)
+                    sec = manuscript.sections[section]
+                    matches = self._apply_rule(rule, manuscript.clean_text)
                     for m in matches:
-                        findings.append(self._build_finding(rule, m, manuscript))
+                        pos = manuscript.source_map.to_original(m.start())
+                        if sec.line_start < pos.line <= sec.line_end:
+                            findings.append(self._build_finding(rule, m, manuscript))
 
         # Deduplicate overlapping matches
         findings = self._deduplicate(findings)
@@ -143,8 +150,9 @@ class ProseValidator:
         """
         # Map clean-text position to original file position via source_map
         orig_pos = manuscript.source_map.to_original(match.start())
-        span_start = manuscript.source_map.to_original(match.start()).char_offset
-        span_end = manuscript.source_map.to_original(match.end()).char_offset
+        span_end_pos = manuscript.source_map.to_original(match.end())
+        span_start = orig_pos.char_offset
+        span_end = span_end_pos.char_offset
 
         return {
             "finding_id": "TBD",  # Assigned during deduplication
@@ -164,41 +172,5 @@ class ProseValidator:
         self,
         findings: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """Resolve overlapping matches: longest match wins.
-
-        When two findings overlap (same span range), keep the one with
-        the longer match text.
-
-        Args:
-            findings: Raw findings that may overlap
-
-        Returns:
-            Deduplicated findings
-        """
-        if not findings:
-            return []
-
-        # Sort by span start, then by span length descending
-        sorted_findings = sorted(
-            findings,
-            key=lambda f: (
-                f.get("span", [0, 0])[0],
-                -(f.get("span", [0, 0])[1] - f.get("span", [0, 0])[0]),
-            ),
-        )
-
-        # Greedy: take non-overlapping longest matches
-        deduplicated: list[dict[str, Any]] = []
-        last_end = -1
-
-        for f in sorted_findings:
-            start, end = f.get("span", [0, 0])
-            if start >= last_end:
-                deduplicated.append(f)
-                last_end = end
-
-        # Assign finding IDs
-        for i, f in enumerate(deduplicated):
-            f["finding_id"] = f"F-{i + 1:03d}"
-
-        return deduplicated
+        """Delegates to engine.deduplicator.deduplicate_findings (SSOT)."""
+        return deduplicate_findings(findings)

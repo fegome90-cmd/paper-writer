@@ -216,6 +216,38 @@ class TestDeduplicateFindings:
         assert result[0]["finding_id"] == "F-001"
         assert result[1]["finding_id"] == "F-002"
 
+    # === Regression: C5 — sweep-line dedup ===
+    def test_partial_overlap_extends_coverage(self) -> None:
+        """[0,50] and [30,80]: second extends beyond first → KEEP both."""
+        findings = [
+            {"finding_id": "", "span": [0, 50], "rule_id": "first"},
+            {"finding_id": "", "span": [30, 80], "rule_id": "second"},
+        ]
+        result = deduplicate_findings(findings)
+        assert len(result) == 2, f"Expected 2 findings, got {len(result)}"
+        assert result[0]["rule_id"] == "first"
+        assert result[1]["rule_id"] == "second"
+
+    def test_completely_subsumed_dropped(self) -> None:
+        """[0,50] and [10,20]: second is within first → DROP."""
+        findings = [
+            {"finding_id": "", "span": [0, 50], "rule_id": "outer"},
+            {"finding_id": "", "span": [10, 20], "rule_id": "inner"},
+        ]
+        result = deduplicate_findings(findings)
+        assert len(result) == 1
+        assert result[0]["rule_id"] == "outer"
+
+    def test_multiple_extending_overlaps(self) -> None:
+        """[0,10], [5,15], [10,20]: each extends the coverage."""
+        findings = [
+            {"finding_id": "", "span": [0, 10], "rule_id": "a"},
+            {"finding_id": "", "span": [5, 15], "rule_id": "b"},
+            {"finding_id": "", "span": [10, 20], "rule_id": "c"},
+        ]
+        result = deduplicate_findings(findings)
+        assert len(result) == 3
+
 
 # ---------------------------------------------------------------------------
 # formatter tests

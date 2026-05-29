@@ -4,10 +4,14 @@ from typing import Any
 
 
 def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Resolve overlapping matches: longest match wins.
+    """Deduplicate overlapping findings using sweep-line algorithm.
 
-    When two findings overlap on the same span, keep the one with
-    the longer match text (by span length).
+    SSOT — this is the ONLY dedup implementation used by all validators.
+
+    Algorithm:
+      1. Sort by span start ASC, then by length DESC (longest first at same start).
+      2. Keep a finding if it extends beyond the current coverage end.
+         This preserves findings that partially overlap but contribute unique span.
 
     Args:
         findings: Raw findings that may overlap.
@@ -27,13 +31,14 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
     )
 
     deduped: list[dict[str, Any]] = []
-    last_end = -1
+    coverage_end = -1
 
     for f in sorted_fs:
         start, end = f.get("span", [0, 0])
-        if start >= last_end:
+        # Keep if non-overlapping OR if it extends beyond current coverage
+        if end > coverage_end:
             deduped.append(f)
-            last_end = end
+            coverage_end = end
 
     for i, f in enumerate(deduped):
         f["finding_id"] = f"F-{i + 1:03d}"

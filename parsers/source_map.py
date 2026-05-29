@@ -55,18 +55,25 @@ class SourceMap:
 
         Simple sentence splitting on period+space boundaries.
         Phase 0: basic. Post-MVP: proper NLP-based segmentation.
+
+        NOTE: char_start points to the first non-whitespace character of the
+        sentence, not to leading whitespace. Leading whitespace before a
+        sentence is NOT included in the span.
         """
         import re
 
         start = 0
         for m in re.finditer(r"[^.!?]*[.!?]", text):
             raw = m.group()
-            yield (start, m.end(), raw.strip())
+            leading_ws = len(raw) - len(raw.lstrip())
+            sent_text = raw.strip()
+            yield (start + leading_ws, m.end(), sent_text)
             start = m.end()
 
         remaining = text[start:].strip()
         if remaining:
-            yield (start, len(text), remaining)
+            leading_ws = len(text[start:]) - len(text[start:].lstrip())
+            yield (start + leading_ws, len(text), remaining)
 
     @property
     def line_count(self) -> int:

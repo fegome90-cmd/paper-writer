@@ -39,7 +39,7 @@
           "expected_location": { "type": "string" },
           "check_type": {
             "type": "string",
-            "enum": ["keyword_presence", "section_presence", "section_content", "subsection_presence", "pattern_match"]
+            "enum": ["keyword_presence", "section_presence", "section_content"]
           },
           "status": {
             "type": "string",

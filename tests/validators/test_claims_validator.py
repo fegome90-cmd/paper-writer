@@ -81,6 +81,38 @@ class TestClaimsValidatorSectionAwareness:
             assert c["risk"] in ("high", "medium", "low", "info")
 
 
+class TestClaimsValidatorRiskModifiers:
+    # === Regression: C4 — risk_by_section key normalization ===
+
+    def test_abstract_gets_high_risk(self) -> None:
+        """Abstract has multiplier=2, default_risk=high → should be high."""
+        text = "# Abstract\nThis proves the hypothesis."
+        ms = _make_man(text)
+        validator = ClaimsValidator()
+        candidates = validator.validate(ms)
+        for c in candidates:
+            assert c["risk"] == "high", f"Expected high risk in abstract, got {c['risk']}"
+
+    def test_methods_gets_info_risk(self) -> None:
+        """Methods has multiplier=0, default_risk=info → should be info."""
+        text = "# Methods\nThis proves the method works."
+        ms = _make_man(text)
+        validator = ClaimsValidator()
+        candidates = validator.validate(ms)
+        for c in candidates:
+            assert c["risk"] == "info", f"Expected info risk in methods, got {c['risk']}"
+
+    def test_multiplier_increases_risk(self) -> None:
+        """Conclusions has multiplier=2 → bumps risk up one level."""
+        text = "# Conclusions\nThis proves the conclusion."
+        ms = _make_man(text)
+        validator = ClaimsValidator()
+        candidates = validator.validate(ms)
+        for c in candidates:
+            # conclusions default_risk=high, multiplier=2 → still high (cap)
+            assert c["risk"] in ("high", "medium")
+
+
 class TestBuildClaimsReport:
     def test_report_structure(self) -> None:
         ms = _make_man(SAMPLE_WITH_CLAIMS)

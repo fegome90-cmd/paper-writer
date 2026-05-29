@@ -268,10 +268,12 @@ class MethodGateValidator:
             Result dict with status, evidence, and message
         """
         check_type = item.get("check_type", "keyword_presence")
-        expected_location = item.get("expected_location", "")
+        # Normalize to lowercase to match manuscript.sections keys
+        expected_location = item.get("expected_location", "").lower()
 
-        # Get the text for the expected section
-        section_text = manuscript.sections.get(expected_location, {}).get("text", "")
+        # Get the Section dataclass (or None if missing)
+        section = manuscript.sections.get(expected_location)
+        section_text = section.text if section else ""
 
         if check_type == "section_presence":
             # Check if the section heading exists

@@ -55,8 +55,12 @@ SECTION_ALIASES: dict[str, str] = {
     "materials & methods": "methods",
     "patients and methods": "methods",
     "patients & methods": "methods",
+    "study design": "methods",
+    "statistical analysis": "methods",
     "summary": "abstract",
     "conclusion": "conclusions",
+    "limitations": "discussion",
+    "strengths and limitations": "discussion",
     "acknowledgment": "declarations",
     "acknowledgement": "declarations",
     "acknowledgments": "declarations",
@@ -131,7 +135,8 @@ class ManuscriptParser:
         current_start = 0
         section_lines: list[str] = []
 
-        def flush() -> None:
+        def flush(end_idx: int) -> None:
+            """Flush current section with end_idx as its last line index."""
             if current_heading is None:
                 return
             body = "\n".join(section_lines).strip()
@@ -142,7 +147,7 @@ class ManuscriptParser:
                     heading=current_heading.strip(),
                     text=body,
                     line_start=current_start,
-                    line_end=current_start + len(section_lines),
+                    line_end=end_idx,
                 )
 
         for idx, line in enumerate(lines):
@@ -156,9 +161,17 @@ class ManuscriptParser:
             if m:
                 matched_heading = m.group(1)
 
-            # Plain text heading (all caps, short, standalone)
+            # Plain text heading (all caps or Title Case, short, standalone)
             if not matched_heading:
                 m = re.match(r"^([A-Z][A-Z\s]+)$", stripped)
+                if m and len(stripped.split()) <= 4:
+                    matched_heading = stripped
+            if not matched_heading:
+                # Title Case heading (e.g. "Data Analysis", "Study Design")
+                m = re.match(
+                    r"^(?:[A-Z][a-z]*(?:\s+[A-Z][a-z]*){0,3})$",
+                    stripped,
+                )
                 if m and len(stripped.split()) <= 4:
                     matched_heading = stripped
 
@@ -170,7 +183,8 @@ class ManuscriptParser:
                         break
 
             if matched_heading:
-                flush()
+                # End previous section at idx - 1 (line right before this heading)
+                flush(idx - 1)
                 current_heading = matched_heading
                 current_start = idx
                 section_lines = []
@@ -187,8 +201,14 @@ class ManuscriptParser:
                         )
                     existing = sections["__preamble__"]
                     existing.text = (existing.text + "\n" + stripped).strip()
+                    existing.line_end = idx
 
-        flush()
+        # Final flush: last section goes to end of document
+        last_line = len(lines) - 1 if lines else 0
+        if current_heading is not None:
+            flush(last_line)
+        elif "__preamble__" in sections:
+            sections["__preamble__"].line_end = last_line
         return sections
 
     @staticmethod

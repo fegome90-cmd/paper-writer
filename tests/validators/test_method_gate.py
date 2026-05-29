@@ -120,3 +120,31 @@ class TestMethodGateEdgeCases:
         blockers = result.get("blockers", [])
         if len(blockers) > 0:
             assert result["gate_passed"] is False
+
+
+class TestMethodGateLookupNormalization:
+    # === Regression: C1 — expected_location case normalization ===
+
+    def test_capitalized_expected_location_finds_section(self) -> None:
+        """YAML says 'Introduction', parser stores 'introduction' — must match."""
+        text = "# Introduction\nBackground text.\n# Methods\nMethod content.\n# Results\nResults.\n# Discussion\nDiscussion.\n# Declarations\nDeclarations.\n# References\nRefs."
+        ms = _make_man(text)
+        validator = MethodGateValidator()
+        result = validator.validate(ms, study_type="*")
+        # structure.introduction expects "Introduction" in YAML
+        passed_ids = {i["item_id"] for i in result.get("passed_items", [])}
+        assert "structure.introduction" in passed_ids, (
+            f"structure.introduction not found in passed_items: {passed_ids}"
+        )
+        assert "structure.methods" in passed_ids
+        assert "structure.results" in passed_ids
+        assert "structure.discussion" in passed_ids
+
+    def test_method_gate_no_crash_with_section_dataclass(self) -> None:
+        """Regression: accesses Section dataclass, not dict."""
+        text = "# Methods\nWe conducted a trial.\n# Results\nFindings.\n# Discussion\nDiscussion.\n# Declarations\nDeclarations."
+        ms = _make_man(text)
+        validator = MethodGateValidator()
+        # Should not crash with AttributeError when accessing section.text
+        result = validator.validate(ms, study_type="*")
+        assert "gate_passed" in result

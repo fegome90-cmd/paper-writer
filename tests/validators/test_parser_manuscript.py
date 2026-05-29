@@ -135,3 +135,93 @@ class TestManuscriptParserSectionEdgeCases:
         ms = parser.parse_text(text)
         assert "introduction" in ms.sections
         assert ms.sections["introduction"].text == "Some background."
+
+    # === Regression: S2 — expanded SECTION_ALIASES ===
+    def test_section_alias_study_design(self) -> None:
+        text = "# Study Design\nWe used a randomized design."
+        ms = ManuscriptParser().parse_text(text)
+        assert "methods" in ms.sections
+
+    def test_section_alias_statistical_analysis(self) -> None:
+        text = "# Statistical Analysis\nWe used t-tests."
+        ms = ManuscriptParser().parse_text(text)
+        assert "methods" in ms.sections
+
+    def test_section_alias_limitations(self) -> None:
+        text = "# Limitations\nSome limitations exist."
+        ms = ManuscriptParser().parse_text(text)
+        assert "discussion" in ms.sections
+
+    def test_section_alias_strengths_and_limitations(self) -> None:
+        text = "# Strengths and limitations\nSeveral strengths."
+        ms = ManuscriptParser().parse_text(text)
+        assert "discussion" in ms.sections
+
+    # === Regression: C2 — Section line_end with blank lines ===
+    def test_section_line_end_with_blank_lines(self) -> None:
+        text = "# Introduction\nLine one.\n\nLine two.\n\n# Methods\nContent."
+        ms = ManuscriptParser().parse_text(text)
+        intro = ms.sections["introduction"]
+        # Introduction spans lines 0-4 (line 0=heading, 1=Line one, 2=blank,
+        # 3=Line two, 4=blank before Methods at line 5)
+        assert intro.line_end == 4, f"Expected line_end=4, got {intro.line_end}"
+
+    def test_section_line_end_no_trailing_blank(self) -> None:
+        text = "# Intro\nLine one.\n# Methods\nContent."
+        ms = ManuscriptParser().parse_text(text)
+        assert ms.sections["intro"].line_end == 1
+
+    def test_preamble_line_end_updated(self) -> None:
+        text = "Preamble line 1.\nPreamble line 2.\n# Introduction\nBody."
+        ms = ManuscriptParser().parse_text(text)
+        assert "__preamble__" in ms.sections
+        assert ms.sections["__preamble__"].line_end >= 1, (
+            f"Expected preamble line_end >= 1, got {ms.sections['__preamble__'].line_end}"
+        )
+
+
+class TestManuscriptParserTitleCaseHeadings:
+    # === Regression: W2 — Title Case heading detection ===
+    def test_title_case_heading_detected(self) -> None:
+        text = "# Data Analysis\nWe analyzed the data.\n# Results\nFindings."
+        ms = ManuscriptParser().parse_text(text)
+        assert "data analysis" in ms.sections
+
+    def test_plain_text_title_case_heading(self) -> None:
+        text = "Data Analysis\nWe analyzed the data.\nResults\nFindings."
+        ms = ManuscriptParser().parse_text(text)
+        assert "data analysis" in ms.sections
+
+    def test_title_case_maps_to_section(self) -> None:
+        text = "Study Design\nWe designed a study.\nResults\nThe results show."
+        ms = ManuscriptParser().parse_text(text)
+        assert "methods" in ms.sections
+
+
+class TestSourceMapSentences:
+    # === Regression: C6 — iter_sentences char_start with whitespace ===
+    def test_iter_sentences_double_space(self) -> None:
+        sm = SourceMap("")
+        sentences = list(sm.iter_sentences("Hello.  World."))
+        assert len(sentences) == 2
+        # "World." should have char_start pointing to 'W', not to the space
+        world_start, world_end, world_text = sentences[1]
+        assert world_text == "World."
+        assert "Hello.  World."[world_start] == "W", (
+            f"Expected 'W' at char_start={world_start}, "
+            f"got '{'Hello.  World.'[world_start] if world_start < len('Hello.  World.') else 'EOF'}'"
+        )
+
+    def test_iter_sentences_trailing_whitespace(self) -> None:
+        sm = SourceMap("")
+        sentences = list(sm.iter_sentences("First. Second.  "))
+        assert len(sentences) == 2
+        assert sentences[0][2] == "First."
+        assert sentences[1][2] == "Second."
+
+    def test_iter_sentences_leading_whitespace_after_punct(self) -> None:
+        sm = SourceMap("")
+        sentences = list(sm.iter_sentences("A.  B.  C."))
+        assert len(sentences) == 3
+        assert sentences[1][2] == "B."
+        assert "A.  B.  C."[sentences[1][0]] == "B"

@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from engine.deduplicator import deduplicate_findings
 from engine.loader import load_rules
 from parsers.manuscript import Manuscript
 
@@ -55,7 +56,8 @@ class ClaimsValidator:
                 data = yaml.safe_load(f)
             if data:
                 self.risk_modifiers = {
-                    entry.get("section", ""): entry for entry in data.get("risk_modifiers", [])
+                    entry.get("section", "").lower(): entry
+                    for entry in data.get("modifiers", [])
                 }
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
@@ -144,48 +146,47 @@ class ClaimsValidator:
 
     @staticmethod
     def _detect_section(char_offset: int, manuscript: Manuscript) -> str:
+        offset_map = manuscript.source_map.to_original(char_offset)
+        char_line = offset_map.line
         for sec_name, sec in manuscript.sections.items():
-            offset_map = manuscript.source_map.to_original(char_offset)
-            char_line = offset_map.line
             if sec.line_start <= char_line <= sec.line_end:
                 return sec_name
         return "unknown"
 
     def _compute_risk(self, section: str, default_severity: str) -> str:
         section = section.lower().strip()
-        base_risk = SECTION_RISK.get(section, "info")
-
         modifier = self.risk_modifiers.get(section, {})
-        risk_adjust = int(modifier.get("risk_adjustment", 0))
+
+        # suppress_findings: don't flag claims in this section
+        if modifier.get("suppress_findings", False):
+            return "info"
+
+        # Base risk: YAML default_risk > SECTION_RISK dict > rule severity fallback
+        base_risk = modifier.get("default_risk") or SECTION_RISK.get(section) or default_severity
+
         levels = ["info", "low", "medium", "high"]
         try:
             idx = levels.index(base_risk)
-            idx = max(0, min(len(levels) - 1, idx + risk_adjust))
-            return levels[idx]
         except ValueError:
-            return base_risk
+            idx = 1  # fallback to "low"
+
+        # Multiplier adjusts severity level
+        multiplier = modifier.get("multiplier", 1)
+        if multiplier >= 2:
+            idx = min(len(levels) - 1, idx + 1)
+        elif multiplier == 0:
+            idx = 0  # info
+        elif multiplier < 1:
+            idx = max(0, idx - 1)
+
+        return levels[idx]
 
     @staticmethod
     def _deduplicate_candidates(
         candidates: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        if not candidates:
-            return []
-        sorted_c = sorted(
-            candidates,
-            key=lambda c: (
-                c.get("span", [0, 0])[0],
-                -(c.get("span", [0, 0])[1] - c.get("span", [0, 0])[0]),
-            ),
-        )
-        deduped: list[dict[str, Any]] = []
-        last_end = -1
-        for c in sorted_c:
-            start, end = c.get("span", [0, 0])
-            if start >= last_end:
-                deduped.append(c)
-                last_end = end
-        return deduped
+        """Delegates to engine.deduplicator.deduplicate_findings (SSOT)."""
+        return deduplicate_findings(candidates)
 
 
 def build_claims_report(
