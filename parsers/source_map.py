@@ -53,12 +53,11 @@ class SourceMap:
     def iter_sentences(self, text: str) -> Iterator[tuple[int, int, str]]:
         """Yield (char_start, char_end, sentence_text) from clean text.
 
-        Simple sentence splitting on period+space boundaries.
-        Phase 0: basic. Post-MVP: proper NLP-based segmentation.
+        Simple sentence splitting on period+space boundaries, with
+        abbreviation awareness and newline-as-boundary support.
 
-        Known limitation: common abbreviations (Dr., Mr., etc.) are handled
-        via negative lookbehind but not exhaustive.  A proper NLP tokenizer
-        (post-MVP) will handle this correctly.
+        Known limitation: abbreviation list is non-exhaustive.  A proper
+        NLP tokenizer (post-MVP) will handle this correctly.
 
         NOTE: char_start points to the first non-whitespace character of the
         sentence, not to leading whitespace. Leading whitespace before a
@@ -66,40 +65,58 @@ class SourceMap:
         """
         import re
 
-        # Abbreviations that end with a dot but are NOT sentence boundaries.
-        _ABBREV = (
-            r"Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|al|Fig|fig"
-            r"|e\.g|i\.e|cf|eq|No|no|Vol|vol|Ed|ed|pp"
-        )
+        if not text:
+            return
 
-        # Strategy: split on sentence-ending punctuation (., !, ?) that is
-        # NOT preceded by an abbreviation dot, and treat newlines as sentence
-        # boundaries to prevent heading/body merging.
-        _SENT_END = rf"(?<!\.)[.!?]+(?=\s|$)"
-        _NL_BOUND = r"\n"
+        # Common abbreviations whose trailing dot is NOT a sentence boundary.
+        _ABBREVS = [
+            "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Sr.", "Jr.", "St.",
+            "vs.", "etc.", "al.", "e.g.", "i.e.", "fig.", "eq.", "cf.",
+        ]
 
+        # Mark every dot that belongs to an abbreviation so we skip it.
+        _protected: set[int] = set()
+        for _a in _ABBREVS:
+            _idx = 0
+            while True:
+                _pos = text.find(_a, _idx)
+                if _pos == -1:
+                    break
+                for _j, _c in enumerate(_a):
+                    if _c == ".":
+                        _protected.add(_pos + _j)
+                _idx = _pos + 1
+
+        # Collect sentence break positions: punctuation NOT in an abbreviation,
+        # and newlines (to prevent heading/body merging).
+        _breaks: list[tuple[str, int]] = []
+        for _i, _c in enumerate(text):
+            if _c == "\n":
+                _breaks.append(("nl", _i))
+            elif _c in ".!?" and _i not in _protected:
+                _breaks.append(("punct", _i))
+
+        # Walk breaks and yield spans.
         start = 0
-        for m in re.finditer(rf"{_SENT_END}|{_NL_BOUND}", text):
-            if m.group() == "\n":
-                # Newline boundary: yield text before the newline as a sentence
-                segment = text[start:m.start()]
+        for kind, idx in _breaks:
+            if kind == "nl":
+                segment = text[start:idx]
                 stripped = segment.strip()
                 if stripped:
                     leading_ws = len(segment) - len(segment.lstrip())
-                    yield (start + leading_ws, m.start(), stripped)
-                start = m.end()
+                    yield (start + leading_ws, idx, stripped)
+                start = idx + 1
             else:
-                # Sentence-ending punctuation
-                raw = text[start : m.end()]
-                leading_ws = len(raw) - len(raw.lstrip())
-                sent_text = raw.strip()
-                if sent_text:
-                    yield (start + leading_ws, m.end(), sent_text)
-                start = m.end()
+                raw = text[start : idx + 1]
+                stripped = raw.strip()
+                if stripped:
+                    leading_ws = len(raw) - len(raw.lstrip())
+                    yield (start + leading_ws, idx + 1, stripped)
+                start = idx + 1
 
         remaining = text[start:].strip()
         if remaining:
-            leading_ws = len(text[start :]) - len(text[start :].lstrip())
+            leading_ws = len(text[start:]) - len(text[start:].lstrip())
             yield (start + leading_ws, len(text), remaining)
 
     @property
