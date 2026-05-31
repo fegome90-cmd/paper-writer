@@ -210,7 +210,7 @@ class ManuscriptParser:
         if current_heading is not None:
             flush(last_content_line)
         elif "__preamble__" in sections:
-            sections["__preamble__"].line_end = last_line
+            sections["__preamble__"].line_end = last_content_line if lines else 0
         return sections
 
     @staticmethod
