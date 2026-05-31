@@ -1,0 +1,8 @@
+{"ts": 1780228137.20946, "query_type": "semantic_hover", "fidelity": "degraded", "latency_ms": 9, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780228137.222611, "query_type": "callers", "fidelity": "full", "latency_ms": 12, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 4, "lsp_signal_ms": 0}}
+{"ts": 1780228137.249195, "query_type": "path", "fidelity": "full", "latency_ms": 26, "timings": {"pack_load_and_search_ms": 9, "ast_resolution_ms": 1, "graph_signal_ms": 15, "lsp_signal_ms": 0}}
+{"ts": 1780228137.262252, "query_type": "overview", "fidelity": "full", "latency_ms": 12, "timings": {"pack_load_and_search_ms": 7, "ast_resolution_ms": 0, "graph_signal_ms": 4, "lsp_signal_ms": 0}}
+{"ts": 1780228137.274774, "query_type": "impact", "fidelity": "full", "latency_ms": 12, "timings": {"pack_load_and_search_ms": 9, "ast_resolution_ms": 0, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780228137.284519, "query_type": "cycle", "fidelity": "full", "latency_ms": 9, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780228137.294863, "query_type": "orphan", "fidelity": "full", "latency_ms": 10, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 1, "lsp_signal_ms": 0}}
+{"ts": 1780228137.30601, "query_type": "hub", "fidelity": "full", "latency_ms": 10, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
