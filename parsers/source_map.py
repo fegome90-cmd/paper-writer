@@ -56,49 +56,50 @@ class SourceMap:
         Simple sentence splitting on period+space boundaries.
         Phase 0: basic. Post-MVP: proper NLP-based segmentation.
 
+        Known limitation: common abbreviations (Dr., Mr., etc.) are handled
+        via negative lookbehind but not exhaustive.  A proper NLP tokenizer
+        (post-MVP) will handle this correctly.
+
         NOTE: char_start points to the first non-whitespace character of the
         sentence, not to leading whitespace. Leading whitespace before a
         sentence is NOT included in the span.
         """
         import re
 
-        # Phase 0 known limitation: common abbreviations that should not
-        # trigger a sentence split.  The list is non-exhaustive; a proper
-        # NLP tokenizer (post-MVP) will handle this correctly.
-        _ABBREV = r"(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|al|e\.g|i\.e|fig|eq|cf)"
+        # Abbreviations that end with a dot but are NOT sentence boundaries.
+        _ABBREV = (
+            r"Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|al|Fig|fig"
+            r"|e\.g|i\.e|cf|eq|No|no|Vol|vol|Ed|ed|pp"
+        )
+
+        # Strategy: split on sentence-ending punctuation (., !, ?) that is
+        # NOT preceded by an abbreviation dot, and treat newlines as sentence
+        # boundaries to prevent heading/body merging.
+        _SENT_END = rf"(?<!\.)[.!?]+(?=\s|$)"
+        _NL_BOUND = r"\n"
 
         start = 0
-        # Split on sentence-ending punctuation NOT preceded by a period
-        # (i.e. abbreviation dots) and NOT followed by a lowercase letter
-        # (which often indicates a decimal or abbreviation continuation).
-        # Also split on newlines to prevent heading/body merging.
-        for m in re.finditer(
-            rf"(?:{_ABBREV}\.)|[.!?]+(?=\s)|\n",
-            text,
-        ):
-            if m.group().strip() == "":
-                # newline boundary — yield text up to this point as a sentence
-                # if it contains substantive content
-                segment = text[start:m.start()].strip()
-                if segment:
-                    leading_ws = len(text[start:m.start()]) - len(text[start:m.start()].lstrip())
-                    yield (start + leading_ws, m.start(), segment)
+        for m in re.finditer(rf"{_SENT_END}|{_NL_BOUND}", text):
+            if m.group() == "\n":
+                # Newline boundary: yield text before the newline as a sentence
+                segment = text[start:m.start()]
+                stripped = segment.strip()
+                if stripped:
+                    leading_ws = len(segment) - len(segment.lstrip())
+                    yield (start + leading_ws, m.start(), stripped)
                 start = m.end()
-                continue
-            # abbreviation match — skip, don't treat as sentence boundary
-            if m.group().endswith("."):
-                continue
-            # sentence-ending punctuation
-            raw = text[start:m.end()]
-            leading_ws = len(raw) - len(raw.lstrip())
-            sent_text = raw.strip()
-            if sent_text:
-                yield (start + leading_ws, m.end(), sent_text)
-            start = m.end()
+            else:
+                # Sentence-ending punctuation
+                raw = text[start : m.end()]
+                leading_ws = len(raw) - len(raw.lstrip())
+                sent_text = raw.strip()
+                if sent_text:
+                    yield (start + leading_ws, m.end(), sent_text)
+                start = m.end()
 
         remaining = text[start:].strip()
         if remaining:
-            leading_ws = len(text[start:]) - len(text[start:].lstrip())
+            leading_ws = len(text[start :]) - len(text[start :].lstrip())
             yield (start + leading_ws, len(text), remaining)
 
     @property
