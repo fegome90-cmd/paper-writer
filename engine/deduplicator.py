@@ -29,6 +29,8 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
         key=lambda f: (
             f.get("span", [0, 0])[0],
             -(f.get("span", [0, 0])[1] - f.get("span", [0, 0])[0]),
+            SEVERITY_ORDER.get(f.get("severity", "P2"), 2),
+            f.get("rule_id", ""),
         ),
     )
 

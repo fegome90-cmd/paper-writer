@@ -45,7 +45,7 @@ class SourceMap:
                 )
             accum = next_accum
         return SourcePosition(
-            line=len(self._lines),
+            line=max(1, len(self._lines)),
             column=len(self._lines[-1]) if self._lines else 0,
             char_offset=char_offset,
         )
@@ -62,12 +62,38 @@ class SourceMap:
         """
         import re
 
+        # Phase 0 known limitation: common abbreviations that should not
+        # trigger a sentence split.  The list is non-exhaustive; a proper
+        # NLP tokenizer (post-MVP) will handle this correctly.
+        _ABBREV = r"(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|al|e\.g|i\.e|fig|eq|cf)"
+
         start = 0
-        for m in re.finditer(r"[^.!?]*[.!?]", text):
-            raw = m.group()
+        # Split on sentence-ending punctuation NOT preceded by a period
+        # (i.e. abbreviation dots) and NOT followed by a lowercase letter
+        # (which often indicates a decimal or abbreviation continuation).
+        # Also split on newlines to prevent heading/body merging.
+        for m in re.finditer(
+            rf"(?:{_ABBREV}\.)|[.!?]+(?=\s)|\n",
+            text,
+        ):
+            if m.group().strip() == "":
+                # newline boundary — yield text up to this point as a sentence
+                # if it contains substantive content
+                segment = text[start:m.start()].strip()
+                if segment:
+                    leading_ws = len(text[start:m.start()]) - len(text[start:m.start()].lstrip())
+                    yield (start + leading_ws, m.start(), segment)
+                start = m.end()
+                continue
+            # abbreviation match — skip, don't treat as sentence boundary
+            if m.group().endswith("."):
+                continue
+            # sentence-ending punctuation
+            raw = text[start:m.end()]
             leading_ws = len(raw) - len(raw.lstrip())
             sent_text = raw.strip()
-            yield (start + leading_ws, m.end(), sent_text)
+            if sent_text:
+                yield (start + leading_ws, m.end(), sent_text)
             start = m.end()
 
         remaining = text[start:].strip()

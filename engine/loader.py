@@ -32,6 +32,7 @@ def load_rules(rules_dir: str | Path) -> list[dict[str, Any]]:
         rule_group = data.get("rule_group", "")
         default_severity = data.get("severity_default", "P2")
         for rule in data["rules"]:
+            rule = {**rule}
             rule["rule_group"] = rule_group
             rule.setdefault("severity", default_severity)
             rule.setdefault("scope", "sentence")

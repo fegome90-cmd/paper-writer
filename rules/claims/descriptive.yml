@@ -9,7 +9,7 @@ severity_default: P2
 rules:
   - id: claims.descriptive.finding_verb
     patterns:
-      - "\\bwe\\s+(observed?|found?|detected?|noted?|report\\b)"
+      - "\\bwe\\s+(observed?|found?|detected?|noted?|report)\\b"
       - "\\bour\\s+(finding|observation|result|analysis)\\b"
     message: "Descriptive finding statement detected."
     severity: P2

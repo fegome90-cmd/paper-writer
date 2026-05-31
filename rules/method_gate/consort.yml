@@ -110,6 +110,7 @@ non_critical_items:
   - id: "consort.4"
     section: "Open science"
     description: "Data sharing statement"
+    expected_location: "Declarations"
     check_type: keyword_presence
     keywords: ["data sharing", "data availability", "data are available"]
     severity_if_missing: P2
@@ -117,6 +118,7 @@ non_critical_items:
   - id: "consort.30"
     section: "Discussion"
     description: "Limitations at multiple levels"
+    expected_location: "Discussion"
     check_type: keyword_presence
     keywords: ["limitation", "limitations", "caveat", "bias"]
     severity_if_missing: P1

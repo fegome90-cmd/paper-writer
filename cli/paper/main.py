@@ -53,6 +53,12 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
         },
     }
 
+    # Validate key fields against expected schema
+    required_keys = {"command", "file", "findings", "summary", "metadata"}
+    missing = required_keys - set(result.keys())
+    if missing:
+        print(f"Warning: result missing schema fields: {missing}", file=sys.stderr)
+
     if args.output == "json":
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:

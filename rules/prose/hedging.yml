@@ -43,4 +43,4 @@ rules:
     message: "Hedging language present."
     severity: P2
     recommendation: "Review for hedging consistency: adjacent sentences should use similar confidence levels unless justified by different evidence strength."
-    scope: document
+    scope: summary_only

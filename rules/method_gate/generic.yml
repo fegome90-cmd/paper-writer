@@ -107,6 +107,7 @@ critical_items:
     section: "Content"
     description: "References section must be present"
     expected_location: "References"
-    check_type: section_presence
-    severity_if_missing: P0
-    message: "References section is missing."
+    check_type: keyword_presence
+    keywords: ["references", "references.", "bibliography", "works cited", "literature cited"]
+    severity_if_missing: P1
+    message: "No references/bibliography section found."

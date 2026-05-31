@@ -162,9 +162,9 @@ class TestManuscriptParserSectionEdgeCases:
         text = "# Introduction\nLine one.\n\nLine two.\n\n# Methods\nContent."
         ms = ManuscriptParser().parse_text(text)
         intro = ms.sections["introduction"]
-        # Introduction spans lines 0-4 (line 0=heading, 1=Line one, 2=blank,
-        # 3=Line two, 4=blank before Methods at line 5)
-        assert intro.line_end == 4, f"Expected line_end=4, got {intro.line_end}"
+        # line_end should be the last non-blank content line (line 3 = "Line two."),
+        # NOT the trailing blank line before Methods.
+        assert intro.line_end == 3, f"Expected line_end=3, got {intro.line_end}"
 
     def test_section_line_end_no_trailing_blank(self) -> None:
         text = "# Intro\nLine one.\n# Methods\nContent."

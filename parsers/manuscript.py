@@ -134,6 +134,7 @@ class ManuscriptParser:
         current_heading: str | None = None
         current_start = 0
         section_lines: list[str] = []
+        last_content_line: int = 0  # tracks last non-blank line index
 
         def flush(end_idx: int) -> None:
             """Flush current section with end_idx as its last line index."""
@@ -154,6 +155,8 @@ class ManuscriptParser:
             stripped = line.strip()
             if not stripped:
                 continue
+
+            last_content_line = idx
 
             matched_heading: str | None = None
             # Markdown heading
@@ -183,8 +186,8 @@ class ManuscriptParser:
                         break
 
             if matched_heading:
-                # End previous section at idx - 1 (line right before this heading)
-                flush(idx - 1)
+                # End previous section at last non-blank line before this heading
+                flush(last_content_line)
                 current_heading = matched_heading
                 current_start = idx
                 section_lines = []
@@ -203,10 +206,9 @@ class ManuscriptParser:
                     existing.text = (existing.text + "\n" + stripped).strip()
                     existing.line_end = idx
 
-        # Final flush: last section goes to end of document
-        last_line = len(lines) - 1 if lines else 0
+        # Final flush: last section goes to last content line
         if current_heading is not None:
-            flush(last_line)
+            flush(last_content_line)
         elif "__preamble__" in sections:
             sections["__preamble__"].line_end = last_line
         return sections

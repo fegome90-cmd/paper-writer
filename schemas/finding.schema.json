@@ -12,7 +12,7 @@
     },
     "command": {
       "type": "string",
-      "enum": ["audit_claims", "audit_prose", "gate_method"],
+      "enum": ["audit_claims", "audit_prose"],
       "description": "Which command generated this finding."
     },
     "rule_id": {

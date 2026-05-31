@@ -21,7 +21,16 @@ def format_terminal(findings: list[dict[str, Any]]) -> str:
         msg = f.get("message", "")
         line = f.get("line", "?")
         col = f.get("column", "?")
-        lines.append(f"{icon} {rule_id}: {msg} (line {line}, col {col})")
+        recommendation = f.get("recommendation", "")
+        span = f.get("span")
+        parts = [f"{icon} {rule_id}: {msg}"]
+        if span:
+            parts.append(f"(span {span[0]}-{span[1]})")
+        else:
+            parts.append(f"(line {line}, col {col})")
+        if recommendation:
+            parts.append(f"\n    -> {recommendation}")
+        lines.append(" ".join(parts) if len(parts) <= 3 else "".join(parts))
     if not lines:
         lines.append("No findings.")
     return "\n".join(lines)

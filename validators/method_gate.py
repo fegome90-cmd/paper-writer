@@ -302,7 +302,7 @@ class MethodGateValidator:
 
             keywords = item.get("keywords", [])
             for kw in keywords:
-                if re.search(re.escape(kw), section_text, re.IGNORECASE):
+                if re.search(rf"\b{re.escape(kw)}\b", section_text, re.IGNORECASE):
                     return {
                         "item_id": item["id"],
                         "description": item.get("description", ""),
