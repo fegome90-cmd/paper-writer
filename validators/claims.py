@@ -152,9 +152,11 @@ class ClaimsValidator:
     @staticmethod
     def _detect_section(char_offset: int, manuscript: Manuscript) -> str:
         offset_map = manuscript.source_map.to_original(char_offset)
-        char_line = offset_map.line
+        char_line = offset_map.line  # 1-indexed from to_original
         for sec_name, sec in manuscript.sections.items():
-            if sec.line_start <= char_line <= sec.line_end:
+            # section.line_start/line_end are 0-indexed; char_line is 1-indexed
+            # heading is at line_start, content starts at line_start+1, ends at line_end+1
+            if sec.line_start < char_line <= sec.line_end + 1:
                 return sec_name
         return "unknown"
 

@@ -156,8 +156,6 @@ class ManuscriptParser:
             if not stripped:
                 continue
 
-            last_content_line = idx
-
             matched_heading: str | None = None
             # Markdown heading
             m = re.match(r"^#{1,6}\s+(.+)$", stripped)
@@ -186,12 +184,13 @@ class ManuscriptParser:
                         break
 
             if matched_heading:
-                # End previous section at last non-blank line before this heading
+                # End previous section at last non-blank content line before this heading
                 flush(last_content_line)
                 current_heading = matched_heading
                 current_start = idx
                 section_lines = []
             else:
+                last_content_line = idx
                 if current_heading is not None:
                     section_lines.append(stripped)
                 else:
