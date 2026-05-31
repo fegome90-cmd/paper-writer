@@ -22,6 +22,8 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
     if not findings:
         return []
 
+    SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
+
     sorted_fs = sorted(
         findings,
         key=lambda f: (
@@ -31,14 +33,17 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
     )
 
     deduped: list[dict[str, Any]] = []
-    coverage_end = -1
+    # Track coverage per rule_id so findings from different rules are never collapsed.
+    coverage_by_rule: dict[str, int] = {}
 
     for f in sorted_fs:
         start, end = f.get("span", [0, 0])
-        # Keep if non-overlapping OR if it extends beyond current coverage
+        rule_id = f.get("rule_id", "")
+        coverage_end = coverage_by_rule.get(rule_id, -1)
+
         if end > coverage_end:
             deduped.append(f)
-            coverage_end = end
+            coverage_by_rule[rule_id] = end
 
     for i, f in enumerate(deduped):
         f["finding_id"] = f"F-{i + 1:03d}"

@@ -75,6 +75,7 @@ class ClaimsValidator:
         for rule in self.rules:
             rule_group = rule.get("rule_group", "")
             claim_type = CLAIM_TAG_MAP.get(rule_group, "unknown")
+            rule_id = rule.get("id", "unknown")
             patterns: list[str] = rule.get("patterns", [])
             if not patterns:
                 continue
@@ -93,6 +94,7 @@ class ClaimsValidator:
                                 {
                                     "text": sent.text,
                                     "claim_type": claim_type,
+                                    "rule_id": rule_id,
                                     "section": section,
                                     "risk": risk,
                                     "triggers": [m.group()],
@@ -116,6 +118,7 @@ class ClaimsValidator:
                             {
                                 "text": m.group(),
                                 "claim_type": claim_type,
+                                "rule_id": rule_id,
                                 "section": section,
                                 "risk": risk,
                                 "triggers": [m.group()],
@@ -140,7 +143,9 @@ class ClaimsValidator:
         for p in patterns:
             try:
                 compiled.append(re.compile(p, re.IGNORECASE))
-            except re.error:
+            except re.error as e:
+                import logging
+                logging.warning("Invalid regex in claim rule pattern: %s — %s", p, e)
                 continue
         return compiled
 
@@ -164,6 +169,11 @@ class ClaimsValidator:
         # Base risk: YAML default_risk > SECTION_RISK dict > rule severity fallback
         base_risk = modifier.get("default_risk") or SECTION_RISK.get(section) or default_severity
 
+        # Map severity strings to valid risk levels
+        severity_to_risk = {"P0": "high", "P1": "medium", "P2": "low"}
+        if base_risk in severity_to_risk:
+            base_risk = severity_to_risk[base_risk]
+
         levels = ["info", "low", "medium", "high"]
         try:
             idx = levels.index(base_risk)
@@ -173,6 +183,8 @@ class ClaimsValidator:
         # Multiplier adjusts severity level
         multiplier = modifier.get("multiplier", 1)
         if multiplier >= 2:
+            idx = min(len(levels) - 1, idx + 2)
+        elif multiplier > 1:
             idx = min(len(levels) - 1, idx + 1)
         elif multiplier == 0:
             idx = 0  # info
@@ -193,6 +205,7 @@ def build_claims_report(
     manuscript: Manuscript,
     candidates: list[dict[str, Any]],
     execution_time_ms: int = 0,
+    rules_loaded: int = 0,
 ) -> dict[str, Any]:
     """Build the full claims audit result dict.
 
@@ -237,7 +250,7 @@ def build_claims_report(
         },
         "metadata": {
             "parser_version": "1.0",
-            "rules_loaded": 0,
+            "rules_loaded": rules_loaded,
             "execution_time_ms": execution_time_ms,
         },
         "disclaimer": (

@@ -103,7 +103,7 @@ class ProseValidator:
                     matches = self._apply_rule(rule, manuscript.clean_text)
                     for m in matches:
                         pos = manuscript.source_map.to_original(m.start())
-                        if sec.line_start < pos.line <= sec.line_end:
+                        if sec.line_start <= pos.line <= sec.line_end:
                             findings.append(self._build_finding(rule, m, manuscript))
 
         # Deduplicate overlapping matches

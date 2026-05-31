@@ -1,0 +1,22 @@
+schema: fork-orchestration
+initialized: 2026-05-31
+project:
+  name: paper-writer
+  language: python
+  source_dir: .
+  test_dir: tests
+testing:
+  runner: pytest
+  command: uv run pytest tests/ -v
+  strict_tdd: true
+  coverage:
+    available: false
+    command: NOT_AVAILABLE
+  layers:
+    unit: true
+    integration: false
+    e2e: false
+quality:
+  linter: ruff check src/ tests/
+  type_checker: mypy src/
+  formatter: ruff format src/ tests/

@@ -139,8 +139,8 @@ class TestDeduplicateFindings:
             {"finding_id": "", "span": [0, 20], "rule_id": "long"},
         ]
         result = deduplicate_findings(findings)
-        assert len(result) == 1
-        assert result[0]["rule_id"] == "long"
+        # Different rules → both preserved even with overlapping spans
+        assert len(result) == 2
 
     def test_adjacent_no_overlap(self) -> None:
         findings = [
@@ -171,15 +171,24 @@ class TestDeduplicateFindings:
         assert result[0]["rule_id"] == "first"
         assert result[1]["rule_id"] == "second"
 
-    def test_completely_subsumed_dropped(self) -> None:
-        """[0,50] and [10,20]: second is within first → DROP."""
+    def test_completely_subsumed_same_rule_dropped(self) -> None:
+        """[0,50] and [10,20] from SAME rule → DROP subsumed."""
+        findings = [
+            {"finding_id": "", "span": [0, 50], "rule_id": "same"},
+            {"finding_id": "", "span": [10, 20], "rule_id": "same"},
+        ]
+        result = deduplicate_findings(findings)
+        assert len(result) == 1
+        assert result[0]["rule_id"] == "same"
+
+    def test_completely_subsumed_different_rules_preserved(self) -> None:
+        """[0,50] and [10,20] from DIFFERENT rules → KEEP both."""
         findings = [
             {"finding_id": "", "span": [0, 50], "rule_id": "outer"},
             {"finding_id": "", "span": [10, 20], "rule_id": "inner"},
         ]
         result = deduplicate_findings(findings)
-        assert len(result) == 1
-        assert result[0]["rule_id"] == "outer"
+        assert len(result) == 2
 
     def test_multiple_extending_overlaps(self) -> None:
         """[0,10], [5,15], [10,20]: each extends the coverage."""

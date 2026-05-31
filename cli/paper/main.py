@@ -77,7 +77,7 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
     candidates = validator.validate(manuscript)
     elapsed = int((time.time() - t0) * 1000)
 
-    result = build_claims_report(manuscript, candidates, elapsed)
+    result = build_claims_report(manuscript, candidates, elapsed, rules_loaded=len(validator.rules))
 
     if args.output == "json":
         print(json.dumps(result, indent=2, ensure_ascii=False))

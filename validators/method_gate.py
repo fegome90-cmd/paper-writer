@@ -136,9 +136,10 @@ class MethodGateValidator:
             result = self._check_item(item, manuscript)
             if result["status"] == "missing":
                 severity = item.get("severity_if_missing", "P2")
-                if severity == "P1":
+                if severity == "P0":
+                    blockers.append(result)
+                elif severity in ("P1", "P2"):
                     warnings.append(result)
-                # P2 items are just suggestions — record but don't warn
             else:
                 passed_items.append(result)
 
@@ -347,7 +348,6 @@ class MethodGateValidator:
             return {
                 "item_id": item["id"],
                 "description": item.get("description", ""),
-                "status": "missing",
-                "severity": "P2",
+                "status": "not_applicable",
                 "message": f"Unsupported check_type: {check_type}",
             }
