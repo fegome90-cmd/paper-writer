@@ -1,4 +1,5 @@
 """Baseline: count runtime assets missing from the wheel."""
+
 import re
 import shutil
 import subprocess
@@ -13,7 +14,9 @@ dist_dir = REPO / "dist_test"
 dist_dir.mkdir(exist_ok=True)
 subprocess.run(
     ["uv", "build", "--wheel", "--out-dir", str(dist_dir)],
-    cwd=REPO, capture_output=True, timeout=60,
+    cwd=REPO,
+    capture_output=True,
+    timeout=60,
 )
 wheels = list(dist_dir.glob("*.whl"))
 if not wheels:
@@ -57,7 +60,8 @@ print("\n=== Runtime path patterns ===")
 for py in (REPO / "validators").glob("*.py"):
     content = py.read_text()
     matches = re.findall(
-        r'Path\(__file__\).*?["\']([^"\']+)["\']', content,
+        r'Path\(__file__\).*?["\']([^"\']+)["\']',
+        content,
     )
     for m in matches:
         print(f"  {py.name}: Path(__file__).../{m}")
