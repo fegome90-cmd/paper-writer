@@ -1,4 +1,5 @@
 """Baseline: count validators that hardcode execution_time_ms=0."""
+
 import sys
 from pathlib import Path
 
