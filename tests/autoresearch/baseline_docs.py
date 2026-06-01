@@ -1,4 +1,5 @@
 """Baseline: count stale documentation claims."""
+
 import subprocess
 import sys
 from pathlib import Path
@@ -37,7 +38,9 @@ if '"cli", "harness", "validators"' in mp and "was:" not in mp.split('"cli"')[0]
 # Get actual test count
 r = subprocess.run(
     ["uv", "run", "pytest", "tests/", "-q", "--tb=no"],
-    capture_output=True, text=True, cwd=REPO,
+    capture_output=True,
+    text=True,
+    cwd=REPO,
 )
 test_line = [ln for ln in r.stdout.strip().split("\n") if "passed" in ln]
 print(f"  actual tests: {test_line[-1] if test_line else '?'}")
