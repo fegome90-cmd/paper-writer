@@ -3,6 +3,7 @@
 Checks each scenario from openspec/changes/multi-project-mode/spec.md
 against the real code. Reports pass/fail per scenario.
 """
+
 import sys
 import tempfile
 from pathlib import Path
@@ -233,12 +234,8 @@ def test_package_fallback() -> None:
         td = Path(td)
         from harness.ports.assets import get_asset_path, get_project_asset
 
-        result = get_project_asset(
-            td, "templates", "journals", "nature", "preset.yaml"
-        )
-        expected = get_asset_path(
-            "templates", "journals", "nature", "preset.yaml"
-        )
+        result = get_project_asset(td, "templates", "journals", "nature", "preset.yaml")
+        expected = get_asset_path("templates", "journals", "nature", "preset.yaml")
         assert result == expected
 
 
@@ -283,9 +280,7 @@ def test_phase0_unaffected() -> None:
     code = (REPO / "cli/paper/main.py").read_text()
     # Phase 0 commands have func attribute and return before resolve
     lines = code.split("\n")
-    func_idx = next(
-        i for i, ln in enumerate(lines) if "func(args)" in ln
-    )
+    func_idx = next(i for i, ln in enumerate(lines) if "func(args)" in ln)
     # There must be a 'return' in the same block
     block = lines[func_idx - 3 : func_idx + 3]
     assert any("return" in ln for ln in block)
