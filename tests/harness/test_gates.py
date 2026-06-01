@@ -20,7 +20,7 @@ def checker() -> InMemoryArtifactChecker:
 
 
 def test_validate_repo_initialized_success(checker: InMemoryArtifactChecker) -> None:
-    checker.existing_paths.update(["cli", "harness", "validators", "templates", "outputs"])
+    checker.existing_paths.update(["templates", "outputs", "outputs/state.yaml"])
     result = validate_repo_initialized(checker)
     assert result.status == "pass"
     assert not result.blockers
@@ -28,10 +28,10 @@ def test_validate_repo_initialized_success(checker: InMemoryArtifactChecker) -> 
 
 
 def test_validate_repo_initialized_fail(checker: InMemoryArtifactChecker) -> None:
-    checker.existing_paths.update(["cli", "harness", "validators", "templates"])
+    checker.existing_paths.update(["outputs"])
     result = validate_repo_initialized(checker)
     assert result.status == "fail"
-    assert any("dir_exists_outputs" in b for b in result.blockers)
+    assert any("dir_exists_templates" in b for b in result.blockers)
 
 
 def test_validate_search_completed_success(checker: InMemoryArtifactChecker) -> None:

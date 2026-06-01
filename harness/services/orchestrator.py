@@ -103,6 +103,7 @@ class Orchestrator:
 
         # Load state
         stage_before = "bootstrap"
+        state_dict: dict[str, Any] = {}
         if request.command != "init" or self.state_manager.exists():
             try:
                 state_dict = self.state_manager.load_state()
@@ -433,7 +434,11 @@ class Orchestrator:
 
     def _build_wrapper_artifacts(self, command: str) -> dict[str, Any]:
         """Build the artifacts input dict for a tool wrapper based on command."""
-        bib_path = self.checker.get_full_path_str("templates/references.bib")
+        from harness.ports.assets import get_project_asset
+
+        bib_path = str(
+            get_project_asset(self.repo_path, "templates", "references.bib")
+        )
         draft_dir = self.repo_path / "outputs" / "drafts"
         manuscript_files = (
             [str(f) for f in sorted(draft_dir.glob("*.md"))] if draft_dir.is_dir() else []
@@ -445,7 +450,9 @@ class Orchestrator:
         }
 
         if command == "audit_reporting":
-            outline_path = self.checker.get_full_path_str("outputs/drafts/outline.md")
+            outline_path = self.checker.get_full_path_str(
+                "outputs/drafts/outline.md"
+            )
             base["outline"] = outline_path
 
         if command == "render":
@@ -453,7 +460,9 @@ class Orchestrator:
             base["output_dir"] = str(render_dir)
             # Priority: assembled manuscript (real content) > placeholder template
             assembled = draft_dir / "manuscript.md"
-            manuscript_qmd = self.repo_path / "templates" / "manuscript.qmd"
+            manuscript_qmd = get_project_asset(
+                self.repo_path, "templates", "manuscript.qmd"
+            )
             if assembled.is_file():
                 base["manuscript"] = str(assembled)
             elif manuscript_qmd.is_file():

@@ -235,7 +235,7 @@ class BibliographyNormalizer(ToolWrapper):
             )
 
         # 2. Local toolchain (relative to repo root)
-        repo_path = Path(context["repo_path"])
+        repo_path = Path(context.get("repo_path", "."))
         local_path = repo_path / "tools" / "node" / "node_modules" / ".bin" / "bibtex-tidy"
         if local_path.exists() and os.access(local_path, os.X_OK):
             return local_path, "local"
