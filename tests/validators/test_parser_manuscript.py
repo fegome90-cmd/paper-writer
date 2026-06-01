@@ -209,9 +209,7 @@ class TestSourceMapSentences:
         assert world_text == "World."
         sample = "Hello.  World."
         char = sample[world_start] if world_start < len(sample) else "EOF"
-        assert sample[world_start] == "W", (
-            f"Expected 'W' at char_start={world_start}, got '{char}'"
-        )
+        assert sample[world_start] == "W", f"Expected 'W' at char_start={world_start}, got '{char}'"
 
     def test_iter_sentences_trailing_whitespace(self) -> None:
         sm = SourceMap("")
