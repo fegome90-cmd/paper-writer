@@ -70,3 +70,4 @@
 {"ts": 1780228292.174528, "query_type": "semantic_hover", "fidelity": "degraded", "latency_ms": 8, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780228292.182774, "query_type": "semantic_hover", "fidelity": "fallback", "latency_ms": 8, "timings": {"pack_load_and_search_ms": 7, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780228292.190746, "query_type": "semantic_hover", "fidelity": "degraded", "latency_ms": 7, "timings": {"pack_load_and_search_ms": 7, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780309367.9573069, "query_type": "impact", "fidelity": "full", "latency_ms": 12, "timings": {"pack_load_and_search_ms": 9, "ast_resolution_ms": 0, "graph_signal_ms": 2, "lsp_signal_ms": 0}}

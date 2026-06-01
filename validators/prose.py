@@ -73,6 +73,10 @@ class ProseValidator:
         findings: list[dict[str, Any]] = []
 
         for rule in self.registry:
+            # Skip suppressed rules (disabled but kept for future reference)
+            if rule.get("suppressed", False):
+                continue
+
             scope = rule.get("scope", "sentence")
 
             if scope == "document":

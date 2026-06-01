@@ -116,6 +116,8 @@ class MethodGateValidator:
                 else:
                     # P1/P2 items in critical_items → warnings
                     warnings.append(result)
+            elif result["status"] == "not_applicable":
+                not_applicable.append(result)
             else:
                 passed_items.append(result)
 
@@ -140,6 +142,8 @@ class MethodGateValidator:
                     blockers.append(result)
                 elif severity in ("P1", "P2"):
                     warnings.append(result)
+            elif result["status"] == "not_applicable":
+                not_applicable.append(result)
             else:
                 passed_items.append(result)
 
