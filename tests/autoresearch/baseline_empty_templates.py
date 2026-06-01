@@ -1,4 +1,5 @@
 """Baseline: count empty template files created by paper init (no preset)."""
+
 import subprocess
 import sys
 import tempfile
@@ -11,7 +12,8 @@ with tempfile.TemporaryDirectory() as raw_td:
     td.mkdir()
     subprocess.run(
         ["uv", "run", "python", "-m", "cli.paper.main", "-C", str(td), "init"],
-        capture_output=True, cwd=REPO,
+        capture_output=True,
+        cwd=REPO,
     )
 
     empty = 0
