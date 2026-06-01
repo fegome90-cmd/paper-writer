@@ -1,0 +1,19 @@
+# Task: Code Architecture Analysis
+
+Analyze the Trifecta Oracle system in this codebase. Answer these questions:
+
+1. **Entry point**: What function does the Oracle expose as its main public API? Name the exact function, file, and line number.
+
+2. **Signal types**: List ALL signal types the Oracle supports (e.g. callers, callees, etc). For each, name the source file and the function that implements it.
+
+3. **Fidelity flow**: When a query arrives, how does the Oracle decide whether to return fidelity=full, degraded, or fallback? Describe the decision tree.
+
+4. **Graph freshness**: How does the system detect that a graph index is stale? What is the staleness threshold?
+
+5. **Metrics recording**: When metrics are recorded after an Oracle call, what fields are persisted? Name the exact JSON structure.
+
+## Constraints
+
+- Answer with EXACT file paths and line numbers
+- If you cannot find a reference, say "not found" — do NOT guess
+- Be precise: wrong references are worse than "not found"
