@@ -22,9 +22,7 @@ from harness.services.state_manager import StateManager
 class TestBuilderContract:
     """Contract tests for build_orchestrator_dependencies."""
 
-    def test_builder_returns_correct_types(
-        self, tmp_path: Path
-    ) -> None:
+    def test_builder_returns_correct_types(self, tmp_path: Path) -> None:
         deps = build_orchestrator_dependencies(project_root=tmp_path)
 
         assert isinstance(deps, OrchestratorDependencies)
@@ -37,9 +35,7 @@ class TestBuilderContract:
             assert isinstance(w, ToolWrapper)
         assert isinstance(deps.skill_adapters, types.MappingProxyType)
 
-    def test_builder_requires_explicit_project_root(
-        self, tmp_path: Path
-    ) -> None:
+    def test_builder_requires_explicit_project_root(self, tmp_path: Path) -> None:
         """Builder now requires project_root — no CWD fallback."""
         with pytest.raises(ValueError, match="project_root is required"):
             build_orchestrator_dependencies()

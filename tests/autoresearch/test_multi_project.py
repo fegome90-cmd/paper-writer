@@ -111,12 +111,8 @@ class TestGetProjectAsset:
         """Project missing file → return package path (may not exist)."""
         from harness.ports.assets import get_asset_path, get_project_asset
 
-        result = get_project_asset(
-            tmp_path, "templates", "journals", "nature", "preset.yaml"
-        )
-        expected = get_asset_path(
-            "templates", "journals", "nature", "preset.yaml"
-        )
+        result = get_project_asset(tmp_path, "templates", "journals", "nature", "preset.yaml")
+        expected = get_asset_path("templates", "journals", "nature", "preset.yaml")
         assert result == expected
 
     def test_both_miss_returns_package_path(self, tmp_path: Path) -> None:

@@ -10,9 +10,7 @@ from harness.services.orchestrator_builder import build_orchestrator_dependencie
 MAX_ASCENDING_DEPTH = 20
 
 
-def resolve_project_root(
-    explicit_path: Path | None, cwd: Path
-) -> Path:
+def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
     """Resolve project root. Priority: flag → ascending search → CWD.
 
     Ascending search resolves symlinks via Path.resolve() before
