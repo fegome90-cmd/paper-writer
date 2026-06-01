@@ -71,3 +71,23 @@ def get_vale_styles_dir() -> Path:
 def get_csl_styles_dir() -> Path:
     """Get the CSL styles directory path."""
     return get_asset_path("styles", "csl")
+
+
+def get_project_asset(project_root: Path, *path_parts: str) -> Path:
+    """Resolve asset with project-local → package waterfall.
+
+    1. project_root / path_parts → if exists, return it
+    2. get_asset_path(*path_parts) → fallback to package
+
+    Args:
+        project_root: Root directory of the current paper project.
+        *path_parts: Path components relative to project root,
+                     e.g. ("templates", "journals", "nature", "preset.yaml")
+
+    Returns:
+        Resolved Path. Caller should check .exists() before use.
+    """
+    local_path = project_root.joinpath(*path_parts)
+    if local_path.exists():
+        return local_path
+    return get_asset_path(*path_parts)

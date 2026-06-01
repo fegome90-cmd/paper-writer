@@ -126,6 +126,9 @@ class ZoteroImporter(ToolWrapper):
         # Copy to target if validation passed
         target_bib = artifacts.get("target_bib", "templates/references.bib")
         target_path = Path(target_bib)
+        if not target_path.is_absolute():
+            repo_root = Path(context.get("repo_path", "."))
+            target_path = repo_root / target_path
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
 

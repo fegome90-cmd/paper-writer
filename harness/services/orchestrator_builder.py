@@ -56,7 +56,9 @@ def build_orchestrator_dependencies(
 ) -> OrchestratorDependencies:
     # 1. Resolve and validate project_root
     if project_root is None:
-        project_root = Path.cwd()
+        raise ValueError(
+            "project_root is required — CLI must always provide it via resolve_project_root()"
+        )
     if not project_root.is_dir():
         raise ValueError(f"Project root does not exist or is not a directory: {project_root}")
 

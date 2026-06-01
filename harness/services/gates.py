@@ -62,8 +62,9 @@ def run_gate(gate_name: str, checks: list[Check], artifacts: list[str]) -> GateR
 
 
 def validate_repo_initialized(checker: ArtifactChecker) -> GateResult:
-    """Checks if base folders exist."""
-    required_dirs = ["cli", "harness", "validators", "templates", "outputs"]
+    """Checks if project directories and state file exist."""
+    required_dirs = ["templates", "outputs"]
+    required_files = ["outputs/state.yaml"]
     checks = []
 
     for d in required_dirs:
@@ -80,10 +81,25 @@ def validate_repo_initialized(checker: ArtifactChecker) -> GateResult:
 
         checks.append(make_check())
 
+    for f in required_files:
+
+        def make_file_check(name: str = f) -> Check:
+            def run_fn() -> None:
+                checker.check_file_exists(name)
+
+            return Check(
+                id=f"file_exists_{name}",
+                description=f"Verify if {name} file exists",
+                run_fn=run_fn,
+            )
+
+        checks.append(make_file_check())
+
     return run_gate(
         "repo_initialized",
         checks,
-        [checker.get_full_path_str(d) for d in required_dirs],
+        [checker.get_full_path_str(d) for d in required_dirs]
+        + [checker.get_full_path_str(f) for f in required_files],
     )
 
 

@@ -7,6 +7,41 @@ from typing import Any
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
 
+MAX_ASCENDING_DEPTH = 20
+
+
+def resolve_project_root(
+    explicit_path: Path | None, cwd: Path
+) -> Path:
+    """Resolve project root. Priority: flag → ascending search → CWD.
+
+    Ascending search resolves symlinks via Path.resolve() before
+    checking for outputs/state.yaml to prevent symlink injection.
+    """
+    if explicit_path is not None:
+        resolved = explicit_path.resolve()
+        if not resolved.is_dir():
+            print(
+                f"Error: Project path does not exist: {explicit_path}",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
+        return resolved
+
+    # Ascending search for outputs/state.yaml (innermost match)
+    candidate = cwd.resolve()
+    for _ in range(MAX_ASCENDING_DEPTH):
+        marker = candidate / "outputs" / "state.yaml"
+        if marker.is_file():
+            return candidate
+        parent = candidate.parent
+        if parent == candidate:
+            break  # filesystem root
+        candidate = parent
+
+    # Fallback: CWD
+    return cwd.resolve()
+
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
     """Run prose analysis (Phase 0)."""
@@ -131,6 +166,13 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="paper CLI - Single entrypoint for scientific drafting CI/CD pipeline."
+    )
+    parser.add_argument(
+        "--project",
+        "-C",
+        default=None,
+        type=Path,
+        help="Project root directory (default: auto-detect from CWD).",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -288,7 +330,7 @@ def main() -> None:
             format_doctor_report,
         )
 
-        repo_path = Path.cwd()
+        repo_path = resolve_project_root(args.project, Path.cwd())
         tools = check_all_tools()
         caps = check_internal_capabilities(repo_path)
         print(format_doctor_report(tools, caps))
@@ -337,7 +379,7 @@ def main() -> None:
         orch_args["csl"] = args.csl
         orch_args["reference_doc"] = args.reference_doc
 
-    repo_path = Path.cwd()
+    repo_path = resolve_project_root(args.project, Path.cwd())
     request = OrchestratorRequest(
         command=orch_command,
         requested_stage="unknown",

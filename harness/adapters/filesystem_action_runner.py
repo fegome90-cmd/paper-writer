@@ -47,12 +47,8 @@ class FilesystemActionRunner(ActionRunner):
 
         if command == "init":
             dirs = [
-                "cli",
-                "harness",
-                "validators",
                 "templates",
                 "outputs",
-                "tests",
                 "outputs/search",
                 "outputs/drafts",
                 "outputs/render",
