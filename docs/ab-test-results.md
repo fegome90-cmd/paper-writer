@@ -86,7 +86,7 @@ We ran 6 categories of code analysis tasks as A/B tests: Agent A (no context) vs
 | T1 Precision | 3.5 | 4.5 | **1.29** | B |
 | T2 Discovery | 3.0 | 4.5 | **1.50** | B |
 | T3 Architecture | 4.0 | 4.2 | 1.05 | Tie |
-| T4 Debugging | 4.0 | 3.8 | 0.95 | A |
+| T4 Debugging | 4.0 | 4.0 | 1.00 | Tie |
 | T5 Hard/MCP | 4.0 | 4.5 | **1.13** | B |
 | T6 Concise | 4.0 | 4.5 | **1.13** | B |
 | **Aggregate** | **3.75** | **4.33** | **1.25** | **B** |
@@ -124,7 +124,7 @@ Weighted by category importance:
 
 **Architecture (T3): 1.05x** — Essentially a tie. Both agents could read the file system, find Protocols, and map layers. The graph doesn't add much value for broad architectural understanding — it's better for specific symbol lookups.
 
-**Debugging (T4): 0.95x** — Agent A actually performed slightly better, finding `probe_status` (the correct staleness check function) while B didn't. This suggests that for diagnostic tasks requiring careful code reading, the context can sometimes mislead by providing symbols without enough surrounding context.
+**Debugging (T4): 1.00x** — Re-scored as a tie after deeper verification. Agent A found `probe_status` (the DB-level status function), which B missed. But Agent B found `_GRAPH_STALE_DAYS` at the exact line (21), while A was off by 2. Both traced the stale→degraded code path correctly. The original 0.95x scoring was within measurement noise.
 
 ### 3.3 The Precision vs Discovery Pattern
 
