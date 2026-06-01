@@ -98,13 +98,25 @@ class FilesystemActionRunner(ActionRunner):
                         preset_dir,
                     )
 
-            # Ensure template files exist (empty fallback if preset didn't provide them)
+            # Ensure template files exist — copy package defaults if not provided by preset
             manuscript_qmd = self._resolve("templates/manuscript.qmd")
             if not manuscript_qmd.exists():
-                manuscript_qmd.touch()
+                from harness.ports.assets import get_asset_path
+
+                src = get_asset_path("templates", "manuscript.qmd")
+                if src.exists():
+                    shutil.copy2(src, manuscript_qmd)
+                else:
+                    manuscript_qmd.touch()
             references_bib = self._resolve("templates/references.bib")
             if not references_bib.exists():
-                references_bib.touch()
+                from harness.ports.assets import get_asset_path
+
+                src = get_asset_path("templates", "references.bib")
+                if src.exists():
+                    shutil.copy2(src, references_bib)
+                else:
+                    references_bib.touch()
 
             artifacts.extend([str(state_file), str(manuscript_qmd), str(references_bib)])
 
