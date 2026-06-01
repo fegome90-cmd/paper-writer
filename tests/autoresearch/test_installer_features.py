@@ -1,4 +1,5 @@
 """Full installer feature verification from installed wheel."""
+
 import subprocess
 import sys
 import tempfile
@@ -34,20 +35,24 @@ with tempfile.TemporaryDirectory(prefix="pw-verify-") as raw:
     dist.mkdir()
     subprocess.run(
         ["uv", "build", "--wheel", "--out-dir", str(dist)],
-        cwd=REPO, capture_output=True, timeout=60,
+        cwd=REPO,
+        capture_output=True,
+        timeout=60,
     )
     wheel = next(dist.glob("*.whl"))
 
     venv = tmpdir / "v"
     subprocess.run(
         ["uv", "venv", str(venv), "--python", "3.12"],
-        capture_output=True, timeout=30,
+        capture_output=True,
+        timeout=30,
     )
     python = str(venv / "bin" / "python")
     paper = str(venv / "bin" / "paper")
     subprocess.run(
         ["uv", "pip", "install", "--python", python, str(wheel)],
-        capture_output=True, timeout=120,
+        capture_output=True,
+        timeout=120,
     )
 
     print("=== ENTRYPOINT ===")
@@ -84,7 +89,10 @@ with tempfile.TemporaryDirectory(prefix="pw-verify-") as raw:
     # Method gate
     check(
         "method_gate (generic=12 items)",
-        [python, "-c", """
+        [
+            python,
+            "-c",
+            """
 import tempfile
 from pathlib import Path
 from validators.method_gate import MethodGateValidator
@@ -100,7 +108,8 @@ with tempfile.NamedTemporaryFile(suffix='.md', mode='w', delete=False) as f:
     r = MethodGateValidator().validate(ms, study_type='*')
     assert r['summary']['total_items'] > 0, 'No items loaded'
     Path(f.name).unlink()
-"""],
+""",
+        ],
         cwd=tmpdir,
     )
     # Prose
@@ -141,7 +150,8 @@ with tempfile.NamedTemporaryFile(suffix='.md', mode='w', delete=False) as f:
     # Gate method: exit code != 0 is expected when blockers found
     r = subprocess.run(
         [paper, "-C", str(proj), "gate", "method", str(intro), "--study-type", "*"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     total += 1
     if "Total items:" in r.stdout:
@@ -155,7 +165,7 @@ with tempfile.NamedTemporaryFile(suffix='.md', mode='w', delete=False) as f:
     print("\n=== DOCTOR ===")
     check("paper doctor", [paper, "-C", str(proj), "doctor"])
 
-print(f"\n{'='*50}")
+print(f"\n{'=' * 50}")
 print(f"RESULTS: {passed}/{total} features verified")
 print(f"METRIC installer_features_verified={passed}")
 failures = [(n, e) for n, ok, e in results if not ok]
