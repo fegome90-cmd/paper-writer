@@ -348,12 +348,8 @@ class TestE2EMultiProject:
         _run(CLI_CMD + ["-C", str(paper_b), "init"], project)
 
         # Add different content to each
-        (paper_a / "templates" / "manuscript.qmd").write_text(
-            "# Paper A\nContent A"
-        )
-        (paper_b / "templates" / "manuscript.qmd").write_text(
-            "# Paper B\nContent B"
-        )
+        (paper_a / "templates" / "manuscript.qmd").write_text("# Paper A\nContent A")
+        (paper_b / "templates" / "manuscript.qmd").write_text("# Paper B\nContent B")
 
         # Verify isolation — A still has A's content
         a_text = (paper_a / "templates" / "manuscript.qmd").read_text()
@@ -364,12 +360,8 @@ class TestE2EMultiProject:
         assert "Paper A" not in b_text
 
         # Verify state files are independent
-        state_a = yaml.safe_load(
-            (paper_a / "outputs" / "state.yaml").read_text()
-        )
-        state_b = yaml.safe_load(
-            (paper_b / "outputs" / "state.yaml").read_text()
-        )
+        state_a = yaml.safe_load((paper_a / "outputs" / "state.yaml").read_text())
+        state_b = yaml.safe_load((paper_b / "outputs" / "state.yaml").read_text())
         # Both should have progressed past bootstrap
         assert state_a["stage"] != "bootstrap"
         assert state_b["stage"] != "bootstrap"
