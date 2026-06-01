@@ -24,6 +24,7 @@ Inspired by:
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 
@@ -62,8 +63,10 @@ class MethodGateValidator:
             GateResult dict conforming to schemas/method_gate.schema.json
         """
         # 1. Resolve checklist based on study_type
+        t0 = time.perf_counter()
         checklist = self._resolve_checklist(study_type, checklist_name)
         if checklist is None:
+            elapsed = int((time.perf_counter() - t0) * 1000)
             return {
                 "command": "gate_method",
                 "file": manuscript.path,
@@ -84,7 +87,7 @@ class MethodGateValidator:
                 "metadata": {
                     "checklist_version": "1.0",
                     "rules_loaded": 0,
-                    "execution_time_ms": 0,
+                    "execution_time_ms": elapsed,
                 },
             }
 
@@ -177,7 +180,7 @@ class MethodGateValidator:
             "metadata": {
                 "checklist_version": checklist.get("version", "1.0"),
                 "rules_loaded": total,
-                "execution_time_ms": 0,  # TODO: measure
+                "execution_time_ms": int((time.perf_counter() - t0) * 1000),
             },
         }
 
