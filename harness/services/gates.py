@@ -276,19 +276,8 @@ def validate_ready_for_delivery(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
     """Final check gate."""
-    required_gates = [
-        "repo_initialized",
-        "search_completed",
-        "screened_evidence",
-        "outline_drafted",
-        "sections_completed",
-        "bib_normalized",
-        "citations_resolved",
-        "refs_validated",
-        "style_passed",
-        "reporting_passed",
-        "render_passed",
-    ]
+    # All gates except ready_for_delivery itself must be True
+    required_gates = sorted(ManuscriptState.REQUIRED_GATES - {"ready_for_delivery"})
 
     checks = []
     for g in required_gates:
