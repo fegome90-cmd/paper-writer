@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from harness.domain.state import ManuscriptState
 from harness.ports.artifact_checker import ArtifactChecker
 
 

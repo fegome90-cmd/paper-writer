@@ -348,13 +348,7 @@ class Orchestrator:
                 return "validating"
         elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
             state_gates = self.state_manager.load_state().get("gates", {})
-            validation_gates = [
-                "bib_normalized",
-                "citations_resolved",
-                "refs_validated",
-                "style_passed",
-                "reporting_passed",
-            ]
+            validation_gates = ManuscriptState.STAGE_PRECONDITIONS["rendering"]
             if all(state_gates.get(g, False) for g in validation_gates):
                 return "rendering"
         elif command == "render":
