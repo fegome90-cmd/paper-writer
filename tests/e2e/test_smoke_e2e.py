@@ -293,3 +293,100 @@ class TestE2EDoctor:
         assert "EXTERNAL TOOLS" in result.stdout
         assert "INTERNAL CAPABILITIES" in result.stdout
         assert "DEGRADED MODE ACTIVE" in result.stdout or "ALL TOOLS" in result.stdout
+
+
+class TestE2EMultiProject:
+    """E2E tests for multi-project mode: --project flag, ascending search,
+    cross-project isolation, and CWD fallback."""
+
+    def test_project_flag_init(self, project: Path) -> None:
+        """paper -C <dir> init creates scaffold at target dir, not CWD."""
+        target = project / "my-paper"
+        target.mkdir()
+        result = _run(CLI_CMD + ["-C", str(target), "init"], project)
+        assert result.returncode == 0, f"init with -C failed: {result.stderr}"
+        assert (target / "outputs" / "state.yaml").exists()
+        assert (target / "templates" / "manuscript.qmd").exists()
+        # CWD should NOT have outputs (command ran against target)
+        assert not (project / "outputs").exists()
+
+    def test_project_flag_doctor(self, project: Path) -> None:
+        """paper -C <dir> doctor resolves assets from target project."""
+        target = project / "my-paper"
+        target.mkdir()
+        _run(CLI_CMD + ["-C", str(target), "init"], target.parent)
+        result = _run(CLI_CMD + ["-C", str(target), "doctor"], project)
+        assert result.returncode == 0
+        assert "INTERNAL CAPABILITIES" in result.stdout
+
+    def test_ascending_search_from_subdir(self, project: Path) -> None:
+        """Running 'paper init' from a subdir finds project root via
+        ascending search for outputs/state.yaml."""
+        # Init the project first
+        _run(CLI_CMD + ["init"], project)
+        assert (project / "outputs" / "state.yaml").exists()
+
+        # Create a deep subdir
+        deep = project / "src" / "analysis" / "data"
+        deep.mkdir(parents=True)
+
+        # Run 'paper doctor' from deep subdir — ascending search
+        # should find the project root
+        result = _run(CLI_CMD + ["doctor"], deep)
+        assert result.returncode == 0
+        assert "INTERNAL CAPABILITIES" in result.stdout
+
+    def test_cross_project_isolation(self, project: Path) -> None:
+        """Two projects in separate dirs don't interfere."""
+        paper_a = project / "paper-a"
+        paper_b = project / "paper-b"
+        paper_a.mkdir()
+        paper_b.mkdir()
+
+        # Init both
+        _run(CLI_CMD + ["-C", str(paper_a), "init"], project)
+        _run(CLI_CMD + ["-C", str(paper_b), "init"], project)
+
+        # Add different content to each
+        (paper_a / "templates" / "manuscript.qmd").write_text(
+            "# Paper A\nContent A"
+        )
+        (paper_b / "templates" / "manuscript.qmd").write_text(
+            "# Paper B\nContent B"
+        )
+
+        # Verify isolation — A still has A's content
+        a_text = (paper_a / "templates" / "manuscript.qmd").read_text()
+        b_text = (paper_b / "templates" / "manuscript.qmd").read_text()
+        assert "Paper A" in a_text
+        assert "Paper B" in b_text
+        assert "Paper B" not in a_text
+        assert "Paper A" not in b_text
+
+        # Verify state files are independent
+        state_a = yaml.safe_load(
+            (paper_a / "outputs" / "state.yaml").read_text()
+        )
+        state_b = yaml.safe_load(
+            (paper_b / "outputs" / "state.yaml").read_text()
+        )
+        # Both should have progressed past bootstrap
+        assert state_a["stage"] != "bootstrap"
+        assert state_b["stage"] != "bootstrap"
+        # Gates should be independent dicts
+        assert "gates" in state_a
+        assert "gates" in state_b
+
+    def test_cwd_fallback_no_state_yaml(self, project: Path) -> None:
+        """When no state.yaml exists above CWD, CLI uses CWD as root."""
+        # Empty directory, no state.yaml
+        result = _run(CLI_CMD + ["init"], project)
+        assert result.returncode == 0
+        # Scaffold created at CWD (project dir)
+        assert (project / "outputs" / "state.yaml").exists()
+        assert (project / "templates" / "manuscript.qmd").exists()
+        # No source stubs
+        assert not (project / "cli").exists()
+        assert not (project / "harness").exists()
+        assert not (project / "validators").exists()
+        assert not (project / "tests").exists()
