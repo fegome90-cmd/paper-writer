@@ -15,7 +15,7 @@ lint:
 	.venv/bin/ruff format --check .
 
 typecheck:
-	.venv/bin/mypy harness cli validators integrations verification
+	.venv/bin/mypy harness cli validators integrations verification parsers engine rules schemas skills
 
 verify: lint typecheck test
 
