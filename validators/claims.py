@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Any
 
 import yaml
@@ -45,7 +44,9 @@ class ClaimsValidator:
         self._load_rules()
 
     def _load_rules(self) -> None:
-        rules_dir = Path(__file__).resolve().parent.parent / "rules" / "claims"
+        from harness.ports.assets import get_rules_dir
+
+        rules_dir = get_rules_dir("claims")
         self.rules = load_rules(rules_dir)
         for r in self.rules:
             r["command"] = "audit_claims"

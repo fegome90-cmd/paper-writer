@@ -28,6 +28,8 @@ include = [
   "verification*",
   "parsers*",
   "engine*",
+  "rules*",
+  "schemas*",
 ]
 
 [tool.setuptools.package-data]
@@ -45,6 +47,8 @@ include = [
 "skills.imported.literature_search.resources" = ["*.*"]
 "skills.local" = ["*.*"]
 "verification" = ["*.*", "**/*.*"]
+"rules" = ["*.*", "**/*.*"]
+"schemas" = ["*.*", "**/*.*"]
 
 [tool.uv]
 package = true

@@ -51,11 +51,10 @@ class ProseValidator:
 
     def _load_rules(self) -> None:
         """Load all prose rules from rules/prose/*.yml."""
-        from pathlib import Path
-
         from engine.loader import load_rules
+        from harness.ports.assets import get_rules_dir
 
-        rules_dir = Path(__file__).resolve().parent.parent / "rules" / "prose"
+        rules_dir = get_rules_dir("prose")
         rules = load_rules(rules_dir)
         for rule in rules:
             rule["command"] = "audit_prose"

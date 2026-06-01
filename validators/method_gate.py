@@ -198,11 +198,11 @@ class MethodGateValidator:
         Returns:
             Merged checklist dict (generic + specific) or None if no match.
         """
-        from pathlib import Path
 
         from engine.loader import load_checklist
+        from harness.ports.assets import get_rules_dir
 
-        rules_dir = Path(__file__).resolve().parent.parent / "rules" / "method_gate"
+        rules_dir = get_rules_dir("method_gate")
         generic_path = rules_dir / "generic.yml"
 
         # Base: always load generic

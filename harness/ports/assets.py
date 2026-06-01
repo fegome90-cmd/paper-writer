@@ -73,6 +73,25 @@ def get_csl_styles_dir() -> Path:
     return get_asset_path("styles", "csl")
 
 
+def get_rules_dir(subdir: str = "") -> Path:
+    """Get the rules directory path.
+
+    Args:
+        subdir: Optional subdirectory, e.g. "prose", "claims", "method_gate".
+
+    Returns:
+        Resolved Path to rules/ or rules/<subdir>.
+    """
+    if subdir:
+        return get_asset_path("rules", subdir)
+    return get_asset_path("rules")
+
+
+def get_schemas_dir() -> Path:
+    """Get the schemas directory path."""
+    return get_asset_path("schemas")
+
+
 def get_project_asset(project_root: Path, *path_parts: str) -> Path:
     """Resolve asset with project-local → package waterfall.
 
