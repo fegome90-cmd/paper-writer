@@ -83,7 +83,7 @@ def test_set_stage_valid_transition(repo: InMemoryStateRepository) -> None:
 
 def test_set_stage_invalid_transition(repo: InMemoryStateRepository) -> None:
     manager = StateManager(repo)
-    with pytest.raises(StateManagerError, match="precondition gate 'search_completed' is not True"):
+    with pytest.raises(StateManagerError, match="Cannot skip stages"):
         manager.set_stage("screen")
 
 

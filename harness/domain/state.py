@@ -18,18 +18,19 @@ class ManuscriptState:
     stage: str
     gates: dict[str, bool] = field(default_factory=dict)
 
-    VALID_STAGES: ClassVar[frozenset[str]] = frozenset(
-        {
-            "bootstrap",
-            "search",
-            "screen",
-            "outline",
-            "drafting",
-            "validating",
-            "rendering",
-            "verified",
-        }
+    # Ordered pipeline stages — position determines forward/backward
+    STAGE_ORDER: ClassVar[tuple[str, ...]] = (
+        "bootstrap",
+        "search",
+        "screen",
+        "outline",
+        "drafting",
+        "validating",
+        "rendering",
+        "verified",
     )
+
+    VALID_STAGES: ClassVar[frozenset[str]] = frozenset(STAGE_ORDER)
 
     REQUIRED_GATES: ClassVar[frozenset[str]] = frozenset(
         {
@@ -125,9 +126,31 @@ class ManuscriptState:
         self.gates[gate_name] = value
 
     def transition_to(self, stage_name: str) -> None:
-        """Changes the current stage after validating transition preconditions."""
+        """Changes the current stage after validating transition preconditions.
+
+        Only forward transitions to the immediately next stage are allowed.
+        Same-stage (no-op) transitions are silently accepted.
+        """
         if stage_name not in self.VALID_STAGES:
             raise DomainStateError(f"Invalid target stage: {stage_name}")
+
+        # Same-stage is a no-op
+        if stage_name == self.stage:
+            return
+
+        current_idx = self.STAGE_ORDER.index(self.stage)
+        target_idx = self.STAGE_ORDER.index(stage_name)
+
+        if target_idx <= current_idx:
+            raise DomainStateError(
+                f"Backward transition not allowed: '{self.stage}' -> '{stage_name}'. "
+                f"Pipeline stages only move forward."
+            )
+        if target_idx > current_idx + 1:
+            raise DomainStateError(
+                f"Cannot skip stages: '{self.stage}' -> '{stage_name}'. "
+                f"Next valid stage is '{self.STAGE_ORDER[current_idx + 1]}'."
+            )
 
         preconditions = self.STAGE_PRECONDITIONS.get(stage_name, frozenset())
         for gate in preconditions:
