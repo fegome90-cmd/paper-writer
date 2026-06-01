@@ -63,13 +63,12 @@ class SourceMap:
         sentence, not to leading whitespace. Leading whitespace before a
         sentence is NOT included in the span.
         """
-        import re
 
         if not text:
             return
 
         # Common abbreviations whose trailing dot is NOT a sentence boundary.
-        _ABBREVS = [
+        abbrevs = [
             "Mr.",
             "Mrs.",
             "Ms.",
@@ -90,7 +89,7 @@ class SourceMap:
 
         # Mark every dot that belongs to an abbreviation so we skip it.
         _protected: set[int] = set()
-        for _a in _ABBREVS:
+        for _a in abbrevs:
             _idx = 0
             while True:
                 _pos = text.find(_a, _idx)

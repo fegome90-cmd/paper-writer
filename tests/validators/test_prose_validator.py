@@ -67,7 +67,6 @@ class TestProseValidatorSections:
 
     def test_dedup_delegates_to_engine(self) -> None:
         """ProseValidator._deduplicate delegates to engine.deduplicator."""
-        from engine.deduplicator import deduplicate_findings
         assert ProseValidator._deduplicate is not None
         # Verify the method exists and is callable
         result = ProseValidator()._deduplicate([])

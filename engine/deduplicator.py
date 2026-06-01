@@ -22,14 +22,14 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
     if not findings:
         return []
 
-    SEVERITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
+    severity_order = {"P0": 0, "P1": 1, "P2": 2}
 
     sorted_fs = sorted(
         findings,
         key=lambda f: (
             f.get("span", [0, 0])[0],
             -(f.get("span", [0, 0])[1] - f.get("span", [0, 0])[0]),
-            SEVERITY_ORDER.get(f.get("severity", "P2"), 2),
+            severity_order.get(f.get("severity", "P2"), 2),
             f.get("rule_id", ""),
         ),
     )
@@ -39,7 +39,7 @@ def deduplicate_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]
     coverage_by_rule: dict[str, int] = {}
 
     for f in sorted_fs:
-        start, end = f.get("span", [0, 0])
+        _start, end = f.get("span", [0, 0])
         rule_id = f.get("rule_id", "")
         coverage_end = coverage_by_rule.get(rule_id, -1)
 

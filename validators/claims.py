@@ -56,8 +56,7 @@ class ClaimsValidator:
                 data = yaml.safe_load(f)
             if data:
                 self.risk_modifiers = {
-                    entry.get("section", "").lower(): entry
-                    for entry in data.get("modifiers", [])
+                    entry.get("section", "").lower(): entry for entry in data.get("modifiers", [])
                 }
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
@@ -145,6 +144,7 @@ class ClaimsValidator:
                 compiled.append(re.compile(p, re.IGNORECASE))
             except re.error as e:
                 import logging
+
                 logging.warning("Invalid regex in claim rule pattern: %s — %s", p, e)
                 continue
         return compiled
@@ -260,6 +260,3 @@ def build_claims_report(
             "This is NOT claim verification. Each candidate should be manually reviewed."
         ),
     }
-
-
-

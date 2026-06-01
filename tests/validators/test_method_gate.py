@@ -127,7 +127,11 @@ class TestMethodGateLookupNormalization:
 
     def test_capitalized_expected_location_finds_section(self) -> None:
         """YAML says 'Introduction', parser stores 'introduction' — must match."""
-        text = "# Introduction\nBackground text.\n# Methods\nMethod content.\n# Results\nResults.\n# Discussion\nDiscussion.\n# Declarations\nDeclarations.\n# References\nRefs."
+        text = (
+            "# Introduction\nBackground text.\n# Methods\nMethod content."
+            "\n# Results\nResults.\n# Discussion\nDiscussion."
+            "\n# Declarations\nDeclarations.\n# References\nRefs."
+        )
         ms = _make_man(text)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
@@ -142,7 +146,10 @@ class TestMethodGateLookupNormalization:
 
     def test_method_gate_no_crash_with_section_dataclass(self) -> None:
         """Regression: accesses Section dataclass, not dict."""
-        text = "# Methods\nWe conducted a trial.\n# Results\nFindings.\n# Discussion\nDiscussion.\n# Declarations\nDeclarations."
+        text = (
+            "# Methods\nWe conducted a trial.\n# Results\nFindings."
+            "\n# Discussion\nDiscussion.\n# Declarations\nDeclarations."
+        )
         ms = _make_man(text)
         validator = MethodGateValidator()
         # Should not crash with AttributeError when accessing section.text

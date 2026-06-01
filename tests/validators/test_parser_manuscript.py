@@ -205,11 +205,12 @@ class TestSourceMapSentences:
         sentences = list(sm.iter_sentences("Hello.  World."))
         assert len(sentences) == 2
         # "World." should have char_start pointing to 'W', not to the space
-        world_start, world_end, world_text = sentences[1]
+        world_start, _world_end, world_text = sentences[1]
         assert world_text == "World."
-        assert "Hello.  World."[world_start] == "W", (
-            f"Expected 'W' at char_start={world_start}, "
-            f"got '{'Hello.  World.'[world_start] if world_start < len('Hello.  World.') else 'EOF'}'"
+        sample = "Hello.  World."
+        char = sample[world_start] if world_start < len(sample) else "EOF"
+        assert sample[world_start] == "W", (
+            f"Expected 'W' at char_start={world_start}, got '{char}'"
         )
 
     def test_iter_sentences_trailing_whitespace(self) -> None:

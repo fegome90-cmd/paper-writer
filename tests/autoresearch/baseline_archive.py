@@ -1,4 +1,5 @@
 """SDD archive baseline: measure what's NOT yet archived."""
+
 import sys
 from pathlib import Path
 
@@ -8,9 +9,7 @@ total = 0
 done = 0
 
 checks = {
-    "main_spec_synced": (
-        REPO / "openspec" / "specs" / "paper-writer" / "spec.md"
-    ).exists(),
+    "main_spec_synced": (REPO / "openspec" / "specs" / "paper-writer" / "spec.md").exists(),
     "change_moved_to_archive": (
         REPO / "openspec" / "changes" / "archive" / "2026-06-01-multi-project-mode"
     ).exists(),
