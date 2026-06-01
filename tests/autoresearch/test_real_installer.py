@@ -1,4 +1,5 @@
 """Real installer test: build wheel, install in isolated venv, run full pipeline."""
+
 import subprocess
 import sys
 import tempfile
@@ -21,7 +22,11 @@ def run_step(
     total += 1
     try:
         r = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=cwd, timeout=timeout,
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            timeout=timeout,
         )
         ok = r.returncode == 0
         if ok:
@@ -105,9 +110,7 @@ with tempfile.TemporaryDirectory(prefix="pw-install-") as raw_tmpdir:
         [python, "-c", import_check_ob],
         cwd=tmpdir,
     )
-    import_check_mg = (
-        "from validators.method_gate import MethodGateValidator; print('OK')"
-    )
+    import_check_mg = "from validators.method_gate import MethodGateValidator; print('OK')"
     run_step(
         "import validators.method_gate",
         [python, "-c", import_check_mg],
@@ -194,19 +197,24 @@ with tempfile.TemporaryDirectory(prefix="pw-install-") as raw_tmpdir:
     # === FINAL STATE ===
     print("\n=== STATE ===")
     r = subprocess.run(
-        [python, "-c", f"""
+        [
+            python,
+            "-c",
+            f"""
 import yaml
 state = yaml.safe_load(open('{paper_dir}/outputs/state.yaml'))
 print(f"stage={{state['stage']}}")
 gates = state.get('gates', {{}})
 passed_gates = sum(1 for v in gates.values() if v)
 print(f"gates={{passed_gates}}/{{len(gates)}}")
-"""],
-        capture_output=True, text=True,
+""",
+        ],
+        capture_output=True,
+        text=True,
     )
     print(f"  {r.stdout.strip()}")
 
-print(f"\n{'='*50}")
+print(f"\n{'=' * 50}")
 print(f"RESULTS: {passed}/{total} steps passed")
 print(f"METRIC installer_pipeline_steps_passed={passed}")
 failures = [(n, e) for n, ok, e in results if not ok]
