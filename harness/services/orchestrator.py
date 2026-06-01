@@ -247,16 +247,7 @@ class Orchestrator:
         current_gates: dict[str, Any] | None = None,
     ) -> None:
         """Verifies if the command is allowed in the current stage."""
-        stage_order = [
-            "bootstrap",
-            "search",
-            "screen",
-            "outline",
-            "drafting",
-            "validating",
-            "rendering",
-            "verified",
-        ]
+        stage_order = ManuscriptState.STAGE_ORDER
 
         try:
             current_idx = stage_order.index(current_stage)
