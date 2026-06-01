@@ -11,14 +11,16 @@ Defines how paper-writer can be installed once and used to produce multiple inde
 
 ## Problem Statement
 
-Currently the CLI uses `Path.cwd()` as `project_root` in 3 files at 4 call sites and has no `--project` flag:
+Previously the CLI used `Path.cwd()` as `project_root` in 3 files at 4 call sites with no `--project` flag:
 
 - `cli/paper/main.py` (doctor command) — `Path.cwd()` usage
 - `cli/paper/main.py` (all other commands) — `Path.cwd()` usage
 - `harness/services/orchestrator_builder.py` — fallback when `project_root is None`
 - `integrations/tools/bibtex_tidy.py` — context fallback
 
-This means:
+**All resolved** in commit `bfa3af9` (multi-project-mode). The CLI now uses `resolve_project_root(args.project, Path.cwd())` with ascending search and `--project/-C` flag support.
+
+The original issues were:
 
 1. The user must always run `paper` from inside their paper project directory.
 2. `validate_repo_initialized` checks for **source code directories** (`cli/`, `harness/`, `validators/`) that only exist in the source tree.
@@ -92,16 +94,16 @@ Assets (presets, CSL styles, Vale rules, skill resources) resolve from the **ins
 
 ### Decision 3: Updated gate for repo_initialized
 
-The `validate_repo_initialized` gate must check for **project directories**, not source directories.
+The `validate_repo_initialized` gate checks for **project directories**, not source directories.
 
-Current (broken for projects):
+Previous (broken for projects):
 ```python
 required_dirs = ["cli", "harness", "validators", "templates", "outputs"]
 ```
 
-Proposed:
+Implemented (commit `bfa3af9`):
 ```python
-required_entries = ["templates", "outputs"]
+required_dirs = ["templates", "outputs"]
 required_files = ["outputs/state.yaml"]
 ```
 
@@ -126,16 +128,16 @@ Fix: (1) extend `assets.py` with project-local fallback, (2) route all asset rea
 
 ### BLOCKER changes (must fix)
 
-| ID | File | Change | Impact |
-|----|------|--------|--------|
-| B1 | `cli/paper/main.py` | Add `--project/-C` flag; resolve project root via ascending search | CLI entry point |
-| B2 | `harness/services/gates.py` | `validate_repo_initialized`: check `templates/`, `outputs/`, `outputs/state.yaml` only | Gate logic |
-| B3 | `harness/adapters/filesystem_action_runner.py` | `init`: stop creating `cli/`, `harness/`, `validators/`, `tests/` stubs | Init behavior |
-| B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (currently package-only) | Asset resolution |
-| B5 | `integrations/tools/bibtex_tidy.py` | Use `repo_path` from context, not `Path.cwd()` fallback | Tool wrapper |
-| B6 | `harness/adapters/filesystem_action_runner.py` | `emit_manifest`: use relative paths (already correct) but document | Manifest |
-| B7 | `harness/services/orchestrator.py` + `harness/services/doctor.py` | Route all direct `repo_path / "templates/..."` and `repo_path / "styles/..."` construction through asset resolver | Render + doctor |
-| B8 | `harness/services/orchestrator_builder.py` | Accept `project_root` from CLI instead of defaulting to `Path.cwd()` | Builder wiring |
+| ID | File | Change | Impact | Status |
+|----|------|--------|--------|--------|
+| B1 | `cli/paper/main.py` | Add `--project/-C` flag; resolve project root via ascending search | CLI entry point | ✅ Done |
+| B2 | `harness/services/gates.py` | `validate_repo_initialized`: check `templates/`, `outputs/`, `outputs/state.yaml` only | Gate logic | ✅ Done |
+| B3 | `harness/adapters/filesystem_action_runner.py` | `init`: stop creating `cli/`, `harness/`, `validators/`, `tests/` stubs | Init behavior | ✅ Done |
+| B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (previously package-only) | Asset resolution | ✅ Done |
+| B5 | `integrations/tools/bibtex_tidy.py` | Use `repo_path` from context, not `Path.cwd()` fallback | Tool wrapper | ✅ Done |
+| B6 | `harness/adapters/filesystem_action_runner.py` | `emit_manifest`: use relative paths (already correct) but document | Manifest | ✅ Done |
+| B7 | `harness/services/orchestrator.py` + `harness/services/doctor.py` | Route all direct `repo_path / "templates/..."` and `repo_path / "styles/..."` construction through asset resolver | Render + doctor | ✅ Done |
+| B8 | `harness/services/orchestrator_builder.py` | Accept `project_root` from CLI instead of defaulting to `Path.cwd()` | Builder wiring | ✅ Done |
 
 ### WARNING changes (should fix)
 

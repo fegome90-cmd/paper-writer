@@ -11,7 +11,7 @@ Defines how `paper-writer` is verified across all layers of the system.
 
 ## Current State
 
-**~520 tests passing** across unit, integration, contract, and E2E layers.
+**~540 tests passing** across unit, integration, contract, and E2E layers.
 
 | Metric | Value |
 |--------|-------|
