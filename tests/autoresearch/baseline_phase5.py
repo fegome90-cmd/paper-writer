@@ -1,4 +1,5 @@
 """Phase 5 baseline: precise ruff error count via JSON output."""
+
 import json
 import subprocess
 import sys
@@ -20,7 +21,7 @@ if result.stdout.strip():
     for f in findings:
         code = f.get("code", "?")
         by_code[code] = by_code.get(code, 0) + 1
-        print(f"  {f['filename']}:{f['location']['row']}: {code} {f.get('message','')[:60]}")
+        print(f"  {f['filename']}:{f['location']['row']}: {code} {f.get('message', '')[:60]}")
 else:
     ruff_check = 0
     by_code = {}

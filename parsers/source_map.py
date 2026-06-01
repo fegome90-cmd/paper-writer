@@ -70,8 +70,22 @@ class SourceMap:
 
         # Common abbreviations whose trailing dot is NOT a sentence boundary.
         _ABBREVS = [
-            "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Sr.", "Jr.", "St.",
-            "vs.", "etc.", "al.", "e.g.", "i.e.", "fig.", "eq.", "cf.",
+            "Mr.",
+            "Mrs.",
+            "Ms.",
+            "Dr.",
+            "Prof.",
+            "Sr.",
+            "Jr.",
+            "St.",
+            "vs.",
+            "etc.",
+            "al.",
+            "e.g.",
+            "i.e.",
+            "fig.",
+            "eq.",
+            "cf.",
         ]
 
         # Mark every dot that belongs to an abbreviation so we skip it.
