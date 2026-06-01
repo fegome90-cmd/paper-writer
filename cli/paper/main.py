@@ -1,4 +1,5 @@
 import argparse
+import importlib.metadata
 import sys
 import time
 from pathlib import Path
@@ -6,6 +7,15 @@ from typing import Any
 
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
+
+
+def _get_version() -> str:
+    """Get package version from metadata."""
+    try:
+        return importlib.metadata.version("paper-writer")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.0.0-dev"
+
 
 MAX_ASCENDING_DEPTH = 20
 
@@ -164,6 +174,12 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="paper CLI - Single entrypoint for scientific drafting CI/CD pipeline."
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=_get_version(),
     )
     parser.add_argument(
         "--project",
