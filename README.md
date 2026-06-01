@@ -6,12 +6,55 @@ A dedicated repository for automated scientific search, drafting, validation, an
 
 The system is verified and ready for controlled validation.
 
-Verification evidence:
+### Installation
 
-- `pytest` — 435 passing (unit, integration, E2E)
+```bash
+# From source (development)
+git clone <repo-url> && cd paper-writer
+uv sync --dev
+
+# As a tool (end-user)
+uv tool install paper-writer
+# or from a built wheel:
+uv tool install ./dist/paper_writer-0.1.0-py3-none-any.whl
+
+# Verify
+paper --help
+paper doctor
+```
+
+### Quick Start
+
+```bash
+# Create a new paper project
+mkdir my-paper && cd my-paper
+paper init
+
+# Or use --project/-C to run from anywhere
+paper -C /path/to/my-paper init
+
+# Full pipeline
+paper search && paper screen
+paper draft outline
+paper draft section introduction
+paper draft section methods
+paper draft section results
+paper draft section discussion
+
+# Validate
+paper audit prose outputs/drafts/introduction.md
+paper audit claims outputs/drafts/introduction.md
+paper gate method outputs/drafts/introduction.md --study-type rct
+```
+
+### Verification Evidence
+
+- `pytest` — ~540 passing (unit, integration, E2E)
 - `ruff check .` — clean
-- `mypy strict` — 0 issues in 82 source files
-- Full pipeline E2E verified: `init → import → search → screen → draft → validate → render → verify`
+- `mypy strict` — 0 issues in 46 source files
+- `make verify` — lint + format + typecheck + tests (single command)
+- Full pipeline E2E verified: `init → search → screen → draft → validate → render → verify`
+- Installed wheel verified: 26/26 features pass from isolated venv
 - Pandoc produces real DOCX (12KB+, Word 2007+)
 
 The repository has:
