@@ -39,7 +39,11 @@ def assemble_manuscript(draft_dir: Path) -> Path:
         if not section_file.is_file():
             logger.warning("Missing section: %s — skipping", section_file.name)
             continue
-        content = section_file.read_text(encoding="utf-8").strip()
+        try:
+            content = section_file.read_text(encoding="utf-8").strip()
+        except (UnicodeDecodeError, OSError) as exc:
+            logger.warning("Unreadable section: %s — skipping (%s)", section_file.name, exc)
+            continue
         if not content:
             logger.warning("Empty section: %s — skipping", section_file.name)
             continue
@@ -50,6 +54,9 @@ def assemble_manuscript(draft_dir: Path) -> Path:
         return manuscript_path
 
     assembled = "\n\n".join(parts) + "\n"
-    manuscript_path.write_text(assembled, encoding="utf-8")
-    logger.info("Assembled manuscript → %s (%d sections)", manuscript_path, len(parts))
+    try:
+        manuscript_path.write_text(assembled, encoding="utf-8")
+        logger.info("Assembled manuscript → %s (%d sections)", manuscript_path, len(parts))
+    except OSError as exc:
+        logger.error("Cannot write manuscript to %s: %s", manuscript_path, exc)
     return manuscript_path

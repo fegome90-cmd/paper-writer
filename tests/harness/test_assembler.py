@@ -110,3 +110,34 @@ class TestAssembleManuscript:
 
         assert result == missing_dir / "manuscript.md"
         assert not result.is_file()
+
+    def test_skips_non_utf8_section_file(self, tmp_path: Path) -> None:
+        """Section files with invalid UTF-8 are skipped with a warning, not a crash."""
+        draft_dir = tmp_path / "drafts"
+        draft_dir.mkdir()
+        (draft_dir / "introduction.md").write_text("# Intro\n\nContent.", encoding="utf-8")
+        (draft_dir / "methods.md").write_bytes(b"\xff\xfe\xfd")  # invalid UTF-8
+
+        result = assemble_manuscript(draft_dir)
+
+        assert result.is_file()
+        content = result.read_text(encoding="utf-8")
+        assert "Intro" in content
+        assert "Methods" not in content
+
+    def test_handles_unwritable_target_gracefully(self, tmp_path: Path) -> None:
+        """If manuscript.md is read-only, assembler logs error but doesn't crash."""
+        draft_dir = tmp_path / "drafts"
+        draft_dir.mkdir()
+        (draft_dir / "introduction.md").write_text("# Intro\n\nContent.", encoding="utf-8")
+        target = draft_dir / "manuscript.md"
+        target.write_text("existing", encoding="utf-8")
+        import os
+        os.chmod(target, 0o444)
+
+        try:
+            result = assemble_manuscript(draft_dir)
+            # Should return path without crashing
+            assert result == target
+        finally:
+            os.chmod(target, 0o644)
