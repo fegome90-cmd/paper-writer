@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "trifecta-f1": {
+      "command": "/Users/felipe_gonzalez/Developer/agent_h/trifecta_dope/.venv/bin/python",
+      "args": [
+        "/Users/felipe_gonzalez/Developer/agent_h/trifecta_dope/src/interfaces/mcp/server.py",
+        "--repo",
+        "/Users/felipe_gonzalez/Developer/paper-writer"
+      ]
+    }
+  }
+}
