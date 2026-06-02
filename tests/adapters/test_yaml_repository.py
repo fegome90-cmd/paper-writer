@@ -71,9 +71,10 @@ def test_load_not_dict_yaml(tmp_path: Path) -> None:
 
 def test_load_invalid_domain_state(tmp_path: Path) -> None:
     file_path = tmp_path / "state.yaml"
-    # missing gates completely
+    # Use a genuinely invalid stage — empty gates are auto-filled by
+    # ManuscriptState.__post_init__ and are NOT a domain violation.
     invalid_content = {
-        "stage": "bootstrap",
+        "stage": "NOT_A_REAL_STAGE",
         "gates": {},
     }
     with open(file_path, "w", encoding="utf-8") as f:
