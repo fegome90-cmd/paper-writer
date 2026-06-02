@@ -19,6 +19,7 @@ from typing import Any
 @dataclass
 class TrifectaResult:
     """Result from Trifecta graph query."""
+
     query: str
     matches: list[dict[str, Any]]
     latency_ms: int
@@ -72,13 +73,12 @@ class TrifectaArm:
                     return self._conn
                 conn.close()
 
-            raise FileNotFoundError(
-                f"No Trifecta graph DB found for {self.repo_root}"
-            )
+            raise FileNotFoundError(f"No Trifecta graph DB found for {self.repo_root}")
         return self._conn
 
     def _resolve_symbol(
-        self, symbol_name: str,
+        self,
+        symbol_name: str,
     ) -> list[dict[str, Any]]:
         """Find nodes matching a symbol name."""
         conn = self._get_conn()
@@ -106,16 +106,15 @@ class TrifectaArm:
 
         matches = []
         for node in nodes:
-            matches.append({
-                "file": node.get("file_rel", ""),
-                "line": node.get("line", 0),
-                "name": node.get("symbol_name", ""),
-                "text": (
-                    f"{node.get('kind', '')} "
-                    f"{node.get('qualified_name', '')}"
-                ),
-                "score": 1.0,
-            })
+            matches.append(
+                {
+                    "file": node.get("file_rel", ""),
+                    "line": node.get("line", 0),
+                    "name": node.get("symbol_name", ""),
+                    "text": (f"{node.get('kind', '')} {node.get('qualified_name', '')}"),
+                    "score": 1.0,
+                }
+            )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -158,16 +157,15 @@ class TrifectaArm:
                 key = f"{r.get('file_rel', '')}:{r.get('symbol_name', '')}"
                 if key not in seen:
                     seen.add(key)
-                    matches.append({
-                        "file": r.get("file_rel", ""),
-                        "line": r.get("line", 0),
-                        "name": r.get("symbol_name", ""),
-                        "text": (
-                            f"{r.get('qualified_name', '')} "
-                            f"calls {symbol_name}"
-                        ),
-                        "score": 1.0,
-                    })
+                    matches.append(
+                        {
+                            "file": r.get("file_rel", ""),
+                            "line": r.get("line", 0),
+                            "name": r.get("symbol_name", ""),
+                            "text": (f"{r.get('qualified_name', '')} calls {symbol_name}"),
+                            "score": 1.0,
+                        }
+                    )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -194,16 +192,15 @@ class TrifectaArm:
         matches = []
         for row in cur.fetchall():
             r = dict(row)
-            matches.append({
-                "file": r.get("file_rel", ""),
-                "line": r.get("line", 0),
-                "name": r.get("symbol_name", ""),
-                "text": (
-                    f"orphan {r.get('kind', '')}: "
-                    f"{r.get('qualified_name', '')}"
-                ),
-                "score": 1.0,
-            })
+            matches.append(
+                {
+                    "file": r.get("file_rel", ""),
+                    "line": r.get("line", 0),
+                    "name": r.get("symbol_name", ""),
+                    "text": (f"orphan {r.get('kind', '')}: {r.get('qualified_name', '')}"),
+                    "score": 1.0,
+                }
+            )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -214,7 +211,10 @@ class TrifectaArm:
         )
 
     def find_subclasses(
-        self, class_name: str, *, transitive: bool = False,
+        self,
+        class_name: str,
+        *,
+        transitive: bool = False,
     ) -> TrifectaResult:
         """Find subclasses using inheritance edges."""
         t0 = time.perf_counter()
@@ -249,17 +249,16 @@ class TrifectaArm:
                         key = f"{r.get('file_rel', '')}:{child_name}"
                         if key not in seen:
                             seen.add(key)
-                            matches.append({
-                                "file": r.get("file_rel", ""),
-                                "line": r.get("line", 0),
-                                "name": child_name,
-                                "text": (
-                                    f"{child_name} inherits "
-                                    f"from {parent_name}"
-                                ),
-                                "score": 1.0,
-                                "depth": depth + 1,
-                            })
+                            matches.append(
+                                {
+                                    "file": r.get("file_rel", ""),
+                                    "line": r.get("line", 0),
+                                    "name": child_name,
+                                    "text": (f"{child_name} inherits from {parent_name}"),
+                                    "score": 1.0,
+                                    "depth": depth + 1,
+                                }
+                            )
                             if transitive:
                                 next_queue.append(child_name)
             queue = next_queue
@@ -292,13 +291,15 @@ class TrifectaArm:
         matches = []
         for row in cur.fetchall():
             r = dict(row)
-            matches.append({
-                "file": r.get("file_rel", ""),
-                "line": r.get("line", 0),
-                "name": r.get("symbol_name", ""),
-                "text": "Static graph: cannot resolve dynamic imports",
-                "score": 0.1,
-            })
+            matches.append(
+                {
+                    "file": r.get("file_rel", ""),
+                    "line": r.get("line", 0),
+                    "name": r.get("symbol_name", ""),
+                    "text": "Static graph: cannot resolve dynamic imports",
+                    "score": 0.1,
+                }
+            )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -324,9 +325,7 @@ class TrifectaArm:
             name = r.get("symbol_name", "").lower()
             qual = r.get("qualified_name", "").lower()
 
-            raw_score = sum(
-                1 for t in tokens if t in name or t in qual
-            )
+            raw_score = sum(1 for t in tokens if t in name or t in qual)
             score = raw_score / max(len(tokens), 1)
 
             if score > 0.3:
@@ -336,16 +335,15 @@ class TrifectaArm:
 
         matches = []
         for score, r in scored[:top_k]:
-            matches.append({
-                "file": r.get("file_rel", ""),
-                "line": r.get("line", 0),
-                "name": r.get("symbol_name", ""),
-                "text": (
-                    f"{r.get('kind', '')} "
-                    f"{r.get('qualified_name', '')}"
-                ),
-                "score": round(score, 2),
-            })
+            matches.append(
+                {
+                    "file": r.get("file_rel", ""),
+                    "line": r.get("line", 0),
+                    "name": r.get("symbol_name", ""),
+                    "text": (f"{r.get('kind', '')} {r.get('qualified_name', '')}"),
+                    "score": round(score, 2),
+                }
+            )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 

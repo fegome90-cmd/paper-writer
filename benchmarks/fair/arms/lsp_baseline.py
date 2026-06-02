@@ -15,6 +15,7 @@ from typing import Any
 @dataclass
 class LSPResult:
     """Result from an LSP query."""
+
     query: str
     matches: list[dict[str, Any]]
     latency_ms: int
@@ -39,7 +40,9 @@ class LSPBaseline:
             try:
                 _result = subprocess.run(
                     ["pyright", "--version"],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 self._pyright_available = _result.returncode == 0
             except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -47,7 +50,8 @@ class LSPBaseline:
         return self._pyright_available
 
     def _find_symbol_location(
-        self, symbol_name: str,
+        self,
+        symbol_name: str,
     ) -> tuple[str, int] | None:
         """Find file and approximate line for a symbol using grep."""
         for filepath in self.repo_root.rglob("*.py"):
@@ -90,37 +94,45 @@ class LSPBaseline:
                 try:
                     result = subprocess.run(
                         ["pyright", "--verifytypes", symbol_name, str(abs_path)],
-                        capture_output=True, text=True, timeout=30,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
                     )
                     # pyright confirms the symbol exists
-                    matches.append({
-                        "file": file_path,
-                        "line": line,
-                        "name": symbol_name,
-                        "text": f"LSP verified: {symbol_name}",
-                        "score": 1.0,
-                    })
+                    matches.append(
+                        {
+                            "file": file_path,
+                            "line": line,
+                            "name": symbol_name,
+                            "text": f"LSP verified: {symbol_name}",
+                            "score": 1.0,
+                        }
+                    )
                 except (subprocess.TimeoutExpired, FileNotFoundError):
                     # Fallback to grep result
-                    matches.append({
-                        "file": file_path,
-                        "line": line,
-                        "name": symbol_name,
-                        "text": f"grep fallback: {symbol_name}",
-                        "score": 0.7,
-                    })
+                    matches.append(
+                        {
+                            "file": file_path,
+                            "line": line,
+                            "name": symbol_name,
+                            "text": f"grep fallback: {symbol_name}",
+                            "score": 0.7,
+                        }
+                    )
         else:
             # No pyright — pure grep
             loc = self._find_symbol_location(symbol_name)
             if loc:
                 file_path, line = loc
-                matches.append({
-                    "file": file_path,
-                    "line": line,
-                    "name": symbol_name,
-                    "text": f"grep-only: {symbol_name}",
-                    "score": 0.5,
-                })
+                matches.append(
+                    {
+                        "file": file_path,
+                        "line": line,
+                        "name": symbol_name,
+                        "text": f"grep-only: {symbol_name}",
+                        "score": 0.5,
+                    }
+                )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -154,13 +166,15 @@ class LSPBaseline:
                         key = f"{rel}:{i}"
                         if key not in seen:
                             seen.add(key)
-                            matches.append({
-                                "file": rel,
-                                "line": i,
-                                "name": symbol_name,
-                                "text": stripped[:100],
-                                "score": 0.8,
-                            })
+                            matches.append(
+                                {
+                                    "file": rel,
+                                    "line": i,
+                                    "name": symbol_name,
+                                    "text": stripped[:100],
+                                    "score": 0.8,
+                                }
+                            )
             except (OSError, ValueError):
                 continue
 
@@ -180,10 +194,7 @@ class LSPBaseline:
         for m in refs.matches:
             # Exclude the definition line
             content_line = m.get("text", "")
-            if (
-                f"def {symbol_name}" in content_line
-                or f"class {symbol_name}" in content_line
-            ):
+            if f"def {symbol_name}" in content_line or f"class {symbol_name}" in content_line:
                 continue
             callers.append(m)
 
@@ -211,18 +222,21 @@ class LSPBaseline:
                 content = filepath.read_text(errors="ignore")
                 content_lower = content.lower()
 
-                score = sum(
-                    1 for t in tokens if t in content_lower
-                ) / max(len(tokens), 1)
+                score = sum(1 for t in tokens if t in content_lower) / max(len(tokens), 1)
 
                 if score > 0.3:
-                    scored.append((score, {
-                        "file": rel,
-                        "line": 1,
-                        "name": Path(rel).stem,
-                        "text": content[:200],
-                        "score": round(score, 2),
-                    }))
+                    scored.append(
+                        (
+                            score,
+                            {
+                                "file": rel,
+                                "line": 1,
+                                "name": Path(rel).stem,
+                                "text": content[:200],
+                                "score": round(score, 2),
+                            },
+                        )
+                    )
             except (OSError, ValueError):
                 continue
 
@@ -255,7 +269,7 @@ class LSPBaseline:
                     stripped = line.strip()
                     for prefix in ("def ", "async def "):
                         if stripped.startswith(prefix):
-                            name = stripped[len(prefix):].split("(")[0].strip()
+                            name = stripped[len(prefix) :].split("(")[0].strip()
                             if name and not name.startswith("_"):
                                 all_defs[f"{rel}:{name}"] = {
                                     "file": rel,
@@ -294,13 +308,15 @@ class LSPBaseline:
                     continue
 
             if ref_count == 0:
-                orphans.append({
-                    "file": loc["file"],
-                    "line": loc["line"],
-                    "name": name,
-                    "text": f"Zero callers for {name}",
-                    "score": 1.0,
-                })
+                orphans.append(
+                    {
+                        "file": loc["file"],
+                        "line": loc["line"],
+                        "name": name,
+                        "text": f"Zero callers for {name}",
+                        "score": 1.0,
+                    }
+                )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -311,7 +327,10 @@ class LSPBaseline:
         )
 
     def find_subclasses(
-        self, class_name: str, *, transitive: bool = False,
+        self,
+        class_name: str,
+        *,
+        transitive: bool = False,
     ) -> LSPResult:
         """Find subclasses via grep for class X(Parent)."""
         t0 = time.perf_counter()
@@ -326,30 +345,27 @@ class LSPBaseline:
             next_queue = []
             for parent in queue:
                 for filepath in self.repo_root.rglob("*.py"):
-                    if (
-                        "/.venv/" in str(filepath)
-                        or "/__pycache__/" in str(filepath)
-                    ):
+                    if "/.venv/" in str(filepath) or "/__pycache__/" in str(filepath):
                         continue
                     try:
                         rel = str(filepath.relative_to(self.repo_root))
                         content = filepath.read_text(errors="ignore")
-                        pattern = (
-                            rf"class\s+(\w+)\s*\([^)]*\b{parent}\b[^)]*\)"
-                        )
+                        pattern = rf"class\s+(\w+)\s*\([^)]*\b{parent}\b[^)]*\)"
                         for m in re.finditer(pattern, content):
                             child = m.group(1)
                             key = f"{rel}:{child}"
                             if key not in seen:
                                 seen.add(key)
-                                matches.append({
-                                    "file": rel,
-                                    "line": 1,
-                                    "name": child,
-                                    "text": f"class {child}({parent})",
-                                    "score": 1.0,
-                                    "depth": depth + 1,
-                                })
+                                matches.append(
+                                    {
+                                        "file": rel,
+                                        "line": 1,
+                                        "name": child,
+                                        "text": f"class {child}({parent})",
+                                        "score": 1.0,
+                                        "depth": depth + 1,
+                                    }
+                                )
                                 if transitive:
                                     next_queue.append(child)
                     except (OSError, ValueError):
@@ -380,13 +396,15 @@ class LSPBaseline:
                     lines = content.split("\n")
                     for i, line in enumerate(lines, 1):
                         if "importlib" in line:
-                            matches.append({
-                                "file": rel,
-                                "line": i,
-                                "name": "",
-                                "text": line.strip()[:100],
-                                "score": 1.0,
-                            })
+                            matches.append(
+                                {
+                                    "file": rel,
+                                    "line": i,
+                                    "name": "",
+                                    "text": line.strip()[:100],
+                                    "score": 1.0,
+                                }
+                            )
             except (OSError, ValueError):
                 continue
 

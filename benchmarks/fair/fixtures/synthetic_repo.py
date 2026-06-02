@@ -17,7 +17,8 @@ def create_synthetic_repo(base_dir: Path) -> dict:
     # === core/engine.py — main processing pipeline ===
     (base_dir / "core").mkdir(exist_ok=True)
     (base_dir / "core" / "__init__.py").write_text("from core.engine import DataProcessor\n")
-    (base_dir / "core" / "engine.py").write_text(textwrap.dedent('''\
+    (base_dir / "core" / "engine.py").write_text(
+        textwrap.dedent('''\
         """Core data processing engine."""
 
         from core.transforms import normalize, validate
@@ -62,10 +63,12 @@ def create_synthetic_repo(base_dir: Path) -> dict:
         def legacy_process(data: list[dict]) -> list[dict]:
             """Legacy processing function — deprecated, use DataProcessor.process instead."""
             return [normalize(item, {}) for item in data]
-    '''))
+    ''')
+    )
 
     # === core/transforms.py — transformation functions ===
-    (base_dir / "core" / "transforms.py").write_text(textwrap.dedent('''\
+    (base_dir / "core" / "transforms.py").write_text(
+        textwrap.dedent('''\
         """Data transformation functions."""
 
         from typing import Any
@@ -105,10 +108,12 @@ def create_synthetic_repo(base_dir: Path) -> dict:
                     seen.add(item.get(key))
                     result.append(item)
             return result
-    '''))
+    ''')
+    )
 
     # === core/output.py — output formatting ===
-    (base_dir / "core" / "output.py").write_text(textwrap.dedent('''\
+    (base_dir / "core" / "output.py").write_text(
+        textwrap.dedent('''\
         """Output formatting functions."""
 
         import json
@@ -133,10 +138,12 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             """Write formatted results to a file."""
             with open(path, "w") as f:
                 f.write(format_batch(items))
-    '''))
+    ''')
+    )
 
     # === core/base.py — base classes (for inheritance testing) ===
-    (base_dir / "core" / "base.py").write_text(textwrap.dedent('''\
+    (base_dir / "core" / "base.py").write_text(
+        textwrap.dedent('''\
         """Base classes for the processing pipeline."""
 
         from abc import ABC, abstractmethod
@@ -175,12 +182,14 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             def log(self, message: str) -> None:
                 """Log a message."""
                 print(f"[{self.__class__.__name__}] {message}")
-    '''))
+    ''')
+    )
 
     # === plugins/advanced.py — extends base classes (3-level inheritance) ===
     (base_dir / "plugins").mkdir(exist_ok=True)
     (base_dir / "plugins" / "__init__.py").write_text("")
-    (base_dir / "plugins" / "advanced.py").write_text(textwrap.dedent('''\
+    (base_dir / "plugins" / "advanced.py").write_text(
+        textwrap.dedent('''\
         """Advanced processing plugins."""
 
         import importlib
@@ -236,12 +245,14 @@ def create_synthetic_repo(base_dir: Path) -> dict:
         def load_plugin(module_name: str) -> Any:
             """Dynamically load a plugin module — IMPORTLIB usage."""
             return importlib.import_module(module_name)
-    '''))
+    ''')
+    )
 
     # === cli/main.py — entry point ===
     (base_dir / "cli").mkdir(exist_ok=True)
     (base_dir / "cli" / "__init__.py").write_text("")
-    (base_dir / "cli" / "main.py").write_text(textwrap.dedent('''\
+    (base_dir / "cli" / "main.py").write_text(
+        textwrap.dedent('''\
         """CLI entry point for the processing pipeline."""
 
         import argparse
@@ -281,12 +292,14 @@ def create_synthetic_repo(base_dir: Path) -> dict:
 
         if __name__ == "__main__":
             sys.exit(main())
-    '''))
+    ''')
+    )
 
     # === utils/helpers.py — standalone utility functions ===
     (base_dir / "utils").mkdir(exist_ok=True)
     (base_dir / "utils" / "__init__.py").write_text("")
-    (base_dir / "utils" / "helpers.py").write_text(textwrap.dedent('''\
+    (base_dir / "utils" / "helpers.py").write_text(
+        textwrap.dedent('''\
         """Standalone utility functions — some are ORPHANS (no callers)."""
 
         from typing import Any
@@ -345,12 +358,14 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             for match in re.finditer(r"<(\\w+)>([^<]*)</\\1>", xml_string):
                 result[match.group(1)] = match.group(2)
             return result
-    '''))
+    ''')
+    )
 
     # === tests/test_pipeline.py ===
     (base_dir / "tests").mkdir(exist_ok=True)
     (base_dir / "tests" / "__init__.py").write_text("")
-    (base_dir / "tests" / "test_pipeline.py").write_text(textwrap.dedent('''\
+    (base_dir / "tests" / "test_pipeline.py").write_text(
+        textwrap.dedent('''\
         """Tests for the processing pipeline."""
 
         import pytest
@@ -386,15 +401,18 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             def test_deduplicate(self):
                 items = [{"id": 1}, {"id": 2}, {"id": 1}]
                 assert len(deduplicate(items)) == 2
-    '''))
+    ''')
+    )
 
     # === pyproject.toml ===
-    (base_dir / "pyproject.toml").write_text(textwrap.dedent('''\
+    (base_dir / "pyproject.toml").write_text(
+        textwrap.dedent("""\
         [project]
         name = "synthetic-fixture"
         version = "0.1.0"
         requires-python = ">=3.11"
-    '''))
+    """)
+    )
 
     # Return gold answers for benchmark tasks
     return {
@@ -419,7 +437,6 @@ def create_synthetic_repo(base_dir: Path) -> dict:
                 "gold_line_range": (7, 14),
                 "gold_symbol": "normalize",
             },
-
             # === DISCOVERY TASKS ===
             "T-D1": {
                 "description": "Trace the call chain from main() to format_result",
@@ -440,7 +457,6 @@ def create_synthetic_repo(base_dir: Path) -> dict:
                 "gold_file": "core/transforms.py",
                 "gold_symbol": "normalize",
             },
-
             # === ORPHAN TASKS ===
             "T-O1": {
                 "description": "Find all functions with zero callers (dead code candidates)",
@@ -456,13 +472,12 @@ def create_synthetic_repo(base_dir: Path) -> dict:
                     "utils/helpers.py::slugify",
                 ],
             },
-
             # === WEAKNESS TASKS ===
             "T-W1": {
                 "description": "Find all descendants of BaseTransformer (including transitive)",
                 "gold_descendants": [
                     "plugins/advanced.py::AdvancedTransformer",  # direct
-                    "plugins/advanced.py::CachedTransformer",   # transitive (via AdvancedTransformer)
+                    "plugins/advanced.py::CachedTransformer",  # transitive (via AdvancedTransformer)
                 ],
                 "note": "Trifecta only resolves direct inheritance — should MISS CachedTransformer",
             },
@@ -477,19 +492,22 @@ def create_synthetic_repo(base_dir: Path) -> dict:
                 "gold_depth": 2,  # CachedTransformer -> AdvancedTransformer -> BaseTransformer
                 "note": "Requires transitive inheritance resolution",
             },
-
             # === ARCHITECTURE TASKS ===
             "T-A1": {
                 "description": "Map the architecture layers of this codebase",
                 "gold_layers": {
                     "cli": ["cli/main.py"],
-                    "core": ["core/engine.py", "core/transforms.py", "core/output.py", "core/base.py"],
+                    "core": [
+                        "core/engine.py",
+                        "core/transforms.py",
+                        "core/output.py",
+                        "core/base.py",
+                    ],
                     "plugins": ["plugins/advanced.py"],
                     "utils": ["utils/helpers.py"],
                     "tests": ["tests/test_pipeline.py"],
                 },
             },
-
             # === SEMANTIC TASKS ===
             "T-S1": {
                 "description": "Find the function that removes duplicate items",
@@ -509,6 +527,7 @@ def create_synthetic_repo(base_dir: Path) -> dict:
 
 if __name__ == "__main__":
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmp:
         gold = create_synthetic_repo(Path(tmp) / "synthetic-fixture")
         print(f"Created repo at {gold['repo_root']}")

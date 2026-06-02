@@ -16,6 +16,7 @@ from typing import Any
 @dataclass
 class RetrievalResult:
     """Result from a RAG retrieval query."""
+
     query: str
     matches: list[dict[str, Any]]  # [{file, line, text, score}]
     latency_ms: int
@@ -45,7 +46,8 @@ class RAGBaseline:
 
         python_files = list(self.repo_root.rglob("*.py"))
         python_files = [
-            f for f in python_files
+            f
+            for f in python_files
             if "/.venv/" not in str(f)
             and "/__pycache__/" not in str(f)
             and "/node_modules/" not in str(f)
@@ -72,22 +74,32 @@ class RAGBaseline:
                     # Flush previous chunk
                     if current_chunk:
                         self._add_chunk(
-                            rel_path, current_start, i,
-                            chunk_name, "\n".join(current_chunk),
+                            rel_path,
+                            current_start,
+                            i,
+                            chunk_name,
+                            "\n".join(current_chunk),
                         )
                     current_chunk = [line]
                     current_start = i
-                    chunk_name = stripped.split("(")[0].replace("def ", "").replace(
-                        "class ", ""
-                    ).replace("async ", "").strip()
+                    chunk_name = (
+                        stripped.split("(")[0]
+                        .replace("def ", "")
+                        .replace("class ", "")
+                        .replace("async ", "")
+                        .strip()
+                    )
                 else:
                     current_chunk.append(line)
 
             # Flush last chunk
             if current_chunk:
                 self._add_chunk(
-                    rel_path, current_start, len(lines),
-                    chunk_name, "\n".join(current_chunk),
+                    rel_path,
+                    current_start,
+                    len(lines),
+                    chunk_name,
+                    "\n".join(current_chunk),
                 )
 
             # Also index the whole file as a "document"
@@ -113,14 +125,16 @@ class RAGBaseline:
         content: str,
     ) -> None:
         tokens = self._tokenize(content)
-        self.chunks.append({
-            "file": str(file),
-            "start_line": start + 1,  # 1-indexed
-            "end_line": end,
-            "name": name,
-            "content": content,
-            "tokens": tokens,
-        })
+        self.chunks.append(
+            {
+                "file": str(file),
+                "start_line": start + 1,  # 1-indexed
+                "end_line": end,
+                "name": name,
+                "content": content,
+                "tokens": tokens,
+            }
+        )
         for t in set(tokens):
             self.doc_freq[t] += 1
 
@@ -129,7 +143,9 @@ class RAGBaseline:
         return re.findall(r"[a-z0-9_]+", text.lower())
 
     def _tfidf_score(
-        self, query_tokens: list[str], doc_tokens: list[str],
+        self,
+        query_tokens: list[str],
+        doc_tokens: list[str],
     ) -> float:
         """Compute TF-IDF cosine similarity."""
         if not doc_tokens or not query_tokens:
@@ -151,7 +167,9 @@ class RAGBaseline:
         return score
 
     def search(
-        self, query: str, top_k: int = 10,
+        self,
+        query: str,
+        top_k: int = 10,
     ) -> RetrievalResult:
         """Search for relevant chunks using TF-IDF."""
         t0 = time.perf_counter()
@@ -172,13 +190,18 @@ class RAGBaseline:
         for file_path, tokens in self.index.items():
             score = self._tfidf_score(query_tokens, tokens)
             if score > 0:
-                scored.append((score * 0.5, {  # Lower weight for file-level
-                    "file": file_path,
-                    "start_line": 1,
-                    "end_line": 0,
-                    "name": Path(file_path).stem,
-                    "content": "",
-                }))
+                scored.append(
+                    (
+                        score * 0.5,
+                        {  # Lower weight for file-level
+                            "file": file_path,
+                            "start_line": 1,
+                            "end_line": 0,
+                            "name": Path(file_path).stem,
+                            "content": "",
+                        },
+                    )
+                )
 
         # Sort and take top-k
         scored.sort(key=lambda x: x[0], reverse=True)
@@ -186,13 +209,15 @@ class RAGBaseline:
 
         matches = []
         for score, chunk in top:
-            matches.append({
-                "file": chunk["file"],
-                "line": chunk["start_line"],
-                "name": chunk.get("name", ""),
-                "text": chunk["content"][:200],
-                "score": round(score, 4),
-            })
+            matches.append(
+                {
+                    "file": chunk["file"],
+                    "line": chunk["start_line"],
+                    "name": chunk.get("name", ""),
+                    "text": chunk["content"][:200],
+                    "score": round(score, 4),
+                }
+            )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -221,13 +246,15 @@ class RAGBaseline:
             ]
             for pattern in patterns:
                 if pattern in content:
-                    matches.append({
-                        "file": chunk["file"],
-                        "line": chunk["start_line"],
-                        "name": symbol_name,
-                        "text": content[:200],
-                        "score": 1.0,
-                    })
+                    matches.append(
+                        {
+                            "file": chunk["file"],
+                            "line": chunk["start_line"],
+                            "name": symbol_name,
+                            "text": content[:200],
+                            "score": 1.0,
+                        }
+                    )
                     break
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
@@ -260,13 +287,15 @@ class RAGBaseline:
                     key = f"{chunk['file']}:{chunk['start_line']}"
                     if key not in seen_files:
                         seen_files.add(key)
-                        matches.append({
-                            "file": chunk["file"],
-                            "line": chunk["start_line"],
-                            "name": chunk.get("name", ""),
-                            "text": chunk["content"][:200],
-                            "score": 0.8 if not has_def else 0.4,
-                        })
+                        matches.append(
+                            {
+                                "file": chunk["file"],
+                                "line": chunk["start_line"],
+                                "name": chunk.get("name", ""),
+                                "text": chunk["content"][:200],
+                                "score": 0.8 if not has_def else 0.4,
+                            }
+                        )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -307,13 +336,15 @@ class RAGBaseline:
                 if name in chunk["content"]:
                     caller_count += 1
             if caller_count == 0:
-                orphans.append({
-                    "file": loc["file"],
-                    "line": loc["line"],
-                    "name": name,
-                    "text": f"Zero callers found for {name}",
-                    "score": 1.0,
-                })
+                orphans.append(
+                    {
+                        "file": loc["file"],
+                        "line": loc["line"],
+                        "name": name,
+                        "text": f"Zero callers found for {name}",
+                        "score": 1.0,
+                    }
+                )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -325,7 +356,10 @@ class RAGBaseline:
         )
 
     def find_subclasses(
-        self, class_name: str, *, transitive: bool = False,
+        self,
+        class_name: str,
+        *,
+        transitive: bool = False,
     ) -> RetrievalResult:
         """Find subclasses — text-based grep for class X(Y)."""
         t0 = time.perf_counter()
@@ -352,14 +386,16 @@ class RAGBaseline:
                         key = f"{chunk['file']}:{child}"
                         if key not in seen:
                             seen.add(key)
-                            matches.append({
-                                "file": chunk["file"],
-                                "line": chunk["start_line"],
-                                "name": child,
-                                "text": content[:200],
-                                "score": 1.0,
-                                "depth": depth + 1,
-                            })
+                            matches.append(
+                                {
+                                    "file": chunk["file"],
+                                    "line": chunk["start_line"],
+                                    "name": child,
+                                    "text": content[:200],
+                                    "score": 1.0,
+                                    "depth": depth + 1,
+                                }
+                            )
                             if transitive:
                                 next_queue.append(child)
             queue = next_queue
@@ -384,13 +420,15 @@ class RAGBaseline:
         matches = []
         for chunk in self.chunks:
             if "importlib" in chunk["content"]:
-                matches.append({
-                    "file": chunk["file"],
-                    "line": chunk["start_line"],
-                    "name": chunk.get("name", ""),
-                    "text": chunk["content"][:200],
-                    "score": 1.0,
-                })
+                matches.append(
+                    {
+                        "file": chunk["file"],
+                        "line": chunk["start_line"],
+                        "name": chunk.get("name", ""),
+                        "text": chunk["content"][:200],
+                        "score": 1.0,
+                    }
+                )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 

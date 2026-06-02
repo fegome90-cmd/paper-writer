@@ -1,6 +1,6 @@
 # Fair Benchmark Report — Bias-Corrected Results
 
-> Generated: 2026-06-02 16:04
+> Generated: 2026-06-02 16:46
 > Purpose: Address the 4 critical biases in the original Trifecta A/B study
 
 ## Aggregate Results
@@ -8,7 +8,7 @@
 | Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |
 |-----|-----------|--------------|---------|-----------------|-------|
 | rag_tfidf | 0.75 | 0.70 | 0.24 | 18 | 16 |
-| lsp_pyright | 0.88 | 0.74 | 0.49 | 2120 | 16 |
+| lsp_pyright | 0.88 | 0.74 | 0.49 | 2042 | 16 |
 | trifecta | 0.44 | 0.44 | 0.04 | 0 | 16 |
 
 ## Honest Context Value Ratio
@@ -44,8 +44,8 @@ Tasks specifically targeting Trifecta's known limitations:
 - **T-W3** (rag_tfidf): recall=1.00, latency=0ms
 - **T-W3** (lsp_pyright): recall=1.00, latency=1ms
 - **T-W3** (trifecta): recall=1.00, latency=0ms
-- **T-W1** (rag_tfidf): recall=0.00, latency=1ms
-- **T-W1** (lsp_pyright): recall=1.00, latency=143ms
+- **T-W1** (rag_tfidf): recall=0.00, latency=0ms
+- **T-W1** (lsp_pyright): recall=1.00, latency=140ms
 - **T-W1** (trifecta): recall=0.00, latency=0ms
 
 **Trifecta underperforms on weakness tasks**: 0.50 vs RAG 0.75 — weakness exposure CONFIRMED
@@ -58,7 +58,7 @@ Tasks specifically targeting Trifecta's known limitations:
 - **trifecta**: 0ms
 
 ### Repo: (varies)
-- **rag_tfidf**: 93ms
+- **rag_tfidf**: 92ms
 - **lsp_pyright**: 0ms
 - **trifecta**: 0ms
 

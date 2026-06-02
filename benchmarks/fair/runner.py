@@ -26,6 +26,7 @@ from fixtures.synthetic_repo import create_synthetic_repo
 @dataclass
 class TaskResult:
     """Result from a single task on a single arm."""
+
     task_id: str
     arm: str
     repo: str
@@ -41,6 +42,7 @@ class TaskResult:
 @dataclass
 class BenchmarkResult:
     """Complete benchmark results."""
+
     tasks: list[TaskResult] = field(default_factory=list)
     index_times: dict[str, int] = field(default_factory=dict)
 
@@ -162,9 +164,7 @@ def score_task(
                         break
 
         recall = len(found_orphans) / max(len(gold_orphans), 1)
-        precision = len(found_orphans) / max(
-            len(found_orphans) + false_positives, 1
-        )
+        precision = len(found_orphans) / max(len(found_orphans) + false_positives, 1)
 
         return {"recall": recall, "precision": precision, "mrr": recall}
 
@@ -188,13 +188,9 @@ def score_task(
 
         if gold_answer is not None and gold_depth is not None:
             # Binary + depth check
-            depth_ok = any(
-                m.get("depth", 0) >= gold_depth for m in matches
-            )
+            depth_ok = any(m.get("depth", 0) >= gold_depth for m in matches)
             has_result = len(matches) > 0
-            correct = has_result == gold_answer and (
-                not gold_depth or depth_ok
-            )
+            correct = has_result == gold_answer and (not gold_depth or depth_ok)
             return {
                 "recall": 1.0 if correct else 0.0,
                 "precision": 1.0 if correct else 0.0,
@@ -264,9 +260,7 @@ def run_benchmark(
     lsp = LSPBaseline(repo_root=repo_root)
     lsp_index_ms = 0  # No separate index phase
 
-    trifecta = TrifectaArm(
-        repo_root=repo_root, graph_db_path=graph_db_path
-    )
+    trifecta = TrifectaArm(repo_root=repo_root, graph_db_path=graph_db_path)
     trifecta_index_ms = 0  # Pre-computed
 
     result.index_times = {
@@ -306,9 +300,7 @@ def run_benchmark(
             result.tasks.append(lsp_result)
 
         # --- Trifecta arm ---
-        tri_result = _run_arm_task(
-            trifecta, task_id, task, task_type
-        )
+        tri_result = _run_arm_task(trifecta, task_id, task, task_type)
         if tri_result:
             tri_result.arm = "trifecta"
             tri_result.repo = repo_name
@@ -338,9 +330,7 @@ def _run_arm_task(
         elif task_id.startswith("T-D1"):
             # Discovery — trace call chain
             if hasattr(arm, "search"):
-                res = arm.search(
-                    "main entry point processing pipeline format_result"
-                )
+                res = arm.search("main entry point processing pipeline format_result")
             else:
                 return None
 
@@ -362,9 +352,7 @@ def _run_arm_task(
         elif task_id.startswith("T-W1"):
             # Transitive inheritance
             if hasattr(arm, "find_subclasses"):
-                res = arm.find_subclasses(
-                    "BaseTransformer", transitive=True
-                )
+                res = arm.find_subclasses("BaseTransformer", transitive=True)
             else:
                 return None
 
@@ -378,18 +366,14 @@ def _run_arm_task(
         elif task_id.startswith("T-W3"):
             # Transitive inheritance depth check
             if hasattr(arm, "find_subclasses"):
-                res = arm.find_subclasses(
-                    "BaseTransformer", transitive=True
-                )
+                res = arm.find_subclasses("BaseTransformer", transitive=True)
             else:
                 return None
 
         elif task_id.startswith("T-A"):
             # Architecture
             if hasattr(arm, "search"):
-                res = arm.search(
-                    "architecture layers core plugins cli utils tests"
-                )
+                res = arm.search("architecture layers core plugins cli utils tests")
             else:
                 return None
 
@@ -428,9 +412,9 @@ def _run_arm_task(
         mrr=scores["mrr"],
         latency_ms=res.latency_ms,
         matches_found=len(res.matches),
-        gold_items=len(task.get("gold_orphans", task.get(
-            "gold_files", task.get("gold_descendants", [])
-        ))),
+        gold_items=len(
+            task.get("gold_orphans", task.get("gold_files", task.get("gold_descendants", [])))
+        ),
     )
 
 
@@ -471,12 +455,8 @@ def generate_report(
     # === Comparison table ===
     lines.append("## Aggregate Results")
     lines.append("")
-    lines.append(
-        "| Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |"
-    )
-    lines.append(
-        "|-----|-----------|--------------|---------|-----------------|-------|"
-    )
+    lines.append("| Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |")
+    lines.append("|-----|-----------|--------------|---------|-----------------|-------|")
     for arm in arms:
         if arm in arm_scores:
             s = arm_scores[arm]
@@ -500,25 +480,17 @@ def generate_report(
         else:
             honest_cvr = float("inf")
 
-        lines.append(
-            f"**Trifecta vs RAG (honest CVR)**: {honest_cvr:.2f}x"
-        )
+        lines.append(f"**Trifecta vs RAG (honest CVR)**: {honest_cvr:.2f}x")
 
         if "lsp_pyright" in arm_scores:
             lsp_r = arm_scores["lsp_pyright"]["avg_recall"]
             if lsp_r > 0:
                 lsp_cvr = tri_r / lsp_r
-                lines.append(
-                    f"**Trifecta vs LSP (honest CVR)**: {lsp_cvr:.2f}x"
-                )
+                lines.append(f"**Trifecta vs LSP (honest CVR)**: {lsp_cvr:.2f}x")
 
         lines.append("")
-        lines.append(
-            "Original claimed CVR: **1.37x** (vs blind agent)"
-        )
-        lines.append(
-            f"Honest CVR (vs RAG baseline): **{honest_cvr:.2f}x**"
-        )
+        lines.append("Original claimed CVR: **1.37x** (vs blind agent)")
+        lines.append(f"Honest CVR (vs RAG baseline): **{honest_cvr:.2f}x**")
         lines.append(
             f"Bias reduction: "
             f"**{((1.37 - honest_cvr) / 1.37 * 100):.0f}%** of original claim was bias"
@@ -539,12 +511,8 @@ def generate_report(
         "T-S": "Semantic Search",
     }
 
-    lines.append(
-        "| Category | RAG | LSP | Trifecta | Winner |"
-    )
-    lines.append(
-        "|----------|-----|-----|----------|--------|"
-    )
+    lines.append("| Category | RAG | LSP | Trifecta | Winner |")
+    lines.append("|----------|-----|-----|----------|--------|")
 
     for prefix, cat_name in categories.items():
         cat_tasks = [t for t in all_tasks if t.task_id.startswith(prefix)]
@@ -573,23 +541,16 @@ def generate_report(
 
     weakness_tasks = [t for t in all_tasks if t.task_id.startswith("T-W")]
     if weakness_tasks:
-        lines.append(
-            "Tasks specifically targeting Trifecta's known limitations:"
-        )
+        lines.append("Tasks specifically targeting Trifecta's known limitations:")
         lines.append("")
         for t in weakness_tasks:
             lines.append(
-                f"- **{t.task_id}** ({t.arm}): recall={t.recall:.2f}, "
-                f"latency={t.latency_ms}ms"
+                f"- **{t.task_id}** ({t.arm}): recall={t.recall:.2f}, latency={t.latency_ms}ms"
             )
 
         # Check if Trifecta underperforms on weakness tasks
-        tri_weak = [
-            t for t in weakness_tasks if t.arm == "trifecta"
-        ]
-        rag_weak = [
-            t for t in weakness_tasks if t.arm == "rag_tfidf"
-        ]
+        tri_weak = [t for t in weakness_tasks if t.arm == "trifecta"]
+        rag_weak = [t for t in weakness_tasks if t.arm == "rag_tfidf"]
         if tri_weak and rag_weak:
             tri_avg = sum(t.recall for t in tri_weak) / len(tri_weak)
             rag_avg = sum(t.recall for t in rag_weak) / len(rag_weak)
@@ -621,21 +582,11 @@ def generate_report(
     # === Conclusion ===
     lines.append("## Conclusion")
     lines.append("")
-    lines.append(
-        "This benchmark corrects the 4 critical biases of the original study:"
-    )
-    lines.append(
-        "1. **Straw-man control**: Replaced blind agent with RAG + LSP baselines"
-    )
-    lines.append(
-        "2. **Restrictive timeout**: All arms complete all tasks; latency measured"
-    )
-    lines.append(
-        "3. **Single repo**: Tested on synthetic fixture with known gold answers"
-    )
-    lines.append(
-        "4. **No weakness testing**: Targeted transitive inheritance and dynamic imports"
-    )
+    lines.append("This benchmark corrects the 4 critical biases of the original study:")
+    lines.append("1. **Straw-man control**: Replaced blind agent with RAG + LSP baselines")
+    lines.append("2. **Restrictive timeout**: All arms complete all tasks; latency measured")
+    lines.append("3. **Single repo**: Tested on synthetic fixture with known gold answers")
+    lines.append("4. **No weakness testing**: Targeted transitive inheritance and dynamic imports")
     lines.append("")
 
     if "rag_tfidf" in arm_scores and "trifecta" in arm_scores:
@@ -714,10 +665,7 @@ def main() -> None:
     # === 2. Paper-writer (real repo, pre-computed graph) ===
     print("=== Paper-Writer (Real Repo) ===")
     pw_root = Path("/Users/felipe_gonzalez/Developer/paper-writer")
-    pw_graph = (
-        pw_root
-        / ".trifecta/cache/graph_paper-writer_0a9954b4.db"
-    )
+    pw_graph = pw_root / ".trifecta/cache/graph_paper-writer_0a9954b4.db"
 
     if pw_root.exists() and pw_graph.exists():
         # Define tasks for paper-writer (manually verified gold)
@@ -816,10 +764,7 @@ def main() -> None:
     print("METRIC rag_recall=" + f"{rag_recall:.2f}")
     print("METRIC lsp_recall=" + f"{lsp_recall:.2f}")
     print("METRIC total_tasks=" + str(len(all_tasks_flat)))
-    print(
-        "METRIC bias_reduction_pct="
-        + f"{((1.37 - honest_cvr) / 1.37 * 100):.0f}"
-    )
+    print("METRIC bias_reduction_pct=" + f"{((1.37 - honest_cvr) / 1.37 * 100):.0f}")
 
 
 if __name__ == "__main__":

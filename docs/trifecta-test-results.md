@@ -104,21 +104,15 @@ trifecta graph test-coverage --symbol "ManuscriptState.validate"
 
 **Effort**: Medium per language (4-8h each).
 
-### O-4: Context Pack Diff Tracking
+### O-4: Context Pack Diff Tracking → IMPLEMENTED ✅
 
-**Current**: `ctx validate` detects stale chunks but doesn't show WHAT changed.
-**Proposal**: Show diff stats: "3 chunks stale, 1 new file, 2 files modified."
+**Implemented in**: autoresearch experiment #71 (2026-06-02).
 
-**Effort**: Low (2-4h).
+`ctx validate` now shows diff summary with 5 new fields: `stale_files_count`, `modified_files_count`, `removed_files_count`, `new_files_count`, `total_chunks`. CLI output: "📊 Diff: 1 modified, 0 removed, 0 new, 153 total chunks".
 
-### O-5: Graph Staleness Auto-Detection
+### O-5: Graph Staleness Auto-Detection → IMPLEMENTED ✅
 
-**Current**: Users must manually run `graph index` after code changes.
-**Proposal**: Track file modification times. If source files are newer than the graph DB, flag as stale in `graph status` and `graph overview`.
-
-**Evidence**: After our edits to paper-writer, the graph showed 268 nodes but some files had been modified. No warning was emitted.
-
-**Effort**: Low (2-4h). Compare `os.path.getmtime` of source files vs graph DB.
+**Implemented in**: autoresearch-gate v1.2.0. The gate checks `graph status` for staleness before trusting results. If > 10% of source files are stale, recommends re-indexing.
 
 ### O-6: Hub-Based Architecture Summary
 
@@ -136,39 +130,83 @@ Highest-risk change: get_asset_path (touched by 9 symbols across 3 files).
 
 **Effort**: Low (2-4h). Template + hub/orphan data.
 
-### O-7: Oracle Confidence Score
+### O-7: Oracle Confidence Score → IMPLEMENTED ✅
 
-**Current**: Fidelity is categorical (full/degraded/fallback). No numeric confidence.
-**Proposal**: Add a confidence score 0-1 based on:
-- Number of signals that returned data (3/4 = high)
-- Score of top PRIME chunk (>10 = high)
-- Whether AST symbols were found
-- Whether graph data was returned
+**Implemented in**: autoresearch experiment #73 (2026-06-02).
 
-**Value**: AI agents can use the score to decide whether to trust the answer or fall back to reading files.
-
-**Effort**: Medium (4-8h). Scoring algorithm + testing.
+Oracle now returns numeric confidence score 0.0-1.0. AI agents can use a single number to decide whether to trust the answer. Critical fix: hits are Pydantic models (not dicts) — requires `getattr` fallback to avoid silent `top_score=0`. 12 confidence signals now available.
 
 ---
 
 ## 4. Performance Summary
 
-| Operation | Latency (paper-writer, 268 nodes) |
+| Operation | Latency (paper-writer, 1030 nodes) |
 |-----------|----------------------------------|
-| Graph index | ~2s (one-time) |
+| Graph index | ~3s (one-time) |
 | Oracle (fallback, PRIME+AST only) | 19-25ms |
 | Oracle (full, PRIME+AST+Graph) | 88-302ms |
 | Graph search | ~10ms |
-| Graph callers/impact | ~5-25ms |
-| Graph orphans | ~50ms |
-| Graph overview | ~60ms |
+| Graph callers/impact | ~5-30ms |
+| Graph subclasses | ~15ms |
+| Graph orphans | ~80ms |
+| Graph hubs | ~60ms |
+| Graph overview | ~70ms |
 | AST symbols | ~100ms |
 | PRIME search | ~20-100ms |
 | ctx sync (build+validate) | ~3s |
 
+> **Scaling note**: Graph grew 4x (268→1030 nodes, 230→838 edges) but query latencies remained within 2x. SQLite handles 1000-node graphs comfortably. The `graph orphans` operation is the most affected (50ms→80ms) due to full-node scan with semantic classification.
+
 ---
 
-## 5. Security Test Results
+## 5. Quality Gate Test Results (autoresearch-gate v1.2.0)
+
+### 5.1 Subclass Coverage: Graph vs grep
+
+| Method | ToolWrapper subclasses found | Time |
+|--------|----------------------------|------|
+| `grep -rn "class.*ToolWrapper"` | 7 (misses `InMemoryToolWrapper` in mocks) | ~200ms |
+| `trifecta graph subclasses --symbol ToolWrapper` | **8** (finds all, including mocks) | ~15ms |
+
+The graph finds the mock class because it uses AST inheritance analysis, not string matching. This matters for quality gates: missing a mock class means the gate won't check if the mock still works after a constructor change.
+
+### 5.2 Spine Coverage: Hubs Over Time
+
+| Date | Nodes | Edges | Top Hub | Hub in_degree |
+|------|-------|-------|---------|--------------|
+| 2026-06-01 | 268 | 230 | `get_asset_path` | 9 |
+| 2026-06-02 | 1030 | 838 | `make_manuscript` | 30 |
+
+The spine grew significantly with expanded indexing. The gate now checks the top 10 hubs against every design's "Affected Areas" table.
+
+### 5.3 Orphan Classification: Semantic Categories
+
+| Category | Count | Example | Gate Action |
+|----------|-------|---------|-------------|
+| `dead_code` | 724 | Test fixtures called by pytest | INFO (expected) |
+| `validation_gap` | 13 | `StateManager.validate_state` (no callers) | CRITICAL (security risk) |
+| `entry_point` | 12 | `main()` CLI entry | INFO (expected) |
+| `data_flow_break` | 5 | `YamlFileStateRepository.load` (no prod callers) | HIGH (data integrity) |
+| `dispatch_target` | 3 | Commands dispatched via argparse | INFO (expected) |
+
+The `validation_gap` category directly surfaced the finding that `StateManager.validate_state` is never called in production — a potential security vulnerability.
+
+### 5.4 Real Gate Execution: ToolResolver Audit
+
+The autoresearch-gate with Trifecta augmentation audited the `tool-resolver-port-centralization` SDD change:
+
+**Claims verified**: 8/8 (7 VERIFIED, 1 MISMATCH documented)
+**Graph queries**: subclasses(8), hubs(10), callers(3), orphans(757)
+**Findings**: 0 CRITICAL, 0 HIGH, 1 MEDIUM (intentional backward compat), 1 LOW (dead code)
+**Verdict**: PASS
+
+Key finding the graph caught that grep would have missed:
+- `PandocRenderer.is_available()` line 61 still has `shutil.which()` fallback — contradicts "adapters no longer know how to find binaries" claim
+- `ToolResolutionError` defined but never used — dead code from refactor
+
+---
+
+## 6. Security Test Results
 
 | Attack Vector | Result |
 |---------------|--------|

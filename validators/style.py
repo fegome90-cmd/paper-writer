@@ -18,7 +18,7 @@ _PASSIVE_RE = re.compile(
 _MAX_SENTENCE_LENGTH = 300
 
 # Strong claims without hedging
-_UNBACKED_CLAIMS: list[str] = [
+_UNBACKED_CLAIMS_LIST: list[str] = [
     "proves that",
     "proven that",
     "conclusively",
@@ -40,9 +40,13 @@ _UNBACKED_CLAIMS: list[str] = [
     "this confirms",
     "this establishes",
 ]
+_UNBACKED_CLAIMS_RE = re.compile(
+    r"\b(" + "|".join(re.escape(p) for p in _UNBACKED_CLAIMS_LIST) + r")\b",
+    re.IGNORECASE,
+)
 
 # Forbidden phrases in academic writing
-_FORBIDDEN_PHRASES: list[str] = [
+_FORBIDDEN_PHRASES_LIST: list[str] = [
     "in order to",
     "due to the fact that",
     "for the purpose of",
@@ -58,9 +62,13 @@ _FORBIDDEN_PHRASES: list[str] = [
     "needless to say",
     "it goes without saying",
 ]
+_FORBIDDEN_PHRASES_RE = re.compile(
+    r"\b(" + "|".join(re.escape(p) for p in _FORBIDDEN_PHRASES_LIST) + r")\b",
+    re.IGNORECASE,
+)
 
 # Informal words/phrases
-_INFORMAL_WORDS: list[str] = [
+_INFORMAL_WORDS_LIST: list[str] = [
     "basically",
     "literally",
     "obviously",
@@ -75,6 +83,10 @@ _INFORMAL_WORDS: list[str] = [
     "wanna",
     "gotta",
 ]
+_INFORMAL_WORDS_RE = re.compile(
+    r"\b(" + "|".join(re.escape(p) for p in _INFORMAL_WORDS_LIST) + r")\b",
+    re.IGNORECASE,
+)
 
 
 def validate_style(text: str, file_label: str = "") -> list[dict[str, Any]]:
@@ -126,47 +138,46 @@ def validate_style(text: str, file_label: str = "") -> list[dict[str, Any]]:
             )
 
     # Check unbacked strong claims
-    text_lower = text.lower()
-    for claim in _UNBACKED_CLAIMS:
-        if claim in text_lower:
-            findings.append(
-                {
-                    "code": "unbacked_claim",
-                    "severity": "warning",
-                    "message": (
-                        f"Strong claim without hedging: '{claim}'. "
-                        f"Consider adding a qualifier (e.g., 'suggests', 'may') "
-                        f"and cite supporting evidence."
-                    ),
-                    "location": location,
-                }
-            )
+    for match in _UNBACKED_CLAIMS_RE.finditer(text):
+        claim = match.group().lower()
+        findings.append(
+            {
+                "code": "unbacked_claim",
+                "severity": "warning",
+                "message": (
+                    f"Strong claim without hedging: '{claim}'. "
+                    f"Consider adding a qualifier (e.g., 'suggests', 'may') "
+                    f"and cite supporting evidence."
+                ),
+                "location": location,
+            }
+        )
 
     # Check forbidden phrases
-    for phrase in _FORBIDDEN_PHRASES:
-        if phrase in text_lower:
-            findings.append(
-                {
-                    "code": "forbidden_phrase",
-                    "severity": "error",
-                    "message": (
-                        f"Forbidden phrase in academic writing: '{phrase}'. "
-                        f"Remove or replace with precise language."
-                    ),
-                    "location": location,
-                }
-            )
+    for match in _FORBIDDEN_PHRASES_RE.finditer(text):
+        phrase = match.group().lower()
+        findings.append(
+            {
+                "code": "forbidden_phrase",
+                "severity": "error",
+                "message": (
+                    f"Forbidden phrase in academic writing: '{phrase}'. "
+                    f"Remove or replace with precise language."
+                ),
+                "location": location,
+            }
+        )
 
     # Check informal language
-    for word in _INFORMAL_WORDS:
-        if re.search(rf"\b{re.escape(word)}\b", text_lower):
-            findings.append(
-                {
-                    "code": "informal_language",
-                    "severity": "warning",
-                    "message": f"Informal language detected: '{word}'. Use formal academic tone.",
-                    "location": location,
-                }
-            )
+    for match in _INFORMAL_WORDS_RE.finditer(text):
+        word = match.group().lower()
+        findings.append(
+            {
+                "code": "informal_language",
+                "severity": "warning",
+                "message": f"Informal language detected: '{word}'. Use formal academic tone.",
+                "location": location,
+            }
+        )
 
     return findings

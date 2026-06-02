@@ -1,7 +1,9 @@
 # Trifecta Extension — Complete Capability Guide
 
-> Practical documentation of the Trifecta context engine, tested against `paper-writer` (268 nodes, 230 edges).
+> Practical documentation of the Trifecta context engine, tested against `paper-writer` (1030 nodes, 838 edges).
 > Every example uses real commands and real output.
+>
+> **Last updated**: 2026-06-02 — Added §12 (Quality Gate Integration), updated stats, new graph commands.
 
 ---
 
@@ -111,7 +113,9 @@ $ trifecta ctx oracle -s . -q "path from ManuscriptState to Orchestrator"
 $ trifecta graph index -s . --json
 ```
 
-**Output**: `{ "node_count": 268, "edge_count": 230 }` — indexes all Python files in configured source roots.
+**Output**: `{ "node_count": 1030, "edge_count": 838 }` — indexes all Python files in configured source roots.
+
+> **Graph growth**: The paper-writer graph grew from 268 nodes / 230 edges (initial index) to 1030 nodes / 838 edges after adding configurable `source_roots` via `trifecta_config.json` and DI edge resolution (`self.attr.method()` patterns). The 4x growth came from expanding indexing scope beyond `harness/` to include `integrations/`, `validators/`, `engine/`, `parsers/`, and test directories.
 
 ### 4.2 Architectural Overview
 
@@ -119,29 +123,31 @@ $ trifecta graph index -s . --json
 $ trifecta graph overview -s . --json
 ```
 
-**Output for paper-writer**:
+**Output for paper-writer** (current):
 ```json
 {
-  "node_count": 268,
-  "edge_count": 230,
+  "node_count": 1030,
+  "edge_count": 838,
   "calls_cycles": 0,
   "imports_cycles": 0,
   "inherits_cycles": 0,
-  "orphan_count": 97,
+  "orphan_count": 757,
   "top_hubs": [
-    {"symbol_name": "get_asset_path", "in_degree": 9},
-    {"symbol_name": "ValidatorResult", "in_degree": 8},
-    {"symbol_name": "run_gate", "in_degree": 8}
+    {"symbol_name": "make_manuscript", "in_degree": 30},
+    {"symbol_name": "ManuscriptState", "in_degree": 26},
+    {"symbol_name": "_run", "in_degree": 20},
+    {"symbol_name": "get_asset_path", "in_degree": 19},
+    {"symbol_name": "_load_config", "in_degree": 17}
   ],
   "path_stats": {
-    "avg_distance": 1.93,
-    "max_distance": 6,
-    "reachability_pct": 1.3
+    "avg_distance": 2.1,
+    "max_distance": 8,
+    "reachability_pct": 1.5
   }
 }
 ```
 
-**Use case**: 30-second codebase health check. Zero cycles = clean dependency graph. 97 orphans = dead code candidates. Top hubs = architectural keystones.
+**Use case**: 30-second codebase health check. Zero cycles = clean dependency graph. 757 orphans classified by semantic category (not just "dead code"). Top hubs = architectural keystones.
 
 ### 4.3 Callers and Callees
 
@@ -157,12 +163,17 @@ $ trifecta graph callers -s . --symbol "Orchestrator.execute" --json
 $ trifecta graph orphans -s . --json
 ```
 
-**Output for paper-writer**: 97 orphans classified into:
+**Output for paper-writer**: 757 orphans classified into 5 semantic categories:
+
 | Type | Count | Meaning |
 |------|-------|---------|
-| `dead_code` | 82 | No callers, not an entry point |
-| `dispatch_target` | 3 | Called via CLI dispatch (argparse), not statically traceable |
+| `dead_code` | 724 | No callers, not an entry point (91% are test fixtures called by pytest dynamically) |
+| `validation_gap` | 13 | Functions with validate/check/verify/ensure names but no callers — potential security gaps |
 | `entry_point` | 12 | CLI entry functions, HTTP handlers — expected orphans |
+| `data_flow_break` | 5 | Repository load/save methods with no callers in production — data integrity risk |
+| `dispatch_target` | 3 | Called via CLI dispatch (argparse), not statically traceable |
+
+The semantic categories go beyond "dead code" to encode **data-flow reasoning**. A `validation_gap` orphan like `StateManager.validate_state` is flagged as CRITICAL because it's a validation function with no caller — meaning validation is never triggered in production. A `data_flow_break` like `YamlFileStateRepository.load` signals that the data pipeline may have a gap where state is written but never read (or vice versa).
 
 **Use case**: See [orphan-detection-use-cases.md](./orphan-detection-use-cases.md) for 10 practical applications.
 
@@ -172,16 +183,21 @@ $ trifecta graph orphans -s . --json
 $ trifecta graph hubs -s . --json
 ```
 
-**Top 5 hubs in paper-writer**:
+**Top 5 hubs in paper-writer** (current):
 | Symbol | Called by | Role |
 |--------|-----------|------|
-| `get_asset_path` | 9 | Asset resolution (used by all validators) |
-| `ValidatorResult` | 8 | Return type for all tool wrappers |
-| `run_gate` | 8 | Gate execution (called by all 8 validate_* functions) |
-| `harness.ports.assets` (module) | 7 | Most-imported module |
-| `ToolWrapper` | 7 | Base class for all integrations |
+| `make_manuscript` | 30 | Test fixture (conftest.py centralization) |
+| `ManuscriptState` | 26 | Domain model — core state machine |
+| `_run` | 20 | E2E test helper |
+| `get_asset_path` | 19 | Asset resolution (used by all validators) |
+| `_load_config` | 17 | Packaging test helper |
 
-**Use case**: New developers read the top 5 hubs to understand the architecture. AI agents prioritize reading hub code to maximize coverage per file read.
+**Architectural significance**: The top production hubs are `ManuscriptState` (26), `get_asset_path` (19), and `build_orchestrator_dependencies` (15). These form the **architectural spine** — changes to any of these have the highest blast radius. AI agents should read these files first to maximize context coverage per file read.
+
+**Use cases**:
+1. New developers read the top 5 hubs to understand the architecture.
+2. Quality gates verify that design docs address all affected spine hubs.
+3. Refactoring prioritizes spine stability — hubs with in_degree > 15 get extra review scrutiny.
 
 ### 4.6 Impact Analysis (Blast Radius)
 
@@ -334,21 +350,24 @@ An AI agent should:
 
 ---
 
-## 8. Performance Profile (paper-writer, 268 nodes)
+## 8. Performance Profile (paper-writer, 1030 nodes)
 
 | Operation | Latency | Notes |
 |-----------|---------|-------|
-| Graph index | ~2s | One-time, cached in SQLite |
+| Graph index | ~3s | One-time, cached in SQLite |
 | Oracle (architecture query) | 166ms | PRIME + AST, no graph match |
 | Oracle (impact query) | 302ms | PRIME + AST + Graph (23ms graph) |
 | Oracle (caller query) | 88ms | Graph-heavy (5.6ms graph) |
 | Graph search | ~10ms | Pure SQLite query |
+| Graph subclasses | ~15ms | AST-based, finds all including mocks |
 | Graph path/impact | ~25ms | BFS on SQLite |
-| Graph orphans | ~50ms | Full scan of 268 nodes |
+| Graph orphans | ~80ms | Full scan of 1030 nodes with semantic classification |
+| Graph hubs | ~60ms | In-degree ranking of all nodes |
 | AST symbols | ~100ms | AST parse + cache |
 | PRIME search | ~50-100ms | TF-IDF weighted chunk retrieval |
+| Graph callers (depth=3) | ~30ms | Transitive BFS |
 
-**Key insight**: Graph operations are 10-50x faster than PRIME/AST. For structural queries (callers, impact, path), the graph is the fastest path to precise answers.
+**Key insight**: Graph operations remain 10-50x faster than PRIME/AST even at 1030 nodes. SQLite scales well — the bottleneck is always the embedding/search layer, never the graph. For structural queries (callers, impact, path, subclasses), the graph is the fastest path to precise answers.
 
 ---
 
@@ -423,3 +442,109 @@ AI agents connect via stdio or Unix socket. The daemon handles connection poolin
 | Graph only indexes Python source roots | Configure `source_roots` in `trifecta_config.json` |
 | PRIME search is TF-IDF, not semantic | Use specific terms; broad queries get lower scores |
 | Import edges track module-level imports only | Dynamic imports (`importlib.import_module`) are invisible |
+| `graph impact` uses call edges only | Inheritance-based blast radius requires `graph subclasses` separately |
+| `graph subclasses` does not resolve transitive inheritance | Chain queries manually: `graph parents` → `graph subclasses` |
+
+---
+
+## 12. Quality Gate Integration (autoresearch-gate)
+
+Trifecta graph queries are integrated into the `autoresearch-gate` skill (v1.2.0) as a **second verification pass** during Phase 0.5 (Code-Anchored Verification). When the graph index is available, the gate runs structural checks that grep cannot perform.
+
+### 12.1 Subclass Coverage Audit
+
+**Problem**: When a design modifies a base class constructor (e.g., adding `resolver` parameter to `ToolWrapper.__init__`), the designer must enumerate ALL subclasses. Missed subclasses = hidden blast radius.
+
+**Graph solution**:
+```bash
+$ trifecta graph subclasses --symbol ToolWrapper -s . --json
+# Returns: 8 subclasses (BibliographyNormalizer, PandocRenderer,
+#   RefsMetadataValidator, RefsValidator, ReportingAuditor,
+#   StyleLinter, ZoteroImporter, InMemoryToolWrapper)
+```
+
+**grep** finds 7 (misses `InMemoryToolWrapper` in test mocks). **Graph** finds 8 via AST inheritance analysis.
+
+**Real case**: The ToolResolver design listed 4 wrappers. Graph found 8. The gate auto-generated a HIGH finding: "Design covers 4 of 8 subclasses. Missing: RefsValidator, RefsMetadataValidator, InMemoryToolWrapper."
+
+### 12.2 Spine Coverage Verification
+
+**Problem**: Changes to top-hub symbols (the architectural spine) have disproportionate blast radius. Design docs must explicitly address spine impacts.
+
+**Graph solution**:
+```bash
+$ trifecta graph hubs -s . --json
+# Returns top-10 hubs with in-degree counts
+```
+
+The gate cross-references each hub against the design's "Affected Areas" table. If a hub is affected but not listed → HIGH finding.
+
+**Real case**: `build_orchestrator_dependencies` (in_degree=15) was affected by the ToolResolver change. The gate confirmed it was listed in the design's scope table.
+
+### 12.3 Layer Boundary Detection
+
+**Problem**: Code that appears duplicated across files may be an **intentional architectural layer** — different process boundaries, different error handling, different testing scopes.
+
+**Graph solution**:
+```bash
+$ trifecta graph path -f "run_real_validation" -t "Orchestrator.execute" -s .
+# If no path exists → separate layers, not duplication
+```
+
+**Real case**: `verification/run_real_validation.py` (1110 lines) appeared to duplicate Orchestrator logic. Graph showed no call path between them → intentional layer boundary (subprocess runner vs in-process orchestrator). Gate marked as INFO, not a finding.
+
+### 12.4 Orphan Delta (Pre/Post Change)
+
+**Problem**: Refactoring can create new orphans — symbols that lost their callers.
+
+**Graph solution**: Compare orphan counts before and after implementation. New orphans in production code → WARNING.
+
+### 12.5 Dead Symbol Detection
+
+**Problem**: Unused exception classes, dead imports, and unreachable code accumulate over time.
+
+**Graph solution**:
+```bash
+$ trifecta graph orphans -s . --json | jq '.orphans[] | select(.orphan_type == "dead_code")'
+```
+
+**Real case**: `ToolResolutionError` was defined in `harness/ports/tool_resolver.py` but never raised or caught anywhere. The graph flagged it as `dead_code`, and the gate generated a LOW finding.
+
+### 12.6 Integration Pattern
+
+The gate follows this two-pass pattern:
+
+```
+Phase 0.5 (Code-Anchored Verification):
+  Pass 1: grep/ls/read — string-level checks (file existence, import counts)
+  Pass 2: Trifecta graph — structural checks (subclasses, hubs, paths, orphans)
+  Merge:  Deduplicate findings, tag graph-confirmed findings
+```
+
+| Check Available | Confidence | Method |
+|----------------|------------|--------|
+| Trifecta + grep | HIGH | Graph first, grep confirms |
+| Trifecta only | MEDIUM | Verify edge cases with manual read |
+| grep only | STANDARD | Standard code-anchor procedure |
+| Neither | LOW | Flag as risk |
+
+### 12.7 Fidelity Gating
+
+Graph findings inherit the Oracle's fidelity model:
+
+| Fidelity | Gate Action |
+|----------|------------|
+| `full` | Use as primary evidence |
+| `partial` | Confirm with grep before generating finding |
+| `degraded` | Skip graph result, rely on grep |
+
+### 12.8 Commands Used by the Gate
+
+| Gate Check | Graph Command | What It Catches |
+|------------|--------------|-----------------|
+| Subclass coverage | `graph subclasses --symbol <Base>` | Missing subclasses in design scope |
+| Blast radius | `graph callers --symbol <X> --depth 3` | Hidden transitive dependents |
+| Spine verification | `graph hubs -s .` | Unaddressed high-impact changes |
+| Orphan delta | `graph orphans -s .` | New dead code from refactoring |
+| Layer boundary | `graph path -f <A> -t <B>` | Intentional vs accidental duplication |
+| Dead symbols | `graph orphans -s .` (filter dead_code) | Unused exception classes, dead imports |
