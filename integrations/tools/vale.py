@@ -20,6 +20,8 @@ class StyleLinter(ToolWrapper):
     passive voice, long sentences, and common issues.
     """
 
+    tool_id: str = "vale"
+
     @property
     def name(self) -> str:
         return "vale"
@@ -47,11 +49,15 @@ class StyleLinter(ToolWrapper):
         artifacts_checked: list[str] = []
         findings: list[dict[str, Any]] = []
 
-        # Try Vale first
-        vale_available = self._vale_available()
+        # Resolve path to vale via tool resolver
+        resolution = None
+        if self._resolver:
+            resolution = self._resolver.resolve(self.tool_id)
+
+        vale_executable = resolution.path if resolution else None
 
         # Explicit degraded-mode notice when Vale is missing
-        if not vale_available:
+        if not vale_executable:
             findings.append(
                 {
                     "code": "degraded_mode",
@@ -71,8 +77,8 @@ class StyleLinter(ToolWrapper):
                 continue
             artifacts_checked.append(str(mf_path))
 
-            if vale_available:
-                findings.extend(self._run_vale(mf_path))
+            if vale_executable:
+                findings.extend(self._run_vale(vale_executable, mf_path))
             else:
                 findings.extend(self._builtin_lint(mf_path))
 
@@ -86,7 +92,7 @@ class StyleLinter(ToolWrapper):
         else:
             status = "pass"
 
-        tool_label = "Vale" if vale_available else "built-in linter"
+        tool_label = "Vale" if vale_executable else "built-in linter"
         summary = (
             f"Style check passed ({tool_label})."
             if status == "pass"
@@ -104,17 +110,6 @@ class StyleLinter(ToolWrapper):
             artifacts_checked=artifacts_checked,
         )
 
-    def _vale_available(self) -> bool:
-        """Check if Vale CLI is installed."""
-
-        try:
-            result = subprocess.run(
-                ["vale", "--version"], capture_output=True, text=True, timeout=5
-            )
-            return result.returncode == 0
-        except (FileNotFoundError, OSError, subprocess.SubprocessError):
-            return False
-
     @staticmethod
     def _styles_path() -> str:
         """Return the path to Vale style packs.
@@ -125,14 +120,14 @@ class StyleLinter(ToolWrapper):
 
         return str(get_vale_styles_dir())
 
-    def _run_vale(self, file_path: Path) -> list[dict[str, Any]]:
+    def _run_vale(self, executable: Path, file_path: Path) -> list[dict[str, Any]]:
         """Run Vale and parse JSON output into findings."""
 
         findings: list[dict[str, Any]] = []
         try:
             result = subprocess.run(
                 [
-                    "vale",
+                    str(executable),
                     "--output=JSON",
                     f"--stylesPath={self._styles_path()}",
                     str(file_path),

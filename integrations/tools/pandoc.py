@@ -44,6 +44,8 @@ class PandocRenderer(ToolWrapper):
     - If all requested formats fail, status is ``fail``.
     """
 
+    tool_id: str = "pandoc"
+
     @property
     def name(self) -> str:
         return "pandoc-renderer"
@@ -53,8 +55,10 @@ class PandocRenderer(ToolWrapper):
         return "render_passed"
 
     def is_available(self) -> bool:
-        """Check if ``pandoc`` is discoverable on PATH."""
-        return shutil.which("pandoc") is not None
+        """Check if ``pandoc`` is discoverable via resolver."""
+        if self._resolver:
+            return self._resolver.resolve(self.tool_id) is not None
+        return shutil.which(self.tool_id) is not None
 
     def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> ValidatorResult:
         """Render manuscript via Pandoc and return a structured result.

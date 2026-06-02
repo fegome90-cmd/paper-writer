@@ -43,6 +43,8 @@ class FilesystemActionRunner(ActionRunner):
         return resolved
 
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
+        if args is None:
+            args = {}
         artifacts: list[str] = []
 
         if command == "init":
