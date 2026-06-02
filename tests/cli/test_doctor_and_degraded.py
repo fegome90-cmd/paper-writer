@@ -36,7 +36,7 @@ class TestDoctorCheckAll:
     @patch("harness.services.doctor.shutil.which", return_value=None)
     def test_all_missing(self, mock_which: MagicMock) -> None:
         tools = check_all_tools()
-        assert len(tools) == 4
+        assert len(tools) == 6
         assert all(not t.installed for t in tools)
         assert all(t.degraded_message for t in tools)
 

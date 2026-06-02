@@ -61,6 +61,18 @@ def check_all_tools() -> list[ToolStatus]:
             "Bibliography normalization",
             "npm install -g bibtex-tidy",
         ),
+        _make(
+            "pdftotext",
+            ["-v"],
+            "PDF text extraction (poppler)",
+            "brew install poppler",
+        ),
+        _make(
+            "pdfinfo",
+            ["-v"],
+            "PDF metadata extraction (poppler)",
+            "brew install poppler",
+        ),
     ]
 
     for t in tools:
