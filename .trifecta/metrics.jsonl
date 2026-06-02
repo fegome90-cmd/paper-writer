@@ -131,3 +131,29 @@
 {"ts": 1780310543.510157, "query_type": "health", "fidelity": "full", "latency_ms": 0}
 {"ts": 1780310543.510179, "query_type": "ast_analyze", "fidelity": "full", "latency_ms": 0}
 {"ts": 1780310543.5102038, "query_type": "ast_analyze", "fidelity": "full", "latency_ms": 0}
+{"ts": 1780370195.878367, "query_type": "search", "fidelity": "fallback", "latency_ms": 166, "timings": {"pack_load_and_search_ms": 70, "ast_resolution_ms": 95, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780370197.536931, "query_type": "search", "fidelity": "fallback", "latency_ms": 105, "timings": {"pack_load_and_search_ms": 45, "ast_resolution_ms": 59, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780370199.327015, "query_type": "impact", "fidelity": "full", "latency_ms": 302, "timings": {"pack_load_and_search_ms": 192, "ast_resolution_ms": 85, "graph_signal_ms": 23, "lsp_signal_ms": 0}}
+{"ts": 1780370421.0106602, "query_type": "path", "fidelity": "degraded", "latency_ms": 226, "timings": {"pack_load_and_search_ms": 82, "ast_resolution_ms": 96, "graph_signal_ms": 46, "lsp_signal_ms": 0}}
+{"ts": 1780370443.3535, "query_type": "callers", "fidelity": "full", "latency_ms": 88, "timings": {"pack_load_and_search_ms": 35, "ast_resolution_ms": 47, "graph_signal_ms": 5, "lsp_signal_ms": 0}}
+{"ts": 1780392271.171296, "query_type": "search", "fidelity": "fallback", "latency_ms": 32, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 19, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392304.496032, "query_type": "search", "fidelity": "fallback", "latency_ms": 19, "timings": {"pack_load_and_search_ms": 8, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392305.155604, "query_type": "search", "fidelity": "fallback", "latency_ms": 11, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 0, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392305.823342, "query_type": "search", "fidelity": "fallback", "latency_ms": 20, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392306.641175, "query_type": "impact", "fidelity": "degraded", "latency_ms": 43, "timings": {"pack_load_and_search_ms": 32, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392307.306798, "query_type": "search", "fidelity": "fallback", "latency_ms": 21, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392352.219168, "query_type": "search", "fidelity": "fallback", "latency_ms": 23, "timings": {"pack_load_and_search_ms": 12, "ast_resolution_ms": 11, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392352.893682, "query_type": "search", "fidelity": "fallback", "latency_ms": 25, "timings": {"pack_load_and_search_ms": 14, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392383.706727, "query_type": "search", "fidelity": "fallback", "latency_ms": 28, "timings": {"pack_load_and_search_ms": 16, "ast_resolution_ms": 11, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392384.401193, "query_type": "search", "fidelity": "fallback", "latency_ms": 24, "timings": {"pack_load_and_search_ms": 12, "ast_resolution_ms": 12, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392385.062979, "query_type": "search", "fidelity": "fallback", "latency_ms": 22, "timings": {"pack_load_and_search_ms": 12, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392416.453881, "query_type": "search", "fidelity": "fallback", "latency_ms": 25, "timings": {"pack_load_and_search_ms": 14, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392417.1250482, "query_type": "search", "fidelity": "fallback", "latency_ms": 23, "timings": {"pack_load_and_search_ms": 12, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780392848.322495, "query_type": "impact", "fidelity": "full", "latency_ms": 25, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392849.008285, "query_type": "impact", "fidelity": "full", "latency_ms": 26, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 12, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392861.644036, "query_type": "impact", "fidelity": "full", "latency_ms": 24, "timings": {"pack_load_and_search_ms": 12, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392892.839606, "query_type": "impact", "fidelity": "full", "latency_ms": 25, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392893.508887, "query_type": "impact", "fidelity": "full", "latency_ms": 25, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392894.173901, "query_type": "impact", "fidelity": "full", "latency_ms": 23, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392894.843155, "query_type": "impact", "fidelity": "full", "latency_ms": 26, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 9, "graph_signal_ms": 2, "lsp_signal_ms": 0}}
+{"ts": 1780392895.510705, "query_type": "impact", "fidelity": "degraded", "latency_ms": 22, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
