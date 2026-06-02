@@ -86,3 +86,72 @@ class TestStageGatesConsistency:
                 gates[gate] = True
             state = ManuscriptState(stage=stage, gates=gates)
             state.validate()
+
+
+class TestTransitionTo:
+    """Test transition_to enforces forward-only and precondition checks."""
+
+    def _bootstrap_state(self) -> ManuscriptState:
+        """Create a bootstrap state with all gates False."""
+        return ManuscriptState(stage="bootstrap", gates=_make_all_gates_false())
+
+    def test_forward_transition_allowed(self) -> None:
+        """bootstrap -> search should succeed."""
+        state = self._bootstrap_state()
+        state.gates["repo_initialized"] = True
+        state.transition_to("search")
+        assert state.stage == "search"
+
+    def test_same_stage_is_noop(self) -> None:
+        """Transition to current stage is a silent no-op."""
+        state = self._bootstrap_state()
+        state.transition_to("bootstrap")
+        assert state.stage == "bootstrap"
+
+    def test_backward_transition_rejected(self) -> None:
+        """search -> bootstrap should be rejected (backward)."""
+        gates = _make_all_gates_false()
+        gates["repo_initialized"] = True
+        state = ManuscriptState(stage="search", gates=gates)
+        with pytest.raises(DomainStateError, match="Backward transition not allowed"):
+            state.transition_to("bootstrap")
+
+    def test_skip_stages_rejected(self) -> None:
+        """bootstrap -> screen (skipping search) should be rejected."""
+        state = self._bootstrap_state()
+        with pytest.raises(DomainStateError, match="Cannot skip stages"):
+            state.transition_to("screen")
+
+    def test_transition_with_unsatisfied_preconditions_rejected(self) -> None:
+        """search -> screen without search_completed should be rejected."""
+        gates = _make_all_gates_false()
+        gates["repo_initialized"] = True
+        state = ManuscriptState(stage="search", gates=gates)
+        # search_completed is False — precondition for 'screen'
+        with pytest.raises(DomainStateError, match=r"precondition gate.*not True"):
+            state.transition_to("screen")
+
+    def test_transition_with_satisfied_preconditions_allowed(self) -> None:
+        """search -> screen with search_completed=True should succeed."""
+        gates = _make_all_gates_false()
+        gates["repo_initialized"] = True
+        gates["search_completed"] = True
+        state = ManuscriptState(stage="search", gates=gates)
+        state.transition_to("screen")
+        assert state.stage == "screen"
+
+    def test_multi_step_forward_progression(self) -> None:
+        """Full valid progression: bootstrap -> search -> screen."""
+        state = self._bootstrap_state()
+        state.gates["repo_initialized"] = True
+        state.transition_to("search")
+        state.gates["search_completed"] = True
+        state.transition_to("screen")
+        assert state.stage == "screen"
+
+    def test_backward_from_verified_rejected(self) -> None:
+        """verified -> rendering should be rejected."""
+        gates = _make_all_gates_true()
+        state = ManuscriptState(stage="verified", gates=gates)
+        with pytest.raises(DomainStateError, match="Backward transition"):
+            state.transition_to("rendering")
