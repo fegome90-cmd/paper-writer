@@ -152,3 +152,43 @@ class TestPackagingCompleteness:
             if get_asset_path(*parts).exists():
                 found += 1
         assert found == len(self.EXPECTED_ASSETS)
+
+
+class TestAssetResolutionErrors:
+    """Test that AssetResolutionError is raised for missing directories."""
+
+    def test_get_templates_dir_raises_on_missing(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
+        from harness.ports.assets import AssetResolutionError, get_templates_dir
+
+        with patch("harness.ports.assets._get_package_root", return_value=tmp_path):
+            with pytest.raises(AssetResolutionError, match="Templates directory not found"):
+                get_templates_dir()
+
+    def test_get_styles_dir_raises_on_missing(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
+        from harness.ports.assets import AssetResolutionError, get_styles_dir
+
+        with patch("harness.ports.assets._get_package_root", return_value=tmp_path):
+            with pytest.raises(AssetResolutionError, match="Styles directory not found"):
+                get_styles_dir()
+
+    def test_get_rules_dir_raises_on_missing(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
+        from harness.ports.assets import AssetResolutionError, get_rules_dir
+
+        with patch("harness.ports.assets._get_package_root", return_value=tmp_path):
+            with pytest.raises(AssetResolutionError, match="Rules directory not found"):
+                get_rules_dir()
+
+    def test_get_schemas_dir_raises_on_missing(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
+        from harness.ports.assets import AssetResolutionError, get_schemas_dir
+
+        with patch("harness.ports.assets._get_package_root", return_value=tmp_path):
+            with pytest.raises(AssetResolutionError, match="Schemas directory not found"):
+                get_schemas_dir()
