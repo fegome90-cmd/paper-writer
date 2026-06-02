@@ -23,31 +23,7 @@ class BibliographyNormalizer(ToolWrapper):
     check that detects unclosed braces and malformed entries.
     """
 
-    _MINIMUM_VERSION: ClassVar[tuple[int, int, int]] = (1, 11, 0)
-
-    @classmethod
-    def _parse_version(cls, version_str: str) -> tuple[int, int, int] | None:
-        """Parse a version string like '1.12.0' or 'v1.11.0' into a 3-element int tuple.
-
-        Pads shorter tuples with zeros: "1.11" → (1, 11, 0), "2" → (2, 0, 0).
-        Returns None for malformed strings.
-        """
-        cleaned = version_str.strip().lstrip("v")
-        if not cleaned:
-            return None
-        parts = cleaned.split(".")
-        try:
-            int_parts = [int(p) for p in parts]
-        except ValueError:
-            return None
-        # Reject negative segments (semver components are non-negative)
-        if any(p < 0 for p in int_parts):
-            return None
-        # Normalize to 3 segments (major.minor.patch), pad with zeros
-        major = int_parts[0] if len(int_parts) > 0 else 0
-        minor = int_parts[1] if len(int_parts) > 1 else 0
-        patch = int_parts[2] if len(int_parts) > 2 else 0
-        return (major, minor, patch)
+    _MINIMUM_VERSION: ClassVar[str] = "1.11.0"
 
     @property
     def name(self) -> str:
@@ -58,7 +34,9 @@ class BibliographyNormalizer(ToolWrapper):
         return "bib_normalized"
 
     def is_available(self) -> bool:
-        """bibtex-tidy is optional — built-in fallback always exists."""
+        """bibtex-tidy is available if the resolver can find it."""
+        if self._resolver:
+            return self._resolver.resolve(self.name, self._MINIMUM_VERSION) is not None
         return True
 
     def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> ValidatorResult:
@@ -95,31 +73,16 @@ class BibliographyNormalizer(ToolWrapper):
                 artifacts_checked=[],
             )
 
-        # Resolve path to bibtex-tidy
-        executable_info = self._resolve_executable(context)
-        if not executable_info:
+        # Resolve path to bibtex-tidy via tool resolver
+        resolution = None
+        if self._resolver:
+            resolution = self._resolver.resolve(self.name, self._MINIMUM_VERSION)
+
+        if not resolution:
             # Fall back to built-in validation
             return self._builtin_validate(bib_file, bib_path)
 
-        executable, source = executable_info
-
-        # Verify version
-        version_ok, version_msg = self._verify_version(executable, source)
-        if not version_ok:
-            return ValidatorResult(
-                validator="bibliography",
-                status="fail",
-                summary=f"bibtex-tidy version verification failed: {version_msg}",
-                findings=[
-                    {
-                        "code": "version_mismatch",
-                        "severity": "error",
-                        "message": version_msg,
-                        "artifact": bib_path,
-                    }
-                ],
-                artifacts_checked=[bib_path],
-            )
+        executable = resolution.path
 
         # Backup the original bibliography file to protect against corruption during --modify
         # Apply strict collision protection
@@ -212,91 +175,6 @@ class BibliographyNormalizer(ToolWrapper):
             findings=findings,
             artifacts_checked=[bib_path],
         )
-
-    def _resolve_executable(self, context: dict[str, Any]) -> tuple[Path, str] | None:
-        """Resolve path to bibtex-tidy in order of preference:
-        1. Environment override: BIBTEX_TIDY_BIN (wins first, fails fast)
-        2. Local toolchain: repo_path/tools/node/node_modules/.bin/bibtex-tidy
-        3. Global PATH fallback (only if BIBTEX_TIDY_ALLOW_GLOBAL=true)
-
-        Returns:
-            Tuple of (Path to executable, source label) or None.
-            source label is one of: "env", "local", "global"
-        """
-
-        # 1. Environment override (Wins first)
-        env_bin = os.environ.get("BIBTEX_TIDY_BIN")
-        if env_bin:
-            env_path = Path(env_bin)
-            if env_path.exists() and os.access(env_path, os.X_OK):
-                return env_path, "env"
-            raise FileNotFoundError(
-                f"BIBTEX_TIDY_BIN specified but not found or not executable: {env_bin}"
-            )
-
-        # 2. Local toolchain (relative to repo root)
-        repo_path = Path(context.get("repo_path", "."))
-        local_path = repo_path / "tools" / "node" / "node_modules" / ".bin" / "bibtex-tidy"
-        if local_path.exists() and os.access(local_path, os.X_OK):
-            return local_path, "local"
-
-        # 3. Global PATH fallback (only if allowed by config)
-        allow_global = os.environ.get("BIBTEX_TIDY_ALLOW_GLOBAL", "").lower() in (
-            "true",
-            "1",
-            "yes",
-        )
-        if allow_global:
-            global_bin = shutil.which("bibtex-tidy")
-            if global_bin:
-                return Path(global_bin), "global"
-
-        return None
-
-    def _verify_version(self, executable: Path, source: str) -> tuple[bool, str]:
-        """Verify bibtex-tidy meets the minimum supported version.
-
-        Uses semver tuple comparison: any version >= _MINIMUM_VERSION passes.
-        The ``source`` parameter is included in error messages for diagnostics
-        but does NOT affect the version threshold -- same minimum everywhere.
-
-        Returns:
-            Tuple of (success: bool, version_string_or_error: str).
-        """
-        min_v = self._MINIMUM_VERSION
-        min_str = ".".join(str(p) for p in min_v)
-
-        try:
-            result = subprocess.run(
-                [str(executable), "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode != 0:
-                return False, (
-                    f"Failed to run version check for {executable} "
-                    f"(source={source}, exit code {result.returncode})"
-                )
-
-            raw = result.stdout.strip()
-            parsed = self._parse_version(raw)
-            if parsed is None:
-                return False, (
-                    f"Malformed version output from {source}: {raw!r} "
-                    f"(expected semver, minimum {min_str})"
-                )
-
-            if parsed < min_v:
-                return False, (
-                    f"Unsupported version {raw} from {source}: minimum required is {min_str}"
-                )
-            return True, raw
-
-        except subprocess.TimeoutExpired:
-            return False, f"Version check timed out for {executable} (source={source})"
-        except OSError as e:
-            return False, f"Error running version check for {executable} (source={source}): {e}"
 
     def _builtin_validate(self, bib_file: Path, bib_path: str) -> ValidatorResult:
         """Built-in BibTeX validation when bibtex-tidy is not available.

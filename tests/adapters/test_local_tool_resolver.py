@@ -1,10 +1,10 @@
 import os
-import subprocess
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
+
 from harness.adapters.local_tool_resolver import LocalToolResolver
-from harness.ports.tool_resolver import ToolResolution
+
 
 @pytest.fixture
 def repo_root(tmp_path):

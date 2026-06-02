@@ -3,7 +3,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
 
 from harness.ports.tool_resolver import ToolResolution, ToolResolver
 

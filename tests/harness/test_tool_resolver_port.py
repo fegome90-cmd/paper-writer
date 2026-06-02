@@ -1,7 +1,9 @@
 from pathlib import Path
-from typing import Any
+
 import pytest
+
 from harness.ports.tool_resolver import ToolResolution, ToolResolver
+
 
 def test_tool_resolution_dataclass():
     """Verify ToolResolution can be instantiated."""

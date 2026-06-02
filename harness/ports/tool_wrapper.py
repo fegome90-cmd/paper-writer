@@ -9,6 +9,8 @@ See integrations/tools/ for implementations.
 from abc import ABC, abstractmethod
 from typing import Any
 
+from harness.ports.tool_resolver import ToolResolver
+
 
 class ValidatorResult:
     """Structured result returned by every validator wrapper.
@@ -50,27 +52,31 @@ class ToolWrapper(ABC):
     directly — it calls wrapper instances through this interface.
     """
 
-    @abstractmethod
-    def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> ValidatorResult:
-        """Execute the tool and return a structured result.
+    def __init__(self, resolver: ToolResolver | None = None) -> None:
+        """Initialize the wrapper with an optional tool resolver.
 
         Args:
-            artifacts: Normalized input artifacts (file paths, config).
-                       Must include the keys documented in VALIDATOR_CONTRACTS.md.
-            context: Execution context (cwd, state_file, command).
-
-        Returns:
-            ValidatorResult with status, summary, findings, and artifacts_checked.
-
-        Raises:
-            ToolNotAvailableError: If the external tool is not installed.
+            resolver: Optional ToolResolver for binary path resolution.
         """
-        pass
+        self._resolver = resolver
 
     @abstractmethod
-    def is_available(self) -> bool:
-        """Return True if the underlying external tool is installed and callable."""
+    def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> ValidatorResult:
+        """Execute the tool and return a structured result."""
         pass
+
+    def is_available(self) -> bool:
+        """Return True if the tool is available.
+
+        Default implementation checks the resolver if present.
+        Pure-Python wrappers that don't override this will return True
+        by default (assuming no resolver is needed).
+        """
+        if self._resolver:
+            # Subclasses should provide their specific tool_id if they use a resolver
+            tool_id = getattr(self, "tool_id", self.name)
+            return self._resolver.resolve(tool_id) is not None
+        return True
 
     @property
     @abstractmethod

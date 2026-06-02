@@ -7,7 +7,6 @@ Defines the interface for locating and verifying external binaries
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass(frozen=True)

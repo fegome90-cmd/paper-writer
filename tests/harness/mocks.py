@@ -4,6 +4,7 @@ from harness.domain.state import ManuscriptState
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
 from harness.ports.state_repository import StateRepository, StateRepositoryError
+from harness.ports.tool_resolver import ToolResolver
 from integrations.tools.base import ToolWrapper, ValidatorResult
 
 
@@ -113,9 +114,15 @@ class InMemoryToolWrapper(ToolWrapper):
     Records calls for assertion in tests.
     """
 
-    def __init__(self, gate: str, return_status: str = "pass") -> None:
+    def __init__(
+        self,
+        gate: str,
+        return_status: str = "pass",
+        resolver: ToolResolver | None = None,
+    ) -> None:
         self._gate = gate
         self._return_status = return_status
+        self._resolver = resolver
         self.calls: list[tuple[dict[str, Any], dict[str, Any]]] = []
 
     @property

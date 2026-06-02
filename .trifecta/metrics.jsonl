@@ -214,3 +214,5 @@
 {"ts": 1780410237.637759, "query_type": "search", "fidelity": "fallback", "latency_ms": 54, "timings": {"pack_load_and_search_ms": 28, "ast_resolution_ms": 25, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780410238.341923, "query_type": "semantic_hover", "fidelity": "fallback", "latency_ms": 40, "timings": {"pack_load_and_search_ms": 30, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780410802.6182961, "query_type": "search", "fidelity": "fallback", "latency_ms": 31, "timings": {"pack_load_and_search_ms": 17, "ast_resolution_ms": 14, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780420921.3815901, "query_type": "search", "fidelity": "fallback", "latency_ms": 27, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 13, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780420982.6615438, "query_type": "search", "fidelity": "fallback", "latency_ms": 50, "timings": {"pack_load_and_search_ms": 23, "ast_resolution_ms": 26, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
