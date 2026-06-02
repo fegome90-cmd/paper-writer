@@ -139,7 +139,27 @@ def score_task(
     elif task_type == "orphan":
         # Gold: specific orphan names
         gold_orphans = set(gold.get("gold_orphans", []))
+        gold_false_orphans = set(gold.get("gold_false_orphans", []))
 
+        # If gold_orphans is empty but gold_false_orphans is populated,
+        # this is a PRECISION-ONLY task: the repo has no real orphans.
+        # Scoring measures avoidance of false positives.
+        if not gold_orphans and gold_false_orphans:
+            # Count how many false orphans each arm incorrectly reports
+            false_alarms = 0
+            for m in matches:
+                name = m.get("name", "")
+                for gf in gold_false_orphans:
+                    if name == gf.split("::")[-1]:
+                        false_alarms += 1
+                        break
+            # Precision: fewer false alarms = better
+            # Recall is N/A (no true orphans to find)
+            recall = 0.0  # nothing to recall
+            precision = 1.0 - (false_alarms / max(len(gold_false_orphans), 1))
+            return {"recall": recall, "precision": precision, "mrr": precision}
+
+        # Standard orphan scoring
         found_orphans = set()
         false_positives = 0
 
@@ -719,21 +739,28 @@ def main() -> None:
                 "gold_files": ["harness/services/"],
                 "gold_symbol": "run_gate",
             },
-            # === ORPHAN (classification test, not detection) ===
+            # === ORPHAN (classification test) ===
             "T-O1": {
-                "description": ("Distinguish entry points from dead code"),
-                # These are graph-orphans that are ENTRY POINTS
-                "gold_orphans": [
+                "description": (
+                    "Distinguish entry points from dead code"
+                ),
+                # NOTE: Paper-writer has NO true orphans. All 7 graph-detected
+                # "orphans" are false positives: same-file calls missed by graph.
+                # - _get_version: called on line 182 (version=_get_version())
+                # - _cmd_audit_prose: passed to set_defaults(func=...) line 241
+                # - main: entry point called by Python runtime
+                # - _install_hint: called on doctor.py line 33
+                # - _assert_gate_true: called on gates.py line 293
+                # Testing precision: arms should NOT report these as orphans.
+                "gold_orphans": [],
+                # These functions LOOK like orphans to graph analysis
+                # but are actually called (false graph orphans)
+                "gold_false_orphans": [
                     "cli/paper/main.py::_get_version",
                     "cli/paper/main.py::_cmd_audit_prose",
                     "cli/paper/main.py::main",
-                ],
-                # These are heavily-called NON-orphans
-                "gold_false_orphans": [
-                    "harness/ports/assets.py::get_asset_path",
-                    "harness/services/orchestrator_builder.py::build_orchestrator_dependencies",
-                    "validators/style.py::validate_style",
-                    "harness/services/assembler.py::assemble_manuscript",
+                    "harness/services/doctor.py::_install_hint",
+                    "harness/services/gates.py::_assert_gate_true",
                 ],
             },
             # === WEAKNESS ===
