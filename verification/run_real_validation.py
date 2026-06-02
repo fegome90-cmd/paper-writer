@@ -33,8 +33,6 @@ from typing import Any
 
 import yaml
 
-from harness.domain.state import ManuscriptState
-
 # ── Constants ──────────────────────────────────────────────────────────────
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

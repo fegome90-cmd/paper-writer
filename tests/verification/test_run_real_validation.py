@@ -185,11 +185,19 @@ class TestPrepareWorkspace:
         # Cleanup
         shutil.rmtree(ws, ignore_errors=True)
 
-    def test_state_yaml_is_uninitialized(self, manifest_file: Path, tmp_path: Path) -> None:
+    def test_state_yaml_initialized_via_delegation(
+        self, manifest_file: Path, tmp_path: Path
+    ) -> None:
         manifest = load_manifest(manifest_file)
         ws = prepare_workspace(manifest, tmp_root=tmp_path)
         state = yaml.safe_load((ws / "outputs" / "state.yaml").read_text())
-        assert state["repo_initialized"] is False
+        # After ISSUE-007 refactor, prepare_workspace delegates to paper init,
+        # which bootstraps AND verifies the scaffold, setting repo_initialized=True.
+        assert state["gates"]["repo_initialized"] is True
+        # All other gates should still be False
+        for gate, value in state["gates"].items():
+            if gate != "repo_initialized":
+                assert value is False, f"Gate {gate} should be False after init"
         shutil.rmtree(ws, ignore_errors=True)
 
     def test_copies_templates_and_styles(self, manifest_file: Path, tmp_path: Path) -> None:
