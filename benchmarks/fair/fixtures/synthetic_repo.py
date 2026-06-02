@@ -459,9 +459,7 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             },
             # === ORPHAN TASKS ===
             "T-O1": {
-                "description": (
-                    "Find all functions with zero callers"
-                ),
+                "description": ("Find all functions with zero callers"),
                 # True orphans: never called from anywhere
                 "gold_orphans": [
                     "utils/helpers.py::rot13",

@@ -159,9 +159,7 @@ def score_task(
                 false_positives += 1
 
         recall = len(found_orphans) / max(len(gold_orphans), 1)
-        precision = len(found_orphans) / max(
-            len(found_orphans) + false_positives, 1
-        )
+        precision = len(found_orphans) / max(len(found_orphans) + false_positives, 1)
 
         return {"recall": recall, "precision": precision, "mrr": recall}
 
