@@ -18,6 +18,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from harness.domain.state import ManuscriptState
+
 # Marker for E2E tests — run with: pytest -m e2e
 pytestmark = pytest.mark.e2e
 
@@ -247,14 +249,10 @@ class TestE2EFullPipeline:
         stage = state.get("stage", "")
         gates = state.get("gates", {})
 
-        # For full render, ALL 5 validation gates must be True
-        validation_gates = [
-            "bib_normalized",
-            "citations_resolved",
-            "refs_validated",
-            "style_passed",
-            "reporting_passed",
-        ]
+        # For full render, ALL rendering precondition gates must be True
+        validation_gates = sorted(
+            ManuscriptState.STAGE_PRECONDITIONS.get("rendering", frozenset())
+        )
         all_validation_passed = all(gates.get(g, False) for g in validation_gates)
 
         if not all_validation_passed:

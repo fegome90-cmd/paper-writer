@@ -22,6 +22,16 @@ else:
         return _resources.files(package)
 
 
+class AssetResolutionError(FileNotFoundError):
+    """Raised when a required runtime asset cannot be resolved.
+
+    This typically means the package was not installed correctly
+    (missing rules/, schemas/, templates/, or styles/ data files).
+
+    Fix: reinstall with ``uv tool install .`` or ``pip install -e .``
+    """
+
+
 def _get_package_root() -> Path:
     """Get the project root directory.
 
@@ -49,13 +59,31 @@ def get_asset_path(*path_parts: str) -> Path:
 
 
 def get_templates_dir() -> Path:
-    """Get the templates/ directory path."""
-    return get_asset_path("templates")
+    """Get the templates/ directory path.
+
+    Raises:
+        AssetResolutionError: If templates/ does not exist (broken install).
+    """
+    p = get_asset_path("templates")
+    if not p.is_dir():
+        raise AssetResolutionError(
+            f"Templates directory not found: {p}\nReinstall the package: uv tool install ."
+        )
+    return p
 
 
 def get_styles_dir() -> Path:
-    """Get the styles/ directory path."""
-    return get_asset_path("styles")
+    """Get the styles/ directory path.
+
+    Raises:
+        AssetResolutionError: If styles/ does not exist (broken install).
+    """
+    p = get_asset_path("styles")
+    if not p.is_dir():
+        raise AssetResolutionError(
+            f"Styles directory not found: {p}\nReinstall the package: uv tool install ."
+        )
+    return p
 
 
 def get_preset_dir(preset_name: str) -> Path:
@@ -81,15 +109,33 @@ def get_rules_dir(subdir: str = "") -> Path:
 
     Returns:
         Resolved Path to rules/ or rules/<subdir>.
+
+    Raises:
+        AssetResolutionError: If rules/ does not exist (broken install).
     """
     if subdir:
-        return get_asset_path("rules", subdir)
-    return get_asset_path("rules")
+        p = get_asset_path("rules", subdir)
+    else:
+        p = get_asset_path("rules")
+    if not p.is_dir():
+        raise AssetResolutionError(
+            f"Rules directory not found: {p}\nReinstall the package: uv tool install ."
+        )
+    return p
 
 
 def get_schemas_dir() -> Path:
-    """Get the schemas directory path."""
-    return get_asset_path("schemas")
+    """Get the schemas directory path.
+
+    Raises:
+        AssetResolutionError: If schemas/ does not exist (broken install).
+    """
+    p = get_asset_path("schemas")
+    if not p.is_dir():
+        raise AssetResolutionError(
+            f"Schemas directory not found: {p}\nReinstall the package: uv tool install ."
+        )
+    return p
 
 
 def get_project_asset(project_root: Path, *path_parts: str) -> Path:

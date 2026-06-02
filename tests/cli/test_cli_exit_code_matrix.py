@@ -32,20 +32,13 @@ def _bootstrap_rendering_state(tmp_path: Path) -> None:
     state = yaml.safe_load(state_path.read_text(encoding="utf-8"))
     state["stage"] = "rendering"
     gates = dict.fromkeys(ManuscriptState.REQUIRED_GATES, False)
-    # Rendering requires these precondition gates to be True
-    for g in [
-        "repo_initialized",
-        "search_completed",
-        "screened_evidence",
-        "outline_drafted",
-        "sections_completed",
-        "bib_normalized",
-        "citations_resolved",
-        "refs_validated",
-        "style_passed",
-        "reporting_passed",
-    ]:
-        gates[g] = True
+    # Set all gates required to reach 'rendering' (transitive preconditions)
+    for stage in ManuscriptState.STAGE_ORDER:
+        preconditions = ManuscriptState.STAGE_PRECONDITIONS.get(stage, frozenset())
+        for g in preconditions:
+            gates[g] = True
+        if stage == "rendering":
+            break
     state["gates"] = gates
     state_path.write_text(yaml.safe_dump(state), encoding="utf-8")
 
