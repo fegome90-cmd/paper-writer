@@ -342,8 +342,9 @@ Add documentation clarifying the architectural intent (done in commit `ca60966`)
 ## 9. Recommended Next Steps
 
 1. ~~**Fix the phantom validation**~~ — DONE (commit `fb9b143`). Defense-in-depth `validate_state()` call added.
-2. **Refactor verification/run_real_validation.py** — extract shared logic with Orchestrator, reduce from 1110 to ~200 lines. Risk: false positives in CI if stage contract diverges.
+2. ~~**Refactor verification/run_real_validation.py**~~ — NOT NEEDED. Investigation confirmed it's an intentional subprocess-level validation runner, not duplication.
 3. **Implement O-8** in Trifecta — self-attribute dispatch. This is a graph quality win, not a paper-writer fix.
 4. ~~**Centralize _make_man**~~ — DONE (O-10, commit `f842cfb`). 3 files → 1 conftest fixture.
-5. **Add `get_asset_path` error handling** — currently returns non-existent Path silently. Consider raising `AssetResolutionError` with helpful message.
-6. **Fix pre-existing test failures** — `test_load_invalid_domain_state` and `test_orchestrator_render_fail_blocks_and_keeps_rendering_stage` are pre-existing bugs not related to graph audit work.
+5. ~~**Add `AssetResolutionError`**~~ — DONE (commit `363dd7d`). get_rules_dir, get_templates_dir, get_styles_dir, get_schemas_dir now raise clear error.
+6. ~~**Fix pre-existing test failures**~~ — DONE (commit `2c8282a`). All 3 fixed: test_load_invalid_domain_state, test_orchestrator_render_fail, stale pytest cache.
+7. **Extend AssetResolutionError** to `get_vale_styles_dir`, `get_csl_styles_dir`, `get_preset_dir` — currently unchecked but still Spine-critical.
