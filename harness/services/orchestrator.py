@@ -325,15 +325,19 @@ class Orchestrator:
         elif cmd == "audit_reporting":
             return [self._run_wrapper_gate("audit_reporting")]
         elif cmd == "render":
-            return [
-                self._run_wrapper_gate("render", request_args=request.args),
-                validate_render_passed(self.checker),
-            ]
+            wrapper_result = self._run_wrapper_gate("render", request_args=request.args)
+            # Only check artifact existence if the wrapper succeeded.
+            # If the renderer itself reports failure, the artifact check is
+            # redundant (and may give misleading results if the action runner
+            # mock-populated paths regardless).
+            if wrapper_result.status in ("pass", "warn"):
+                return [wrapper_result, validate_render_passed(self.checker)]
+            return [wrapper_result]
         elif cmd == "import_bib":
-            return [
-                self._run_wrapper_gate("import_bib", request_args=request.args),
-                validate_bib_normalized(self.checker),
-            ]
+            wrapper_result = self._run_wrapper_gate("import_bib", request_args=request.args)
+            if wrapper_result.status in ("pass", "warn"):
+                return [wrapper_result, validate_bib_normalized(self.checker)]
+            return [wrapper_result]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
             return [validate_ready_for_delivery(self.checker, state_gates)]
