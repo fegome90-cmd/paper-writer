@@ -249,10 +249,87 @@ Then in `_extract_edges`, after building the class's method calls, look up the c
 
 ---
 
-## 6. Recommended Next Steps
+## 6. The Spine — System-Critical Hubs
 
-1. **Fix the phantom validation** — add `self._state_manager.validate_state(data)` after every `load_state()` call in `Orchestrator.execute()`. This is a 3-line change in 3 places.
-2. **Refactor the Vale dispatch** — extract `_run_vale` and `_builtin_lint` into a single strategy table.
+The Trifecta `graph hubs` command reveals the 3 load-bearing walls of paper-writer:
+
+| Hub | In-Degree | Role | Risk |
+|-----|-----------|------|------|
+| `get_asset_path` | 19 direct (40 total) | Asset resolution | **Single point of failure** — if path resolution fails, the entire pipeline crashes |
+| `ManuscriptState` | 18 | Domain model | **Contract enforcement** — every stage transition, gate check, and validator depends on this |
+| `validate_style` | 16 | Prose validation | **Most atomized capability** — the most reused single validator across the system |
+
+### 6.1 `get_asset_path` — The One-Point Bridge
+
+```python
+def get_asset_path(*path_parts: str) -> Path:
+    # 19 direct callers across validators, orchestrator, CLI, tests
+    # 40 total transitive dependents
+```
+
+**Why this is critical**: Every template, style, rule, schema, and preset resolution flows through this function. The packaging fix (iteration #51) added `get_rules_dir()` / `get_schemas_dir()` as aliases, but they all delegate to `get_asset_path`. If the package is not installed correctly, ALL of these fail.
+
+**Mitigation**: The `paper doctor` command checks asset resolution. But `get_asset_path` itself has no fallback — if the path doesn't exist, it returns a non-existent Path (no error until file access). This is intentional (caller checks `.exists()`), but means **all 40 dependents must independently handle FileNotFoundError**.
+
+### 6.2 `ManuscriptState` — The Contract
+
+```python
+@dataclass
+class ManuscriptState:
+    STAGE_ORDER: ClassVar[tuple[str, ...]] = (...)  # 8 stages
+    STAGE_PRECONDITIONS: ClassVar[dict[str, frozenset[str]]] = {...}
+    REQUIRED_GATES: ClassVar[frozenset[str]] = frozenset({...})  # 11 gates
+```
+
+18 symbols depend on this contract. The state machine enforcement fix (iteration #65) made transitions strict (forward-only adjacent), but the **contract itself** is still a frozen dataclass with ClassVar constants. If anyone modifies `STAGE_ORDER` without updating `STAGE_PRECONDITIONS`, the system breaks silently.
+
+**Current protection**: `test_domain_consistency.py` (12 tests) validates contract invariants. This is the right approach — test the contract, don't add runtime overhead.
+
+## 7. The Test Shadow — _make_man
+
+The #1 hub in the entire graph is **not production code** — it's `_make_man` in `tests/validators/test_prose_validator.py` with 30 callers.
+
+```python
+def _make_man(text: str):
+    return ManuscriptParser().parse_text(text, "test.md", "markdown")
+```
+
+This helper was **identically defined in 3 test files**:
+1. `tests/validators/test_prose_validator.py` (30 callers)
+2. `tests/validators/test_claims_validator.py` (12 callers)
+3. `tests/validators/test_method_gate.py` (12 callers)
+
+**The debt**: If `ManuscriptParser().parse_text()` signature changes, or if the test fixture name changes, you need to update 3 separate files (54 call sites total).
+
+**Fix applied (O-10)**: Centralized into `tests/validators/conftest.py` as `make_manuscript` pytest fixture. Single definition, auto-discovered by pytest. 3 duplicate definitions → 1 shared fixture. 54 call sites migrated.
+
+## 8. Dead Hubs — verification/run_real_validation.py
+
+| Symbol | In-Degree | Concern |
+|--------|-----------|---------|
+| `main` | 15 | Top-level entry point with its own arg parsing |
+| `load_manifest` | 13 | Loads the same manifest format as Orchestrator |
+| `run_stage` | 6 | Duplicates Orchestrator stage execution logic |
+| `consume_source` | 4 | PDF parsing not available in production pipeline |
+
+This is a **1110-line parallel pipeline** that duplicates core Orchestrator logic. It has its own:
+- Argument parsing (`argparse.ArgumentParser`)
+- Workspace preparation (`prepare_workspace`)
+- Stage execution (`run_stage` with retry logic)
+- Validation reporting (`generate_report`)
+- Manifest loading (`load_manifest` — same format as Orchestrator, different implementation)
+
+**The risk**: If the Orchestrator's stage contract changes (e.g., new gates, renamed commands), this script will go out of sync and produce **false positives** in CI. It is currently tested (36 tests in `tests/verification/`), but those tests verify the script's own behavior, not its sync with the Orchestrator.
+
+**Recommendation**: Either extract shared logic into a `verification/shared.py` module that both Orchestrator and this script import, or convert this script into a thin wrapper that calls the Orchestrator's public API. The 1110 lines should shrink to ~200 if shared logic is extracted.
+
+---
+
+## 9. Recommended Next Steps
+
+1. ~~**Fix the phantom validation**~~ — DONE (commit `fb9b143`). Defense-in-depth `validate_state()` call added.
+2. **Refactor verification/run_real_validation.py** — extract shared logic with Orchestrator, reduce from 1110 to ~200 lines. Risk: false positives in CI if stage contract diverges.
 3. **Implement O-8** in Trifecta — self-attribute dispatch. This is a graph quality win, not a paper-writer fix.
-4. **Run the new TrifectaBench IDX-07 (files with syntax error)** — ensure indexing recovers gracefully.
-5. **Add a regression test** that runs `ctx validate` on a known-good state and confirms 0 source orphans. Run the same on a known-stale state and confirm the diff is reported.
+4. ~~**Centralize _make_man**~~ — DONE (O-10, commit `f842cfb`). 3 files → 1 conftest fixture.
+5. **Add `get_asset_path` error handling** — currently returns non-existent Path silently. Consider raising `AssetResolutionError` with helpful message.
+6. **Fix pre-existing test failures** — `test_load_invalid_domain_state` and `test_orchestrator_render_fail_blocks_and_keeps_rendering_stage` are pre-existing bugs not related to graph audit work.
