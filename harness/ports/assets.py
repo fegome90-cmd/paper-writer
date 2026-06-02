@@ -11,6 +11,7 @@ Resolution order:
 from __future__ import annotations
 
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 if sys.version_info >= (3, 12):
@@ -32,6 +33,7 @@ class AssetResolutionError(FileNotFoundError):
     """
 
 
+@lru_cache(maxsize=1)
 def _get_package_root() -> Path:
     """Get the project root directory.
 
