@@ -155,3 +155,29 @@ class TestTransitionTo:
         state = ManuscriptState(stage="verified", gates=gates)
         with pytest.raises(DomainStateError, match="Backward transition"):
             state.transition_to("rendering")
+
+
+class TestPostInitGateAutoFill:
+    """Test that __post_init__ auto-fills missing gates from REQUIRED_GATES."""
+
+    def test_empty_gates_dict_fills_all_required(self) -> None:
+        """Creating state with empty gates dict should fill all REQUIRED_GATES."""
+        state = ManuscriptState(stage="bootstrap", gates={})
+        assert set(state.gates.keys()) == ManuscriptState.REQUIRED_GATES
+        assert all(v is False for v in state.gates.values())
+
+    def test_partial_gates_dict_preserves_existing(self) -> None:
+        """Partial gates dict should preserve existing values and fill the rest."""
+        state = ManuscriptState(
+            stage="bootstrap", gates={"repo_initialized": True}
+        )
+        assert state.gates["repo_initialized"] is True
+        assert len(state.gates) == len(ManuscriptState.REQUIRED_GATES)
+        rest = {k: v for k, v in state.gates.items() if k != "repo_initialized"}
+        assert all(v is False for v in rest.values())
+
+    def test_complete_gates_dict_unchanged(self) -> None:
+        """Complete gates dict should not be modified by __post_init__."""
+        gates = dict.fromkeys(ManuscriptState.REQUIRED_GATES, True)
+        state = ManuscriptState(stage="verified", gates=gates)
+        assert all(v is True for v in state.gates.values())
