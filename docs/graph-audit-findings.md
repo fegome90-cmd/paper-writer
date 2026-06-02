@@ -305,23 +305,37 @@ This helper was **identically defined in 3 test files**:
 
 ## 8. Dead Hubs — verification/run_real_validation.py
 
-| Symbol | In-Degree | Concern |
-|--------|-----------|---------|
-| `main` | 15 | Top-level entry point with its own arg parsing |
-| `load_manifest` | 13 | Loads the same manifest format as Orchestrator |
-| `run_stage` | 6 | Duplicates Orchestrator stage execution logic |
-| `consume_source` | 4 | PDF parsing not available in production pipeline |
+| Symbol | In-Degree | Role |
+|--------|-----------|------|
+| `main` | 15 | Top-level entry point with arg parsing |
+| `load_manifest` | 13 | Loads validation manifest (YAML) |
+| `run_stage` | 6 | Executes pipeline stages via subprocess |
+| `consume_source` | 4 | PDF text extraction and metadata parsing |
+| `generate_report` | 4 | HTML report generation |
 
-This is a **1110-line parallel pipeline** that duplicates core Orchestrator logic. It has its own:
-- Argument parsing (`argparse.ArgumentParser`)
-- Workspace preparation (`prepare_workspace`)
-- Stage execution (`run_stage` with retry logic)
-- Validation reporting (`generate_report`)
-- Manifest loading (`load_manifest` — same format as Orchestrator, different implementation)
+This is a **1110-line end-to-end validation runner** that intentionally runs the paper CLI as subprocesses to test the full binary path.
 
-**The risk**: If the Orchestrator's stage contract changes (e.g., new gates, renamed commands), this script will go out of sync and produce **false positives** in CI. It is currently tested (36 tests in `tests/verification/`), but those tests verify the script's own behavior, not its sync with the Orchestrator.
+### Why it's NOT a duplicate
 
-**Recommendation**: Either extract shared logic into a `verification/shared.py` module that both Orchestrator and this script import, or convert this script into a thin wrapper that calls the Orchestrator's public API. The 1110 lines should shrink to ~200 if shared logic is extracted.
+After investigation, `run_stage` runs `paper` CLI via `subprocess.run()`, not `Orchestrator.execute()`. This is an **architectural layer difference**, not code duplication:
+
+| Concern | `Orchestrator` | `run_real_validation.py` |
+|---------|----------------|--------------------------|
+| Process | In-process | Subprocess |
+| Scope | Library API | Full CLI binary |
+| Error handling | Exceptions | Exit codes + stderr |
+| Timeout | N/A | 120s per stage |
+| Degraded mode | N/A | Detected from stderr markers |
+
+The script tests what the Orchestrator cannot: CLI argument parsing, entry point resolution, `pip install` compatibility, and error messages that only surface at the subprocess boundary.
+
+### The real risk (revised)
+
+The risk is **not** that they'll go out of sync — `run_stage` will immediately surface any API break via failing tests. The risk is that the script is **1110 lines** with substantial PDF processing logic (`consume_source` at 71 lines, `_parse_pdf_metadata` at 80 lines) that has no test coverage for edge cases beyond the existing 36 tests.
+
+### Recommendation
+
+Add documentation clarifying the architectural intent (done in commit `ca60966`). The script is doing its job correctly — it's a **validation runner**, not a duplicate Orchestrator.
 
 ---
 

@@ -562,7 +562,22 @@ def run_stage(
     bib_path: str | None,
     timeout: int = 120,
 ) -> StageResult:
-    """Execute a single pipeline stage and return the result."""
+    """Execute a single pipeline stage via the paper CLI (subprocess).
+
+    This intentionally runs the paper CLI as a subprocess rather than
+    calling Orchestrator.execute() directly. The reason: this script is an
+    **end-to-end validation runner** that tests the real CLI binary path,
+    including argument parsing, entry point resolution, and error handling
+    that only occurs at the CLI layer.
+
+    The Orchestrator handles in-process orchestration (gate checks, state
+    transitions). run_stage handles subprocess-level concerns (timeouts,
+    exit codes, degraded-mode detection from stderr).
+
+    If Orchestrator's public API changes, this function will surface the
+    break via failing tests — which is the desired behavior for a
+    validation runner.
+    """
     cmd_str = stage["command"]
     args = list(stage.get("args", []))
 
