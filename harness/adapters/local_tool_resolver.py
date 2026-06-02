@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import shutil
@@ -5,6 +6,8 @@ import subprocess
 from pathlib import Path
 
 from harness.ports.tool_resolver import ToolResolution, ToolResolver
+
+logger = logging.getLogger(__name__)
 
 
 class LocalToolResolver(ToolResolver):
@@ -49,10 +52,23 @@ class LocalToolResolver(ToolResolver):
                 timeout=5,
             )
             if result.returncode != 0:
+                logger.warning(
+                    "Tool at %s (%s) returned non-zero exit code %s.",
+                    path,
+                    source,
+                    result.returncode,
+                )
                 return None
             version = result.stdout.strip()
             return ToolResolution(path=path, version=version, source=source)
-        except (OSError, subprocess.SubprocessError):
+        except subprocess.TimeoutExpired:
+            logger.error("Timeout while checking version for tool at %s (%s).", path, source)
+            return None
+        except OSError as e:
+            logger.error("OS error while accessing tool at %s (%s): %s", path, source, e)
+            return None
+        except Exception as e:
+            logger.error("Unexpected error resolving tool at %s (%s): %s", path, source, e)
             return None
 
     def _verify_min_version(self, res: ToolResolution | None, min_version: str | None) -> bool:
