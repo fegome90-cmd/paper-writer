@@ -11,5 +11,4 @@ Este log registra problemas críticos, deuda técnica y discrepancias detectadas
 | ISSUE-005 | **Baja** | `integrations/tools/vale.py` | Densidad de orfandad alta en métodos internos. Verificado: son falsos positivos de Trifecta; los métodos se invocan correctamente en `run()`. | ✅ Cerrado (FP) |
 | ISSUE-006 | **Media** | `harness/services/gates.py` | `validate_render_passed` estaba desconectado. Conectado en `Orchestrator._run_gate_verification()`. | ✅ Resuelto |
 
----
-*Log generado por Gemini CLI Agent mediante auditoría con Trifecta Context Engine.*
+| ISSUE-007 | **Alta** | `verification/run_real_validation.py` | Duplicación de lógica de gates y bootstrap. Resuelto importando `ManuscriptState` y delegando a `paper init`. | ✅ Resuelto |

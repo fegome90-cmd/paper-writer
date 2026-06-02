@@ -33,6 +33,8 @@ from typing import Any
 
 import yaml
 
+from harness.domain.state import ManuscriptState
+
 # ── Constants ──────────────────────────────────────────────────────────────
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -496,6 +498,15 @@ def consume_source(
 # ── Workspace isolation ────────────────────────────────────────────────────
 
 
+def _build_paper_cmd(workspace: Path) -> list[str]:
+    """Build the base command for invoking the paper CLI in the workspace."""
+    venv_python = workspace / ".venv" / "bin" / "python"
+    if venv_python.exists():
+        return [str(venv_python), "-m", "cli.paper.main"]
+    # Fallback: system python with repo on sys.path
+    return [sys.executable, "-m", "cli.paper.main"]
+
+
 def prepare_workspace(manifest: dict[str, Any], tmp_root: Path | None = None) -> Path:
     """Create an isolated workspace as a copy of the repo structure.
 
@@ -532,45 +543,19 @@ def prepare_workspace(manifest: dict[str, Any], tmp_root: Path | None = None) ->
         if src_pkg.exists():
             shutil.copytree(src_pkg, ws / pkg, symlinks=True)
 
-    # Fresh outputs directory
-    (ws / "outputs").mkdir()
-    (ws / "outputs" / "drafts").mkdir()
-    (ws / "outputs" / "search").mkdir()
-    (ws / "outputs" / "render").mkdir()
-    (ws / "outputs" / "logs").mkdir()
+    # Delegate initialization to the official CLI.
+    # This ensures directories and state.yaml match domain invariants.
+    preset = manifest.get("project", {}).get("preset")
+    cmd = [*_build_paper_cmd(ws), "init"]
+    if preset:
+        cmd.extend(["--preset", preset])
 
-    # Fresh state.yaml with all required gates initialized to false
-    all_gates = [
-        "repo_initialized",
-        "search_completed",
-        "screened_evidence",
-        "outline_drafted",
-        "sections_completed",
-        "bib_normalized",
-        "citations_resolved",
-        "refs_validated",
-        "style_passed",
-        "reporting_passed",
-        "render_passed",
-        "ready_for_delivery",
-    ]
-    gates_yaml = "\n".join(f"  {g}: false" for g in all_gates)
-    state_yaml = ws / "outputs" / "state.yaml"
-    state_yaml.write_text(f"repo_initialized: false\ngates:\n{gates_yaml}\nstage: bootstrap\n")
+    subprocess.run(cmd, cwd=str(ws), check=True, capture_output=True)
 
     return ws
 
 
 # ── Pipeline execution ─────────────────────────────────────────────────────
-
-
-def _build_paper_cmd(workspace: Path) -> list[str]:
-    """Build the base command for invoking the paper CLI in the workspace."""
-    venv_python = workspace / ".venv" / "bin" / "python"
-    if venv_python.exists():
-        return [str(venv_python), "-m", "cli.paper.main"]
-    # Fallback: system python with repo on sys.path
-    return [sys.executable, "-m", "cli.paper.main"]
 
 
 def run_stage(

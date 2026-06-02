@@ -1,8 +1,17 @@
 # MCP tools candidates for paper-writer
 
+> ⚠ **Architecture correction (2026-06-01)**: This document was originally
+> framed as "MCP tools that paper-writer exposes via CLI". The corrected
+> direction is: **paper-writer does NOT expose MCP tools in v1**. The `paper`
+> CLI **consumes** MCPs externos (Robin, ERA, otros) through adapters. This
+> file is preserved as a reference of WHICH external tools the CLI may consume.
+> The canonical architecture will be documented separately once written.
+
 ## Scope
 
-Candidatas diseñadas para exponer capacidades del sistema propio. No implican implementar Robin ni ERA ni depender de ellos en runtime.
+Candidatas son **MCPs externos** que el CLI orquestador consume (Robin, ERA,
+otros). paper-writer no expone tools propias en v1. No implican implementar
+Robin ni ERA ni depender de ellos en runtime.
 
 | Nombre | Descripción | Input schema preliminar | Output schema preliminar | Prioridad | Dependencia | Riesgo | Fuente de inspiración |
 |---|---|---|---|---|---|---|---|
@@ -22,8 +31,14 @@ Candidatas diseñadas para exponer capacidades del sistema propio. No implican i
 - **P1**: `paper_reference_verify`, `paper_wiki_sync`, `paper_hypothesis_generate`, `paper_experiment_plan`
 - **P2**: `paper_repro_audit`
 
-## Criterio CLI-first vs MCP-first
+## Criterio de resolución: Local vs MCP externo
 
-- **CLI primero**: todo lo que tenga lógica de auditoría, gates o extracción estructurada.
-- **MCP primero**: casi nada en v1; el MCP debe envolver capacidades ya estabilizadas en CLI.
-- **Excepción razonable**: `paper_wiki_sync` puede tener valor como tool MCP una vez que el ledger exista y el CLI ya exponga JSON estable.
+- **Local primero (Phase 0)**: toda lógica de auditoría, gates y extracción
+  estructurada que sea determinística y offline. El CLI resuelve localmente
+  cuando el adapter MCP no está disponible.
+- **MCP externo cuando disponible**: tools que requieren capacidad externa
+  (búsqueda de evidencia, generación de hipótesis con scoring). El CLI detecta
+  disponibilidad y delega al adapter.
+- **Nunca exponer**: paper-writer no expone tools MCP propias en v1. Si en
+  el futuro eso se necesita, será un concern separado, no el corazón del
+  sistema.

@@ -211,3 +211,6 @@
 {"ts": 1780407835.187783, "query_type": "search", "fidelity": "fallback", "latency_ms": 20, "timings": {"pack_load_and_search_ms": 10, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780408121.879605, "query_type": "impact", "fidelity": "full", "latency_ms": 31, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 10, "graph_signal_ms": 8, "lsp_signal_ms": 0}}
 {"ts": 1780408608.0168839, "query_type": "search", "fidelity": "fallback", "latency_ms": 26, "timings": {"pack_load_and_search_ms": 16, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780410237.637759, "query_type": "search", "fidelity": "fallback", "latency_ms": 54, "timings": {"pack_load_and_search_ms": 28, "ast_resolution_ms": 25, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780410238.341923, "query_type": "semantic_hover", "fidelity": "fallback", "latency_ms": 40, "timings": {"pack_load_and_search_ms": 30, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780410802.6182961, "query_type": "search", "fidelity": "fallback", "latency_ms": 31, "timings": {"pack_load_and_search_ms": 17, "ast_resolution_ms": 14, "graph_signal_ms": 0, "lsp_signal_ms": 0}}

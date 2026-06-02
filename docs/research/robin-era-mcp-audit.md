@@ -1,5 +1,15 @@
 # Robin + ERA MCP audit for paper-writer
 
+> ⚠ **Architecture correction (2026-06-01)**: The original recommendation
+> framed `paper-writer` as an MCP server/wrapper that exposes CLI capabilities.
+> The corrected direction is: **`paper` CLI is an MCP CLIENT/CONSUMER** that
+> decides per-tool whether to resolve locally (Phase 0) or via external MCP
+> (Robin, ERA, otros). The historical research on Robin/ERA itself remains
+> valid and is preserved. Future canonical architecture will be documented
+> separately once it is written.
+>
+> Sections reconciled in this commit are marked ⚠ Reconciled 2026-06-01.
+
 ## 1. Resumen ejecutivo
 
 Se auditó estáticamente **Robin** (FutureHouse) y **ERA** (Google Research) en un workspace temporal local el **28 de mayo de 2026**.
@@ -15,7 +25,7 @@ Conclusión sobria:
 - Para `paper-writer`, la recomendación es:
   1. **tomar inspiración metodológica de Robin**;
   2. **reutilizar conceptualmente y quizás parcialmente FUTS de ERA** solo para tareas escorables;
-  3. **arrancar con un MCP wrapper liviano sobre el CLI**;
+  3. **construir un CLI orquestador que consume MCPs externos (Robin, ERA, otros)**;
   4. **posponer cualquier loop agéntico profundo** hasta tener claim ledger, evidence map y method gates maduros.
 
 Veredicto final:
@@ -461,7 +471,7 @@ No conviene:
 | Generación de hipótesis | Sí, biomédica | Indirecta, como búsqueda de programas | Robin inspira `hypothesis_generate` | Robin útil como referencia conceptual | Alto | No automatizar sin gates |
 | Validación / crítica | Ranking pairwise con LLM | Scoring objetivo por executor | ERA es mejor cuando hay métrica | Robin mejor para crítica textual inspiracional | Medio | Combinar score + crítica estructurada |
 | Trazabilidad | Archivos txt/csv + links Edison | diffs HTML + study pages + JSON de progreso | ERA aporta mejor historial de iteración | Robin aporta mejor artefacto por etapa | Medio | Adoptar trazabilidad propia |
-| Facilidad de acoplamiento MCP | Baja | Media | ERA mejor para tools puntuales | Robin mejor como inspiración de prompts | Medio | MCP wrapper propio |
+| Facilidad de acoplamiento MCP | Baja | Media | ERA mejor para tools puntuales | Robin mejor como inspiración de prompts | Medio | CLI consume MCPs externos (no expone los suyos) |
 | Licencia | Apache-2.0 | Apache-2.0 | Ambas compatibles | Ambas compatibles | Bajo | Sin bloqueo legal aparente |
 | Riesgo de sobreingeniería | Muy alto si se replica el loop completo | Alto si se usa tree search donde no aplica | Alto | Alto | Alto | Empezar simple |
 
@@ -502,9 +512,14 @@ No conviene:
 
 ---
 
-## 8. Oportunidades MCP
+## 8. Oportunidades MCP ⚠ Reconciled 2026-06-01
 
-La recomendación es que las primeras tools MCP NO hablen con Robin ni ERA directamente. Deben hablar con **nuestro CLI y nuestros artefactos locales**.
+Recomendación corregida: **paper-writer NO expone tools MCP propias en v1**.
+El CLI es **cliente MCP**: cuando un MCP externo (Robin, ERA, otros) está
+disponible, el CLI lo consume a través de un adapter. Cuando no, delega a
+los validadores determinísticos de Fase 0. La tabla 8.1 lista capacidades
+candidatas (locales o remotas) sin pre-juzgar el orden de implementación —
+ese orden se definirá en un spec canónico futuro.
 
 ### 8.1 MCP tools candidatas
 
@@ -550,7 +565,7 @@ La recomendación es que las primeras tools MCP NO hablen con Robin ni ERA direc
 
 | Alternativa | Descripción | Complejidad | Mantenibilidad | Riesgo de drift | Dependencia de terceros | Seguridad | Reproducibilidad | Valor inmediato | Compatibilidad wiki | Compatibilidad CLI | Recomendación |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| **A. MCP wrapper liviano sobre `paper` CLI** | MCP traduce tools a comandos/subcomandos propios | Baja | Alta | Baja | Baja | Alta | Alta | Alta | Alta | Alta | **RECOMENDADA** |
+| **A. CLI orquestador con adapters MCP cliente** | El CLI invoca MCPs externos (Robin, ERA) vía adapters; fallback a Fase 0 local | Baja | Alta | Baja | Baja-Media | Alta | Alta | Alta | Alta | Alta | **RECOMENDADA** |
 | **B. Sidecar MCP independiente** | servidor MCP separado lee wiki, corpus y ledger | Media | Media | Media | Media | Media | Media | Media | Alta | Media | Recomendable en segunda etapa |
 | **C. Integración profunda tipo Robin/ERA** | loops agénticos, búsqueda, evaluación y herramientas múltiples | Alta | Baja | Alta | Alta | Baja-media | Baja | Baja al inicio | Media | Media | **NO recomendada para v1** |
 
@@ -558,12 +573,15 @@ La recomendación es que las primeras tools MCP NO hablen con Robin ni ERA direc
 
 Elegir **A** ahora.
 
-Razón:
+Razón: el CLI queda como única superficie invocable; los MCPs externos
+(Robin, ERA, otros) se acceden vía adapters DENTRO del CLI, no al revés.
+
+Notas adicionales:
 
 - preserva el CLI como fuente de verdad;
 - mantiene logs y gates donde ya existen;
 - evita meter estados paralelos desde el día uno;
-- permite exponer solo herramientas estables.
+- permite consumir solo herramientas externas disponibles.
 
 ---
 
@@ -642,37 +660,32 @@ Ingestar papers y generar matriz estructurada de evidencia conectada a claims.
 - cada claim puede apuntar a evidencia concreta;
 - existe matriz reproducible paper -> diseño -> outcome -> hallazgo -> limitación.
 
-### Fase 2 — MCP wrapper
+### Fase 2 — MCP consumer / external adapter ⚠ Reconciled 2026-06-01
 
 **Objetivo**
 
-Exponer las herramientas estables del CLI vía MCP.
+Incorporar **adapters MCP cliente** dentro del CLI para consumir MCPs externos
+(Robin, ERA, otros) sin que `paper-writer` se convierta en un MCP server.
+El CLI decide **por tool** si la resolución es local (Fase 0) o remota (adapter).
 
-**Comandos CLI propuestos**
+**Pendiente de spec canónico** ⚠
 
-- `paper mcp serve`
-- `paper audit claims --json`
-- `paper map evidence --json`
+Esta sección conserva la dirección arquitectónica corregida. Los detalles
+concretos (comandos específicos, archivos, criterios de aceptación) se
+definirán en un spec canónico futuro, no en este audit. Razones:
 
-**Tools MCP**
+- el alcance exacto de Fase 2 depende de qué MCPs externos estén disponibles
+  y mantenidos al momento de implementar;
+- la separación entre CLI y adapters requiere decisiones de diseño que
+  exceden el scope de una reconciliación documental;
+- introducir comandos o archivos concretos sin spec es exactamente el
+  error que esta reconciliación intenta evitar.
 
-- P0 y P1 estables
+**Riesgos conocidos (orientativos, no definitivos)**
 
-**Archivos afectados**
-
-- nuevo módulo `integrations/mcp/` o `mcp_server/`
-- adapters CLI/JSON
-- docs operativas
-
-**Riesgos**
-
-- drift entre CLI y MCP si ambos resuelven lógica.
-
-**Criterios de aceptación**
-
-- MCP delega al CLI o a servicios internos comunes;
-- logs y schemas estables;
-- cero duplicación innecesaria de reglas.
+- drift entre adapters y CLI si cada adapter resuelve lógica de negocio;
+- disponibilidad intermitente de MCPs externos requiere fallback explícito
+  a Fase 0 local.
 
 ### Fase 3 — Hipótesis asistida
 
@@ -791,7 +804,8 @@ Recomendación accionable:
    - prompt contracts con outputs delimitados.
 3. **Tomar de ERA solo la pieza pequeña y fuerte:**
    - FUTS / `generate_fn` + `execute_fn` para futuras tareas escorables.
-4. **Construir primero un MCP wrapper del CLI propio.**
+ 4. **Construir primero un CLI orquestador que consume MCPs externos** (no un
+    MCP server propio). El spec canónico de Fase 2 se escribirá por separado.
 5. **Crear antes claim ledger + evidence map + method gate**; recién después evaluar loops avanzados.
 
 En términos del criterio de éxito pedido:
@@ -805,7 +819,10 @@ En términos del criterio de éxito pedido:
 
 1. Diseñar el **schema del claim ledger** y del **evidence map**.
 2. Implementar en el CLI la **Fase 0**: `claim-audit`, `prose-audit`, `method-gate`.
-3. Diseñar el **MCP wrapper liviano** sobre esos comandos, sin agentes profundos todavía.
+ 3. **Pendiente**: diseñar adapters MCP cliente (Robin, ERA) y spec canónico,
+    sin agentes profundos. La Fase 0 ya está implementada (ver
+    `docs/research/phase-0-prior-art.md` § Implementation Alignment); Fase 2
+    (MCP consumer) requiere spec canónico antes de implementar.
 
 ---
 
