@@ -5,6 +5,7 @@ import yaml
 
 from harness.adapters.filesystem_action_runner import FilesystemActionRunner
 from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
+from harness.domain.state import ManuscriptState
 
 
 def test_artifact_checker_dir_exists(tmp_path: Path) -> None:
@@ -159,4 +160,44 @@ def test_action_runner_emit_manifest(tmp_path: Path) -> None:
     assert manifest["status"] == "ready_for_delivery"
     assert manifest["stage"] == "verified"
     assert manifest["gate_snapshot"] == gates
+    assert manifest["verdict"] == "pass"
     assert len(manifest["gate_snapshot"]) == 12
+
+
+def test_emit_manifest_reflects_failed_gates(tmp_path: Path) -> None:
+    """Manifest must NOT claim delivery-ready when gates have failed."""
+    runner = FilesystemActionRunner(tmp_path)
+    (tmp_path / "outputs").mkdir(parents=True, exist_ok=True)
+
+    all_failed = dict.fromkeys(ManuscriptState.REQUIRED_GATES, False)
+    manifest_path_str = runner.emit_manifest(all_failed)
+    manifest_path = Path(manifest_path_str)
+
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = yaml.safe_load(f)
+
+    assert manifest["status"] == "incomplete", (
+        "Manifest must say 'incomplete' when no gates passed"
+    )
+    assert manifest["verdict"] == "fail", (
+        "Manifest must say 'fail' when no gates passed"
+    )
+    assert manifest["gate_snapshot"] == all_failed
+    assert len(manifest["notes"]) > 0, "Failed manifest should list issue notes"
+
+
+def test_emit_manifest_only_lists_existing_artifacts(tmp_path: Path) -> None:
+    """Manifest must not claim artifacts exist if they don't."""
+    runner = FilesystemActionRunner(tmp_path)
+    (tmp_path / "outputs").mkdir(parents=True, exist_ok=True)
+
+    all_passed = dict.fromkeys(ManuscriptState.REQUIRED_GATES, True)
+    manifest_path_str = runner.emit_manifest(all_passed)
+
+    with open(manifest_path_str, encoding="utf-8") as f:
+        manifest = yaml.safe_load(f)
+
+    # No render outputs or bib exist — artifacts should be empty
+    assert manifest["artifacts"] == {}, (
+        "Manifest should not list artifacts that don't exist on disk"
+    )

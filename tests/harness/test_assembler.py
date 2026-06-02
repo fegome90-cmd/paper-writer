@@ -133,6 +133,7 @@ class TestAssembleManuscript:
         target = draft_dir / "manuscript.md"
         target.write_text("existing", encoding="utf-8")
         import os
+
         os.chmod(target, 0o444)
 
         try:

@@ -281,19 +281,43 @@ class FilesystemActionRunner(ActionRunner):
 
     def emit_manifest(self, gate_snapshot: dict[str, bool]) -> str:
         manifest_path = self._resolve("outputs/manifest.yaml")
+
+        # Derive verdict from actual gate state rather than hardcoding.
+        all_passed = all(gate_snapshot.values()) if gate_snapshot else False
+
+        # Collect only artifacts that actually exist on disk.
+        manuscript_artifacts: list[str] = []
+        for candidate in [
+            "outputs/render/manuscript.docx",
+            "outputs/render/manuscript.pdf",
+        ]:
+            if self._resolve(candidate).is_file():
+                manuscript_artifacts.append(candidate)
+
+        bib_path = "templates/references.bib"
+        artifacts: dict[str, str | list[str]] = {}
+        if manuscript_artifacts:
+            artifacts["manuscript"] = manuscript_artifacts
+        if self._resolve(bib_path).is_file():
+            artifacts["bibliography"] = bib_path
+
         manifest_data = {
             "schema_version": "1.0",
             "project": "paper-writer",
-            "status": "ready_for_delivery",
+            "status": "ready_for_delivery" if all_passed else "incomplete",
             "generated_at": datetime.datetime.now().isoformat(),
             "stage": "verified",
             "gate_snapshot": gate_snapshot,
-            "artifacts": {
-                "manuscript": ["outputs/render/manuscript.docx", "outputs/render/manuscript.pdf"],
-                "bibliography": "templates/references.bib",
-            },
-            "verdict": "pass",
-            "notes": [],
+            "artifacts": artifacts,
+            "verdict": "pass" if all_passed else "fail",
+            "notes": (
+                []
+                if all_passed
+                else [
+                    f"{sum(not v for v in gate_snapshot.values())} "
+                    "gate(s) not passed"
+                ]
+            ),
         }
 
         with open(manifest_path, "w", encoding="utf-8") as f:
