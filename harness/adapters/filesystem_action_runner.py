@@ -313,10 +313,7 @@ class FilesystemActionRunner(ActionRunner):
             "notes": (
                 []
                 if all_passed
-                else [
-                    f"{sum(not v for v in gate_snapshot.values())} "
-                    "gate(s) not passed"
-                ]
+                else [f"{sum(not v for v in gate_snapshot.values())} gate(s) not passed"]
             ),
         }
 

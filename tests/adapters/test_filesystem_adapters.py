@@ -176,12 +176,8 @@ def test_emit_manifest_reflects_failed_gates(tmp_path: Path) -> None:
     with open(manifest_path, encoding="utf-8") as f:
         manifest = yaml.safe_load(f)
 
-    assert manifest["status"] == "incomplete", (
-        "Manifest must say 'incomplete' when no gates passed"
-    )
-    assert manifest["verdict"] == "fail", (
-        "Manifest must say 'fail' when no gates passed"
-    )
+    assert manifest["status"] == "incomplete", "Manifest must say 'incomplete' when no gates passed"
+    assert manifest["verdict"] == "fail", "Manifest must say 'fail' when no gates passed"
     assert manifest["gate_snapshot"] == all_failed
     assert len(manifest["notes"]) > 0, "Failed manifest should list issue notes"
 
