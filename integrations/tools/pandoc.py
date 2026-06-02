@@ -55,7 +55,11 @@ class PandocRenderer(ToolWrapper):
         return "render_passed"
 
     def is_available(self) -> bool:
-        """Check if ``pandoc`` is discoverable via resolver."""
+        """Check if ``pandoc`` is discoverable via resolver.
+        
+        Note: Maintains a manual fallback to shutil.which if resolver is None
+        for backward compatibility with un-injected instantiation.
+        """
         if self._resolver:
             return self._resolver.resolve(self.tool_id) is not None
         return shutil.which(self.tool_id) is not None
