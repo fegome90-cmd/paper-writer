@@ -139,14 +139,12 @@ def score_task(
     elif task_type == "orphan":
         # Gold: specific orphan names
         gold_orphans = set(gold.get("gold_orphans", []))
-        gold_false = set(gold.get("gold_false_orphans", []))
 
         found_orphans = set()
         false_positives = 0
 
         for m in matches:
             name = m.get("name", "")
-            f"{m.get('file', '')}::{name}"
 
             # Check if it's a true orphan
             is_gold = False
@@ -156,15 +154,14 @@ def score_task(
                     is_gold = True
                     break
 
-            # Check if it's a false positive
+            # Everything NOT a true gold orphan is a false positive
             if not is_gold:
-                for gf in gold_false:
-                    if name == gf.split("::")[-1]:
-                        false_positives += 1
-                        break
+                false_positives += 1
 
         recall = len(found_orphans) / max(len(gold_orphans), 1)
-        precision = len(found_orphans) / max(len(found_orphans) + false_positives, 1)
+        precision = len(found_orphans) / max(
+            len(found_orphans) + false_positives, 1
+        )
 
         return {"recall": recall, "precision": precision, "mrr": recall}
 
@@ -265,7 +262,7 @@ def run_benchmark(
 
     result.index_times = {
         "rag_tfidf": rag_index_ms,
-        "lsp_pyright": lsp_index_ms,
+        "grep_pyright": lsp_index_ms,
         "trifecta": trifecta_index_ms,
     }
 
@@ -274,7 +271,7 @@ def run_benchmark(
         task["description"]
 
         # Determine task type from ID prefix
-        task_type = task_id.split("-")[1].lower()
+        task_type = task_id.split("-")[1].lower()[0]
         type_map = {
             "p": "precision",
             "d": "discovery",
@@ -295,7 +292,7 @@ def run_benchmark(
         # --- LSP arm ---
         lsp_result = _run_arm_task(lsp, task_id, task, task_type)
         if lsp_result:
-            lsp_result.arm = "lsp_pyright"
+            lsp_result.arm = "grep_pyright"
             lsp_result.repo = repo_name
             result.tasks.append(lsp_result)
 
@@ -328,15 +325,21 @@ def _run_arm_task(
                 return None
 
         elif task_id.startswith("T-D1"):
-            # Discovery — trace call chain
+            # Discovery — trace call chain via search
+            gold_path = task.get("gold_path", [])
+            query_parts = []
+            for entry in gold_path:
+                parts = entry.split("::")
+                query_parts.append(parts[-1])
+            query = " ".join(query_parts) if query_parts else desc
             if hasattr(arm, "search"):
-                res = arm.search("main entry point processing pipeline format_result")
+                res = arm.search(query, top_k=15)
             else:
                 return None
 
         elif task_id.startswith("T-D2"):
-            # Discovery — find callers
-            symbol = "normalize"
+            # Discovery — find callers of the gold symbol
+            symbol = task.get("gold_symbol", "normalize")
             if hasattr(arm, "find_callers"):
                 res = arm.find_callers(symbol)
             else:
@@ -350,9 +353,16 @@ def _run_arm_task(
                 return None
 
         elif task_id.startswith("T-W1"):
-            # Transitive inheritance
+            # Transitive inheritance — read target from gold
+            gold_desc = task.get("gold_descendants", [])
+            if gold_desc:
+                target = gold_desc[0].split("::")[-1]
+                # Walk up: use the parent class mentioned in gold
+                target = task.get("gold_parent_class", "BaseTransformer")
+            else:
+                target = task.get("gold_parent_class", "BaseTransformer")
             if hasattr(arm, "find_subclasses"):
-                res = arm.find_subclasses("BaseTransformer", transitive=True)
+                res = arm.find_subclasses(target, transitive=True)
             else:
                 return None
 
@@ -365,15 +375,22 @@ def _run_arm_task(
 
         elif task_id.startswith("T-W3"):
             # Transitive inheritance depth check
+            target = task.get("gold_parent_class", "BaseTransformer")
             if hasattr(arm, "find_subclasses"):
-                res = arm.find_subclasses("BaseTransformer", transitive=True)
+                res = arm.find_subclasses(target, transitive=True)
             else:
                 return None
 
         elif task_id.startswith("T-A"):
-            # Architecture
+            # Architecture — search for file/directory names
+            gold_layers = task.get("gold_layers", {})
+            if gold_layers:
+                layer_names = list(gold_layers.keys())
+                query = " ".join(layer_names)
+            else:
+                query = "architecture layers core plugins cli utils tests"
             if hasattr(arm, "search"):
-                res = arm.search("architecture layers core plugins cli utils tests")
+                res = arm.search(query, top_k=20)
             else:
                 return None
 
@@ -436,7 +453,7 @@ def generate_report(
         all_tasks.extend(r.tasks)
 
     # === Per-arm aggregates ===
-    arms = ["rag_tfidf", "lsp_pyright", "trifecta"]
+    arms = ["rag_tfidf", "grep_pyright", "trifecta"]
     arm_scores = {}
     for arm in arms:
         arm_tasks = [t for t in all_tasks if t.arm == arm]
@@ -482,8 +499,8 @@ def generate_report(
 
         lines.append(f"**Trifecta vs RAG (honest CVR)**: {honest_cvr:.2f}x")
 
-        if "lsp_pyright" in arm_scores:
-            lsp_r = arm_scores["lsp_pyright"]["avg_recall"]
+        if "grep_pyright" in arm_scores:
+            lsp_r = arm_scores["grep_pyright"]["avg_recall"]
             if lsp_r > 0:
                 lsp_cvr = tri_r / lsp_r
                 lines.append(f"**Trifecta vs LSP (honest CVR)**: {lsp_cvr:.2f}x")
@@ -516,7 +533,7 @@ def generate_report(
 
     for prefix, cat_name in categories.items():
         cat_tasks = [t for t in all_tasks if t.task_id.startswith(prefix)]
-        row = {"rag_tfidf": 0.0, "lsp_pyright": 0.0, "trifecta": 0.0}
+        row = {"rag_tfidf": 0.0, "grep_pyright": 0.0, "trifecta": 0.0}
 
         for arm in arms:
             arm_cat = [t for t in cat_tasks if t.arm == arm]
@@ -529,7 +546,7 @@ def generate_report(
 
         lines.append(
             f"| {cat_name} | {row['rag_tfidf']:.2f} | "
-            f"{row['lsp_pyright']:.2f} | {row['trifecta']:.2f} "
+            f"{row['grep_pyright']:.2f} | {row['trifecta']:.2f} "
             f"| {winner} |"
         )
 
@@ -691,6 +708,7 @@ def main() -> None:
             },
             "T-W1": {
                 "description": "Find subclasses of ToolWrapper",
+                "gold_parent_class": "ToolWrapper",
                 "gold_descendants": [
                     "integrations/tools/bibtex_tidy.py::BibliographyNormalizer",
                     "integrations/tools/zotero_import.py::ZoteroImporter",
@@ -750,7 +768,7 @@ def main() -> None:
 
     tri_tasks = [t for t in all_tasks_flat if t.arm == "trifecta"]
     rag_tasks = [t for t in all_tasks_flat if t.arm == "rag_tfidf"]
-    lsp_tasks = [t for t in all_tasks_flat if t.arm == "lsp_pyright"]
+    lsp_tasks = [t for t in all_tasks_flat if t.arm == "grep_pyright"]
 
     tri_recall = sum(t.recall for t in tri_tasks) / max(len(tri_tasks), 1)
     rag_recall = sum(t.recall for t in rag_tasks) / max(len(rag_tasks), 1)

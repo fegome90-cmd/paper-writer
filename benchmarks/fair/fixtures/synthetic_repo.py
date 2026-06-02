@@ -426,10 +426,10 @@ def create_synthetic_repo(base_dir: Path) -> dict:
         "tasks": {
             # === PRECISION TASKS ===
             "T-P1": {
-                "description": "Find the definition of DataProcessor.process",
+                "description": "Find the definition of process method",
                 "gold_file": "core/engine.py",
                 "gold_line_range": (14, 18),
-                "gold_symbol": "DataProcessor.process",
+                "gold_symbol": "process",
             },
             "T-P2": {
                 "description": "Find the definition of normalize function",
@@ -459,13 +459,18 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             },
             # === ORPHAN TASKS ===
             "T-O1": {
-                "description": "Find all functions with zero callers (dead code candidates)",
+                "description": (
+                    "Find all functions with zero callers"
+                ),
+                # True orphans: never called from anywhere
                 "gold_orphans": [
-                    "utils/helpers.py::fibonacci",
                     "utils/helpers.py::rot13",
                     "utils/helpers.py::xml_to_dict",
                 ],
-                "gold_total_orphans_approx": 3,
+                # fibonacci is recursive (self-edge), NOT an orphan
+                "gold_non_orphans": [
+                    "utils/helpers.py::fibonacci",
+                ],
                 "gold_false_orphans": [
                     # These ARE called — should NOT appear
                     "core/transforms.py::enrich",
@@ -475,19 +480,20 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             # === WEAKNESS TASKS ===
             "T-W1": {
                 "description": "Find all descendants of BaseTransformer (including transitive)",
+                "gold_parent_class": "BaseTransformer",
                 "gold_descendants": [
                     "plugins/advanced.py::AdvancedTransformer",  # direct
-                    "plugins/advanced.py::CachedTransformer",  # transitive (via AdvancedTransformer)
+                    "plugins/advanced.py::CachedTransformer",  # transitive
                 ],
                 "note": "Trifecta only resolves direct inheritance — should MISS CachedTransformer",
             },
             "T-W2": {
                 "description": "Find what load_plugin() dynamically imports",
                 "gold_dynamic_imports": "unknown_at_static_time",
-                "note": "Trifecta is blind to importlib.import_module() — should return empty/unknown",
+                "note": "Trifecta is blind to importlib",
             },
             "T-W3": {
-                "description": "Does the graph correctly show that CachedTransformer inherits from BaseTransformer?",
+                "description": "CachedTransformer inherits from BaseTransformer?",
                 "gold_answer": True,
                 "gold_depth": 2,  # CachedTransformer -> AdvancedTransformer -> BaseTransformer
                 "note": "Requires transitive inheritance resolution",

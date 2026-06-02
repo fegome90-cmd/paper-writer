@@ -19,7 +19,7 @@ class LSPResult:
     query: str
     matches: list[dict[str, Any]]
     latency_ms: int
-    arm: str = "lsp_pyright"
+    arm: str = "grep_pyright"
 
 
 @dataclass
@@ -92,7 +92,7 @@ class LSPBaseline:
                 # Run pyright to verify the symbol is valid
                 abs_path = self.repo_root / file_path
                 try:
-                    result = subprocess.run(
+                    subprocess.run(
                         ["pyright", "--verifytypes", symbol_name, str(abs_path)],
                         capture_output=True,
                         text=True,

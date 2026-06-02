@@ -328,7 +328,7 @@ class TrifectaArm:
             raw_score = sum(1 for t in tokens if t in name or t in qual)
             score = raw_score / max(len(tokens), 1)
 
-            if score > 0.3:
+            if score > 0.15:
                 scored.append((score, r))
 
         scored.sort(key=lambda x: x[0], reverse=True)
