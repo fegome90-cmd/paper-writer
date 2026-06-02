@@ -1,8 +1,7 @@
 # Schema version: 1.0
-# Pre-init state. Run `paper init` to scaffold the repository.
-stage: bootstrap
+stage: search
 gates:
-  repo_initialized: false
+  repo_initialized: true
   search_completed: false
   screened_evidence: false
   outline_drafted: false

@@ -294,6 +294,8 @@ def test_orchestrator_verify_requires_render_passed_gate() -> None:
     assert result.exit_code == 1
     assert result.stage_before == "unknown"  # load_state failed → state not loaded
     assert result.stage_after == "unknown"
-    assert any("render_passed" in s for s in result.steps) or any(
-        "render_passed" in b for b in result.blockers
-    ) or any("inconsistency" in b.lower() for b in result.blockers)
+    assert (
+        any("render_passed" in s for s in result.steps)
+        or any("render_passed" in b for b in result.blockers)
+        or any("inconsistency" in b.lower() for b in result.blockers)
+    )

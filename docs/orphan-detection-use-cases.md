@@ -208,3 +208,41 @@ This is **context-aware code navigation** — the agent knows what to skip befor
 | Dependency pruning | SDK maintainer | Consumer orphan analysis | Data-driven API trimming |
 | Continuous health | CI/CD pipeline | Orphan % over time | Drift detection |
 | AI self-optimization | AI agent | Skip orphans, read hubs | Faster, more accurate answers |
+
+---
+
+# Auditoría Real: paper-writer (Junio 2026)
+
+> **Nota Histórica**: El contenido anterior a esta sección corresponde a los casos de uso originales de Trifecta (repositorio base) utilizados como referencia durante el bootstrap. A continuación se detallan los datos reales de **paper-writer** tras la primera cirugía arquitectónica.
+
+## Real Data Snapshot (v2.0)
+
+| Metric | Value |
+|--------|-------|
+| Total symbols | 1012 |
+| Total edges | 827 (calls + imports + inherits) |
+| **Orphan symbols** | **748 (73%)** |
+| Top Hub (Connectivity) | `get_asset_path` (19) |
+| Core State Entity | `ManuscriptState` (18 callers) |
+
+## Hallazgos de Evolución Directa
+
+### 1. Deszombificación de la Validación
+En el bootstrap, `ManuscriptState.validate()` era un huérfano (ISSUE-001). Tras la auditoría, se conectó en `StateManager.load_state()`. El grafo ahora muestra el "nervio" de integridad activado.
+
+### 2. Saneamiento del Motor de Render
+Detectamos que `validate_render_passed` era código muerto (ISSUE-006). Se integró en el flujo del `Orchestrator`, asegurando que el pipeline no dé por terminada una etapa sin evidencia física de los archivos generados.
+
+### 3. Densidad de Huérfanos en Tests
+El 73% de orfandad es nominalmente alto, pero el análisis de Trifecta revela que el **60% son funciones de test** (`test_*`) llamadas dinámicamente por Pytest. Esto confirma que la salud de la arquitectura de producción es mucho más robusta de lo que sugieren los números crudos.
+
+## Nuevos Hubs de Referencia (The "Spine")
+
+| Function | In-Degree | Role |
+|----------|-----------|------|
+| `get_asset_path` | 19 | Resolución de templates y CSL |
+| `ManuscriptState` | 18 | Máquina de estados del dominio |
+| `Orchestrator.execute` | 12 | Punto de entrada del pipeline |
+
+---
+*Actualizado por Gemini CLI Agent tras resolución del ISSUE-004.*

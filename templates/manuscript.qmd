@@ -1,27 +1,43 @@
----
-title: "Manuscript Title"
-author: "Author Name"
-date: today
-bibliography: references.bib
-format:
-  docx: default
-  pdf:
-    documentclass: article
-    keep-tex: true
+# Nature Manuscript Template
+
+## {title}
+
+{author_names_affiliations}
+
+{corresponding_author}
+
 ---
 
-# Introduction
+## Abstract
 
-Placeholder — content will be drafted by the academic-writer skill.
+{abstract_max_150_words}
 
-# Methods
+---
 
-Placeholder — content will be drafted by the academic-writer skill.
+## Introduction
 
-# Results
+{introduction_text}
 
-Placeholder — content will be drafted by the academic-writer skill.
+---
 
-# Discussion
+## Results
 
-Placeholder — content will be drafted by the academic-writer skill.
+{results_text}
+
+---
+
+## Discussion
+
+{discussion_text}
+
+---
+
+## Methods
+
+{methods_text}
+
+---
+
+## References
+
+{references}
