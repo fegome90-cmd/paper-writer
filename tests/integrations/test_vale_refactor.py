@@ -4,7 +4,7 @@ from integrations.tools.vale import StyleLinter
 from harness.ports.tool_resolver import ToolResolver, ToolResolution
 
 def test_vale_uses_resolver():
-    """Verify StyleLinter uses the injected ToolResolver."""
+    """Verify StyleLinter uses the injected ToolResolver during run()."""
     mock_resolver = MagicMock(spec=ToolResolver)
     mock_resolver.resolve.return_value = ToolResolution(
         path=Path("/usr/bin/vale"),
@@ -14,17 +14,34 @@ def test_vale_uses_resolver():
     
     linter = StyleLinter(resolver=mock_resolver)
     
-    # Vale is optional, so is_available should still be True even if resolver fails,
-    # but we want to see it CALL the resolver to try finding the binary.
-    assert linter.is_available() is True
-    mock_resolver.resolve.assert_called_with("vale")
+    # Create a dummy file to lint
+    dummy_file = Path("dummy.md")
+    dummy_file.write_text("Hello world")
+    
+    try:
+        # Mock subprocess.run to avoid actual vale execution
+        with patch("subprocess.run") as mock_sub:
+            mock_sub.return_value = MagicMock(returncode=0, stdout="{}")
+            linter.run({"manuscript_files": [str(dummy_file)]}, {})
+            
+        mock_resolver.resolve.assert_called_with("vale")
+    finally:
+        dummy_file.unlink()
 
 def test_vale_fallback_when_resolver_fails():
-    """Verify StyleLinter still available if resolver returns None (built-in fallback)."""
+    """Verify StyleLinter falls back to built-in if resolver returns None."""
     mock_resolver = MagicMock(spec=ToolResolver)
     mock_resolver.resolve.return_value = None
     
     linter = StyleLinter(resolver=mock_resolver)
+    dummy_file = Path("dummy_fallback.md")
+    dummy_file.write_text("Hello world")
     
-    assert linter.is_available() is True
-    mock_resolver.resolve.assert_called_with("vale")
+    try:
+        with patch("validators.style.validate_style", return_value=[]) as mock_val:
+            linter.run({"manuscript_files": [str(dummy_file)]}, {})
+            assert mock_val.called
+            
+        mock_resolver.resolve.assert_called_with("vale")
+    finally:
+        dummy_file.unlink()
