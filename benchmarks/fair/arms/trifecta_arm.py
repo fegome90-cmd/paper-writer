@@ -273,33 +273,53 @@ class TrifectaArm:
         )
 
     def find_dynamic_imports(self) -> TrifectaResult:
-        """
-        Find dynamic imports — Trifecta is BLIND to these.
-        Static graph cannot see importlib.import_module() targets.
-        """
+        """Find files that use dynamic imports (importlib, __import__)."""
         t0 = time.perf_counter()
 
         conn = self._get_conn()
 
-        # Try to find "importlib" in any node name or file
+        # Query module nodes with has_dynamic_imports metadata
         cur = conn.execute(
-            "SELECT * FROM nodes WHERE "
-            "symbol_name LIKE '%importlib%' OR "
-            "qualified_name LIKE '%importlib%'"
+            "SELECT * FROM nodes WHERE kind = 'module' "
+            "AND metadata_json LIKE '%has_dynamic_imports%'"
         )
 
         matches = []
+        seen_files: set[str] = set()
         for row in cur.fetchall():
             r = dict(row)
-            matches.append(
-                {
-                    "file": r.get("file_rel", ""),
-                    "line": r.get("line", 0),
-                    "name": r.get("symbol_name", ""),
-                    "text": "Static graph: cannot resolve dynamic imports",
-                    "score": 0.1,
-                }
+            file_rel = r.get("file_rel", "")
+            if file_rel and file_rel not in seen_files:
+                seen_files.add(file_rel)
+                matches.append(
+                    {
+                        "file": file_rel,
+                        "line": r.get("line", 0),
+                        "name": r.get("symbol_name", ""),
+                        "text": "File uses dynamic imports (importlib/__import__)",
+                        "score": 0.8,
+                    }
+                )
+
+        # Fallback: if no metadata tags, search for importlib in node names
+        if not matches:
+            cur2 = conn.execute(
+                "SELECT DISTINCT file_rel FROM nodes WHERE "
+                "qualified_name LIKE '%importlib%' OR file_rel LIKE '%importlib%'"
             )
+            for row in cur2.fetchall():
+                file_rel = row[0]
+                if file_rel and file_rel not in seen_files:
+                    seen_files.add(file_rel)
+                    matches.append(
+                        {
+                            "file": file_rel,
+                            "line": 0,
+                            "name": "",
+                            "text": "File references importlib",
+                            "score": 0.3,
+                        }
+                    )
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 
