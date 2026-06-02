@@ -250,9 +250,7 @@ class TestE2EFullPipeline:
         gates = state.get("gates", {})
 
         # For full render, ALL rendering precondition gates must be True
-        validation_gates = sorted(
-            ManuscriptState.STAGE_PRECONDITIONS.get("rendering", frozenset())
-        )
+        validation_gates = sorted(ManuscriptState.STAGE_PRECONDITIONS.get("rendering", frozenset()))
         all_validation_passed = all(gates.get(g, False) for g in validation_gates)
 
         if not all_validation_passed:

@@ -21,9 +21,9 @@ This plan builds on documents already committed to the repo. Treat each as locke
 
 ---
 
-## 2. Scope
+## 2. Scope IN
 
-### 2.1 What Phase 2 IS
+Phase 2 delivers the following. Each item is observable and tied to a verification gate.
 
 1. Move all inline Fase 0 logic (`_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method`) from `cli/paper/main.py` into `harness/services/audit/` so the CLI entrypoint becomes pure dispatch.
 2. Introduce an `MCPAdapter` class that conforms to the existing `ToolWrapper` port — no new port, no sibling port.
@@ -34,7 +34,7 @@ This plan builds on documents already committed to the repo. Treat each as locke
 7. Provide a stub MCP transport usable in CI and integration tests, with no network dependency.
 8. Sanitize every adapter request before logging or persisting; reject configs that contain secret-like values.
 
-### 2.2 What Phase 2 is NOT
+## 3. Scope OUT
 
 1. **Not** an agentic loop. No LLM-in-the-loop orchestration, no iterative refinement, no tool-of-tools. Phase 2 is plumbing.
 2. **Not** an MCP server. `paper-writer` does not expose its own MCP tools. Adapters only consume.
@@ -46,7 +46,7 @@ This plan builds on documents already committed to the repo. Treat each as locke
 
 ---
 
-## 3. Open design questions (already triaged)
+## 4. Open design questions (already triaged)
 
 | # | Question | Priority | Status | Default (configurable in implementation) |
 |---|----------|----------|--------|------------------------------------------|
@@ -65,7 +65,7 @@ This plan builds on documents already committed to the repo. Treat each as locke
 
 ---
 
-## 4. Architecture decisions (ADRs)
+## 5. Architecture decisions (ADRs)
 
 ### ADR-1: Reuse the `ToolWrapper` port for MCP adapters (Q1)
 
@@ -93,7 +93,7 @@ This plan builds on documents already committed to the repo. Treat each as locke
 
 ---
 
-## 5. Adapter contract
+## 6. Adapter contract
 
 The `ToolWrapper` port in `harness/ports/tool_wrapper.py` is the **only** contract an MCP adapter must satisfy. The contract is:
 
@@ -132,7 +132,7 @@ The orchestrator's `_run_wrapper_gate` (in `harness/services/orchestrator.py:372
 
 ---
 
-## 6. Resolution layer: local vs MCP
+## 7. Resolution layer: local vs MCP
 
 ```
         CLI
@@ -199,7 +199,7 @@ Precedence is enforced in `harness/services/orchestrator.py:_resolve_tool`. A CL
 
 ---
 
-## 7. Fallback and fail-closed semantics
+## 8. Fallback and fail-closed semantics
 
 The orchestrator's resolution + fallback logic follows four rules:
 
@@ -214,7 +214,7 @@ The orchestrator's resolution + fallback logic follows four rules:
 
 ---
 
-## 8. P0 candidate tools (from `mcp-tools-candidates.md`)
+## 9. P0 candidate tools (from `mcp-tools-candidates.md`)
 
 | Tool | Orchestrator command (when MCP path is taken) | Local resolver (when MCP path is not) | MCP adapter slot | Fallback allowed |
 |------|-----------------------------------------------|---------------------------------------|------------------|------------------|
@@ -235,7 +235,7 @@ The orchestrator's resolution + fallback logic follows four rules:
 
 ---
 
-## 9. Configuration, credentials, and discovery
+## 10. Configuration, credentials, and discovery
 
 **Config file location**: `.paper-writer/mcp.yaml` at the project root. Justification: the file is resolver-specific, has a different audience (DevOps / CI), and must be gitignored when it carries non-secret operational data (endpoints, timeouts). It is **not** a section of `state.yaml` because (a) `state.yaml` is meant to be machine-generated and human-readable-as-state, not hand-edited, and (b) mixing resolver config with state confuses the diff view.
 
@@ -258,7 +258,7 @@ The orchestrator's resolution + fallback logic follows four rules:
 
 ---
 
-## 10. Observability and traceability
+## 11. Observability and traceability
 
 Every MCP adapter call MUST emit one step entry into `OrchestratorResult.steps` with the following schema:
 
@@ -289,7 +289,7 @@ Every MCP adapter call MUST emit one step entry into `OrchestratorResult.steps` 
 
 ---
 
-## 11. Prerequisites
+## 12. Prerequisites
 
 Phase 2 cannot start until every box is green.
 
@@ -304,7 +304,7 @@ Phase 2 cannot start until every box is green.
 
 ---
 
-## 12. Implementation batches
+## 13. Implementation batches
 
 | PR | Focus | Files touched | Gate |
 |----|-------|---------------|------|
@@ -318,7 +318,7 @@ Phase 2 cannot start until every box is green.
 
 ---
 
-## 13. Success criteria
+## 14. Success criteria
 
 Observable, testable, and tied to a specific test path.
 
@@ -335,7 +335,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 14. Risks and mitigations
+## 15. Risks and mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
@@ -352,7 +352,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 15. Post-Phase 2 (Fase 3+ handoff)
+## 16. Post-Phase 2 (Fase 3+ handoff)
 
 **Rule**: do NOT pre-design Fase 3 in this document. The plan intentionally leaves these questions open:
 
@@ -365,7 +365,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 16. Decisions
+## 17. Decisions
 
 - **2026-06-02 — Q1 LOCKED**: Reuse `ToolWrapper` as the MCP adapter contract. No new port. `Orchestrator` is unchanged. `OrchestratorDependencies` gains an `mcp_clients: MappingProxyType[str, MCPAdapter]` slot. Rationale: keeps the orchestrator simple, leverages the existing `_run_wrapper_gate` fail-closed path, and avoids the cost of a sibling port.
 - **2026-06-02 — Q2 LOCKED**: Resolution policy lives in `.paper-writer/mcp.yaml` (per-tool section) with a CLI flag override and a static invariant fallback. Precedence: CLI > config > invariant. Rationale: three layers is the minimum that supports both ops-style YAML and per-invocation experimentation.
@@ -374,7 +374,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 17. Further considerations
+## 18. Further considerations
 
 1. **Cognitive complexity in `_run_wrapper_gate`**: when PR #2 lands, the function already handles local + MCP subclasses of the same port. The further refactor in `plan-extract-cli-wiring-builder.prompt.md` §Further Considerations #2 still applies — extract the resolution-and-dispatch logic into a `ResolutionGateRunner` if it exceeds 60 lines or grows more than one new branch. Track this in a follow-up plan; do not pre-design here.
 2. **Sub-orchestrator for `paper review`**: PR #5 may need a `ReviewSubOrchestrator` that composes the orchestrator with the extracted Fase 0 services. This is a v1 follow-up, not a v1 deliverable. Track the decision once PR #4 lands and the integration surface is observable.
@@ -384,7 +384,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 18. Relevant files
+## 19. Relevant files
 
 - `harness/ports/tool_wrapper.py` — `ToolWrapper` ABC, `ValidatorResult`, `ToolNotAvailableError`. The contract.
 - `harness/services/orchestrator.py` — `Orchestrator`, `OrchestratorRequest`, `OrchestratorResult`, `_run_wrapper_gate` (the integration surface that MCP adapters plug into without modification).
@@ -412,7 +412,7 @@ Observable, testable, and tied to a specific test path.
 
 ---
 
-## 19. Verification
+## 20. Verification
 
 Run, in order, after every PR lands. All must pass for v1 to be considered done.
 
