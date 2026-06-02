@@ -27,8 +27,13 @@ def test_artifact_checker_file_exists(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match=r"File 'manuscript\.qmd' not found"):
         checker.check_file_exists("manuscript.qmd")
 
-    # Created file
+    # Empty file should fail — gates require non-empty artifacts
     (tmp_path / "manuscript.qmd").touch()
+    with pytest.raises(ValueError, match="empty"):
+        checker.check_file_exists("manuscript.qmd")
+
+    # Non-empty file should pass
+    (tmp_path / "manuscript.qmd").write_text("# Title\n\nContent.", encoding="utf-8")
     checker.check_file_exists("manuscript.qmd")
 
 
@@ -39,8 +44,13 @@ def test_artifact_checker_any_file_exists(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="No files found"):
         checker.check_any_file_exists(files)
 
-    # Create only one file
+    # Empty file should fail — all existing files must be non-empty
     (tmp_path / "file2.txt").touch()
+    with pytest.raises(ValueError, match="empty"):
+        checker.check_any_file_exists(files)
+
+    # Non-empty file should pass
+    (tmp_path / "file2.txt").write_text("content", encoding="utf-8")
     checker.check_any_file_exists(files)
 
 
