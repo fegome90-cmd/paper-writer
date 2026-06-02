@@ -309,12 +309,27 @@ class TrifectaArm:
             latency_ms=latency_ms,
         )
 
+    # Stop words shared with production GraphStore.search_nodes
+    _STOP_WORDS = frozenset({
+        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+        "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
+        "to", "was", "were", "will", "with", "find", "get", "show",
+        "all", "any", "can", "do", "does", "how", "i", "if", "me",
+        "my", "no", "not", "or", "so", "this", "what", "when", "which",
+        "who", "why", "function", "class", "method", "module", "file",
+    })
+
     def search(self, query: str, top_k: int = 10) -> TrifectaResult:
-        """Search using graph symbol names."""
+        """Search using graph symbol names with stop word removal."""
         t0 = time.perf_counter()
 
         conn = self._get_conn()
-        tokens = re.findall(r"[a-z0-9_]+", query.lower())
+        raw_tokens = re.findall(r"[a-z0-9_]+", query.lower())
+        # Remove stop words and short tokens (matches production logic)
+        tokens = [t for t in raw_tokens if t not in self._STOP_WORDS and len(t) > 1]
+
+        if not tokens:
+            tokens = raw_tokens  # fallback if all were stop words
 
         # Score nodes by token overlap with symbol name
         scored: list[tuple[float, dict[str, Any]]] = []
