@@ -59,40 +59,40 @@ The `__init__.py` and `main.py` files use `argparse` to wire up commands dynamic
 
 The graph is not perfect, but it surfaced **three real bugs** in paper-writer that the user manually verified and that the indexer's limitations made visible.
 
-### 2.1 Phantom Validation 🧟‍♂️ (CRITICAL)
+### 2.1 Phantom Validation 🧟‍♂️ (CRITICAL — re-verified after fix)
 
 **Affected symbols**:
 - `ManuscriptState.validate()` — `harness/domain/state.py`
 - `StateManager.validate_state()` — `harness/services/state_manager.py`
 
-**The bug**: These methods are documented as "enforces schema invariants and stage-gates consistency", but the **graph cannot see any of the call sites**.
+**The original bug claim (from the other agent)**: "El sistema carga el state.yaml pero NUNCA verifica si es válido."
 
-**Why the graph is right** (in this case): the methods are invoked through local variables:
-- `yaml_repository.py:36` — `state = ManuscriptState(...); state.validate()` — variable `state` is locally typed
-- `state_manager.py:39` — `temp_state = ManuscriptState(...); temp_state.validate()` — same pattern
-- `state_manager.py:55,68,81` — `self.load_state()` returns a dict, not a state
+**The actual situation (after re-verification)**:
 
-**Why the methods ARE reachable** (in reality):
-- `state_manager.load_state()` returns `dict[str, Any]`
-- The dict is then **implicitly** converted to a `ManuscriptState` somewhere downstream (or it isn't, in which case the validation is **never actually invoked in production**)
+`StateManager.load_state()` (line 28) ALREADY calls `self.state.validate()` on the loaded state before returning the dict. So the production code path was **validating** — the bug claim was technically wrong.
 
-**Consequence**:
-- If the conversion never happens, the system **loads `state.yaml` but never validates it**
-- A user could write `state.yaml` claiming `stage: rendering` without `gates.search_completed: true`
-- The system would trust the file and proceed
+**However**, the orphan status of `validate_state()` (the service-layer wrapper) was misleading. The service-layer method takes a raw dict and validates it, but the production code never calls it because `load_state()` does the validation inline. So `validate_state` is orphan in the graph for a benign reason: the production code uses `self.state.validate()` directly instead of going through the wrapper.
 
-**Evidence the bug is real**:
-```bash
-$ grep -rn "validate_state\|state\.validate" harness/ cli/ 2>/dev/null
-harness/adapters/yaml_repository.py:36:            state.validate()
-harness/adapters/yaml_repository.py:43:            state.validate()
-harness/services/state_manager.py:39:            temp_state.validate()
+**The real (minor) risk**:
+- The dict returned from `load_state()` comes from a `ManuscriptState` that was already validated. But the dict itself is never explicitly re-validated. If the conversion from `ManuscriptState` to dict was buggy, the orchestrator would trust corrupted data.
+
+**Fix applied** (commit `fb9b143`):
+```python
+# After load_state() returns the dict:
+self.state_manager.validate_state(state_dict)
 ```
-Only 3 call sites, all in repositories. The orchestrator's `load_state()` returns a dict, not a `ManuscriptState`. So **between `load_state()` and any use of the dict, the data is never validated**.
+This is defense-in-depth. It costs ~1ms and makes the validation explicit at the orchestration layer.
 
-**Fix needed** (out of scope for this audit, but flagged):
-- Either have `StateManager.load_state()` return a `ManuscriptState` object directly (force validation)
-- Or call `validate_state()` on the loaded dict in `Orchestrator.execute()` before any transition
+**Test fixture bugs also fixed** (commit `fb9b143`):
+- `_create_orchestrator_in_stage` was creating `ManuscriptState(stage="rendering", gates={all: False})` — violates the invariant because you can't be at "rendering" without the precondition gates being True. The fixture was passing by accident because the old code only called `load_state()` and the broken fixture was silently accepted.
+- After the fix, the fixtures now set the precondition gates based on `STAGE_PRECONDITIONS`, exposing the test bug.
+
+**Key lesson for the autoresearch loop**: the other agent's "phantom validation" claim was based on the orphan status, which is **necessary but not sufficient** evidence. A function being orphan doesn't mean it's a bug — it could be:
+1. Actually unused (real bug)
+2. Called via a path the graph can't see (false positive — true here)
+3. Replaced by an equivalent call to a different method (true here: `self.state.validate()` instead of `validate_state()`)
+
+**Without O-9's `validation_gap` category, an agent would have to do this 3-step reasoning manually.**
 
 ### 2.2 Persistence Manca ✍️ (REAL BUG in graph perception)
 
