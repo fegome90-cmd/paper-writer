@@ -168,9 +168,7 @@ class TestPostInitGateAutoFill:
 
     def test_partial_gates_dict_preserves_existing(self) -> None:
         """Partial gates dict should preserve existing values and fill the rest."""
-        state = ManuscriptState(
-            stage="bootstrap", gates={"repo_initialized": True}
-        )
+        state = ManuscriptState(stage="bootstrap", gates={"repo_initialized": True})
         assert state.gates["repo_initialized"] is True
         assert len(state.gates) == len(ManuscriptState.REQUIRED_GATES)
         rest = {k: v for k, v in state.gates.items() if k != "repo_initialized"}

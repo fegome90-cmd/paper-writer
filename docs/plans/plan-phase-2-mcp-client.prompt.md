@@ -25,11 +25,11 @@ This plan builds on documents already committed to the repo. Treat each as locke
 
 Phase 2 delivers the following. Each item is observable and tied to a verification gate.
 
-1. Move all inline Fase 0 logic (`_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method`) from `cli/paper/main.py` into `harness/services/audit/` so the CLI entrypoint becomes pure dispatch.
+1. Move all inline Fase 0 logic (`_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method`) from `cli/paper/main.py` into `harness/services/audit/` so the CLI entrypoint contains no inline validator calls (Fase 0 command bodies moved to `harness/services/audit/`; entrypoint retains argument parsing, command-to-`OrchestratorRequest` mapping, and `_print_summary` per §19 / per `cli/paper/main.py:354-453` in the current file).
 2. Introduce an `MCPAdapter` class that conforms to the existing `ToolWrapper` port — no new port, no sibling port.
 3. Add an `mcp_clients: MappingProxyType[str, MCPAdapter]` slot to `OrchestratorDependencies` (parallel to `wrappers` and `skill_adapters`).
 4. Define a config schema (`.paper-writer/mcp.yaml`) and a CLI flag (`--mcp-resolver`) for per-tool resolution between local and MCP paths. Precedence: CLI flag > config file > static invariant in `harness/services/orchestrator.py`.
-5. Implement a fail-closed default with an explicit opt-in (`fallback: local`) for resolvers where a local implementation exists. MCP-only tools (P1+ tools with no local path) ALWAYS fail-closed (schema-level enforcement: `fallback` key rejected).
+5. Implement a fail-closed default with an explicit opt-in (`fallback: local`) for resolvers where a local implementation exists. MCP-only tools (tools without a local path — in v1: `paper_evidence_map`, `paper_reviewer2`) ALWAYS fail-closed (schema-level enforcement: `fallback` key rejected at config load for any tool whose local resolver does not exist).
 6. Probe adapter availability at command start (JSON-RPC `initialize` for stdio) and emit a structured step in `OrchestratorResult.steps` describing which path was used.
 7. Provide a stub MCP transport usable in CI and integration tests, with no network dependency.
 8. Sanitize every adapter request before logging or persisting; reject configs that contain secret-like values.
@@ -38,7 +38,7 @@ Phase 2 delivers the following. Each item is observable and tied to a verificati
 
 1. **Not** an agentic loop. No LLM-in-the-loop orchestration, no iterative refinement, no tool-of-tools. Phase 2 is plumbing.
 2. **Not** an MCP server. `paper-writer` does not expose its own MCP tools. Adapters only consume.
-3. **Not** a Fase 0/1 expansion. No new validators, no new rule families, no new CLI commands beyond the resolution mechanism. P1/P2 tools listed in `mcp-tools-candidates.md` are **out of v1** scope.
+3. **Not** a Fase 0/1 expansion. No new validators, no new rule families, no new CLI commands beyond the resolution mechanism. P1/P2 tools listed in `mcp-tools-candidates.md` are **out of v1** scope. The "MCP-only" classification is priority-agnostic — it is defined by the absence of a local path, not by P-tier. The v1 MCP-only P0 set is `paper_evidence_map`, `paper_reviewer2`; the schema rule that rejects `fallback: local` is the single source of truth (see §7).
 4. **Not** a duplicate of `plan-extract-cli-wiring-builder.prompt.md`. The extraction plan owns the dependency builder; Phase 2 consumes its output and adds the `mcp_clients` slot.
 5. **Not** an HTTP/SSE transport implementation. v1 is stdio JSON-RPC only. HTTP/SSE is parked as a follow-up.
 6. **Not** a keychain integration. Credentials are env-var-only in v1. Keychain is a follow-up.
@@ -62,6 +62,7 @@ Phase 2 delivers the following. Each item is observable and tied to a verificati
 | Q10 | Artifact sanitization | P1 | Open | Redacted dict via `SecretDetector` utility in `harness/services/mcp/sanitization.py`. Never emit raw credentials. |
 | Q11 | Adapter → gate mapping | P1 | Open | 1:1 in v1 (each adapter declares exactly one gate). Generalize to many-to-many in follow-up. |
 | Q12 | CLI surfacing | P1 | Open | One entry in `OrchestratorResult.steps` per MCP call + one-line summary at the end of the run: `"paper_claim_audit: resolved via mcp:robin (latency=120ms)"`. |
+| Q13 | MCP request rate cap | P2 | Open | Per-adapter rate cap (configurable, default 10/min) — **Configurable in implementation**, default shown. |
 
 ---
 
@@ -82,7 +83,7 @@ Phase 2 delivers the following. Each item is observable and tied to a verificati
 ### ADR-3: Fail-closed default with explicit `fallback: local` opt-in (Q4)
 
 - **Context**: External MCPs are flaky, rate-limited, and can disappear. A silent fallback to local hides outages and produces misleading success signals.
-- **Decision**: Default is **fail-closed**. The orchestrator emits a `blocker` naming the transport, the tool, and the failure mode. To allow fallback for tools that have a local path, the config author must set `fallback: local` on that tool's entry. When fallback fires, the orchestrator emits a `warning` with the message `"fallback triggered for <tool>: mcp <adapter> unavailable, using local"`. **MCP-only tools** (P1+ tools without a local implementation) are blocked at config load — the schema rejects the `fallback` key on their entries.
+- **Decision**: Default is **fail-closed**. The orchestrator emits a `blocker` naming the transport, the tool, and the failure mode. To allow fallback for tools that have a local path, the config author must set `fallback: local` on that tool's entry. When fallback fires, the orchestrator emits a `warning` with the message `"fallback triggered for <tool>: mcp <adapter> unavailable, using local"`. **MCP-only tools** (P0/P1/P2 tools with no local path) are blocked at config load from specifying `fallback: local` — the schema rejects the `fallback` key on their entries.
 - **Tradeoff**: Stricter than typical MCP integrations. **Cost**: more boilerplate in YAML, more explicit "fallback triggered" warnings. **Benefit**: no silent degradation; every fallback is auditable; outages are visible in CI logs.
 
 ### ADR-4: v1 is plumbing only; `paper review` is PR #5 (Q9)
@@ -126,9 +127,11 @@ class ToolWrapper(ABC):
 
 The orchestrator's `_run_wrapper_gate` (in `harness/services/orchestrator.py:372`) is the **integration surface**. It already handles `ToolNotAvailableError`, the validator-to-gate conversion, and the fail-closed blocker emission. The MCP-specific concerns — transport spawn, JSON-RPC encode/decode, request sanitization — live entirely inside the `MCPAdapter` subclass. The orchestrator sees no difference between a local wrapper and an MCP adapter.
 
+The resolution layer (PR #3) reads from `wrappers`. The `mcp_clients` field on `OrchestratorDependencies` mirrors the `skill_adapters` precedent — present for builder-level testability and decoupling, not for Orchestrator consumption.
+
 **Invariant**: An MCP adapter MUST NOT raise anything other than `ToolNotAvailableError` and the JSON-RPC error classes declared in `harness/services/mcp/errors.py`. It MUST return a `ValidatorResult` whose `validator` field equals `self.name`.
 
-**Non-goals for the port**: streaming responses, callbacks, push notifications. v1 is request/response only.
+**Non-goals for the port**: streaming responses, callbacks, push notifications. v1 is request/response only. If complexity grows, the resolution-and-dispatch logic will be extracted into a `ResolutionGateRunner` (see §18 #1).
 
 ---
 
@@ -186,13 +189,13 @@ resolvers:
     adapter: robin
     fallback: local              # opt-in; absent = fail-closed
   paper_evidence_map:
-    adapter: robin
-    fallback: local
+    adapter: robin                # MCP-only; fallback key rejected by schema
   paper_reviewer2:
     adapter: robin                # MCP-only; fallback key rejected by schema
   paper_method_gate:
-    adapter: era                  # MCP-only; default local
-    # NB: no `fallback` key — fails closed if era is down
+    adapter: era                  # default local; fallback: local allowed because MethodGateValidator exists (PR #1 refactor)
+    fallback: local              # opt-in; absent = fail-closed
+    # NB: local path is `harness.services.audit.method_gate.gate_method` (PR #1)
 ```
 
 Precedence is enforced in `harness/services/orchestrator.py:_resolve_tool`. A CLI flag parses to a dict that overlays the config dict, which overlays the static invariant.
@@ -208,7 +211,7 @@ The orchestrator's resolution + fallback logic follows four rules:
 3. **Adapter configured and unreachable, `fallback: local` set, and a local wrapper exists** → use the local wrapper and emit a `warning: fallback triggered for <tool>: mcp <adapter> unavailable, using local`. The step entry records the path switch.
 4. **Adapter configured and unreachable, no `fallback: local` set, OR tool is MCP-only** → emit `blocker: mcp <adapter> unreachable for <tool> (transport=<transport>, tool=<tool>, failure_mode=<class>)`. The step entry records the failure but does not proceed to the local wrapper.
 
-**Schema-level enforcement for MCP-only tools**: `MCPResolverConfig` is a Pydantic model with a discriminator on `fallback`. When the tool has no local path (the canonical list is `paper_reviewer2` until Fase 3 adds more), the `fallback` key is rejected with `ValidationError` at config load. The error message names the tool and the offending key.
+**Schema-level enforcement for MCP-only tools**: `MCPResolverConfig` is a Pydantic model with a discriminator on `fallback`. The rule is universal: any tool whose local resolver does not exist rejects the `fallback` key at config load time. The "local-exists" list is the schema's source of truth — derived from §9 P0 table and §19 (`harness/services/audit/`) — not the P-tier. In v1, the rejected-key set is `{paper_evidence_map, paper_reviewer2}`. The error message names the tool and the offending key.
 
 **Log discipline on fallback**: every fallback firing writes one structured warning. The warning text is fixed (not user-configurable) so log scrapers can detect it. CI rules can grep for it.
 
@@ -218,10 +221,10 @@ The orchestrator's resolution + fallback logic follows four rules:
 
 | Tool | Orchestrator command (when MCP path is taken) | Local resolver (when MCP path is not) | MCP adapter slot | Fallback allowed |
 |------|-----------------------------------------------|---------------------------------------|------------------|------------------|
-| `paper_claim_audit` | `audit_claims` (new) — composed in PR #5 | `_cmd_audit_claims` refactored (PR #1) | `robin.paper_claim_audit` | yes (local exists) |
+| `paper_claim_audit` | `audit_claims` (new) — composed in PR #5 | `harness.services.audit.claims.audit_claims` (PR #1) | `robin.paper_claim_audit` | yes (local exists) |
 | `paper_evidence_map` | `map_evidence` (new) — composed in PR #5 | none in v1 | `robin.paper_evidence_map` | no (no local) |
 | `paper_reviewer2` | `reviewer2_run` (new) — composed in PR #5 | none in v1 | `robin.paper_reviewer2` | no (MCP-only) |
-| `paper_method_gate` | `gate_method` (reuses existing command) | `MethodGateValidator` (PR #1 refactor) | `era.paper_method_gate` | yes (local exists) |
+| `paper_method_gate` | `gate_method` (reuses existing command) | `harness.services.audit.method_gate.gate_method` (PR #1, calls `MethodGateValidator`) | `era.paper_method_gate` | yes (local exists) |
 
 **P1/P2 tools — explicitly out of v1**:
 
@@ -245,12 +248,12 @@ The orchestrator's resolution + fallback logic follows four rules:
 2. `.paper-writer/mcp.yaml` in the project root.
 3. Static invariant in `harness/services/orchestrator.py` (lowest precedence; default resolvers and gate mappings).
 
-**Credentials**: env vars only in v1. The schema for the `env:` section in `.paper-writer/mcp.yaml` is `Mapping[str, SecretReference]` where `SecretReference = str` matching the pattern `^[A-Z][A-Z0-9_]*$` (e.g., `OPENAI_API_KEY`). At adapter construction time, the env var is resolved against `os.environ`. The **resolved value never appears** in `OrchestratorResult.steps`, in `state.yaml`, in the artifact directory, or in any log line. A `SecretDetector` utility in `harness/services/mcp/sanitization.py` enforces this at three checkpoints: step-emit, artifact-write, log-emit.
+**Credentials**: env vars only in v1. The schema for the `env:` section in `.paper-writer/mcp.yaml` is `Mapping[str, SecretReference]` where `SecretReference = str` matching the pattern `^[A-Z][A-Z0-9_]*$` (e.g., `OPENAI_API_KEY`). `SecretReference` is defined in `harness/services/mcp/schema.py` and re-exported from `harness/services/mcp/sanitization.py`. At adapter construction time, the env var is resolved against `os.environ`. The **resolved value never appears** in `OrchestratorResult.steps`, in `state.yaml`, in the artifact directory, or in any log line. A `SecretDetector` utility in `harness/services/mcp/sanitization.py` enforces this at three checkpoints: step-emit, artifact-write, log-emit.
 
 **Security boundary (hard rules)**:
 
 - No secrets in the repo (`.gitignore` includes `.paper-writer/mcp.local.yaml` and any `*.mcp.secret` files).
-- No secrets in `state.yaml` (schema rejects string values that look like API keys — see ADR-3 and §9.4 of `VALIDATOR_CONTRACTS.md` if it exists, else define in `harness/services/mcp/sanitization.py`).
+- No secrets in `state.yaml` (schema rejects string values that look like API keys — see ADR-3 and `VALIDATOR_CONTRACTS.md` §Canonical Input Contract).
 - No secrets in `OrchestratorResult` (the `SecretDetector` runs on every dict before it leaves the orchestrator).
 - No secrets in artifact files (same detector runs at `action_runner.emit_*`).
 
@@ -272,7 +275,7 @@ Every MCP adapter call MUST emit one step entry into `OrchestratorResult.steps` 
     "gate": "<gate_name>",                   # the gate this resolver feeds
     "adapter_id": "<adapter_id>",            # e.g. "robin"
     "error_class": None | "TransportDown" | "Timeout" | "SchemaMismatch" | "AuthFailure" | "RateLimited" | "Other",
-    "sanitized_request": {...},              # JSON-RPC payload with secrets redacted
+    "sanitized_request": MCPRequestPayload,  # Pydantic model in harness/services/mcp/responses.py (same file as response schema per Q6); JSON-RPC payload with secrets redacted
     "path": "mcp" | "local" | "local_via_fallback",   # which path was taken
 }
 ```
@@ -299,8 +302,7 @@ Phase 2 cannot start until every box is green.
 - [ ] `ToolWrapper` port surface reviewed — accepted as the MCP adapter contract.
 - [ ] Phase 1 success criteria still green (regression test suite passes).
 - [ ] `mcp-tools-candidates.md` reconciled with current `OrchestratorRequest` / `OrchestratorResult` shape (no command name drift).
-- [ ] MCP credential storage policy documented in `docs/SECURITY.md` (or equivalent) — env-var-only, no keychain in v1.
-- [ ] Stub MCP transport implemented and used by integration tests — CI does not require network.
+- [ ] Create `docs/SECURITY.md` with the v1 MCP credential storage policy (env-var-only, no keychain in v1, precedence: env > config) — deliverable as part of PR #2.
 
 ---
 
@@ -308,8 +310,8 @@ Phase 2 cannot start until every box is green.
 
 | PR | Focus | Files touched | Gate |
 |----|-------|---------------|------|
-| **#1** | Refactor Fase 0: move `_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method` from `cli/paper/main.py` to `harness/services/audit/`. `cli/paper/main.py` becomes pure dispatch (no inline validator calls). | `cli/paper/main.py` (lines 54–167 refactored), NEW: `harness/services/audit/{prose,claims,method_gate}.py`, NEW: `harness/services/audit/__init__.py`. | Existing Fase 0 tests pass without modification. `pytest tests/validators/ -v` green. `pytest tests/cli/test_cli_request_mapping.py` green. |
-| **#2** | Adapter contract: define `MCPAdapter(ToolWrapper)` in `harness/services/mcp/adapter.py`, add `mcp_clients: MappingProxyType[str, MCPAdapter]` slot to `OrchestratorDependencies`, register a stub transport (`harness/services/mcp/transports/stdio.py`). | NEW: `harness/services/mcp/{adapter.py,transports/__init__.py,transports/stdio.py,errors.py,responses.py}`, modify `harness/services/orchestrator_builder.py` (add `mcp_clients` field + builder arg), modify `harness/services/orchestrator.py` (no semantic change; just thread the new field). | `tests/harness/test_mcp_adapter.py` ≥ 80% coverage. `_run_wrapper_gate` behavior unchanged. Existing builder tests still pass. |
+| **#1** | Refactor Fase 0: move `_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method` from `cli/paper/main.py` to `harness/services/audit/`. The dispatch in `cli/paper/main.py:333-336` (the `func = getattr(args, "func", None)` direct-call path) is REPLACED with an `Orchestrator.execute` call for Fase 0 commands. `cli/paper/main.py` becomes pure dispatch (no inline validator calls). | `cli/paper/main.py` (`_cmd_audit_prose`, `_cmd_audit_claims`, `_cmd_gate_method` moved out), NEW: `harness/services/audit/{prose,claims,method_gate}.py`, NEW: `harness/services/audit/__init__.py`. | Existing Fase 0 tests pass with their result content unchanged (functional regression only, not implementation detail). `pytest tests/validators/ -v` green. `pytest tests/cli/test_cli_request_mapping.py` green. Fase 0 commands now route through the orchestrator. |
+| **#2** | Adapter contract: define `MCPAdapter(ToolWrapper)` in `harness/services/mcp/adapter.py`, add `mcp_clients: MappingProxyType[str, MCPAdapter]` slot to `OrchestratorDependencies`, register a stub transport (`harness/services/mcp/transports/stdio.py`). PR #2 also adds `paper doctor` MCP adapter count reporting (configured vs reachable, defaults to `0 configured, 0 reachable` in v1). | NEW: `harness/services/mcp/{adapter.py,transports/__init__.py,transports/stdio.py,errors.py,responses.py}`, modify `harness/services/orchestrator_builder.py` (add `mcp_clients` field + builder arg), modify `harness/services/orchestrator.py` (no semantic change; just thread the new field). | `tests/harness/test_mcp_adapter.py` ≥ 80% coverage. `_run_wrapper_gate` behavior unchanged. Existing builder tests still pass. `paper doctor` reports adapter count. Stub MCP transport ready and used in `tests/integration/test_mcp_adapter.py`; CI does not require network for adapter tests. |
 | **#3** | Resolution layer: parse `.paper-writer/mcp.yaml`, add `--mcp-resolver` CLI flag, implement `_resolve_tool` in `harness/services/orchestrator.py`, probe at command start (JSON-RPC `initialize`). | NEW: `harness/services/mcp/{config.py,schema.py,probe.py}`, modify `cli/paper/main.py` (add flag), modify `harness/services/orchestrator.py` (`_resolve_tool` + probe call). | `tests/integration/test_resolution.py` passes. Config validation rejects unknown tools, missing adapters, and `fallback` key on MCP-only tools. Probe does not block the orchestrator on unconfigured adapters. |
 | **#4** | Fallback semantics: implement the four-rule fallback logic, integrate step entries, wire `SecretDetector` into step-emit and artifact-write paths, add the "FALLBACK TRIGGERED" suffix to the one-line summary. | modify `harness/services/orchestrator.py` (fallback dispatch + step emission), NEW: `harness/services/mcp/sanitization.py`, modify `cli/paper/main.py` (`_print_summary`), modify `harness/adapters/filesystem_action_runner.py` (sanitize on emit). | `tests/integration/test_fallback.py` passes. MCP-down → blocker for MCP-only tools; MCP-down → local + warning for `fallback: local` tools. `pytest tests/security/test_secret_detector.py` (or equivalent) passes. |
 | **#5** | `paper review` command (follow-up, **not v1**): compose orchestrator + extracted Fase 0 services + zero or more MCP adapters into a single command. | NEW: `cli/paper/review.py` (or extension of `main.py`), NEW: `harness/services/review/orchestrator.py` (sub-orchestrator if composition exceeds main flow). | E2E test: `paper review` runs end-to-end with the stub Robin transport. `pytest tests/e2e/test_paper_review.py` passes. |
@@ -323,12 +325,10 @@ Phase 2 cannot start until every box is green.
 Observable, testable, and tied to a specific test path.
 
 - [ ] `paper audit prose`, `paper audit claims`, `paper gate method` run end-to-end after PR #1 with no change in output (regression test in `tests/cli/test_cli_phase0_regression.py`).
-- [ ] `paper review` runs end-to-end with zero MCP adapters configured and produces equivalent result to pre-Phase-2 Fase 0 invocation (regression test). **Note**: `paper review` itself is PR #5; this criterion is satisfied by the existing Fase 0 regression once PR #5 lands. v1 does not include this criterion.
-- [ ] `paper review` runs end-to-end with at least one MCP adapter configured, exercises both local and MCP path for at least one P0 tool. **Note**: same as above — PR #5 criterion.
 - [ ] When MCP is configured but unreachable, the orchestrator fails closed with explicit `blocker` naming the transport and the tool. Test path: `tests/integration/test_fallback.py::test_mcp_down_blocks_mcp_only_tool`.
 - [ ] When MCP returns a malformed response, the orchestrator fails closed and the artifact path records the sanitized request + failure mode. Test path: `tests/integration/test_fallback.py::test_malformed_response_blocks_and_artifact_sanitized`.
 - [ ] Adapter contract test suite passes with stub transport; coverage ≥ 80% for new `MCPAdapter` / `mcp_clients` integration code. Test path: `pytest tests/harness/test_mcp_adapter.py --cov=harness/services/mcp --cov-report=term-missing`.
-- [ ] No regression: all Fase 0/1 tests pass; `Orchestrator.__init__` signature unchanged (PR #2 only adds an optional `mcp_clients` arg with default `None`); `OrchestratorDependencies` backward-compatible (PR #2 adds an optional `mcp_clients` slot that defaults to an empty `MappingProxyType`).
+- [ ] No regression: all Fase 0/1 tests pass; `Orchestrator.__init__` backward-compatible (PR #2 only adds an optional `mcp_clients` arg with default `None`); `OrchestratorDependencies` backward-compatible (PR #2 adds an optional `mcp_clients` slot that defaults to an empty `MappingProxyType`).
 - [ ] MCP invocations observable: every MCP call produces a step entry with `{tool, transport, latency_ms, status, gate, adapter_id, error_class, sanitized_request, path}`. Test path: `tests/integration/test_resolution.py::test_step_entry_shape`.
 - [ ] No secrets persisted in `state.yaml`, `OrchestratorResult`, or artifacts — `tests/security/test_secret_detector.py` (or equivalent) enforces by injecting a fake `OPENAI_API_KEY` env var, running a fixture adapter, and asserting that no string starting with `sk-` or matching common API-key regexes appears in any emitted field.
 - [ ] Adding a new MCP adapter requires zero changes to `Orchestrator` — only builder registration (`orchestrator_builder.py`) and a config entry in `.paper-writer/mcp.yaml`. Test path: `tests/harness/test_orchestrator_builder.py::test_adding_adapter_does_not_change_orchestrator_init_signature`.
@@ -343,7 +343,7 @@ Observable, testable, and tied to a specific test path.
 | Credential leakage via logs / `state.yaml` / artifacts | Medium | Critical | `SecretDetector` utility at three checkpoints; CI linter that fails when `state.yaml` or any emitted artifact contains a high-entropy string; env-var-only storage in v1; `.gitignore` rules for `.paper-writer/mcp.local.yaml`. |
 | Fallback masking real issues (MCP down repeatedly, user never notices) | Medium | High | Fallback always emits a `warning` (not silent); one-line summary appends `(FALLBACK TRIGGERED)`; CI rule can grep for it. |
 | Schema drift between local validator output and MCP adapter output (different `findings` shapes) | High | Medium | `ValidatorResult` is the only return type; MCP adapter is responsible for translating its raw response into `ValidatorResult`; integration tests assert shape equivalence for at least one P0 tool. |
-| Cost — MCP calls have per-call $ | Medium | Medium | Per-adapter timeouts (Q5) cap blast radius; per-adapter request rate cap (configurable, default 10/min) prevents runaway scripts; cost warning logged when adapter config has no `timeouts:` block. |
+| Cost — MCP calls have per-call $ | Medium | Medium | Per-adapter timeouts (Q5) cap blast radius; per-adapter request rate cap (Q13, default 10/min) prevents runaway scripts; cost warning logged when adapter config has no `timeouts:` block. |
 | Lock-in to a specific vendor's MCP schema (e.g., Robin's exact request shape) | Medium | Medium | Adapter subclasses per vendor; orchestrator sees only `ValidatorResult`; switching vendors = new adapter class + new `.paper-writer/mcp.yaml` entry. No vendor code in `Orchestrator` or `OrchestratorBuilder`. |
 | Resolution layer cognitive complexity (precedence + invariants + CLI flag overlay) grows over time | Medium | Medium | ADR-2 documents the precedence once; `_resolve_tool` is the single function; docstring + test coverage freeze the behavior. |
 | Probe call at command start adds latency even when no MCP is configured | Low | Low | Probe runs only against adapters declared in `.paper-writer/mcp.yaml`; absent config = no probe. |
@@ -353,6 +353,12 @@ Observable, testable, and tied to a specific test path.
 ---
 
 ## 16. Post-Phase 2 (Fase 3+ handoff)
+
+**Out-of-scope for v1 (PR #5 follow-up)** — these items are deliberately NOT in §14 success criteria:
+
+- [ ] `paper review` runs end-to-end with zero MCP adapters configured and produces equivalent result to pre-Phase-2 Fase 0 invocation (regression test). **Note**: `paper review` itself is PR #5; this criterion is satisfied by the existing Fase 0 regression once PR #5 lands. v1 does not include this criterion.
+- [ ] `paper review` runs end-to-end with at least one MCP adapter configured, exercises both local and MCP path for at least one P0 tool. **Note**: same as above — PR #5 criterion.
+- The `audit_claims` (and any other) orchestrator command(s) needed by `paper review` are defined in the PR #5 follow-up spec. v1 plumbing supports them without yet exercising them.
 
 **Rule**: do NOT pre-design Fase 3 in this document. The plan intentionally leaves these questions open:
 
@@ -367,7 +373,7 @@ Observable, testable, and tied to a specific test path.
 
 ## 17. Decisions
 
-- **2026-06-02 — Q1 LOCKED**: Reuse `ToolWrapper` as the MCP adapter contract. No new port. `Orchestrator` is unchanged. `OrchestratorDependencies` gains an `mcp_clients: MappingProxyType[str, MCPAdapter]` slot. Rationale: keeps the orchestrator simple, leverages the existing `_run_wrapper_gate` fail-closed path, and avoids the cost of a sibling port.
+- **2026-06-02 — Q1 LOCKED**: Reuse `ToolWrapper` as the MCP adapter contract. No new port. `Orchestrator` is unchanged. `OrchestratorDependencies` gains an `mcp_clients: MappingProxyType[str, MCPAdapter]` slot. The `mcp_clients` slot is for testability and decoupling, not for Orchestrator consumption — same precedent as `skill_adapters`. Rationale: keeps the orchestrator simple, leverages the existing `_run_wrapper_gate` fail-closed path, and avoids the cost of a sibling port.
 - **2026-06-02 — Q2 LOCKED**: Resolution policy lives in `.paper-writer/mcp.yaml` (per-tool section) with a CLI flag override and a static invariant fallback. Precedence: CLI > config > invariant. Rationale: three layers is the minimum that supports both ops-style YAML and per-invocation experimentation.
 - **2026-06-02 — Q4 LOCKED**: Fail-closed default. Opt-in `fallback: local` for tools that have a local path. MCP-only tools always fail-closed (schema rejects the `fallback` key). Rationale: silent fallback hides outages; explicit fallback is auditable.
 - **2026-06-02 — Q9 LOCKED**: v1 is plumbing only (PR #1–#4). `paper review` is PR #5, follow-up. Rationale: smaller blast radius per PR; plumbing validated before composition.
@@ -376,7 +382,7 @@ Observable, testable, and tied to a specific test path.
 
 ## 18. Further considerations
 
-1. **Cognitive complexity in `_run_wrapper_gate`**: when PR #2 lands, the function already handles local + MCP subclasses of the same port. The further refactor in `plan-extract-cli-wiring-builder.prompt.md` §Further Considerations #2 still applies — extract the resolution-and-dispatch logic into a `ResolutionGateRunner` if it exceeds 60 lines or grows more than one new branch. Track this in a follow-up plan; do not pre-design here.
+1. **Cognitive complexity in `_run_wrapper_gate`**: when PR #2 lands, the function already handles local + MCP subclasses of the same port. The further refactor in `plan-extract-cli-wiring-builder.prompt.md` §Further Considerations #2 still applies — extract the resolution-and-dispatch logic into the `ResolutionGateRunner` class (forward-referenced from §6) if it exceeds 60 lines or grows more than one new branch. Track this in a follow-up plan; do not pre-design here.
 2. **Sub-orchestrator for `paper review`**: PR #5 may need a `ReviewSubOrchestrator` that composes the orchestrator with the extracted Fase 0 services. This is a v1 follow-up, not a v1 deliverable. Track the decision once PR #4 lands and the integration surface is observable.
 3. **Cost dashboard**: per-adapter call counts and approximate cost belong in a future observability plan. Out of scope for Phase 2.
 4. **Multiple-`paper review` profiles**: when Fase 3 adds per-journal profiles, the resolution layer must be re-runnable with a profile overlay. The CLI flag already supports this; the config schema may need a `profiles:` section. Out of scope for Phase 2; note in `phase-1-plan.md` §8 successor.
