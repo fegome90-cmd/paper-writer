@@ -11,6 +11,7 @@ from harness.services.gates import (
     validate_bib_normalized,
     validate_outline_drafted,
     validate_ready_for_delivery,
+    validate_render_passed,
     validate_repo_initialized,
     validate_screened_evidence,
     validate_search_completed,
@@ -320,7 +321,10 @@ class Orchestrator:
         elif cmd == "audit_reporting":
             return [self._run_wrapper_gate("audit_reporting")]
         elif cmd == "render":
-            return [self._run_wrapper_gate("render", request_args=request.args)]
+            return [
+                self._run_wrapper_gate("render", request_args=request.args),
+                validate_render_passed(self.checker),
+            ]
         elif cmd == "import_bib":
             return [
                 self._run_wrapper_gate("import_bib", request_args=request.args),

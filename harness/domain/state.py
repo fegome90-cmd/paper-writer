@@ -18,6 +18,15 @@ class ManuscriptState:
     stage: str
     gates: dict[str, bool] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        """Ensure all required gates are present, defaulting to False."""
+        if not isinstance(self.gates, dict):
+            return  # Will be caught by validate()
+
+        for gate in self.REQUIRED_GATES:
+            if gate not in self.gates:
+                self.gates[gate] = False
+
     # Ordered pipeline stages — position determines forward/backward
     STAGE_ORDER: ClassVar[tuple[str, ...]] = (
         "bootstrap",

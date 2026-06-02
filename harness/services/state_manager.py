@@ -25,11 +25,12 @@ class StateManager:
         """Loads state through the repository and returns its representation."""
         try:
             self.state = self.repository.load()
+            self.state.validate()
             return {
                 "stage": self.state.stage,
                 "gates": self.state.gates,
             }
-        except StateRepositoryError as e:
+        except (StateRepositoryError, DomainStateError) as e:
             raise StateManagerError(f"State Manager failed to load state: {e}") from e
 
     def validate_state(self, data: dict[str, Any]) -> None:
