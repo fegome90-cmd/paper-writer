@@ -12,8 +12,10 @@ def test_tool_resolution_dataclass():
     assert res.version == "3.1.0"
     assert res.source == "global"
 
+
 def test_tool_resolver_interface():
     """Verify ToolResolver ABC can be subclassed and enforced."""
+
     class DummyResolver(ToolResolver):
         def resolve(self, tool_id: str, min_version: str | None = None) -> ToolResolution | None:
             if tool_id == "found":
@@ -24,6 +26,7 @@ def test_tool_resolver_interface():
     result = resolver.resolve("found")
     assert result.path == Path("/bin/found")
     assert resolver.resolve("missing") is None
+
 
 def test_tool_resolver_abc_enforcement():
     """Verify ToolResolver cannot be instantiated directly."""

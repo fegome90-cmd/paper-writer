@@ -123,12 +123,12 @@ class TestDegradedModeInWrappers:
         mf = tmp_path / "test.md"
         mf.write_text("The data was collected. This proves that X is true.")
 
+        # No resolver injected → falls back to built-in linter (degraded mode)
         linter = StyleLinter()
-        with patch.object(linter, "_vale_available", return_value=False):
-            result = linter.run(
-                {"manuscript_files": [str(mf)]},
-                {},
-            )
+        result = linter.run(
+            {"manuscript_files": [str(mf)]},
+            {},
+        )
 
         degraded = [f for f in result.findings if f["code"] == "degraded_mode"]
         assert len(degraded) == 1
@@ -149,12 +149,12 @@ class TestDegradedModeInWrappers:
             "}\n"
         )
 
+        # No resolver injected → falls back to _builtin_validate (degraded mode)
         normalizer = BibliographyNormalizer()
-        with patch.object(normalizer, "_resolve_executable", return_value=None):
-            result = normalizer.run(
-                {"bibliography": str(bib)},
-                {},
-            )
+        result = normalizer.run(
+            {"bibliography": str(bib)},
+            {},
+        )
 
         degraded = [f for f in result.findings if f["code"] == "degraded_mode"]
         assert len(degraded) == 1

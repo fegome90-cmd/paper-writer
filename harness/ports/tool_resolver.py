@@ -22,9 +22,7 @@ class ToolResolver(ABC):
     """Interface for resolving external tool paths and versions."""
 
     @abstractmethod
-    def resolve(
-        self, tool_id: str, min_version: str | None = None
-    ) -> ToolResolution | None:
+    def resolve(self, tool_id: str, min_version: str | None = None) -> ToolResolution | None:
         """Locate a tool and verify its version if requested.
 
         Args:

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from harness.adapters.filesystem_action_runner import FilesystemActionRunner
 from harness.adapters.filesystem_artifact_checker import FilesystemArtifactChecker
+from harness.adapters.local_tool_resolver import LocalToolResolver
 from harness.adapters.yaml_repository import YamlFileStateRepository
 from harness.ports.action_runner import ActionRunner
 from harness.ports.artifact_checker import ArtifactChecker
@@ -83,18 +84,21 @@ def build_orchestrator_dependencies(
     # 7. Action runner
     action_runner = FilesystemActionRunner(project_root, skill_adapters=resolved_skill_adapters)
 
-    # 8. Tool wrappers (fresh instances per call)
+    # 8. Tool resolver for binary resolution
+    tool_resolver = LocalToolResolver(project_root)
+
+    # 9. Tool wrappers (fresh instances per call)
     wrappers: dict[str, ToolWrapper] = {
-        "lint_bib": BibliographyNormalizer(),
+        "lint_bib": BibliographyNormalizer(resolver=tool_resolver),
         "check_refs": RefsValidator(),
         "check_refs_metadata": RefsMetadataValidator(),
-        "lint_style": StyleLinter(),
+        "lint_style": StyleLinter(resolver=tool_resolver),
         "audit_reporting": ReportingAuditor(),
-        "render": PandocRenderer(),
+        "render": PandocRenderer(resolver=tool_resolver),
         "import_bib": ZoteroImporter(),
     }
 
-    # 9. Return assembled dependencies with immutable dict wrappers.
+    # 10. Return assembled dependencies with immutable dict wrappers.
     # Copy dicts before wrapping so external references cannot mutate
     # the data through the proxy.
     return OrchestratorDependencies(

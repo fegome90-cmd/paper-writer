@@ -1,7 +1,6 @@
 """Tests for integration tool wrappers — real behavior, no mocks."""
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -54,8 +53,8 @@ class TestBibliographyNormalizer:
         bib = tmp_path / "references.bib"
         bib.write_text("")
         wrapper = BibliographyNormalizer()
-        with patch.object(wrapper, "_resolve_executable", return_value=None):
-            result = wrapper.run({"bibliography": str(bib)}, {})
+        # No resolver injected → falls back to _builtin_validate (degraded mode)
+        result = wrapper.run({"bibliography": str(bib)}, {})
         assert result.status == "fail"
         assert any("empty" in f["message"].lower() for f in result.findings)
 
@@ -69,8 +68,8 @@ class TestBibliographyNormalizer:
         bib = tmp_path / "references.bib"
         bib.write_text(INVALID_BIB_UNBALANCED)
         wrapper = BibliographyNormalizer()
-        with patch.object(wrapper, "_resolve_executable", return_value=None):
-            result = wrapper.run({"bibliography": str(bib)}, {})
+        # No resolver injected → falls back to _builtin_validate (degraded mode)
+        result = wrapper.run({"bibliography": str(bib)}, {})
         assert result.status == "fail"
         assert any("unbalanced" in f["message"].lower() for f in result.findings)
 

@@ -13,9 +13,7 @@ class LocalToolResolver(ToolResolver):
     def __init__(self, repo_path: Path) -> None:
         self.repo_path = repo_path
 
-    def resolve(
-        self, tool_id: str, min_version: str | None = None
-    ) -> ToolResolution | None:
+    def resolve(self, tool_id: str, min_version: str | None = None) -> ToolResolution | None:
         """Resolve tool path and verify version."""
         # 1. ENV Var (e.g. PANDOC_BIN)
         env_key = f"{tool_id.upper().replace('-', '_')}_BIN"
@@ -26,9 +24,7 @@ class LocalToolResolver(ToolResolver):
                 return res
 
         # 2. Local toolchain
-        local_path = (
-            self.repo_path / "tools" / "node" / "node_modules" / ".bin" / tool_id
-        )
+        local_path = self.repo_path / "tools" / "node" / "node_modules" / ".bin" / tool_id
         if local_path.exists() and os.access(local_path, os.X_OK):
             res = self._build_resolution(local_path, "local")
             if self._verify_min_version(res, min_version):
@@ -59,21 +55,19 @@ class LocalToolResolver(ToolResolver):
         except (OSError, subprocess.SubprocessError):
             return None
 
-    def _verify_min_version(
-        self, res: ToolResolution | None, min_version: str | None
-    ) -> bool:
+    def _verify_min_version(self, res: ToolResolution | None, min_version: str | None) -> bool:
         """Helper to compare versions."""
         if res is None:
             return False
         if min_version is None:
             return True
-        
+
         found_v = self._parse_version(res.version)
         min_v = self._parse_version(min_version)
-        
+
         if found_v is None or min_v is None:
             return False
-            
+
         return found_v >= min_v
 
     @staticmethod
@@ -87,5 +81,5 @@ class LocalToolResolver(ToolResolver):
             if not match:
                 return None
             return (int(match.group(1)), int(match.group(2)), 0)
-            
+
         return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
