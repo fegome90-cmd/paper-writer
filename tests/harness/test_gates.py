@@ -160,3 +160,33 @@ def test_validate_ready_for_delivery(checker: InMemoryArtifactChecker) -> None:
     result2 = validate_ready_for_delivery(checker, gates_state)
     assert result2.status == "fail"
     assert any("style_passed" in b for b in result2.blockers)
+
+
+
+class TestValidateValidatorGateMalformed:
+    """validate_validator_gate must handle malformed validator output."""
+
+    def test_none_result_fails(self) -> None:
+        result = validate_validator_gate("test", None)
+        assert result.status == "fail"
+
+    def test_empty_dict_fails(self) -> None:
+        result = validate_validator_gate("test", {})
+        assert result.status == "fail"
+
+    def test_findings_not_list_no_crash(self) -> None:
+        result = validate_validator_gate("test", {"status": "pass", "findings": "not a list"})
+        assert result.status == "pass"  # no valid findings → no blockers
+
+    def test_findings_none_no_crash(self) -> None:
+        result = validate_validator_gate("test", {"status": "pass", "findings": None})
+        assert result.status == "pass"
+
+    def test_finding_not_dict_skipped(self) -> None:
+        result = validate_validator_gate("test", {
+            "status": "pass",
+            "findings": ["string", 42, None, {"severity": "error", "code": "E1", "message": "real"}],
+        })
+        assert result.status == "fail"
+        assert len(result.blockers) == 1  # only the dict finding counted
+

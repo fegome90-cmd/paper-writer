@@ -222,8 +222,13 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
         )
 
     status = validator_result.get("status", "fail")
-    findings = validator_result.get("findings", [])
+    raw_findings = validator_result.get("findings", [])
     artifacts_checked = validator_result.get("artifacts_checked", [])
+
+    # Guard against malformed findings — must be an iterable of dicts.
+    findings: list[dict[str, Any]] = []
+    if isinstance(raw_findings, list):
+        findings = [f for f in raw_findings if isinstance(f, dict)]
 
     blockers = []
     warnings = []

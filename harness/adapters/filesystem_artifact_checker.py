@@ -29,9 +29,7 @@ class FilesystemArtifactChecker(ArtifactChecker):
         non_empty = [p for p in existing if p.stat().st_size > 0]
         if not non_empty:
             names = [str(p) for p in existing]
-            raise ValueError(
-                f"All render outputs exist but are empty (0 bytes): {names}"
-            )
+            raise ValueError(f"All render outputs exist but are empty (0 bytes): {names}")
 
     def get_full_path_str(self, rel_path: str) -> str:
         return str(self.repo_path / rel_path)
