@@ -62,6 +62,12 @@ class TestValidateRefsMetadata:
         findings = validate_refs_metadata({})
         assert findings == []
 
+    def test_entry_with_none_values_no_crash(self) -> None:
+        """None field values (from malformed BibTeX) should not crash."""
+        entries: dict[str, dict[str, str]] = {"key1": {"title": None, "author": None}}  # type: ignore[dict-item]
+        findings = validate_refs_metadata(entries)
+        assert isinstance(findings, list)
+
     def test_multiple_entries_mixed_compliance(self) -> None:
         entries = {
             "good": {"year": "2024", "doi": "10.1000/a"},

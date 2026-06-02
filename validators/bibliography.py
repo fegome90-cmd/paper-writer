@@ -49,10 +49,11 @@ def normalize_entry_fields(fields: dict[str, str]) -> dict[str, str]:
 
     Returns:
         Normalized fields dict with lowercase keys and stripped values.
+        None values are converted to empty strings.
     """
     normalized: dict[str, str] = {}
     for key, value in fields.items():
-        normalized[key.lower().strip()] = value.strip()
+        normalized[key.lower().strip()] = value.strip() if isinstance(value, str) else ""
     return normalized
 
 
