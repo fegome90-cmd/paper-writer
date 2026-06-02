@@ -360,3 +360,4 @@ What Agent B receives in its system prompt (from probe log):
 ```
 
 Agent A receives the same system prompt WITHOUT this section.
+# stale content Tue Jun  2 07:23:12 -04 2026
