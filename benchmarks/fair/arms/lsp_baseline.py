@@ -287,8 +287,7 @@ class LSPBaseline:
                 continue
             try:
                 file_contents.append(
-                    (str(filepath.relative_to(self.repo_root)),
-                     filepath.read_text(errors="ignore"))
+                    (str(filepath.relative_to(self.repo_root)), filepath.read_text(errors="ignore"))
                 )
             except (OSError, ValueError):
                 continue
@@ -307,9 +306,7 @@ class LSPBaseline:
                         if name in stripped:
                             if not (
                                 stripped.startswith(f"def {name}")
-                                or stripped.startswith(
-                                    f"async def {name}"
-                                )
+                                or stripped.startswith(f"async def {name}")
                             ):
                                 ref_count += 1
                                 break

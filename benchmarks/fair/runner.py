@@ -696,10 +696,7 @@ def main() -> None:
             },
             # === DISCOVERY ===
             "T-D1": {
-                "description": (
-                    "Trace call chain from main to "
-                    "assemble_manuscript"
-                ),
+                "description": ("Trace call chain from main to assemble_manuscript"),
                 "gold_files": [
                     "cli/paper/",
                     "harness/services/",
@@ -724,9 +721,7 @@ def main() -> None:
             },
             # === ORPHAN (classification test, not detection) ===
             "T-O1": {
-                "description": (
-                    "Distinguish entry points from dead code"
-                ),
+                "description": ("Distinguish entry points from dead code"),
                 # These are graph-orphans that are ENTRY POINTS
                 "gold_orphans": [
                     "cli/paper/main.py::_get_version",
@@ -743,9 +738,7 @@ def main() -> None:
             },
             # === WEAKNESS ===
             "T-W1": {
-                "description": (
-                    "Find subclasses of ToolWrapper"
-                ),
+                "description": ("Find subclasses of ToolWrapper"),
                 "gold_parent_class": "ToolWrapper",
                 "gold_descendants": [
                     "integrations/tools/bibtex_tidy.py::BibliographyNormalizer",
@@ -753,9 +746,7 @@ def main() -> None:
                 ],
             },
             "T-W2": {
-                "description": (
-                    "Find dynamic imports via importlib"
-                ),
+                "description": ("Find dynamic imports via importlib"),
                 # importlib.metadata and importlib.resources
                 "gold_files": [
                     "cli/paper/main.py",
@@ -776,20 +767,17 @@ def main() -> None:
             },
             # === SEMANTIC ===
             "T-S1": {
-                "description": (
-                    "Find function that resolves "
-                    "project root directory"
-                ),
+                "description": ("Find function that resolves project root directory"),
                 "gold_file": "cli/paper/main.py",
                 "gold_symbol": "resolve_project_root",
             },
             "T-S2": {
                 "description": (
-                    "Find function that checks if "
-                    "system can run the pipeline"
+                    "Find function that checks "
+                    "all external tools availability"
                 ),
                 "gold_file": "harness/services/doctor.py",
-                "gold_symbol": "run_doctor",
+                "gold_symbol": "check_all_tools",
             },
         }
 

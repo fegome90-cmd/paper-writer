@@ -487,8 +487,9 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             },
             "T-W2": {
                 "description": "Find what load_plugin() dynamically imports",
+                "gold_files": ["plugins/advanced.py"],
                 "gold_dynamic_imports": "unknown_at_static_time",
-                "note": "Trifecta is blind to importlib",
+                "note": "Trifecta is blind to importlib; file-level detection is scorable",
             },
             "T-W3": {
                 "description": "CachedTransformer inherits from BaseTransformer?",
