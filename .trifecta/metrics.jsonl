@@ -216,3 +216,6 @@
 {"ts": 1780410802.6182961, "query_type": "search", "fidelity": "fallback", "latency_ms": 31, "timings": {"pack_load_and_search_ms": 17, "ast_resolution_ms": 14, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780420921.3815901, "query_type": "search", "fidelity": "fallback", "latency_ms": 27, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 13, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780420982.6615438, "query_type": "search", "fidelity": "fallback", "latency_ms": 50, "timings": {"pack_load_and_search_ms": 23, "ast_resolution_ms": 26, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780423900.5810492, "query_type": "search", "fidelity": "fallback", "latency_ms": 39, "timings": {"pack_load_and_search_ms": 24, "ast_resolution_ms": 14, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780423931.6509519, "query_type": "search", "fidelity": "fallback", "latency_ms": 37, "timings": {"pack_load_and_search_ms": 25, "ast_resolution_ms": 11, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780424131.578861, "query_type": "search", "fidelity": "fallback", "latency_ms": 36, "timings": {"pack_load_and_search_ms": 26, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
