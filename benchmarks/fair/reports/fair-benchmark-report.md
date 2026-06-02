@@ -1,20 +1,20 @@
 # Fair Benchmark Report — Bias-Corrected Results
 
-> Generated: 2026-06-02 17:40
+> Generated: 2026-06-02 17:46
 > Purpose: Address the 4 critical biases in the original Trifecta A/B study
 
 ## Aggregate Results
 
 | Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |
 |-----|-----------|--------------|---------|-----------------|-------|
-| rag_tfidf | 0.70 | 0.47 | 0.57 | 1313 | 20 |
-| grep_pyright | 0.62 | 0.47 | 0.52 | 435 | 20 |
-| trifecta | 0.63 | 0.45 | 0.49 | 2 | 20 |
+| rag_tfidf | 0.70 | 0.47 | 0.57 | 1278 | 20 |
+| grep_pyright | 0.65 | 0.47 | 0.52 | 510 | 20 |
+| trifecta | 0.63 | 0.45 | 0.49 | 3 | 20 |
 
 ## Honest Context Value Ratio
 
 **Trifecta vs RAG (honest CVR)**: 0.90x
-**Trifecta vs LSP (honest CVR)**: 1.01x
+**Trifecta vs LSP (honest CVR)**: 0.97x
 
 Original claimed CVR: **1.37x** (vs blind agent)
 Honest CVR (vs RAG baseline): **0.90x**
@@ -25,7 +25,7 @@ Bias reduction: **34%** of original claim was bias
 | Category | RAG | LSP | Trifecta | Winner |
 |----------|-----|-----|----------|--------|
 | Precision | 1.00 | 1.00 | 1.00 | rag_tfidf |
-| Discovery | 0.71 | 0.67 | 0.75 | trifecta |
+| Discovery | 0.71 | 0.79 | 0.75 | grep_pyright |
 | Orphan Detection | 0.39 | 0.29 | 0.46 | trifecta |
 | Weakness Probing | 1.00 | 1.00 | 0.60 | rag_tfidf |
 | Architecture | 0.65 | 0.59 | 0.30 | rag_tfidf |
@@ -36,32 +36,32 @@ Bias reduction: **34%** of original claim was bias
 Tasks specifically targeting Trifecta's known limitations:
 
 - **T-W1** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W1** (grep_pyright): recall=1.00, latency=4ms
+- **T-W1** (grep_pyright): recall=1.00, latency=7ms
 - **T-W1** (trifecta): recall=1.00, latency=0ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W2** (grep_pyright): recall=1.00, latency=1ms
+- **T-W2** (grep_pyright): recall=1.00, latency=2ms
 - **T-W2** (trifecta): recall=0.00, latency=0ms
 - **T-W3** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W3** (grep_pyright): recall=1.00, latency=4ms
+- **T-W3** (grep_pyright): recall=1.00, latency=8ms
 - **T-W3** (trifecta): recall=1.00, latency=0ms
-- **T-W1** (rag_tfidf): recall=1.00, latency=101ms
-- **T-W1** (grep_pyright): recall=1.00, latency=3712ms
-- **T-W1** (trifecta): recall=1.00, latency=2ms
+- **T-W1** (rag_tfidf): recall=1.00, latency=64ms
+- **T-W1** (grep_pyright): recall=1.00, latency=4237ms
+- **T-W1** (trifecta): recall=1.00, latency=3ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=1ms
-- **T-W2** (grep_pyright): recall=1.00, latency=176ms
-- **T-W2** (trifecta): recall=0.00, latency=0ms
+- **T-W2** (grep_pyright): recall=1.00, latency=247ms
+- **T-W2** (trifecta): recall=0.00, latency=1ms
 
 **Trifecta underperforms on weakness tasks**: 0.60 vs RAG 1.00 — weakness exposure CONFIRMED
 
 ## Indexing Overhead
 
 ### Repo: (varies)
-- **rag_tfidf**: 5ms
+- **rag_tfidf**: 10ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 
 ### Repo: (varies)
-- **rag_tfidf**: 410ms
+- **rag_tfidf**: 434ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 

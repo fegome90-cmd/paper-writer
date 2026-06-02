@@ -741,9 +741,7 @@ def main() -> None:
             },
             # === ORPHAN (classification test) ===
             "T-O1": {
-                "description": (
-                    "Distinguish entry points from dead code"
-                ),
+                "description": ("Distinguish entry points from dead code"),
                 # NOTE: Paper-writer has NO true orphans. All 7 graph-detected
                 # "orphans" are false positives: same-file calls missed by graph.
                 # - _get_version: called on line 182 (version=_get_version())

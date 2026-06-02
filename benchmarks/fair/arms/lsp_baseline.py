@@ -157,6 +157,19 @@ class LSPBaseline:
                 content = filepath.read_text(errors="ignore")
                 lines = content.split("\n")
 
+                # Pre-compute enclosing function name per line
+                enclosing: dict[int, str] = {}
+                current_func = ""
+                for idx, line in enumerate(lines):
+                    stripped = line.strip()
+                    for prefix in ("def ", "async def "):
+                        if stripped.startswith(prefix):
+                            current_func = stripped[
+                                len(prefix) :
+                            ].split("(")[0].strip()
+                            break
+                    enclosing[idx + 1] = current_func  # 1-indexed
+
                 for i, line in enumerate(lines, 1):
                     if symbol_name in line:
                         # Skip string literals and comments (rough heuristic)
@@ -170,7 +183,7 @@ class LSPBaseline:
                                 {
                                     "file": rel,
                                     "line": i,
-                                    "name": symbol_name,
+                                    "name": enclosing.get(i, ""),
                                     "text": stripped[:100],
                                     "score": 0.8,
                                 }

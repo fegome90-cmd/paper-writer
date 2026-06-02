@@ -129,9 +129,11 @@ El valor de este benchmark es el **framework de 3 brazos** y la **metodología d
 
 | Metric | Original Claim | Final (Audited) |
 |--------|---------------|-----------------|
-| CVR | 1.37x (vs blind) | **0.97x** (vs RAG TF-IDF) |
-| Bias from straw-man | 0% | **29%** |
-| Trifecta Recall | N/A | **0.68** |
+| CVR | 1.37x (vs blind) | **0.90x** (vs RAG TF-IDF) |
+| Bias from straw-man | 0% | **34%** |
+| Trifecta Recall | N/A | **0.63** |
 | RAG Recall | N/A | **0.70** |
 
-Trifecta wins: discovery (0.75 vs 0.71), orphans (0.93 vs 0.79). RAG wins: weakness (0.80 vs 0.60), architecture (0.65 vs 0.30). Tied on precision and semantic.
+Trifecta wins: synthetic orphans (0.93 vs 0.79), discovery (0.75 vs 0.71). RAG wins: weakness (0.80 vs 0.60), architecture (0.65 vs 0.30), orphan avoidance (1.00 vs 0.00). Tied on precision and semantic.
+
+Key finding: Paper-writer has ZERO real orphans. Graph misses same-file call edges, creating false orphans that inflated Trifecta's orphan scores by 7% CVR.
