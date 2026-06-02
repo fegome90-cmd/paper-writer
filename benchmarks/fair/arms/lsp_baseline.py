@@ -252,7 +252,8 @@ class LSPBaseline:
         )
 
     def find_orphans(self) -> LSPResult:
-        """Find functions with zero callers — same approach as RAG (O(n²))."""
+        """Find functions with zero callers — O(n²), capped at 60s."""
+
         t0 = time.perf_counter()
 
         # Collect all definitions
@@ -279,33 +280,41 @@ class LSPBaseline:
             except (OSError, ValueError):
                 continue
 
-        # Check each definition for references
+        # Pre-load all file contents for fast checking
+        file_contents: list[tuple[str, str]] = []
+        for filepath in self.repo_root.rglob("*.py"):
+            if "/.venv/" in str(filepath) or "/__pycache__/" in str(filepath):
+                continue
+            try:
+                file_contents.append(
+                    (str(filepath.relative_to(self.repo_root)),
+                     filepath.read_text(errors="ignore"))
+                )
+            except (OSError, ValueError):
+                continue
+
+        # Check each definition for references (with time cap)
         orphans = []
         for _key, loc in all_defs.items():
+            if time.perf_counter() - t0 > 60:
+                break  # Time cap
             name = loc["name"]
             ref_count = 0
-
-            for filepath in self.repo_root.rglob("*.py"):
-                if "/.venv/" in str(filepath) or "/__pycache__/" in str(filepath):
-                    continue
-                try:
-                    content = filepath.read_text(errors="ignore")
-                    if name in content:
-                        # Check it's not the definition itself
-                        lines = content.split("\n")
-                        for line in lines:
-                            stripped = line.strip()
-                            if name in stripped:
-                                if not (
-                                    stripped.startswith(f"def {name}")
-                                    or stripped.startswith(f"async def {name}")
-                                ):
-                                    ref_count += 1
-                                    break
-                        if ref_count > 0:
-                            break
-                except (OSError, ValueError):
-                    continue
+            for _frel, content in file_contents:
+                if name in content:
+                    for line in content.split("\n"):
+                        stripped = line.strip()
+                        if name in stripped:
+                            if not (
+                                stripped.startswith(f"def {name}")
+                                or stripped.startswith(
+                                    f"async def {name}"
+                                )
+                            ):
+                                ref_count += 1
+                                break
+                    if ref_count > 0:
+                        break
 
             if ref_count == 0:
                 orphans.append(

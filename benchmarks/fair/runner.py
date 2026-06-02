@@ -365,11 +365,13 @@ def _run_arm_task(
                 return None
 
         elif task_id.startswith("T-W2"):
-            # Dynamic imports
+            # Dynamic imports — scored by file matching
             if hasattr(arm, "find_dynamic_imports"):
                 res = arm.find_dynamic_imports()
             else:
                 return None
+            # Override type to discovery for gold_files scoring
+            task_type = "discovery"
 
         elif task_id.startswith("T-W3"):
             # Transitive inheritance depth check
@@ -685,11 +687,32 @@ def main() -> None:
     if pw_root.exists() and pw_graph.exists():
         # Define tasks for paper-writer (manually verified gold)
         pw_tasks = {
+            # === PRECISION ===
             "T-P1": {
-                "description": "Find definition of DataProcessor",
+                "description": "Find definition of Orchestrator",
                 "gold_file": "harness/services/orchestrator.py",
                 "gold_symbol": "Orchestrator",
                 "gold_line_range": (1, 500),
+            },
+            # === DISCOVERY ===
+            "T-D1": {
+                "description": (
+                    "Trace call chain from main to "
+                    "assemble_manuscript"
+                ),
+                "gold_files": [
+                    "cli/paper/",
+                    "harness/services/",
+                ],
+                "gold_callers": [
+                    "harness/services/orchestrator.py::run_action",
+                ],
+                "gold_path": [
+                    "cli/paper/main.py::main",
+                    "harness/services/orchestrator.py::execute",
+                    "harness/services/orchestrator.py::run_action",
+                    "harness/services/assembler.py::assemble_manuscript",
+                ],
             },
             "T-D2": {
                 "description": "Find callers of run_gate",
@@ -699,19 +722,48 @@ def main() -> None:
                 "gold_files": ["harness/services/"],
                 "gold_symbol": "run_gate",
             },
+            # === ORPHAN (classification test, not detection) ===
             "T-O1": {
-                "description": "Find orphan functions",
-                "gold_orphans": [],  # Too many to list
-                "gold_false_orphans": [],
+                "description": (
+                    "Distinguish entry points from dead code"
+                ),
+                # These are graph-orphans that are ENTRY POINTS
+                "gold_orphans": [
+                    "cli/paper/main.py::_get_version",
+                    "cli/paper/main.py::_cmd_audit_prose",
+                    "cli/paper/main.py::main",
+                ],
+                # These are heavily-called NON-orphans
+                "gold_false_orphans": [
+                    "harness/ports/assets.py::get_asset_path",
+                    "harness/services/orchestrator_builder.py::build_orchestrator_dependencies",
+                    "validators/style.py::validate_style",
+                    "harness/services/assembler.py::assemble_manuscript",
+                ],
             },
+            # === WEAKNESS ===
             "T-W1": {
-                "description": "Find subclasses of ToolWrapper",
+                "description": (
+                    "Find subclasses of ToolWrapper"
+                ),
                 "gold_parent_class": "ToolWrapper",
                 "gold_descendants": [
                     "integrations/tools/bibtex_tidy.py::BibliographyNormalizer",
                     "integrations/tools/zotero_import.py::ZoteroImporter",
                 ],
             },
+            "T-W2": {
+                "description": (
+                    "Find dynamic imports via importlib"
+                ),
+                # importlib.metadata and importlib.resources
+                "gold_files": [
+                    "cli/paper/main.py",
+                    "harness/ports/assets.py",
+                ],
+                "gold_callers": [],
+            },
+            # === ARCHITECTURE ===
             "T-A1": {
                 "description": "Map architecture layers",
                 "gold_layers": {
@@ -721,6 +773,23 @@ def main() -> None:
                     "parsers": ["parsers/"],
                     "tests": ["tests/"],
                 },
+            },
+            # === SEMANTIC ===
+            "T-S1": {
+                "description": (
+                    "Find function that resolves "
+                    "project root directory"
+                ),
+                "gold_file": "cli/paper/main.py",
+                "gold_symbol": "resolve_project_root",
+            },
+            "T-S2": {
+                "description": (
+                    "Find function that checks if "
+                    "system can run the pipeline"
+                ),
+                "gold_file": "harness/services/doctor.py",
+                "gold_symbol": "run_doctor",
             },
         }
 
