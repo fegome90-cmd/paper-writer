@@ -36,42 +36,27 @@
 
 ## 2. Discovered Bugs
 
-### Bug 1: Oracle misses "what breaks if" impact classification
+### Bug 1: Oracle misses "what breaks if" impact classification → FIXED ✅
 
 **Severity**: Medium (functional gap)
 
-**Symptom**: Queries like "what breaks if I change run_gate" and "consequences of removing GateResult" return `fidelity=fallback` with NO graph data, even though the graph has precise impact data for these symbols.
+**Symptom**: Queries like "what breaks if I change run_gate" and "consequences of removing GateResult" returned `fidelity=fallback` with NO graph data.
 
-**Expected**: These queries should be classified as `impact` queries and return the same data as `"impact of changing GateResult"` (which correctly returns fidelity=full with 16 upstream dependents).
+**Root cause**: The `_IMPACT_PATTERNS` list only had 11 patterns. Common English phrasings like "what breaks if", "consequences of", and "blast radius of X" were missing. Additionally, `blast radius of X` was incorrectly placed in `_HUB_PATTERNS` instead of `_IMPACT_PATTERNS`.
 
-**Root cause**: The Oracle's query classifier only recognizes the pattern `"impact of changing X"` but not semantically equivalent phrasings like:
-- "what breaks if I change X"
-- "consequences of removing X"
-- "who depends on X"
-- "blast radius of X"
-- "if I modify X"
+**Fix**: Added 12 new patterns (commit 1b4a795):
+- 8 English: "what breaks if I change X", "consequences of removing X", "blast radius of X", "if I change X", etc.
+- 2 Spanish: "consecuencias de cambiar X", "qué pasa si cambio X"
+- 2 bare variants: "blast radius" without target → hub, with target → impact
 
-**Reproduction**:
-```bash
-# Works correctly:
-trifecta ctx oracle -s . -q "impact of changing GateResult"
-# → fidelity=full, graph_data with 16 upstream
-
-# Misses the graph:
-trifecta ctx oracle -s . -q "what breaks if I change run_gate"
-# → fidelity=fallback, NO graph data
+**Verification**: All 4 previously failing queries now return `fidelity=full`:
+```
+'what breaks if I change run_gate'      → fidelity=full ✅
+'consequences of removing GateResult'   → fidelity=full ✅
+'blast radius of changing GateResult'   → fidelity=full ✅
 ```
 
-**Fix**: Expand the impact query classifier to match common English phrasings. The pattern should be:
-```python
-IMPACT_PATTERNS = [
-    r"impact of (?:changing|modifying|removing|renaming)\s+(.+)",
-    r"what (?:breaks|changes|happens) if (?:I |we )?(?:change|modify|remove|rename)\s+(.+)",
-    r"(?:consequences|effects|implications) of (?:changing|removing|modifying)\s+(.+)",
-    r"(?:who|what) (?:depends|rely) on\s+(.+)",
-    r"blast radius of\s+(.+)",
-]
-```
+120 classifier tests pass (was 98, +22 new regression tests).
 
 ### Bug 2: `--json` flag inconsistency across installations
 
