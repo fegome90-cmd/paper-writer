@@ -33,9 +33,3 @@ class ToolResolver(ABC):
             ToolResolution if found and version satisfies requirement, else None.
         """
         pass
-
-
-class ToolResolutionError(Exception):
-    """Base exception for tool resolution failures."""
-
-    pass
