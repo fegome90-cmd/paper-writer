@@ -327,13 +327,18 @@ class RAGBaseline:
                 }
 
         # For each defined symbol, check if it appears in any OTHER chunk
+        # Use word boundary matching to avoid false callers from substrings
+        # e.g. "validate" should not match "validated" or "invalidate"
+        import re
+
         orphans = []
         for name, loc in all_defined.items():
             caller_count = 0
+            pattern = re.compile(r"\b" + re.escape(name) + r"\b")
             for chunk in self.chunks:
                 if chunk.get("name") == name:
                     continue  # Skip self
-                if name in chunk["content"]:
+                if pattern.search(chunk["content"]):
                     caller_count += 1
             if caller_count == 0:
                 orphans.append(

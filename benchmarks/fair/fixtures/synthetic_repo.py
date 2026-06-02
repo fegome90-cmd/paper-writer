@@ -460,9 +460,21 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             # === ORPHAN TASKS ===
             "T-O1": {
                 "description": ("Find all functions with zero callers"),
-                # True orphans: never called from anywhere
+                # True orphans: verified via graph (zero incoming call edges)
                 "gold_orphans": [
+                    "cli/main.py::main",
+                    "core/base.py::get_errors",
+                    "core/base.py::validate_input",
+                    "core/transforms.py::enrich",
+                    "core/transforms.py::validate",
+                    "plugins/advanced.py::__init__",
+                    "plugins/advanced.py::load_plugin",
+                    "plugins/advanced.py::transform",
+                    "plugins/advanced.py::validate",
                     "utils/helpers.py::rot13",
+                    "utils/helpers.py::safe_get",
+                    "utils/helpers.py::slugify",
+                    "utils/helpers.py::truncate",
                     "utils/helpers.py::xml_to_dict",
                 ],
                 # fibonacci is recursive (self-edge), NOT an orphan
