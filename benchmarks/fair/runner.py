@@ -772,10 +772,7 @@ def main() -> None:
                 "gold_symbol": "resolve_project_root",
             },
             "T-S2": {
-                "description": (
-                    "Find function that checks "
-                    "all external tools availability"
-                ),
+                "description": ("Find function that checks all external tools availability"),
                 "gold_file": "harness/services/doctor.py",
                 "gold_symbol": "check_all_tools",
             },

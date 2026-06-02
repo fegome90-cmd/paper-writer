@@ -1,15 +1,15 @@
 # Fair Benchmark Report — Bias-Corrected Results
 
-> Generated: 2026-06-02 17:22
+> Generated: 2026-06-02 17:29
 > Purpose: Address the 4 critical biases in the original Trifecta A/B study
 
 ## Aggregate Results
 
 | Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |
 |-----|-----------|--------------|---------|-----------------|-------|
-| rag_tfidf | 0.71 | 0.40 | 0.53 | 83 | 20 |
-| grep_pyright | 0.64 | 0.39 | 0.49 | 595 | 20 |
-| trifecta | 0.68 | 0.43 | 0.54 | 4 | 20 |
+| rag_tfidf | 0.71 | 0.40 | 0.53 | 66 | 20 |
+| grep_pyright | 0.64 | 0.39 | 0.49 | 519 | 20 |
+| trifecta | 0.68 | 0.43 | 0.54 | 3 | 20 |
 
 ## Honest Context Value Ratio
 
@@ -36,19 +36,19 @@ Bias reduction: **30%** of original claim was bias
 Tasks specifically targeting Trifecta's known limitations:
 
 - **T-W1** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W1** (grep_pyright): recall=1.00, latency=4ms
+- **T-W1** (grep_pyright): recall=1.00, latency=5ms
 - **T-W1** (trifecta): recall=1.00, latency=0ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=0ms
 - **T-W2** (grep_pyright): recall=1.00, latency=1ms
 - **T-W2** (trifecta): recall=0.00, latency=0ms
 - **T-W3** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W3** (grep_pyright): recall=1.00, latency=5ms
+- **T-W3** (grep_pyright): recall=1.00, latency=11ms
 - **T-W3** (trifecta): recall=1.00, latency=0ms
-- **T-W1** (rag_tfidf): recall=1.00, latency=89ms
-- **T-W1** (grep_pyright): recall=1.00, latency=4763ms
-- **T-W1** (trifecta): recall=1.00, latency=4ms
+- **T-W1** (rag_tfidf): recall=1.00, latency=80ms
+- **T-W1** (grep_pyright): recall=1.00, latency=4084ms
+- **T-W1** (trifecta): recall=1.00, latency=2ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=1ms
-- **T-W2** (grep_pyright): recall=1.00, latency=333ms
+- **T-W2** (grep_pyright): recall=1.00, latency=257ms
 - **T-W2** (trifecta): recall=0.00, latency=0ms
 
 **Trifecta underperforms on weakness tasks**: 0.60 vs RAG 1.00 — weakness exposure CONFIRMED
@@ -56,12 +56,12 @@ Tasks specifically targeting Trifecta's known limitations:
 ## Indexing Overhead
 
 ### Repo: (varies)
-- **rag_tfidf**: 5ms
+- **rag_tfidf**: 4ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 
 ### Repo: (varies)
-- **rag_tfidf**: 485ms
+- **rag_tfidf**: 490ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 
