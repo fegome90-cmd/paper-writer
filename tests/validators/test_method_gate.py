@@ -1,12 +1,6 @@
 """Tests for validators/method_gate.py — methodological gate."""
 
-from parsers.manuscript import ManuscriptParser
 from validators.method_gate import MethodGateValidator
-
-
-def _make_man(text: str):
-    return ManuscriptParser().parse_text(text, "test.md", "markdown")
-
 
 CONSORT_MANUSCRIPT = """# Introduction
 This study examines a new intervention.
@@ -34,8 +28,8 @@ Data are available upon request.
 
 
 class TestMethodGateBasic:
-    def test_generic_gate_passes_with_all_sections(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_generic_gate_passes_with_all_sections(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         assert result["command"] == "gate_method"
@@ -43,24 +37,24 @@ class TestMethodGateBasic:
         assert "summary" in result
         assert result["guideline"] != "unknown"
 
-    def test_generic_gate_fails_without_sections(self) -> None:
+    def test_generic_gate_fails_without_sections(self, make_manuscript) -> None:
         text = "Just some text without any structure."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         # Should have blockers (missing sections)
         assert len(result["blockers"]) > 0
 
-    def test_consort_checklist_loaded(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_consort_checklist_loaded(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="rct")
         assert result["guideline"] in ("CONSORT", "Generic")
 
 
 class TestMethodGateStructure:
-    def test_result_has_required_fields(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_result_has_required_fields(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         assert "command" in result
@@ -72,8 +66,8 @@ class TestMethodGateStructure:
         assert "warnings" in result
         assert "summary" in result
 
-    def test_summary_totals_correct(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_summary_totals_correct(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         summary = result["summary"]
@@ -85,8 +79,8 @@ class TestMethodGateStructure:
             + summary["not_applicable"]
         )
 
-    def test_not_applicable_items(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_not_applicable_items(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*", na_items=["ethics.consent"])
         na_ids = {i["item_id"] for i in result["not_applicable"]}
@@ -94,27 +88,27 @@ class TestMethodGateStructure:
 
 
 class TestMethodGateEdgeCases:
-    def test_empty_manuscript(self) -> None:
-        ms = _make_man("")
+    def test_empty_manuscript(self, make_manuscript) -> None:
+        ms = make_manuscript("")
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         assert "gate_passed" in result
 
-    def test_invalid_study_type_uses_generic(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_invalid_study_type_uses_generic(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="nonexistent_type_xyz")
         assert result["guideline"] in ("Generic", "unknown")
 
-    def test_explicit_checklist_loaded(self) -> None:
-        ms = _make_man(CONSORT_MANUSCRIPT)
+    def test_explicit_checklist_loaded(self, make_manuscript) -> None:
+        ms = make_manuscript(CONSORT_MANUSCRIPT)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*", checklist_name="generic")
         assert result["guideline"] == "Generic"
 
-    def test_blocker_makes_gate_fail(self) -> None:
+    def test_blocker_makes_gate_fail(self, make_manuscript) -> None:
         text = "# Introduction\nNo methods section here."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         blockers = result.get("blockers", [])
@@ -125,14 +119,14 @@ class TestMethodGateEdgeCases:
 class TestMethodGateLookupNormalization:
     # === Regression: C1 — expected_location case normalization ===
 
-    def test_capitalized_expected_location_finds_section(self) -> None:
+    def test_capitalized_expected_location_finds_section(self, make_manuscript) -> None:
         """YAML says 'Introduction', parser stores 'introduction' — must match."""
         text = (
             "# Introduction\nBackground text.\n# Methods\nMethod content."
             "\n# Results\nResults.\n# Discussion\nDiscussion."
             "\n# Declarations\nDeclarations.\n# References\nRefs."
         )
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = MethodGateValidator()
         result = validator.validate(ms, study_type="*")
         # structure.introduction expects "Introduction" in YAML
@@ -144,13 +138,13 @@ class TestMethodGateLookupNormalization:
         assert "structure.results" in passed_ids
         assert "structure.discussion" in passed_ids
 
-    def test_method_gate_no_crash_with_section_dataclass(self) -> None:
+    def test_method_gate_no_crash_with_section_dataclass(self, make_manuscript) -> None:
         """Regression: accesses Section dataclass, not dict."""
         text = (
             "# Methods\nWe conducted a trial.\n# Results\nFindings."
             "\n# Discussion\nDiscussion.\n# Declarations\nDeclarations."
         )
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = MethodGateValidator()
         # Should not crash with AttributeError when accessing section.text
         result = validator.validate(ms, study_type="*")

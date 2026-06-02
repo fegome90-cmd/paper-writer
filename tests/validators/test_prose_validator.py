@@ -1,35 +1,30 @@
 """Tests for validators/prose.py — prose analysis."""
 
-from parsers.manuscript import ManuscriptParser
 from validators.prose import ProseValidator
-
-
-def _make_man(text: str):
-    return ManuscriptParser().parse_text(text, "test.md", "markdown")
 
 
 class TestProseValidatorBasic:
     """Basic tests that exercise the real rule registry."""
 
-    def test_clean_text_no_findings(self) -> None:
+    def test_clean_text_no_findings(self, make_manuscript) -> None:
         text = "The study found significant results. Participants completed the survey."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator()
         findings = validator.validate(ms)
         assert isinstance(findings, list)
 
-    def test_definitive_causal_overclaim(self) -> None:
+    def test_definitive_causal_overclaim(self, make_manuscript) -> None:
         text = "This study proves that the intervention works."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator()
         findings = validator.validate(ms)
         assert len(findings) >= 1
         rule_ids = {f.get("rule_id", "") for f in findings}
         assert any("overclaim" in rid for rid in rule_ids)
 
-    def test_whitelist_skipped(self) -> None:
+    def test_whitelist_skipped(self, make_manuscript) -> None:
         text = "This study proves the hypothesis."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator(whitelist={"proves"})
         findings = validator.validate(ms)
         # with whitelist, "proves" should be skipped
@@ -38,9 +33,9 @@ class TestProseValidatorBasic:
 
 
 class TestProseValidatorSections:
-    def test_section_scoped(self) -> None:
+    def test_section_scoped(self, make_manuscript) -> None:
         text = "# Methods\nThis proves something.\n# Results\nThis proves something else."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator()
         findings = validator.validate(ms)
         for f in findings:
@@ -50,10 +45,10 @@ class TestProseValidatorSections:
             assert "span" in f
 
     # === Regression: C3 — section-scoped match positions are in full-text coords ===
-    def test_section_scoped_position_full_text(self) -> None:
+    def test_section_scoped_position_full_text(self, make_manuscript) -> None:
         """Section-scoped findings must report line/column in full manuscript, not section text."""
         text = "# Methods\nThis proves something.\n# Results\nThis proves something else."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator()
         findings = validator.validate(ms)
         for f in findings:
@@ -74,9 +69,9 @@ class TestProseValidatorSections:
 
 
 class TestProseValidatorStructure:
-    def test_findings_have_required_fields(self) -> None:
+    def test_findings_have_required_fields(self, make_manuscript) -> None:
         text = "This study proves that the intervention is effective."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ProseValidator()
         findings = validator.validate(ms)
         for f in findings:

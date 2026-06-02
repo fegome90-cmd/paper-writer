@@ -1,12 +1,6 @@
 """Tests for validators/claims.py — claim candidate detection."""
 
-from parsers.manuscript import ManuscriptParser
 from validators.claims import ClaimsValidator, build_claims_report
-
-
-def _make_man(text: str):
-    return ManuscriptParser().parse_text(text, "test.md", "markdown")
-
 
 SAMPLE_WITH_CLAIMS = """# Introduction
 This study examines the relationship between exercise and cognition.
@@ -27,16 +21,16 @@ This proves that exercise is beneficial for brain health.
 
 
 class TestClaimsValidatorBasic:
-    def test_claim_candidates_detected(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_claim_candidates_detected(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         assert isinstance(candidates, list)
         # Should detect some claims from trigger patterns
         assert len(candidates) >= 0
 
-    def test_candidates_have_required_fields(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_candidates_have_required_fields(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
@@ -53,9 +47,9 @@ class TestClaimsValidatorBasic:
                 "unknown",
             )
 
-    def test_whitelist_skips_terms(self) -> None:
+    def test_whitelist_skips_terms(self, make_manuscript) -> None:
         text = "This proves the hypothesis."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ClaimsValidator(whitelist={"proves"})
         candidates = validator.validate(ms)
         proving = [c for c in candidates if "proves" in str(c.get("triggers", []))]
@@ -63,18 +57,18 @@ class TestClaimsValidatorBasic:
 
 
 class TestClaimsValidatorSectionAwareness:
-    def test_section_detected(self) -> None:
-        ms = _make_man("# Introduction\nThis proves something.")
+    def test_section_detected(self, make_manuscript) -> None:
+        ms = make_manuscript("# Introduction\nThis proves something.")
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
             assert c.get("section") in ("introduction", "unknown")
 
-    def test_risk_varies_by_section(self) -> None:
+    def test_risk_varies_by_section(self, make_manuscript) -> None:
         text = (
             "# Conclusions\nThis proves the hypothesis.\n# Methods\nThis proves the method works."
         )
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
@@ -84,28 +78,28 @@ class TestClaimsValidatorSectionAwareness:
 class TestClaimsValidatorRiskModifiers:
     # === Regression: C4 — risk_by_section key normalization ===
 
-    def test_abstract_gets_high_risk(self) -> None:
+    def test_abstract_gets_high_risk(self, make_manuscript) -> None:
         """Abstract has multiplier=2, default_risk=high → should be high."""
         text = "# Abstract\nThis proves the hypothesis."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
             assert c["risk"] == "high", f"Expected high risk in abstract, got {c['risk']}"
 
-    def test_methods_gets_info_risk(self) -> None:
+    def test_methods_gets_info_risk(self, make_manuscript) -> None:
         """Methods has multiplier=0, default_risk=info → should be info."""
         text = "# Methods\nThis proves the method works."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
             assert c["risk"] == "info", f"Expected info risk in methods, got {c['risk']}"
 
-    def test_multiplier_increases_risk(self) -> None:
+    def test_multiplier_increases_risk(self, make_manuscript) -> None:
         """Conclusions has multiplier=2 → bumps risk up one level."""
         text = "# Conclusions\nThis proves the conclusion."
-        ms = _make_man(text)
+        ms = make_manuscript(text)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         for c in candidates:
@@ -114,8 +108,8 @@ class TestClaimsValidatorRiskModifiers:
 
 
 class TestBuildClaimsReport:
-    def test_report_structure(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_report_structure(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         report = build_claims_report(ms, candidates, 42)
@@ -127,8 +121,8 @@ class TestBuildClaimsReport:
         assert "metadata" in report
         assert "disclaimer" in report
 
-    def test_summary_counts(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_summary_counts(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         report = build_claims_report(ms, candidates, 42)
@@ -139,8 +133,8 @@ class TestBuildClaimsReport:
         assert "by_risk" in summary
         assert "by_section" in summary
 
-    def test_by_type_has_all_keys(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_by_type_has_all_keys(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         report = build_claims_report(ms, candidates)
@@ -149,8 +143,8 @@ class TestBuildClaimsReport:
         for key in ("causal", "comparative", "descriptive", "prescriptive", "unknown"):
             assert key in by_type
 
-    def test_by_risk_has_all_keys(self) -> None:
-        ms = _make_man(SAMPLE_WITH_CLAIMS)
+    def test_by_risk_has_all_keys(self, make_manuscript) -> None:
+        ms = make_manuscript(SAMPLE_WITH_CLAIMS)
         validator = ClaimsValidator()
         candidates = validator.validate(ms)
         report = build_claims_report(ms, candidates)
