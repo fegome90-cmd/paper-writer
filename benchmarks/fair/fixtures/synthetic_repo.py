@@ -460,13 +460,14 @@ def create_synthetic_repo(base_dir: Path) -> dict:
             # === ORPHAN TASKS ===
             "T-O1": {
                 "description": ("Find all functions with zero callers"),
-                # True orphans: verified via graph (zero incoming call edges)
+                # True orphans: verified via code analysis (zero real callers)
+                # NOTE: cli/main.py::main is NOT an orphan — sys.exit(main()) on line 39
+                # core/transforms.py::validate is NOT an orphan — called from engine.py:17
+                # (graph misresolved validate() to core/base.py instead of core/transforms.py)
                 "gold_orphans": [
-                    "cli/main.py::main",
                     "core/base.py::get_errors",
                     "core/base.py::validate_input",
                     "core/transforms.py::enrich",
-                    "core/transforms.py::validate",
                     "plugins/advanced.py::__init__",
                     "plugins/advanced.py::load_plugin",
                     "plugins/advanced.py::transform",

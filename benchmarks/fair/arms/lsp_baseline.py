@@ -164,9 +164,7 @@ class LSPBaseline:
                     stripped = line.strip()
                     for prefix in ("def ", "async def "):
                         if stripped.startswith(prefix):
-                            current_func = stripped[
-                                len(prefix) :
-                            ].split("(")[0].strip()
+                            current_func = stripped[len(prefix) :].split("(")[0].strip()
                             break
                     enclosing[idx + 1] = current_func  # 1-indexed
 
