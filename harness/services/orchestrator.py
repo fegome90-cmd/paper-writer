@@ -108,6 +108,10 @@ class Orchestrator:
         if request.command != "init" or self.state_manager.exists():
             try:
                 state_dict = self.state_manager.load_state()
+                # Validate the loaded state — without this, a corrupted state.yaml
+                # with invalid stage names or non-boolean gates would silently pass
+                # through and the orchestrator would trust it. (O-9 fix)
+                self.state_manager.validate_state(state_dict)
                 stage_before = state_dict.get("stage", "bootstrap")
                 result.stage_before = stage_before
             except StateManagerError as e:
