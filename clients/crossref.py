@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from typing import Any
 
 from clients._retry import retry_with_backoff
 from clients._text_similarity import TITLE_SIMILARITY_THRESHOLD, title_similarity
@@ -30,13 +31,13 @@ class CrossrefResult:
     score: float = 0.0
 
 
-def _extract_title(message: dict) -> str:
+def _extract_title(message: dict[str, Any]) -> str:
     """Crossref returns title as a list of language variants. Take first."""
     titles = message.get("title") or []
     return titles[0] if titles else ""
 
 
-def _extract_year(item: dict) -> int | None:
+def _extract_year(item: dict[str, Any]) -> int | None:
     """Extract publication year from Crossref date-parts."""
     for key in ("issued", "published-print", "published-online"):
         val = item.get(key)
@@ -44,11 +45,11 @@ def _extract_year(item: dict) -> int | None:
             continue
         date_parts = val.get("date-parts")
         if date_parts and date_parts[0]:
-            return date_parts[0][0]
+            return int(date_parts[0][0])
     return None
 
 
-def _extract_authors(item: dict) -> list[str]:
+def _extract_authors(item: dict[str, Any]) -> list[str]:
     """Extract author names from Crossref response."""
     authors = []
     for author in item.get("author", []):
@@ -159,7 +160,7 @@ class CrossrefClient:
         except Exception:
             return []
 
-    def _get(self, path: str, query: dict[str, str]) -> dict | None:
+    def _get(self, path: str, query: dict[str, str]) -> dict[str, Any] | None:
         """Single GET request with retry on 429."""
         url = f"{self.BASE_URL}{path}"
         if query:
@@ -171,9 +172,9 @@ class CrossrefClient:
 
         req = urllib.request.Request(url, headers={"User-Agent": ua})
 
-        def _do_request() -> dict:
+        def _do_request() -> dict[str, Any]:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                return json.loads(resp.read().decode("utf-8"))  # type: ignore[no-any-return]
 
         try:
             return retry_with_backoff(_do_request)

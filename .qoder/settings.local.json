@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/felipe_gonzalez/Developer/paper-writer/cli/paper/ 2>/dev/null && echo \"---\" && ls /Users/felipe_gonzalez/Developer/paper-writer/harness/services/ /Users/felipe_gonzalez/Developer/paper-writer/harness/domain/ /Users/felipe_gonzalez/Developer/paper-writer/harness/ports/ /Users/felipe_gonzalez/Developer/paper-writer/harness/adapters/ 2>/dev/null)",
+      "Bash(ls:*)"
+    ]
+  }
+}

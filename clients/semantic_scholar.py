@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+from typing import Any
 
 from clients._retry import retry_with_backoff
 from clients._text_similarity import TITLE_SIMILARITY_THRESHOLD, title_similarity
@@ -127,7 +128,7 @@ class SemanticScholarClient:
         except Exception:
             return []
 
-    def _get(self, path: str) -> dict | None:
+    def _get(self, path: str) -> dict[str, Any] | None:
         """Single GET request with retry on 429."""
         url = f"{self.BASE_URL}{path}"
         headers = {"User-Agent": "paper-writer/0.1"}
@@ -136,9 +137,9 @@ class SemanticScholarClient:
 
         req = urllib.request.Request(url, headers=headers)
 
-        def _do_request() -> dict:
+        def _do_request() -> dict[str, Any]:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                return json.loads(resp.read().decode("utf-8"))  # type: ignore[no-any-return]
 
         try:
             return retry_with_backoff(_do_request)
