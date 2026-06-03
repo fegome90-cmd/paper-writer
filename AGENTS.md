@@ -15,3 +15,9 @@ Source of Truth: `https://github.com/fegome90-cmd/constitucion-ai`
 - Todos los tool wrappers retornan ValidatorResult
 - Ningún cambio es real sin evidencia de ejecución
 - Consulta `docs/trifecta-mcp-agent-guide.md` para evitar el anti-patrón "One-Tool MCP" y usar la herramienta exacta (callers, ast_hover, etc.) en lugar de depender solo de ctx_oracle.
+
+## Skills
+
+| Skill | Description | File |
+|-------|-------------|------|
+| `trifecta-mcp` | Code navigation and semantic search via Trifecta MCP | [SKILL.md](skills/local/trifecta-mcp/SKILL.md) |
