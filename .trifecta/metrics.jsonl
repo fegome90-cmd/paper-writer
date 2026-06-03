@@ -255,3 +255,4 @@
 {"ts": 1780502971.257998, "query_type": "search", "fidelity": "fallback", "latency_ms": 39, "timings": {"pack_load_and_search_ms": 29, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780502983.5421782, "query_type": "search", "fidelity": "fallback", "latency_ms": 41, "timings": {"pack_load_and_search_ms": 31, "ast_resolution_ms": 10, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780504422.347223, "query_type": "impact", "fidelity": "full", "latency_ms": 37, "timings": {"pack_load_and_search_ms": 14, "ast_resolution_ms": 11, "graph_signal_ms": 12, "lsp_signal_ms": 0}}
+{"ts": 1780504624.596093, "query_type": "impact", "fidelity": "full", "latency_ms": 35, "timings": {"pack_load_and_search_ms": 14, "ast_resolution_ms": 11, "graph_signal_ms": 10, "lsp_signal_ms": 0}}

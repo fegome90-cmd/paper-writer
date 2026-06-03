@@ -318,3 +318,26 @@ def test_orchestrator_verify_requires_render_passed_gate() -> None:
         or any("render_passed" in b for b in result.blockers)
         or any("inconsistency" in b.lower() for b in result.blockers)
     )
+
+
+def test_orchestrator_import_bib_normalizes_bibliography() -> None:
+    """import_bib triggers wrapper + bib_normalized gate validation."""
+    orch, _, _, _ = _create_orchestrator()
+
+    # Init first to create state file
+    res_init = orch.execute(OrchestratorRequest("init", "search", "stop_on_error"))
+    assert res_init.success is True
+
+    # Import bib works from bootstrap+ (already past init)
+    result = orch.execute(
+        OrchestratorRequest(
+            command="import_bib",
+            requested_stage="search",
+            failure_policy="stop_on_error",
+            args={"source_bib": "references.bib", "target_bib": "templates/references.bib"},
+        )
+    )
+    assert result.success is True
+    assert result.exit_code == 0
+    # Wrapper gate (bib_normalized) should be set
+    assert result.gate_changes.get("bib_normalized") is True
