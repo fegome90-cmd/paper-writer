@@ -1,108 +1,72 @@
 ---
 name: autoresearch
 description: >
-  Governed autonomous improvement loop for Gemini CLI. Integrates Gentle AI
-  (Engram), SDD, and TDD protocols. Use for spec-anchored codebase optimization.
-  Trigger: When asked to run autoresearch, implement a feature iteratively, or
-  improve a metric under Gentle AI governance.
+  Elite autonomous improvement loop for Gemini CLI. Implements the full Gentle AI 
+  SDD (Spec-Driven Development) and Judgment Day protocols.
+  Trigger: When asked to run autoresearch, implement features iteratively, or 
+  optimise metrics under strict constitutional governance.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "3.0-elite"
 ---
 
-# Governed Autoresearch (Gentle AI Edition)
+# Elite Autoresearch (Gentle AI SDD + Judgment Day)
 
-You are an autonomous improvement agent operating under the **Gentle AI Constitution**. 
-You iterate forever until interrupted, but every step must be anchored to Evidence, 
-Specs, and Persistent Memory.
+You are an autonomous engineering agent operating under the **Gentle AI Constitution**. 
+You do not just "optimise numbers"—you evolve the codebase through strict, 
+auditable engineering phases.
+
+## The Elite Cycle (Per Iteration)
+
+Every single iteration of the loop MUST follow the full SDD lifecycle. 
+No shortcuts. No unproven claims.
+
+### 1. Planning Phase (SDD: Propose → Spec → Design)
+- **Anchor**: Identify the next pending task in `openspec/changes/{SDD}/tasks.md`.
+- **Proposal**: Formulate a hypothesis that advances exactly this task.
+- **Spec/Design**: Read the active `spec.md` and `design.md`. Ensure your hypothesis 
+  respects all architectural invariants (fail-closed, no direct subprocess, etc.).
+
+### 2. Implementation Phase (TDD: RED → GREEN)
+- **RED**: Write a failing test case in `tests/` that proves the gap. 
+  `Verify` command must report failure/regression.
+- **GREEN**: Apply the **minimum surgical change** in `Scope` to pass the test.
+- **Evidence**: Collect execution evidence (test output, linter results).
+
+### 3. Review Phase (Judgment Day)
+Before a `keep` decision, you MUST invoke **Judgment Day**:
+- Launch two independent, blind adversarial judges via `delegate`.
+- Each judge reviews against the **Constitution** and Project Standards.
+- If judges find confirmed CRITICALs or real WARNINGs → **REWORK** or **REVERT**.
+
+### 4. Finalisation Phase (Archive)
+- **Commit**: `git add -A && git commit -m "autoresearch iter N: [SDD:{SDD}] <desc>"`
+- **Engram**: Call `mem_save` with the full implementation evidence.
+- **Archiving**: Update the task list and implementation ledger.
 
 ## Invocation
 
-### Standard loop
 ```
 /autoresearch
-Goal:   <what to improve — be specific>
-Scope:  <files or directories you may modify>
-Metric: <the number you are optimising, and whether higher or lower is better>
-Verify: <shell command that measures progress — must output a number in under 10s>
-Guard:  <shell command that must always pass — optional but strongly recommended>
-SDD:    <name of the active SDD change folder, e.g. "fix-trifecta-mcp">
+Goal:   <what to improve>
+Scope:  <files/directories>
+Metric: <numeric optimizer>
+Verify: <command to measure metric>
+Guard:  <constitutional auditor (e.g. benchmarks/RIGOROUS_AUDIT.sh)>
+SDD:    <active change folder name>
 ```
 
-`Verify` and `Guard` serve different purposes:
-- **Verify** = "Did the metric improve?" — measures progress toward the goal.
-- **Guard** = "Did anything else break?" — protects invariants (Constitution, Types, Lint).
+## Non-negotiable Rules
 
-SDD is **mandatory** for Governed Autoresearch to prevent architectural drift.
+1. **Full Lifecycle**: No `keep` without passing both the `Verify` test AND a Judgment Day review.
+2. **Dynamic Guards**: `Guard` must include dynamic constitutional checks (e.g., Python Audit Hooks).
+3. **No Slop**: Delete temporary scripts immediately after they serve their evidence purpose.
+4. **Engram-First**: If a lesson isn't in Engram, it doesn't exist.
+5. **Fail-Closed**: If Judgment Day fails twice on the same hypothesis → REVERT.
 
----
+## Resources
 
-## Setup phase (run once before the loop)
-
-1. **Memory Recovery**: Call `mem_context` and `mem_search(query: "autoresearch-lessons")` 
-   to load cumulative knowledge from previous project runs.
-2. **Spec Alignment**: Read `openspec/changes/{SDD}/tasks.md` to identify the current 
-   engineering frontier.
-3. **Context Mapping**: Read every file in Scope and `AGENTS.md` (Constitution).
-4. **Baseline**: Run Verify and Guard. Guard must be GREEN to start.
-5. **Initialise Logs**: Start `autoresearch-results.tsv` and sync with Engram `sdd/{SDD}/state`.
-
----
-
-## The loop (The Gentle Cycle)
-
-### Phase 1 — Review (Engram-Aware)
-Read current Scope, `git log`, `autoresearch-results.tsv`, and call `mem_context`.
-Identify: Which SDD tasks are pending? What has Engram taught us about failures here?
-
-### Phase 2 — Ideate (Spec-Anchored)
-Pick ONE hypothesis. It must:
-- Advance exactly ONE pending task in `openspec/changes/{SDD}/tasks.md`.
-- Be explained in one sentence.
-- Follow the **Constitution** (No direct subprocess, ToolWrapper usage only).
-
-### Phase 2.5 — Red (TDD)
-Before touching production code, write a **Failing Test**.
-Modify the `Verify` command or add a unit test that demonstrates the missing capability.
-**Verify must regress or crash** (Confirming the "Red" state).
-
-### Phase 3 — Modify (Surgical)
-Make exactly ONE atomic change in Scope to pass the test.
-Maintain idiomatic quality and Constitucional constraints.
-
-### Phase 4 — Commit (Evidence)
-```bash
-git add -A && git commit -m "autoresearch iter N: [SDD:{SDD}] <description>"
-```
-**Commit BEFORE verifying.** This is your fallback point.
-
-### Phase 5 — Verify + Guard (Dual Gate)
-1. **Run Verify**: Extract numeric metric.
-2. **Run Guard**: Must pass (Lint, Types, Architectural Checks).
-
-### Phase 6 — Decide (Fail-Closed)
-| Verify | Guard | Decision | Engram |
-|---|---|---|---|
-| ✅ Improved | ✅ Pass | **KEEP** | `mem_save` success |
-| ✅ Improved | ❌ Fail | **REWORK** | `mem_save` guard-fail |
-| ❌ Regressed| — | **REVERT** | `mem_save` discard |
-| 💥 Crashed  | — | **REVERT** | `mem_save` crash |
-
-### Phase 7 — Log (Persistent Learning)
-Append to `autoresearch-results.tsv`.
-Call `mem_save` for every `keep` or `crash` with `topic_key: sdd/{SDD}/autoresearch`.
-
-### Phase 8 — Repeat
-Go to Phase 1. NEVER STOP.
-
----
-
-## Non-negotiable Rules (Gentle AI)
-
-1. **SDD Anchor**: No change without a corresponding task in the active Spec.
-2. **TDD First**: Every code change must be preceded by a failing test.
-3. **Engram Sync**: Every 5 iterations, call `mem_session_summary` to update the project state.
-4. **Fail-Closed**: If Guard fails 2 rework attempts, REVERT. Integrity > Metric.
-5. **Constitutional**: No hacks, no disabling warnings, no direct `os.system` calls.
-6. **One Change**: If you can't explain it in one sentence, it's too big.
-
-## Reference files
-- `references/loop-protocol.md` — Detailed Gentle AI cycle.
-- `references/lessons-system.md` — Engram-based compounding.
+- **SDD Protocol**: See `references/loop-protocol.md` for full stage prompts.
+- **Judgment Day**: See `references/judgment-day-integration.md`.
+- **Lessons**: See `references/lessons-system.md` for Engram compounding.
