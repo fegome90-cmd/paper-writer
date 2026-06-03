@@ -149,8 +149,11 @@ def score_task(
             false_alarms = 0
             for m in matches:
                 name = m.get("name", "")
+                mfile = m.get("file", "")
                 for gf in gold_false_orphans:
-                    if name == gf.split("::")[-1]:
+                    gf_name = gf.split("::")[-1]
+                    gf_file = gf.split("::")[0] if "::" in gf else ""
+                    if name == gf_name and (not gf_file or gf_file in mfile):
                         false_alarms += 1
                         break
             # Precision: fewer false alarms = better

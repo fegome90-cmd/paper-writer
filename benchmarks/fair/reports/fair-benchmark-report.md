@@ -1,15 +1,15 @@
 # Fair Benchmark Report — Bias-Corrected Results
 
-> Generated: 2026-06-02 21:16
+> Generated: 2026-06-02 21:24
 > Purpose: Address the 4 critical biases in the original Trifecta A/B study
 
 ## Aggregate Results
 
 | Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |
 |-----|-----------|--------------|---------|-----------------|-------|
-| rag_tfidf | 0.70 | 0.47 | 0.57 | 291 | 20 |
-| grep_pyright | 0.65 | 0.47 | 0.52 | 95 | 20 |
-| trifecta | 0.95 | 0.76 | 0.77 | 0 | 20 |
+| rag_tfidf | 0.70 | 0.47 | 0.57 | 290 | 20 |
+| grep_pyright | 0.65 | 0.47 | 0.52 | 96 | 20 |
+| trifecta | 0.95 | 0.77 | 0.78 | 0 | 20 |
 
 ## Honest Context Value Ratio
 
@@ -45,7 +45,7 @@ Tasks specifically targeting Trifecta's known limitations:
 - **T-W3** (grep_pyright): recall=1.00, latency=1ms
 - **T-W3** (trifecta): recall=1.00, latency=0ms
 - **T-W1** (rag_tfidf): recall=1.00, latency=12ms
-- **T-W1** (grep_pyright): recall=1.00, latency=718ms
+- **T-W1** (grep_pyright): recall=1.00, latency=721ms
 - **T-W1** (trifecta): recall=1.00, latency=0ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=0ms
 - **T-W2** (grep_pyright): recall=1.00, latency=44ms
@@ -61,7 +61,7 @@ Tasks specifically targeting Trifecta's known limitations:
 - **trifecta**: 0ms
 
 ### Repo: (varies)
-- **rag_tfidf**: 89ms
+- **rag_tfidf**: 90ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 
