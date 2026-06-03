@@ -270,6 +270,19 @@ class TrifectaArm:
                 if is_override_reachable:
                     continue
 
+            # Skip methods on constructed classes (DI instantiation)
+            # If a class is called (constructed), its methods are reachable
+            if kind in ("method", "init") and "." in qual:
+                class_name = qual.rsplit(".", 1)[0]
+                is_constructed = conn.execute(
+                    "SELECT 1 FROM nodes n "
+                    "WHERE n.symbol_name = ? AND n.file_rel = ? AND n.kind = 'class' "
+                    "AND n.id IN (SELECT DISTINCT to_node_id FROM edges WHERE edge_kind = 'calls')",
+                    (class_name, file_rel),
+                ).fetchone()
+                if is_constructed:
+                    continue
+
             matches.append(
                 {
                     "file": file_rel,
