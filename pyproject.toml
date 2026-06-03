@@ -28,6 +28,7 @@ include = [
   "verification*",
   "parsers*",
   "engine*",
+  "clients*",
   "rules*",
   "schemas*",
 ]

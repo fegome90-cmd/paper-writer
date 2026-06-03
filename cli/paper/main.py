@@ -136,6 +136,47 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
         print(format_claims_output(result))
 
 
+def _cmd_audit_code_health(args: argparse.Namespace) -> None:
+    """Run code health audit using Trifecta graph index.
+
+    Finds actionable dead code / orphan methods in the project, filtering
+    out known false positives (tests, mixin inheritance, CLI dispatch).
+    Requires MCP_TRIFECTA_MODE=real to be useful.
+    """
+    import json
+
+    from validators.code_health import analyze_code_health
+
+    t0 = time.time()
+    report = analyze_code_health()
+    elapsed = int((time.time() - t0) * 1000)
+
+    output = {
+        "summary": report.summary(),
+        "trifecta_enabled": report.trifecta_enabled,
+        "actionable_count": len(report.findings),
+        "filtered_count": report.filtered_count,
+        "total_orphans_seen": report.total_orphans_seen,
+        "elapsed_ms": elapsed,
+        "error": report.error,
+        "findings": [f.to_dict() for f in report.findings],
+    }
+
+    if args.output == "json":
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+    else:
+        print(output["summary"])
+        if report.findings:
+            print()
+            for finding in report.findings:
+                print(f"  {finding.file_rel}::{finding.symbol_name} ({finding.orphan_type})")
+        if report.error:
+            print(f"  Note: {report.error}", file=sys.stderr)
+
+    # Exit 1 if there are actionable findings, 0 otherwise
+    sys.exit(1 if report.findings else 0)
+
+
 def _cmd_gate_method(args: argparse.Namespace) -> None:
     """Run methodological gate (Phase 0)."""
     import json
@@ -246,6 +287,14 @@ def main() -> None:
         "--whitelist", "-w", action="append", default=[], help="Terms to skip"
     )
     audit_claims.set_defaults(func=_cmd_audit_claims)
+    audit_code_health = audit_sub.add_parser(
+        "code-health",
+        help="Audit code health (dead code, unused methods) via Trifecta graph.",
+    )
+    audit_code_health.add_argument(
+        "--output", "-o", choices=["terminal", "json"], default="terminal"
+    )
+    audit_code_health.set_defaults(func=_cmd_audit_code_health)
 
     # paper gate (Phase 0)
     gate_parser = subparsers.add_parser(
