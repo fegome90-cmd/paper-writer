@@ -1,13 +1,11 @@
 import socket
 import json
-import subprocess
 import time
 import sys
 from pathlib import Path
 
 SOCKET_PATH = "/tmp/trifecta_f1_0a9954b40438.sock"
 
-# These represent the exact usage patterns instructed by the trifecta-mcp SKILL and Guide.
 SCENARIOS = [
     ("ctx_search", {"query": "ManuscriptState"}),
     ("ctx_get", {"ids": ["repo:harness/domain/state.py:f60249cebb"]}),
@@ -20,11 +18,11 @@ SCENARIOS = [
     ("ctx_graph", {"action": "parents", "symbol": "BibliographyNormalizer"}),
     ("ctx_graph", {"action": "path", "from_symbol": "Orchestrator.execute", "to_symbol": "ManuscriptState"}),
     ("ctx_graph", {"action": "impact", "symbol": "ManuscriptState"}),
-    ("ctx_graph", {"action": "orphans", "symbol": ""}),
+    ("ctx_graph", {"action": "orphans"}),
     ("ctx_graph", {"action": "cycles", "edge_kind": "calls"}),
     ("ctx_graph", {"action": "hubs", "top_n": 5}),
-    ("ctx_graph", {"action": "overview", "symbol": ""}),
-    ("ctx_graph", {"action": "status", "symbol": ""}),
+    ("ctx_graph", {"action": "overview"}),
+    ("ctx_graph", {"action": "status"}),
     ("ctx_graph", {"action": "search", "symbol": "State"}),
     ("ast_analyze", {"path": "harness/domain/state.py"}),
     ("ast_hover", {"path": "harness/domain/state.py", "line": 12, "col": 5}),

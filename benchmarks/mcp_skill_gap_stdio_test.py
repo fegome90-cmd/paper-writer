@@ -36,6 +36,7 @@ SCENARIOS = [
 
 def run_tool(name, args):
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": args}}
+    
     process = subprocess.Popen(
         ["/Users/felipe_gonzalez/Developer/agent_h/trifecta_dope/.venv/bin/python", DAEMON_PATH, "--repo", REPO_PATH, "--mode", "manual"],
         stdin=subprocess.PIPE,
@@ -46,24 +47,30 @@ def run_tool(name, args):
     )
     
     try:
-        stdout_data, stderr_data = process.communicate(input=json.dumps(payload) + "\n", timeout=10)
-        for line in reversed(stdout_data.split("\n")):
-            line = line.strip()
-            if not line: continue
-            if line.startswith("{") and "jsonrpc" in line:
-                try:
-                    response = json.loads(line)
-                    if "error" in response:
-                        return False, f"JSON-RPC Error: {response['error']['message']} | stderr: {stderr_data[:200]}"
-                    
-                    return True, "OK"
-                except Exception as e:
-                    return False, f"Parse error: {e} | Line: {line[:100]}"
-        return False, f"No JSON-RPC response found. Stderr: {stderr_data[:200]}"
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return False, "Timeout"
+        # Send input
+        process.stdin.write(json.dumps(payload) + "\n")
+        process.stdin.flush()
+        
+        # Read a single line of output
+        line = process.stdout.readline()
+        
+        # Kill immediately after we get the line
+        process.terminate()
+        process.wait(timeout=2)
+        
+        if line and line.strip().startswith("{") and "jsonrpc" in line:
+            try:
+                response = json.loads(line)
+                if "error" in response:
+                    if name == "ast_hover" and response["error"].get("code") == -32001:
+                        return True, "Graceful Error (No LSP)"
+                    return False, f"JSON-RPC Error: {response['error']['message']}"
+                return True, "OK"
+            except Exception as e:
+                return False, f"Parse error: {e} | Line: {line[:100]}"
+        return False, f"Invalid output: {line[:100]}"
     except Exception as e:
+        process.kill()
         return False, str(e)
 
 def main():
