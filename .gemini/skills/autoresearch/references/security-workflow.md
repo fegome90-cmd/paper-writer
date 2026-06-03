@@ -1,4 +1,4 @@
-# Gentle SECURITY Protocol
+# Gentle AI SECURITY Protocol
 
 ## Governance
 - Use Evidence Layers for every finding.

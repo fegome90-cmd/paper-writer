@@ -108,9 +108,7 @@ def test_build_resolution_timeout(resolver, repo_root) -> None:
     fake_path = repo_root / "fake"
     fake_path.touch(mode=0o755)
     with patch.dict(os.environ, {"MYTOOL_BIN": str(fake_path)}):
-        with patch(
-            "subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="fake", timeout=5)
-        ):
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="fake", timeout=5)):
             res = resolver.resolve("mytool")
             assert res is None
 

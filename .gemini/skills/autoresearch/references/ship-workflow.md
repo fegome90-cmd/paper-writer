@@ -1,4 +1,4 @@
-# Gentle SHIP Protocol
+# Gentle AI SHIP Protocol
 
 ## Governance
 - Use Evidence Layers for every finding.

@@ -1,4 +1,5 @@
 """Tests for validators.citation_verify — citation verification orchestrator."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -27,13 +28,15 @@ def _make_manuscript(text: str = "", references: str = "") -> Manuscript:
     sentences = []
     for i, line in enumerate(full.split("\n")):
         if line.strip():
-            sentences.append(Sentence(
-                text=line.strip(),
-                line=i + 1,
-                col=0,
-                char_start=full.find(line),
-                char_end=full.find(line) + len(line),
-            ))
+            sentences.append(
+                Sentence(
+                    text=line.strip(),
+                    line=i + 1,
+                    col=0,
+                    char_start=full.find(line),
+                    char_end=full.find(line) + len(line),
+                )
+            )
     return Manuscript(
         path="test.md",
         format="markdown",
@@ -143,9 +146,11 @@ class TestCitationVerifyValidatorValidate:
         )
         validator = CitationVerifyValidator(
             crossref_client=mock_client,
-            s2_client=MagicMock(verify_doi=MagicMock(return_value=S2Result(
-                found=True, title="Nature Paper", score=0.95
-            ))),
+            s2_client=MagicMock(
+                verify_doi=MagicMock(
+                    return_value=S2Result(found=True, title="Nature Paper", score=0.95)
+                )
+            ),
         )
         findings = validator.validate(manuscript)
         p0_findings = [f for f in findings if f["severity"] == "P0"]
@@ -162,12 +167,8 @@ class TestCitationVerifyVerifySingle:
             found=True, title="Wrong Title", score=0.3
         )
         mock_s2 = MagicMock()
-        mock_s2.verify_doi.return_value = S2Result(
-            found=True, title="Wrong Title", score=0.3
-        )
-        validator = CitationVerifyValidator(
-            crossref_client=mock_crossref, s2_client=mock_s2
-        )
+        mock_s2.verify_doi.return_value = S2Result(found=True, title="Wrong Title", score=0.3)
+        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
@@ -182,9 +183,7 @@ class TestCitationVerifyVerifySingle:
         )
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=False)
-        validator = CitationVerifyValidator(
-            crossref_client=mock_crossref, s2_client=mock_s2
-        )
+        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
@@ -197,9 +196,7 @@ class TestCitationVerifyVerifySingle:
         mock_crossref.verify_doi.return_value = CrossrefResult(found=False)
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=False)
-        validator = CitationVerifyValidator(
-            crossref_client=mock_crossref, s2_client=mock_s2
-        )
+        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
         citation = {"doi": "10.99999/fake", "line": 3, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
@@ -213,12 +210,8 @@ class TestCitationVerifyVerifySingle:
             found=True, title="Test Paper", score=0.95
         )
         mock_s2 = MagicMock()
-        mock_s2.verify_doi.return_value = S2Result(
-            found=True, title="Test Paper", score=0.95
-        )
-        validator = CitationVerifyValidator(
-            crossref_client=mock_crossref, s2_client=mock_s2
-        )
+        mock_s2.verify_doi.return_value = S2Result(found=True, title="Test Paper", score=0.95)
+        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is None
@@ -264,9 +257,7 @@ class TestCitationVerifyQueryClients:
         """_query_crossref returns CrossrefResult(found=False) on exception."""
         mock_client = MagicMock()
         mock_client.verify_doi.side_effect = Exception("network error")
-        validator = CitationVerifyValidator(
-            offline=False, crossref_client=mock_client
-        )
+        validator = CitationVerifyValidator(offline=False, crossref_client=mock_client)
         result = validator._query_crossref({"doi": "10.1234/test"})
         assert result is not None
         assert result.found is False
@@ -275,9 +266,7 @@ class TestCitationVerifyQueryClients:
         """_query_s2 returns S2Result(found=False) on exception."""
         mock_client = MagicMock()
         mock_client.verify_doi.side_effect = Exception("network error")
-        validator = CitationVerifyValidator(
-            offline=False, s2_client=mock_client
-        )
+        validator = CitationVerifyValidator(offline=False, s2_client=mock_client)
         result = validator._query_s2({"doi": "10.1234/test"})
         assert result is not None
         assert result.found is False
@@ -288,9 +277,7 @@ class TestCitationVerifyQueryClients:
         mock_client.search_by_title.return_value = [
             CrossrefResult(found=True, title="Test", score=0.9)
         ]
-        validator = CitationVerifyValidator(
-            offline=False, crossref_client=mock_client
-        )
+        validator = CitationVerifyValidator(offline=False, crossref_client=mock_client)
         result = validator._query_crossref({"title": "Test Paper"})
         assert result is not None
         assert result.found is True
@@ -298,12 +285,8 @@ class TestCitationVerifyQueryClients:
     def test_query_s2_by_title(self) -> None:
         """_query_s2 falls back to title search."""
         mock_client = MagicMock()
-        mock_client.search_by_title.return_value = [
-            S2Result(found=True, title="Test", score=0.9)
-        ]
-        validator = CitationVerifyValidator(
-            offline=False, s2_client=mock_client
-        )
+        mock_client.search_by_title.return_value = [S2Result(found=True, title="Test", score=0.9)]
+        validator = CitationVerifyValidator(offline=False, s2_client=mock_client)
         result = validator._query_s2({"title": "Test Paper"})
         assert result is not None
         assert result.found is True

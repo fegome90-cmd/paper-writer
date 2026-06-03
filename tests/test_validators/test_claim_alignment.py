@@ -1,4 +1,5 @@
 """Tests for validators.claim_alignment — claim-reference alignment."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -14,13 +15,15 @@ def _make_manuscript(text: str = "") -> Manuscript:
     sentences = []
     for i, line in enumerate(text.split("\n")):
         if line.strip():
-            sentences.append(Sentence(
-                text=line.strip(),
-                line=i + 1,
-                col=0,
-                char_start=text.find(line),
-                char_end=text.find(line) + len(line),
-            ))
+            sentences.append(
+                Sentence(
+                    text=line.strip(),
+                    line=i + 1,
+                    col=0,
+                    char_start=text.find(line),
+                    char_end=text.find(line) + len(line),
+                )
+            )
     return Manuscript(
         path="test.md",
         format="markdown",
@@ -102,7 +105,13 @@ class TestClaimAlignmentValidator:
     def test_make_unsupported_finding_structure(self):
         """_make_unsupported_finding produces correct P1 finding."""
         validator = ClaimAlignmentValidator()
-        candidate = {"line": 10, "column": 5, "span": [100, 120], "section": "results", "claim_type": "definitive"}
+        candidate = {
+            "line": 10,
+            "column": 5,
+            "span": [100, 120],
+            "section": "results",
+            "claim_type": "definitive",
+        }
         finding = validator._make_unsupported_finding(candidate)
         assert finding["rule_id"] == "claim_alignment.unsupported"
         assert finding["severity"] == "P1"
@@ -112,7 +121,13 @@ class TestClaimAlignmentValidator:
     def test_make_alignment_finding_overclaim(self):
         """_make_alignment_finding with 'overclaim' status."""
         validator = ClaimAlignmentValidator()
-        candidate = {"line": 15, "column": 0, "span": [200, 220], "section": "discussion", "claim_type": "causal"}
+        candidate = {
+            "line": 15,
+            "column": 0,
+            "span": [200, 220],
+            "section": "discussion",
+            "claim_type": "causal",
+        }
         finding = validator._make_alignment_finding(candidate, "overclaim")
         assert finding["rule_id"] == "claim_alignment.overclaim"
         assert finding["severity"] == "P1"
