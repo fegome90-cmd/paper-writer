@@ -64,7 +64,11 @@ RUN_ID = "20260603T120000"
 
 def _run_path(tmp_path: Path, *parts: str) -> Path:
     """Helper to build per-run artifact path."""
-    return tmp_path / "outputs" / "runs" / RUN_ID / Path(*parts) if parts else tmp_path / "outputs" / "runs" / RUN_ID
+    return (
+        tmp_path / "outputs" / "runs" / RUN_ID / Path(*parts)
+        if parts
+        else tmp_path / "outputs" / "runs" / RUN_ID
+    )
 
 
 def test_action_runner_init(tmp_path: Path) -> None:

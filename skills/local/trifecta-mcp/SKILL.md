@@ -17,6 +17,14 @@ metadata:
 - Validating or indexing context packs (`ctx_validate`, `ctx_reindex_graph`).
 - Troubleshooting code graph staleness.
 
+
+## Gentle AI Governance
+
+- **Evidence-First**: Every tool call must include the "evidence" field explaining the source of the fact.
+- **Fidelity Monitoring**: Agents MUST check the `fidelity` field. If `degraded`, pivot to structural tools (`ctx_graph`).
+- **Fail-Closed**: If a tool returns an error code (e.g., -32001 for LSP), do NOT hallucinate; report the limitation.
+- **Spec-Anchored**: Use `ctx_plan` to verify the engineering path before mass modifications.
+
 ## Critical Patterns
 
 - **Anti-Pattern (The "One-Tool MCP")**: DO NOT default to `ctx_oracle`. The Oracle is for broad, unspecific searches.

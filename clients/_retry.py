@@ -16,7 +16,10 @@ BACKOFF_SECONDS = 2.0
 MAX_RETRIES = 3
 
 
-def retry_with_backoff(fn: Callable[[], T]) -> T:
+def retry_with_backoff(
+    fn: Callable[[], T],
+    on_retry: Callable[[], None] | None = None,
+) -> T:
     """Call fn() with exponential backoff on HTTP 429.
 
     Retries up to MAX_RETRIES times with increasing delays:
@@ -24,6 +27,8 @@ def retry_with_backoff(fn: Callable[[], T]) -> T:
 
     Args:
         fn: Callable that performs the HTTP request.
+        on_retry: Optional callback invoked after each backoff sleep.
+            Used by clients to refresh `_last_request_at` timestamp.
 
     Returns:
         Result of fn() on success.
@@ -38,6 +43,8 @@ def retry_with_backoff(fn: Callable[[], T]) -> T:
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < MAX_RETRIES:
                 time.sleep(BACKOFF_SECONDS * (2**attempt))
+                if on_retry is not None:
+                    on_retry()
                 last_error = e
                 continue
             raise

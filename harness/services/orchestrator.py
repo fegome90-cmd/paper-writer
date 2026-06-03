@@ -498,7 +498,7 @@ class Orchestrator:
         from harness.ports.assets import get_project_asset
 
         bib_path = str(get_project_asset(self.repo_path, "templates", "references.bib"))
-        draft_dir = self.repo_path / "outputs" / "drafts"
+        draft_dir = self.repo_path / "outputs" / "latest" / "drafts"
         manuscript_files = (
             [str(f) for f in sorted(draft_dir.glob("*.md"))] if draft_dir.is_dir() else []
         )

@@ -279,9 +279,7 @@ class FilesystemActionRunner(ActionRunner):
                     inputs={
                         "section_name": section_name,
                         "outline_path": str(self._resolve_run("drafts/outline.md")),
-                        "evidence_path": str(
-                            self._resolve_run("search/screened_evidence.json")
-                        ),
+                        "evidence_path": str(self._resolve_run("search/screened_evidence.json")),
                         "bib_path": str(self._resolve("templates/references.bib")),
                         "output_dir": str(drafts_dir),
                     },
