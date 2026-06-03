@@ -330,9 +330,7 @@ def validate_ready_for_delivery(
         def make_soft_check(gate_name: str = g) -> Check:
             def run_fn() -> None:
                 if not state_gates.get(gate_name, False):
-                    raise ValueError(
-                        f"Soft gate '{gate_name}' is not satisfied (warning only)."
-                    )
+                    raise ValueError(f"Soft gate '{gate_name}' is not satisfied (warning only).")
 
             return Check(
                 id=f"gate_satisfied_{gate_name}",
@@ -359,6 +357,7 @@ def validate_citation_verify_gate(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
     """Soft gate: citation_verified. Warns if not yet run or False."""
+
     def check_gate() -> None:
         if not state_gates.get("citation_verified", False):
             raise ValueError("citation_verified gate not yet evaluated or not satisfied")
@@ -378,6 +377,7 @@ def validate_ethics_passed_gate(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
     """Soft gate: ethics_passed. Warns if not yet run or False."""
+
     def check_gate() -> None:
         if not state_gates.get("ethics_passed", False):
             raise ValueError("ethics_passed gate not yet evaluated or not satisfied")
