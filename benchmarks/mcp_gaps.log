@@ -1,0 +1,5 @@
+GAP: ctx_graph {'action': 'callers', 'symbol': 'ManuscriptState'} -> JSON-RPC Error: TrifectaF1Server._gentle_wrap() got an unexpected keyword argument 'depth'
+GAP: ctx_graph {'action': 'callees', 'symbol': 'ManuscriptState.validate'} -> JSON-RPC Error: TrifectaF1Server._gentle_wrap() got an unexpected keyword argument 'depth'
+GAP: ctx_graph {'action': 'path', 'from_symbol': 'Orchestrator.execute', 'to_symbol': 'ManuscriptState'} -> JSON-RPC Error: GraphService.path() missing 1 required positional argument: 'to_symbol'
+GAP: ctx_graph {'action': 'impact', 'symbol': 'ManuscriptState'} -> JSON-RPC Error: TrifectaF1Server._gentle_wrap() got an unexpected keyword argument 'depth'
+GAP: ctx_graph {'action': 'search', 'symbol': 'State'} -> JSON-RPC Error: TrifectaF1Server._gentle_wrap() got an unexpected keyword argument 'limit'
