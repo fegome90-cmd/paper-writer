@@ -245,8 +245,11 @@ class DependencyRiskReport:
 HUB_IN_DEGREE_THRESHOLD = 5
 """Minimum in_degree for a symbol to be considered a hub."""
 
-COUPLING_FAN_OUT_THRESHOLD = 8
+COUPLING_FAN_OUT_THRESHOLD = 6
 """Minimum number of callees to flag as a coupling hotspot."""
+
+LOW_REACHABILITY_THRESHOLD = 0.6
+"""Below this fraction of reachable symbols, flag as architectural risk."""
 
 
 def _find_dead_hubs(
@@ -375,9 +378,27 @@ def analyze_dependency_risk(
     # Step 4: Find coupling hotspots (high fan-out symbols)
     coupling_hotspots = _find_coupling_hotspots(client, hubs)
 
+    # Step 5: Check reachability from overview (architectural risk)
+    overview_result = client.find_overview()
+    reachability_findings: list[DependencyRiskFinding] = []
+    if overview_result.success and isinstance(overview_result.data, dict):
+        path_stats = overview_result.data.get("path_stats", {})
+        reach_pct = path_stats.get("reachability_pct", 1.0)
+        if reach_pct < LOW_REACHABILITY_THRESHOLD:
+            reachability_findings.append(
+                DependencyRiskFinding(
+                    file_rel="(global)",
+                    symbol_name="reachability",
+                    qualified_name="graph.reachability_pct",
+                    kind="metric",
+                    in_degree=int(reach_pct * 100),
+                    risk_reason="low_reachability",
+                )
+            )
+
     return DependencyRiskReport(
         trifecta_enabled=True,
-        findings=dead_hubs + coupling_hotspots,
+        findings=dead_hubs + coupling_hotspots + reachability_findings,
         hub_count=len(hubs),
         coupling_hotspots=coupling_hotspots,
         error="",
