@@ -13,12 +13,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from clients.trifecta import (
     TrifectaClient,
-    TrifectaUnavailableError,
-    TrifectaResult,
     get_trifecta_client,
 )
 
@@ -157,6 +153,39 @@ class TestTrifectaSuccessPath:
         assert result.data["node_count"] == 1000
 
 
+
+
+    def test_find_callers_parses_nodes_key(self, tmp_path: Path) -> None:
+        """find_callers handles Trifecta's 'nodes' key (newer CLI versions)."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({
+            "status": "ok",
+            "nodes": [{"symbol_name": "main", "file_rel": "cli.py"}],
+        })
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_callers("Foo.bar")
+        assert result.success is True
+        assert len(result.data) == 1
+
+    def test_find_callees_parses_nodes_key(self, tmp_path: Path) -> None:
+        """find_callees handles Trifecta's 'nodes' key."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({
+            "status": "ok",
+            "nodes": [{"symbol_name": "validate", "file_rel": "validators.py"}],
+        })
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_callees("Foo")
+        assert result.success is True
+        assert len(result.data) == 1
+
+
 class TestTrifectaCommand:
     """Verify the subprocess command is correct."""
 
@@ -185,3 +214,77 @@ class TestTrifectaCommand:
         call_args = run.call_args[0][0]
         assert "--symbol" in call_args
         assert "MyClass.my_method" in call_args
+
+
+class TestTrifectaGraphActions:
+    """Test the new graph action methods added in Phase 1b."""
+
+    def test_find_overview_returns_dict(self, tmp_path: Path) -> None:
+        """find_overview returns the graph overview dict."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({
+            "status": "ok",
+            "node_count": 1000,
+            "edge_count": 1500,
+            "orphan_count": 50,
+            "top_hubs": [{"symbol": "main", "in_degree": 30}],
+        })
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_overview()
+        assert result.success is True
+        assert result.data["node_count"] == 1000
+        assert result.data["orphan_count"] == 50
+        assert len(result.data["top_hubs"]) == 1
+
+    def test_find_overview_handles_failure(self, tmp_path: Path) -> None:
+        """find_overview returns empty dict on failure."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = client.find_overview()
+        assert result.success is False
+        assert result.data == {}
+
+    def test_find_hubs_returns_list(self, tmp_path: Path) -> None:
+        """find_hubs returns a list of hub dicts."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({
+            "hubs": [
+                {"symbol_name": "main", "in_degree": 30},
+                {"symbol_name": "validate", "in_degree": 15},
+            ],
+        })
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_hubs(top_n=5)
+        assert result.success is True
+        assert len(result.data) == 2
+        assert result.data[0]["symbol_name"] == "main"
+
+    def test_find_hubs_passes_top_n(self, tmp_path: Path) -> None:
+        """find_hubs passes --top to Trifecta CLI."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"hubs": []})
+        with patch("subprocess.run", return_value=mock) as run:
+            client.find_hubs(top_n=20)
+        call_args = run.call_args[0][0]
+        assert "--top" in call_args
+        assert "20" in call_args
+
+    def test_find_callers_passes_depth(self, tmp_path: Path) -> None:
+        """find_callers passes --depth when specified."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"callers": []})
+        with patch("subprocess.run", return_value=mock) as run:
+            client.find_callers("MyClass.method", depth=3)
+        call_args = run.call_args[0][0]
+        assert "--depth" in call_args
+        assert "3" in call_args

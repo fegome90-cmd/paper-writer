@@ -25,6 +25,7 @@ Why strict TDD:
     - The filter is critical (95% FP rate without it)
     - The integration boundary (Trifecta subprocess) needs explicit testing
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

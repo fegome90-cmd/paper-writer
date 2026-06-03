@@ -60,3 +60,33 @@ class TestTrifectaRealIntegration:
         client = get_trifecta_client(repo_path=PAPER_WRITER_ROOT)
         assert client is not None
         assert isinstance(client, TrifectaClient)
+
+
+class TestTrifectaGraphActions:
+    """Integration tests for the new graph action methods (Phase 1b)."""
+
+    def test_find_overview_returns_metrics(self) -> None:
+        """find_overview returns graph metrics from paper-writer's index."""
+        client = TrifectaClient(repo_path=PAPER_WRITER_ROOT, timeout=30.0)
+        result = client.find_overview()
+        assert result.success is True, f"find_overview failed: {result.error}"
+        assert "node_count" in result.data
+        assert "edge_count" in result.data
+        assert result.data["node_count"] > 0
+
+    def test_find_hubs_returns_list(self) -> None:
+        """find_hubs returns top architectural hubs."""
+        client = TrifectaClient(repo_path=PAPER_WRITER_ROOT, timeout=30.0)
+        result = client.find_hubs(top_n=5)
+        assert result.success is True, f"find_hubs failed: {result.error}"
+        assert isinstance(result.data, list)
+        # We know paper-writer has at least 1 hub (make_manuscript, ManuscriptState)
+        assert len(result.data) > 0
+
+    def test_find_path_between_entry_point_and_method(self) -> None:
+        """find_path returns a path from main to a known method."""
+        client = TrifectaClient(repo_path=PAPER_WRITER_ROOT, timeout=30.0)
+        result = client.find_path("main", "BibliographyNormalizer.run")
+        assert result.success is True, f"find_path failed: {result.error}"
+        # The path might be empty if no connection, but no error
+        assert isinstance(result.data, dict)

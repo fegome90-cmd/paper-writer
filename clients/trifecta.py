@@ -25,6 +25,7 @@ Why subprocess and not direct import:
     - Subprocess failures don't crash the caller
     - No coupling to Trifecta's internal module structure
 """
+
 from __future__ import annotations
 
 import json
@@ -155,21 +156,28 @@ class TrifectaClient:
             result.data = []
         return result
 
-    def find_callers(self, symbol: str) -> TrifectaResult:
+    def find_callers(self, symbol: str, depth: int = 1) -> TrifectaResult:
         """Find callers of a symbol.
 
         Args:
             symbol: Qualified name like "ClassName.method_name" or "function_name"
+            depth: Traversal depth (1=direct, 3=transitive). Default 1.
 
         Returns:
             TrifectaResult with data=list of caller dicts.
         """
-        result = self._run(["graph", "callers", "--symbol", symbol])
+        result = self._run(["graph", "callers", "--symbol", symbol, "--depth", str(depth)])
         if not result.success:
             result.data = []
             return result
-        if isinstance(result.data, dict) and "callers" in result.data:
-            result.data = result.data["callers"]
+        # Trifecta returns callers in either "callers" or "nodes" key
+        if isinstance(result.data, dict):
+            if "callers" in result.data:
+                result.data = result.data["callers"]
+            elif "nodes" in result.data:
+                result.data = result.data["nodes"]
+            else:
+                result.data = []
         elif not isinstance(result.data, list):
             result.data = []
         return result
@@ -187,8 +195,14 @@ class TrifectaClient:
         if not result.success:
             result.data = []
             return result
-        if isinstance(result.data, dict) and "callees" in result.data:
-            result.data = result.data["callees"]
+        # Trifecta returns in either "callees" or "nodes" key
+        if isinstance(result.data, dict):
+            if "callees" in result.data:
+                result.data = result.data["callees"]
+            elif "nodes" in result.data:
+                result.data = result.data["nodes"]
+            else:
+                result.data = []
         elif not isinstance(result.data, list):
             result.data = []
         return result
@@ -203,14 +217,46 @@ class TrifectaClient:
         Returns:
             TrifectaResult with data=dict containing path information.
         """
-        result = self._run(
-            ["graph", "path", "--from", from_symbol, "--to", to_symbol]
-        )
+        result = self._run(["graph", "path", "--from", from_symbol, "--to", to_symbol])
         if not result.success:
             result.data = {}
             return result
         if not isinstance(result.data, dict):
             result.data = {}
+        return result
+
+    def find_overview(self) -> TrifectaResult:
+        """Get architectural health overview: cycles, orphans, hubs, path stats.
+
+        Returns:
+            TrifectaResult with data=dict containing node_count, edge_count,
+            cycles, orphan_count, top_hubs list.
+        """
+        result = self._run(["graph", "overview"])
+        if not result.success:
+            result.data = {}
+            return result
+        if not isinstance(result.data, dict):
+            result.data = {}
+        return result
+
+    def find_hubs(self, top_n: int = 10) -> TrifectaResult:
+        """Find most-depended-upon symbols (architectural keystones).
+
+        Args:
+            top_n: Number of top hubs to return (default 10).
+
+        Returns:
+            TrifectaResult with data=list of hub dicts.
+        """
+        result = self._run(["graph", "hubs", "--top", str(top_n)])
+        if not result.success:
+            result.data = []
+            return result
+        if isinstance(result.data, dict) and "hubs" in result.data:
+            result.data = result.data["hubs"]
+        elif not isinstance(result.data, list):
+            result.data = []
         return result
 
     def health(self) -> TrifectaResult:
