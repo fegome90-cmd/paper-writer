@@ -509,10 +509,7 @@ class TrifectaArm:
                             "file": r.get("file_rel", ""),
                             "line": r.get("line", 0),
                             "name": r.get("symbol_name", ""),
-                            "text": (
-                                f"{r.get('kind', '')}"
-                                f" {r.get('qualified_name', '')}"
-                            ),
+                            "text": (f"{r.get('kind', '')} {r.get('qualified_name', '')}"),
                             "score": round(score, 2),
                         }
                     )
