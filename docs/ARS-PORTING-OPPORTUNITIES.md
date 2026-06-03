@@ -606,6 +606,135 @@ tests/fixtures/v3.9.4-temporal/
 
 ---
 
+## 🟡 Medium — Additional ARS Components (Not Yet Ported)
+
+### 10. Contamination Signals (`contamination_signals.py`, 221 lines)
+
+**Purpose**: Compute contamination signals for literature entries per v3.7.3 spec.
+
+**Two signals**:
+1. **Preprint signal** (`compute_preprint_signal`): True iff `year >= 2024 AND venue resolves to a preprint server`. Uses a 10-venue closed list (arXiv, bioRxiv, medRxiv, SSRN, etc.) + source_pointer inference.
+2. **SS unmatched** (`compute_ss_unmatched_signal`): True if Semantic Scholar returns no match. None if `obtained_via='manual'` or API degradation.
+
+**Also provides**:
+- `resolve_openalex_unmatched()` — DOI-first then title-search fallback
+- `resolve_crossref_unmatched()` — Same pattern as OpenAlex
+- `build_signals_object()` — Constructs the full `contamination_signals` dict
+- `reset_client_outage_latch()` — Best-effort latch reset helper
+
+**Relevance to paper-writer**: The preprint detection logic (10-venue list + source_pointer inference) could enhance our citation verification to flag preprint contamination. The `build_signals_object()` pattern is a clean interface we could adopt.
+
+**Lines affected**: New module `clients/contamination_signals.py`
+
+---
+
+### 11. Uncited Assertion Detector (`uncited_assertion_detector.py`, 254 lines)
+
+**Purpose**: Detect sentences that make empirical claims without citations (D4-c rule).
+
+**Three conditions** (ALL must hold):
+1. Quantifier or empirical verb present (numbers, percentages, "most", "several", "showed", "demonstrated", etc.)
+2. No `<!--ref:slug-->` marker on the sentence
+3. Not a definitional sentence ("refers to", "is defined as", "we define", "for the purposes of")
+
+**Guard pass**: Rejects bare numbers that are years, version triples, or section numbers (e.g., "Table 2", "v3.7.3", "2024").
+
+**Key constants** (from `_claim_audit_constants.py`):
+```python
+UNCITED_EMPIRICAL_VERBS = {"showed", "demonstrated", "observed", "proved", "confirmed"}
+UNCITED_FUZZY_QUANTIFIERS = {"most", "several", "two-thirds"}
+UNCITED_DEFINITION_PHRASES = ("refers to", "is defined as", "we define", "for the purposes of")
+```
+
+**Relevance to paper-writer**: This is a valuable writing quality check — detect claims without evidence. Could be a new validator: `validators/uncited_assertion.py`.
+
+**Lines affected**: New module `validators/uncited_assertion.py` + constants
+
+---
+
+### 12. Three-Layer Citation Lint (`check_v3_7_3_three_layer_citation.py`, 318 lines)
+
+**Purpose**: Static lint for `<!--ref:slug-->` + `<!--anchor:kind:value-->` marker pairs.
+
+**Checks**:
+1. Every `<!--ref:slug-->` is followed by `<!--anchor:kind:value-->` where kind ∈ {quote, page, section, paragraph, none}
+2. Quote anchors: URL-decoded value ≤ 25 words
+3. No orphan anchor markers without preceding ref
+4. No raw `--` in quote values (must be `%2D` encoded)
+5. No premature HTML comment termination in quote anchors
+6. Malformed ref markers (3+ status tokens)
+7. Fenced code blocks excluded from lint
+
+**Relevance to paper-writer**: If we adopt the `<!--ref:slug-->` + `<!--anchor:kind:value-->` convention, this lint ensures structural integrity. Currently paper-writer doesn't use this convention — it would be a new feature.
+
+**Lines affected**: New module `linters/three_layer_citation.py`
+
+---
+
+### 13. Claim Audit Pipeline (`claim_audit_pipeline.py`, 1373 lines)
+
+**Purpose**: Full claim-faithfulness audit pipeline — the most complex module in ARS.
+
+**Architecture**:
+- Dependency-injected `retrieve_fn` / `judge_fn` (not hardcoded to any LLM)
+- Cache layer with stable JSON hashing
+- 6-step pipeline: claim extraction → retrieval → judge invocation → verdict routing → constraint checking → result aggregation
+- Handles: SUPPORTED, UNSUPPORTED, AMBIGUOUS, VIOLATED, NOT_VIOLATED, audit_tool_failure
+- Negative constraint checking (NC-C###, MNC-### patterns)
+- Sampling strategy (stratified_buckets_v1)
+
+**Relevance to paper-writer**: This is the "deep" claim verification that goes beyond our current `ClaimAlignmentValidator`. Our validator checks if claims have references; this pipeline checks if the references actually support the claims. It's a much deeper analysis but requires LLM judge integration.
+
+**Lines affected**: Large new module — likely not a direct port, but patterns could inform a simpler version.
+
+---
+
+### 14. OpenAlex Client (`openalex_client.py`, 166 lines)
+
+**Purpose**: Third bibliographic index API client (alongside Crossref and Semantic Scholar).
+
+**Features**:
+- DOI lookup with title cross-check
+- Title search with year tiebreaker (+0.05)
+- Polite email via `OPENALEX_POLITE_EMAIL` env var
+- Rate limiting: 10 req/s (polite), 1 req/s (anonymous)
+- Same error handling patterns as Crossref/S2
+
+**Relevance to paper-writer**: Adding OpenAlex would give us 3-way triangulation (Crossref + S2 + OpenAlex) instead of 2-way. This would significantly improve citation verification confidence.
+
+**Lines affected**: New module `clients/openalex.py` (~166 lines)
+
+---
+
+### 15. API Protocol Documentation (`deep-research/references/`)
+
+**22 reference docs** covering:
+- `crossref_api_protocol.md` — Full Crossref API contract
+- `semantic_scholar_api_protocol.md` — Full S2 API contract
+- `openalex_api_protocol.md` — Full OpenAlex API contract
+- `ethics_checklist.md` — Research ethics guidelines
+- `systematic_review_protocol.md` — SLR methodology
+- `argumentation_reasoning_framework.md` — Logical reasoning patterns
+- `methodology_patterns.md` — Research methodology templates
+- `source_quality_hierarchy.md` — Source quality tiers
+- `equator_reporting_guidelines.md` — Medical research reporting
+
+**Relevance to paper-writer**: These docs define the exact API contracts we ported. They're the authoritative reference for behavior, not the code. If we ever need to verify our implementation matches ARS, these are the source of truth.
+
+---
+
+### 16. Adapters (`scripts/adapters/`)
+
+**Components**:
+- `zotero.py` — Zotero library integration
+- `obsidian.py` — Obsidian vault integration
+- `folder_scan.py` — Generic folder scanning
+- `_common.py` — Shared adapter utilities
+
+**Relevance to paper-writer**: These are input adapters for ingesting citations from different sources. Not directly relevant to our current scope (we parse markdown manuscripts), but could be useful for future expansion.
+
+---
+
 ## Implementation Priority Matrix
 
 | # | Item | Effort | Impact | Risk | Do First? |
@@ -619,7 +748,13 @@ tests/fixtures/v3.9.4-temporal/
 | 7 | Year tiebreaker | 10 lines | Medium | None | Next |
 | 8 | Polite email env var | 1 line | Low | None | Quick win |
 | 9 | DI for testability | 5 lines | Low | None | When testing |
-| 10 | Temporal audit system | ~1,160 lines | High | Medium | Feature scope (~7 days) |
+| 10 | Contamination signals | ~100 lines | Medium | Low | New module |
+| 11 | Uncited assertion detector | ~150 lines | Medium | Low | New validator |
+| 12 | Three-layer citation lint | ~200 lines | Medium | Medium | New linter (requires ref convention) |
+| 13 | OpenAlex client | ~166 lines | Medium | Low | New client (3-way triangulation) |
+| 14 | Temporal audit system | ~1,160 lines | High | Medium | Feature scope (~7 days) |
+| 15 | Claim audit pipeline | ~1,373 lines | High | High | Major feature (requires LLM judge) |
+| 16 | Adapters (Zotero/Obsidian) | ~300 lines | Low | Low | Future expansion |
 
 ---
 
