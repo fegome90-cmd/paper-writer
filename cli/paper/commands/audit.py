@@ -232,13 +232,18 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
 
     Finds actionable dead code / orphan methods in the project, filtering
     out known false positives (tests, mixin inheritance, CLI dispatch).
-    Requires MCP_TRIFECTA_MODE=real to be useful.
+    Also performs dependency risk analysis (dead hubs: highly-connected
+    orphaned symbols). Requires MCP_TRIFECTA_MODE=real to be useful.
     """
 
-    from validators.code_health import analyze_code_health
+    from validators.code_health import (
+        analyze_code_health,
+        analyze_dependency_risk,
+    )
 
     t0 = time.time()
     report = analyze_code_health()
+    dep_report = analyze_dependency_risk()
     elapsed = int((time.time() - t0) * 1000)
 
     output = {
@@ -247,9 +252,12 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
         "actionable_count": len(report.findings),
         "filtered_count": report.filtered_count,
         "total_orphans_seen": report.total_orphans_seen,
+        "dependency_risk_summary": dep_report.summary(),
+        "dead_hub_count": len(dep_report.findings),
         "elapsed_ms": elapsed,
-        "error": report.error,
+        "error": report.error or dep_report.error,
         "findings": [f.to_dict() for f in report.findings],
+        "dead_hubs": [f.to_dict() for f in dep_report.findings],
     }
 
     if args.output == "json":
@@ -260,8 +268,16 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
             print()
             for finding in report.findings:
                 print(f"  {finding.file_rel}::{finding.symbol_name} ({finding.orphan_type})")
-        if report.error:
-            print(f"  Note: {report.error}", file=sys.stderr)
+        if dep_report.findings:
+            print(f"\n{dep_report.summary()}")
+            for hub in dep_report.findings:
+                print(
+                    f"  {hub.file_rel}::{hub.symbol_name} "
+                    f"(in_degree={hub.in_degree}, {hub.risk_reason})"
+                )
+        if report.error or dep_report.error:
+            err = report.error or dep_report.error
+            print(f"  Note: {err}", file=sys.stderr)
 
     # Exit 1 if there are actionable findings, 0 otherwise
-    sys.exit(1 if report.findings else 0)
+    sys.exit(1 if (report.findings or dep_report.findings) else 0)

@@ -175,6 +175,155 @@ def _make_finding(orphan: dict[str, Any]) -> CodeHealthFinding:
     )
 
 
+@dataclass
+class DependencyRiskFinding:
+    """A symbol that is both highly-connected (hub) and orphaned (dead code).
+
+    Dead hubs are high-risk because they represent code that is depended upon
+    by many other symbols but is itself unreachable from any entry point.
+    """
+
+    file_rel: str
+    symbol_name: str
+    qualified_name: str
+    kind: str
+    in_degree: int
+    risk_reason: str = "dead_hub"
+
+    def to_dict(self) -> dict[str, str | int]:
+        """Convert to dict for JSON serialization."""
+        return {
+            "file_rel": self.file_rel,
+            "symbol_name": self.symbol_name,
+            "qualified_name": self.qualified_name,
+            "kind": self.kind,
+            "in_degree": self.in_degree,
+            "risk_reason": self.risk_reason,
+        }
+
+
+@dataclass
+class DependencyRiskReport:
+    """Result of dependency risk analysis using Trifecta graph hubs + orphans.
+
+    Attributes:
+        trifecta_enabled: True if Trifecta subprocess was available.
+        findings: Dead hubs (highly-connected orphaned symbols).
+        hub_count: Number of hubs analyzed.
+        error: Description of any error encountered.
+    """
+
+    trifecta_enabled: bool
+    findings: list[DependencyRiskFinding] = field(default_factory=list)
+    hub_count: int = 0
+    error: str = ""
+
+    def summary(self) -> str:
+        """Human-readable summary for CLI output."""
+        if not self.trifecta_enabled:
+            return f"Dependency risk: SKIPPED ({self.error})"
+        if not self.findings:
+            return f"Dependency risk: OK ({self.hub_count} hubs analyzed, 0 dead)"
+        return (
+            f"Dependency risk: {len(self.findings)} dead hubs "
+            f"({self.hub_count} hubs analyzed)"
+        )
+
+
+HUB_IN_DEGREE_THRESHOLD = 5
+"""Minimum in_degree for a symbol to be considered a hub."""
+
+
+def _find_dead_hubs(
+    hubs: list[dict[str, Any]],
+    orphan_ids: set[str],
+) -> list[DependencyRiskFinding]:
+    """Find hubs that are also orphans — symbols depended upon but unreachable.
+
+    These are the highest-risk dead code: removing them would break callers,
+    but they are not reachable from any entry point.
+    """
+    dead_hubs: list[DependencyRiskFinding] = []
+    for hub in hubs:
+        hub_id = hub.get("id", "")
+        in_degree = hub.get("in_degree", 0)
+        if in_degree < HUB_IN_DEGREE_THRESHOLD:
+            continue
+        if hub_id in orphan_ids:
+            dead_hubs.append(
+                DependencyRiskFinding(
+                    file_rel=hub.get("file_rel", ""),
+                    symbol_name=hub.get("symbol_name", ""),
+                    qualified_name=hub.get("qualified_name", ""),
+                    kind=hub.get("kind", "function"),
+                    in_degree=in_degree,
+                    risk_reason="dead_hub",
+                )
+            )
+    return dead_hubs
+
+
+def analyze_dependency_risk(
+    repo_path: str | None = None,
+) -> DependencyRiskReport:
+    """Analyze dependency risk using Trifecta graph hubs + orphan cross-reference.
+
+    This adds a capability beyond simple orphan detection: it finds symbols
+    that are (a) depended upon by many other symbols (hubs) AND (b) not
+    reachable from any entry point (orphans). Dead hubs are high-risk because
+    their removal would cascade-break many callers.
+
+    The function NEVER raises. If Trifecta is unavailable, returns a report
+    with trifecta_enabled=False and a descriptive error message.
+    """
+    from clients.trifecta import get_trifecta_client
+
+    client = get_trifecta_client(repo_path=repo_path)  # type: ignore[arg-type]
+    if client is None:
+        return DependencyRiskReport(
+            trifecta_enabled=False,
+            error="Trifecta not enabled (set MCP_TRIFECTA_MODE=real)",
+        )
+
+    # Step 1: Get hubs (highly-connected symbols)
+    hubs_result = client.find_hubs(top_n=50)
+    if not hubs_result.success:
+        return DependencyRiskReport(
+            trifecta_enabled=True,
+            error=hubs_result.error or "Trifecta find_hubs failed",
+        )
+
+    hubs = hubs_result.data if isinstance(hubs_result.data, list) else []
+
+    # Step 2: Get orphans (unreachable symbols)
+    orphans_result = client.find_orphans()
+    if not orphans_result.success:
+        return DependencyRiskReport(
+            trifecta_enabled=True,
+            error=orphans_result.error or "Trifecta find_orphans failed",
+        )
+
+    orphans = orphans_result.data if isinstance(orphans_result.data, list) else []
+    orphan_ids = {o.get("id", "") for o in orphans}
+
+    # Step 3: Cross-reference — find dead hubs
+    dead_hubs = _find_dead_hubs(hubs, orphan_ids)
+
+    # Filter out test-file dead hubs
+    dead_hubs = [
+        dh
+        for dh in dead_hubs
+        if not _is_test_file(dh.file_rel) and not _is_test_symbol(dh.symbol_name)
+    ]
+
+    return DependencyRiskReport(
+        trifecta_enabled=True,
+        findings=dead_hubs,
+        hub_count=len(hubs),
+        error="",
+    )
+
+
 def analyze_code_health(
     repo_path: str | None = None,
 ) -> CodeHealthReport:
@@ -193,7 +342,7 @@ def analyze_code_health(
         CodeHealthReport with findings, filter stats, and any errors.
 
     The function NEVER raises. If Trifecta is unavailable, returns a report
-    with trifecta_enabled=False and a descriptive error message.
+        with trifecta_enabled=False and a descriptive error message.
     """
     # Lazy import to avoid circular dependencies and to keep the import cheap
     # when Trifecta is disabled (default for safety)
