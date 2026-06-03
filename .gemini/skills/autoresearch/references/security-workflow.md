@@ -3,7 +3,7 @@
 ## Governance
 - Use Evidence Layers for every finding.
 - Anchor to `SDD: security-audit` or similar.
-- Call `mem_session_summary` at completion.
+- Call `mem_session_summary` and `mem_save` at completion to store in Engram.
 # Security workflow — `/autoresearch:security`
 
 Autonomous security audit using STRIDE threat modelling and OWASP categories.
