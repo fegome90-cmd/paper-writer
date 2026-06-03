@@ -5,7 +5,7 @@ Defines how `paper-writer` is verified across all layers of the system.
 ## Quick path
 
 1. Tests run via `uv run pytest` (or `make test`).
-2. Repository docs describe CI enforcement for `ruff check`, `mypy strict`, and `pytest`; current CI state was not re-run in this audit pass.
+2. Repository docs describe CI enforcement for `ruff check`, `mypy`, and `pytest`; current CI state was not re-run in this audit pass.
 3. E2E tests run real subprocess I/O — not mocked.
 4. Verification claims match the current maturity of the repository.
 
@@ -17,7 +17,7 @@ This audit pass did not re-run the suite, so fixed test counts are intentionally
 | Metric | Value |
 |--------|-------|
 | Linter | Repository-documented: ruff |
-| Type checker | Repository-documented: mypy strict |
+| Type checker | Repository-documented: mypy |
 | CI | Repository-documented: GitHub Actions with lint, typecheck, tests |
 
 > **Requires re-verification**: current test counts, current CI pass/fail state, and current linter/typechecker cleanliness.
@@ -45,7 +45,6 @@ Focused logic tests evidenced in this audit set include:
 |--------|---------------|----------|
 | `harness/services/gates.py` | Gate evaluation and malformed validator handling | `tests/harness/test_gates.py` |
 | `harness/domain/state.py` + `harness/services/orchestrator.py` | Stage invariants and transition behavior through orchestrator fixtures | `tests/harness/test_orchestrator.py` |
-| `harness/services/gates.py` | Gate evaluation, precondition checks | `tests/harness/test_gates.py` |
 | `skills/local/adapters.py` | Search/screen/draft adapter behavior and "no state.yaml" invariant | `tests/skills/test_adapters.py` |
 
 ### Integration Tests
@@ -72,7 +71,7 @@ Some contract-like invariants are covered by the evidence set, but this audit do
 
 ### End-to-End Tests
 
-Full pipeline via subprocess — real CLI invocation, real I/O, real Pandoc.
+Full pipeline via subprocess — real CLI invocation, real I/O, and real Pandoc when available.
 
 | Flow | What is verified | Location |
 |------|-----------------|----------|
@@ -100,7 +99,7 @@ The render stage currently advances the orchestrator to `verified` on successful
 Repository documentation currently describes the following CI flow:
 
 1. **Lint**: `ruff check .`
-2. **Type check**: `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (strict mode)
+2. **Type check**: `mypy harness/ cli/ validators/ integrations/ verification/ parsers/ engine/ rules/ schemas/ skills/`
 3. **Unit + integration tests**: `pytest tests/ -m "not e2e" --tb=short`
 4. **E2E smoke tests**: subprocess, real I/O (requires Pandoc installed)
 
@@ -117,7 +116,7 @@ make verify
 # Individual layers
 make test          # pytest
 make lint          # ruff check + format check
-make typecheck     # mypy strict (local scope)
+make typecheck     # mypy (local scope)
 
 # Controlled validation (local-only, real material)
 make validate CASE=verification/local-data/<case>.local.yaml

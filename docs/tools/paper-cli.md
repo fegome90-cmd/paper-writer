@@ -31,7 +31,7 @@ These commands execute local handler functions in `cli/paper/main.py` and do not
 - `paper trace <symbol>`
 - `paper graph-overview`
 
-Direct execution is evidenced by `args.func` dispatch and the special-case `doctor` branch in `cli/paper/main.py` lines 688-706.
+Direct execution is evidenced by `args.func` dispatch and the special-case `doctor` branch in `cli/paper/main.py`.
 
 ### Orchestrated commands
 
@@ -99,6 +99,6 @@ This mapping is exercised by `tests/cli/test_cli_request_mapping.py`.
 
 This document is grounded in:
 
-- `cli/paper/main.py` lines 465-772 for parser and dispatch behavior
+- `cli/paper/main.py` for parser and dispatch behavior
 - `tests/cli/test_cli_request_mapping.py` for request mapping
 - `tests/cli/test_paper_cli.py` and `tests/cli/test_doctor_and_degraded.py` for exercised commands

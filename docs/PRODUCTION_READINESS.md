@@ -1,7 +1,7 @@
 # Controlled Validation Readiness Criteria
 
 > [!IMPORTANT]
-> **Status**: Ready for controlled validation. This repository is not certified as fully "production-ready" for autonomous drafting. It is built as an evidence-first pipeline designed for human-in-the-loop controlled execution.
+> **Status**: Repository evidence supports controlled validation workflows. Live operational status still requires re-verification in the target environment.
 
 > [!NOTE]
 > This document distinguishes between current code behavior, tested behavior from repository test files, and operational claims that were not re-executed in this audit pass.
@@ -54,36 +54,35 @@ The gate and stage flow implemented by `harness/domain/state.py`, `harness/servi
 | `render_passed` | `paper render` | advances `rendering -> verified` |
 | `ready_for_delivery` | `paper verify` | stays in `verified`; also emits `outputs/manifest.yaml` on success |
 
-Soft gates declared in the domain model are `citation_verified` and `ethics_passed`. `validate_ready_for_delivery()` treats them as warnings rather than blockers.
+The domain model also declares `citation_verified` and `ethics_passed` as soft gates. In `validate_ready_for_delivery()`, missing soft gates produce warnings rather than blockers.
 
 ## Degraded Mode Behavior
 
 Current code behavior in `harness/services/doctor.py` and tested wrapper behavior in `tests/cli/test_doctor_and_degraded.py` support the following distinctions:
 
-- **bibtex-tidy missing**: Built-in BibTeX parser + `validators.bibliography` domain rules
-  - Emits `degraded_mode` warning (severity: warning)
-  - Checks: brace balance, entry types, required fields, DOI format, year range, duplicates
+- **`bibtex-tidy` missing**:
+  - `paper doctor` reports the tool as missing and degraded mode active.
+  - Wrapper tests confirm a `degraded_mode` finding is emitted instead of hard-crashing.
 
-- **Vale missing**: Built-in style checks
-  - Emits `degraded_mode` warning (severity: warning)
-  - Checks: passive voice, strong claims, forbidden phrases, informal language
-  - Does NOT check: Vale rule packs (StrongClaims.yml, etc.)
+- **`vale` missing**:
+  - `paper doctor` reports the tool as missing and degraded mode active.
+  - Wrapper tests confirm a `degraded_mode` finding is emitted instead of hard-crashing.
 
-- **pdflatex missing**: PDF render skipped
-  - DOCX render still available (Pandoc only)
-  - Emits `degraded_mode` warning in doctor report
+- **`pdflatex` missing**:
+  - `paper doctor` reports degraded mode.
+  - Render tests cover mixed outcomes where DOCX can succeed while PDF fails, yielding warnings rather than an all-or-nothing crash.
 
-- **Pandoc missing**: Render fails entirely
-  - No fallback for DOCX generation
-  - Must install Pandoc for any render output
+- **`pandoc` missing**:
+  - Render cannot proceed; wrapper tests expect `ToolNotAvailableError` when Pandoc is absent.
+  - No fallback renderer is evidenced in the audited files.
 
 ## Render Verification
 
-Tested wrapper behavior in `tests/integrations/test_pandoc.py` covers the following artifact checks:
+The audited evidence supports these render-verification claims:
 
-1. **Size check**: Files < 500B trigger `render_artifact_too_small` warning
-2. **DOCX integrity**: Must be valid ZIP containing `word/document.xml`
-3. **PDF integrity**: Size check only (PDFs are not ZIP-based)
+1. `tests/integrations/test_pandoc.py` verifies that tiny mocked render artifacts produce `render_artifact_*` findings.
+2. `tests/e2e/test_smoke_e2e.py` verifies that a real DOCX artifact, when Pandoc is available, is a ZIP containing `word/document.xml`.
+3. This audit does not restate broader PDF integrity guarantees beyond the wrapper and E2E behavior exercised in those tests.
 
 ## CI Pipeline
 
@@ -101,20 +100,15 @@ Python matrix and current CI status were not re-executed in this audit pass and 
 
 ## Journal Presets
 
-| Preset | Template | CSL | Reference doc |
-|--------|----------|-----|---------------|
-| nature | `templates/journals/nature/template.qmd` | vancouver | — |
-
-Usage: `paper init --preset nature`
+The audited CLI and E2E tests cover `paper init --preset nature` as the currently evidenced preset flow.
 
 ## Full Pipeline E2E
 
-Test files in `tests/cli/test_paper_cli.py`, `tests/harness/test_orchestrator.py`, and `tests/e2e/test_smoke_e2e.py` document end-to-end and near-end-to-end coverage for the following workflow:
+Test files in `tests/cli/test_paper_cli.py`, `tests/harness/test_orchestrator.py`, and `tests/e2e/test_smoke_e2e.py` document end-to-end and near-end-to-end coverage for the core workflow from initialization through render and verify.
 
 ```
-init → import bib → search → screen → draft outline →
-draft sections (4) → check refs → lint bib → lint style →
-audit reporting → render docx → verify
+init → import/search/screen → draft outline/sections →
+validation commands → render → verify
 ```
 
 - **Tested behavior**: stage progression is asserted in orchestrator and CLI tests, and the smoke E2E test runs the CLI via subprocess.
@@ -130,4 +124,4 @@ audit reporting → render docx → verify
 - [x] Render artifact verification (size + DOCX ZIP integrity)
 - [ ] Current aggregate test counts require re-verification
 - [ ] Current lint/typecheck clean status requires re-verification
-- [x] README.md and docs reflect real state
+- [x] This document now limits strong claims to code, tests, and workflow files audited here

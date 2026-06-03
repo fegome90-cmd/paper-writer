@@ -4,7 +4,7 @@ A dedicated repository for automated scientific search, drafting, validation, an
 
 ## Current Status
 
-The system is verified and ready for controlled validation.
+Repository evidence supports controlled validation workflows. Live operational status still requires re-verification in the target environment.
 
 ### Installation
 
@@ -57,28 +57,14 @@ paper gate method outputs/drafts/introduction.md --study-type rct
 
 The repository has:
 
-- a thin `paper` CLI (`cli/paper/main.py`)
-- a harness centered on `state_manager`, `gates`, `orchestrator`, and the dependency builder in `harness/services/orchestrator_builder.py`
-- domain validators (`validators/`) — pure functions, no I/O
-  - `refs.py` — metadata completeness (year, DOI/URL)
-  - `citations.py` — key consistency
-  - `style.py` — passive voice, strong claims, forbidden phrases, informal language
-  - `bibliography.py` — entry type, required fields, DOI format, year range, duplicates
-  - `reporting.py` — study design, sample size, limitations
-  - `structure.py` — required section presence
-  - `preset.py` — journal preset schema validation
-- tool wrappers (`integrations/tools/`) — Pandoc, bibtex-tidy, Vale, refs validation, Zotero import
-- Vale style packs (`styles/vale/paper-writer/`) — strong claims, informal language, forbidden phrases, unbacked claims
-- CSL citation styles (`styles/csl/`) — Vancouver, APA 7th
-- journal presets (`templates/journals/nature/`) — template, preset.yaml, seeded references
-- imported skills with provenance-tracked adapters:
-  - `literature-search` — real scoring engine (dedup, tier classification)
-  - `academic-writer` — section structures from manifest derived from SKILL.md
-- fail-closed gate system — no gate passes without evidence
-- multi-output render (docx, pdf) with CSL and reference-doc support
-- optional Zotero/Better BibTeX ingestion surface
-- `paper doctor` — environment check with explicit degraded-mode reporting
-- repository-documented CI pipeline (`.github/workflows/ci.yml`) — lint, typecheck, unit + E2E tests; current status requires re-verification
+- a thin `paper` CLI in `cli/paper/main.py`
+- a harness centered on `harness/domain/state.py`, `harness/services/gates.py`, `harness/services/orchestrator.py`, and `harness/services/orchestrator_builder.py`
+- orchestrated workflow commands for `init`, `search`, `screen`, `draft`, `lint`, `check refs`, `audit reporting`, `import bib`, `render`, and `verify`
+- direct CLI commands for `doctor`, `audit prose`, `audit claims`, `audit citations`, `audit ethics`, `audit writing-quality`, `audit code-health`, `gate method`, `trace`, and `graph-overview`
+- fail-closed required gates plus soft warning-only gates in the manuscript state model
+- render argument forwarding for multi-format output plus optional `--csl` and `--reference-doc`
+- `paper doctor` environment reporting with explicit degraded-mode output
+- repository-documented CI in `.github/workflows/ci.yml`; current run status still requires re-verification
 
 ## Phase Status
 

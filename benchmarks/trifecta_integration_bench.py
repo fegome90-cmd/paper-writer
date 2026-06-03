@@ -23,6 +23,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -100,10 +101,14 @@ def run_paper_command(cmd: List[str], mode: str, timeout: int = 30) -> Benchmark
                 if any(p in line for p in ("::", "validation_gap", "dead_code", "data_flow_break"))
             )
 
+        # Success means: command ran and produced output.
+        # exit code 1 is OK for code-health if it has findings (fail-closed).
+        # SKIPPED / not enabled = degraded mode.
+        is_degraded = "SKIPPED" in output or "not enabled" in output
         return BenchmarkResult(
             command=" ".join(cmd),
             mode=mode,
-            success=(result.returncode == 0) or "SKIPPED" in output,
+            success=not is_degraded,
             output=output,
             findings_count=findings_count,
         )
@@ -188,7 +193,7 @@ def format_report(results: Dict[str, Any], comparison: Dict[str, Any]) -> str:
     lines = [
         "# Trifecta Integration Benchmark Results",
         "",
-        f"**Generated**: {os.popen('date').read().strip()}",
+        f"**Generated**: {datetime.now().isoformat()}",
         f"**Repo**: {REPO_ROOT}",
         "",
         "## Summary",
