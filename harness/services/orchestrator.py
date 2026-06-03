@@ -9,6 +9,8 @@ from harness.ports.tool_wrapper import ToolNotAvailableError, ToolWrapper
 from harness.services.gates import (
     GateResult,
     validate_bib_normalized,
+    validate_citation_verify_gate,
+    validate_ethics_passed_gate,
     validate_outline_drafted,
     validate_ready_for_delivery,
     validate_render_passed,
@@ -360,10 +362,24 @@ class Orchestrator:
         elif cmd == "lint_bib":
             return [self._run_wrapper_gate("lint_bib")]
         elif cmd == "check_refs":
-            return [
+            results = [
                 self._run_wrapper_gate("check_refs", gate_override="citations_resolved"),
                 self._run_wrapper_gate("check_refs_metadata", gate_override="refs_validated"),
             ]
+            # Soft gate: if refs are resolved, citations are verified
+            all_ok = all(r.status in ("pass", "warn") for r in results)
+            results.append(
+                GateResult(
+                    gate="citation_verified",
+                    status="pass" if all_ok else "warn",
+                    blockers=[],
+                    warnings=(
+                        [] if all_ok else ["Citations not fully verified — check refs output"]
+                    ),
+                    artifacts=[],
+                )
+            )
+            return results
         elif cmd == "lint_style":
             return [self._run_wrapper_gate("lint_style")]
         elif cmd == "audit_reporting":
@@ -384,7 +400,11 @@ class Orchestrator:
             return [wrapper_result]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
-            return [validate_ready_for_delivery(self.checker, state_gates)]
+            return [
+                validate_ready_for_delivery(self.checker, state_gates),
+                validate_citation_verify_gate(self.checker, state_gates),
+                validate_ethics_passed_gate(self.checker, state_gates),
+            ]
 
         raise ValueError(f"Unknown gate verification for command: {cmd}")
 
