@@ -67,6 +67,37 @@ class Orchestrator:
         self.action_runner = action_runner
         self.wrappers = wrappers or {}
 
+    def _build_command_log_payload(
+        self, request: OrchestratorRequest, result: OrchestratorResult
+    ) -> dict[str, Any]:
+        """Build a structured, serializable payload for command execution logs."""
+        return {
+            "command": request.command,
+            "requested_stage": request.requested_stage,
+            "failure_policy": request.failure_policy,
+            "args": request.args,
+            "success": result.success,
+            "exit_code": result.exit_code,
+            "stage_before": result.stage_before,
+            "stage_after": result.stage_after,
+            "steps": result.steps,
+            "blockers": result.blockers,
+            "warnings": result.warnings,
+            "artifacts": result.artifacts,
+            "gate_changes": result.gate_changes,
+            "state_changes": result.state_changes,
+        }
+
+    def _write_command_log_best_effort(
+        self, request: OrchestratorRequest, result: OrchestratorResult
+    ) -> None:
+        """Persist a structured command log without affecting command success/failure."""
+        try:
+            payload = self._build_command_log_payload(request, result)
+            self.action_runner.write_command_log(request.command, payload)
+        except (OSError, RuntimeError, ValueError):
+            return
+
     def execute(self, request: OrchestratorRequest) -> OrchestratorResult:
         """Executes a command by loading state, validating, and updating gates."""
         result = OrchestratorResult(
@@ -100,7 +131,9 @@ class Orchestrator:
                 msg = f"Failed to bootstrap state: {e}"
                 blockers.append(msg)
                 steps.append({"step_id": "bootstrap_state", "status": "failed", "error": msg})
-                return self._build_fail_result(result, steps, blockers, warnings)
+                fail_result = self._build_fail_result(result, steps, blockers, warnings)
+                self._write_command_log_best_effort(request, fail_result)
+                return fail_result
 
         # Load state
         stage_before = "bootstrap"
@@ -118,7 +151,9 @@ class Orchestrator:
                 msg = f"Failed to load state: {e}"
                 blockers.append(msg)
                 steps.append({"step_id": "load_state", "status": "failed", "error": msg})
-                return self._build_fail_result(result, steps, blockers, warnings)
+                fail_result = self._build_fail_result(result, steps, blockers, warnings)
+                self._write_command_log_best_effort(request, fail_result)
+                return fail_result
         else:
             result.stage_before = "bootstrap"
 
@@ -136,7 +171,9 @@ class Orchestrator:
             msg = f"Precondition failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "validate_preconditions", "status": "failed", "error": msg})
-            return self._build_fail_result(result, steps, blockers, warnings)
+            fail_result = self._build_fail_result(result, steps, blockers, warnings)
+            self._write_command_log_best_effort(request, fail_result)
+            return fail_result
 
         # ----------------------------------------------------
         # 2. APPLY PHASE: Execute command action
@@ -153,7 +190,9 @@ class Orchestrator:
             msg = f"Action failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "run_core_action", "status": "failed", "error": msg})
-            return self._build_fail_result(result, steps, blockers, warnings)
+            fail_result = self._build_fail_result(result, steps, blockers, warnings)
+            self._write_command_log_best_effort(request, fail_result)
+            return fail_result
 
         # ----------------------------------------------------
         # 3. VERIFY PHASE: Evaluate gates and update state
@@ -197,9 +236,11 @@ class Orchestrator:
             # is not a command failure)
             any_failed = any(v.status == "fail" for v in gate_verdicts)
             if any_failed and request.failure_policy == "stop_on_error" and not is_draft:
-                return self._build_fail_result(
+                fail_result = self._build_fail_result(
                     result, steps, blockers, warnings, artifacts, gate_changes
                 )
+                self._write_command_log_best_effort(request, fail_result)
+                return fail_result
 
             # Transition stage if all verification gates passed (or warned) or if it's
             # draft_section (stage manager will handle transition)
@@ -227,9 +268,11 @@ class Orchestrator:
             msg = f"Verification/Persistence failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "persist_state", "status": "failed", "error": msg})
-            return self._build_fail_result(
+            fail_result = self._build_fail_result(
                 result, steps, blockers, warnings, artifacts, gate_changes
             )
+            self._write_command_log_best_effort(request, fail_result)
+            return fail_result
 
         # Successful Execution Result
         result.success = len(blockers) == 0
@@ -243,6 +286,7 @@ class Orchestrator:
             "stage_after": result.stage_after,
         }
         result.exit_code = 0 if result.success else 1
+        self._write_command_log_best_effort(request, result)
         return result
 
     def _validate_preconditions(

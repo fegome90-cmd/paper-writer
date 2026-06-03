@@ -1,25 +1,25 @@
-GAP: ctx_search {'query': 'ManuscriptState'} -> Timeout
-GAP: ctx_get {'ids': ['repo:harness/domain/state.py:f60249cebb']} -> Timeout
-GAP: ctx_oracle {'query': 'impact of changing ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'callers', 'symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'callees', 'symbol': 'ManuscriptState.validate'} -> Timeout
-GAP: ctx_graph {'action': 'importers', 'symbol': 'harness.domain.state'} -> Timeout
-GAP: ctx_graph {'action': 'import_targets', 'symbol': 'harness.domain.state'} -> Timeout
-GAP: ctx_graph {'action': 'subclasses', 'symbol': 'ToolWrapper'} -> Timeout
-GAP: ctx_graph {'action': 'parents', 'symbol': 'BibliographyNormalizer'} -> Timeout
-GAP: ctx_graph {'action': 'path', 'from_symbol': 'Orchestrator.execute', 'to_symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'impact', 'symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'orphans', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'cycles', 'edge_kind': 'calls'} -> Timeout
-GAP: ctx_graph {'action': 'hubs', 'top_n': 5} -> Timeout
-GAP: ctx_graph {'action': 'overview', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'status', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'search', 'symbol': 'State'} -> Timeout
-GAP: ast_analyze {'path': 'harness/domain/state.py'} -> Timeout
-GAP: ast_hover {'path': 'harness/domain/state.py', 'line': 12, 'col': 5} -> Timeout
-GAP: ctx_health {} -> Timeout
-GAP: ctx_oracle_health {} -> Timeout
-GAP: ctx_validate {} -> Timeout
-GAP: ctx_reindex_graph {} -> Timeout
-GAP: ctx_plan {'query': 'how to add a new command'} -> Timeout
-GAP: ctx_graph_metrics {'last_n': 10} -> Timeout
+GAP: ctx_search {'query': 'ManuscriptState'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_get {'ids': ['repo:harness/domain/state.py:f60249cebb']} -> Exception: [Errno 61] Connection refused
+GAP: ctx_oracle {'query': 'impact of changing ManuscriptState'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'callers', 'symbol': 'ManuscriptState'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'callees', 'symbol': 'ManuscriptState.validate'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'importers', 'symbol': 'harness.domain.state'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'import_targets', 'symbol': 'harness.domain.state'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'subclasses', 'symbol': 'ToolWrapper'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'parents', 'symbol': 'BibliographyNormalizer'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'path', 'from_symbol': 'Orchestrator.execute', 'to_symbol': 'ManuscriptState'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'impact', 'symbol': 'ManuscriptState'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'orphans'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'cycles', 'edge_kind': 'calls'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'hubs', 'top_n': 5} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'overview'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'status'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph {'action': 'search', 'symbol': 'State'} -> Exception: [Errno 61] Connection refused
+GAP: ast_analyze {'path': 'harness/domain/state.py'} -> Exception: [Errno 61] Connection refused
+GAP: ast_hover {'path': 'harness/domain/state.py', 'line': 12, 'col': 5} -> Exception: [Errno 61] Connection refused
+GAP: ctx_health {} -> Exception: [Errno 61] Connection refused
+GAP: ctx_oracle_health {} -> Exception: [Errno 61] Connection refused
+GAP: ctx_validate {} -> Exception: [Errno 61] Connection refused
+GAP: ctx_reindex_graph {} -> Exception: [Errno 61] Connection refused
+GAP: ctx_plan {'query': 'how to add a new command'} -> Exception: [Errno 61] Connection refused
+GAP: ctx_graph_metrics {'last_n': 10} -> Exception: [Errno 61] Connection refused

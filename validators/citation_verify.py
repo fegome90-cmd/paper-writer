@@ -38,6 +38,7 @@ class CitationVerifyValidator:
 
         Returns findings in paper-writer format.
         """
+        self._manuscript_path = manuscript.path
         citations = self._extract_citations(manuscript)
         findings: list[dict[str, Any]] = []
 
@@ -119,45 +120,69 @@ class CitationVerifyValidator:
         return None
 
     def _extract_citations(self, manuscript: Manuscript) -> list[dict[str, Any]]:
-        """Extract DOIs and reference strings from the manuscript."""
-        citations: list[dict[str, Any]] = []
+        """Extract DOIs and reference strings from the manuscript.
 
+        Joins multi-line references before extraction. A new reference
+        starts with a pattern like "1. ", "2. ", etc. Continuation lines
+        are appended to the current reference.
+        """
         ref_section = manuscript.sections.get("references")
-        if ref_section:
-            # Track position iteratively to avoid str.find() fragility
-            text = ref_section.text
-            search_start = 0
-            for line in text.split("\n"):
-                stripped = line.strip()
-                if not stripped:
-                    search_start += len(line) + 1  # +1 for newline
-                    continue
+        if not ref_section:
+            return []
 
-                # Find this line's position relative to search_start
-                idx = text.find(stripped, search_start)
-                if idx == -1:
-                    idx = search_start
-                offset = ref_section.line_start + text[:idx].count("\n") + 1
-                search_start = idx + len(stripped)
+        text = ref_section.text
+        ref_start_re = re.compile(r"^\s*\d+[\.\)]\s")
+        merged_refs: list[tuple[str, int]] = []  # (merged_text, start_line)
+        current_ref: list[str] = []
+        current_start = 0
+        line_num = ref_section.line_start
 
-                dois = DOI_PATTERN.findall(stripped)
-                if dois:
-                    for doi in dois:
-                        citations.append({
-                            "doi": doi,
-                            "title": None,
-                            "line": offset,
-                            "section": "references",
-                            "raw": stripped,
-                        })
-                else:
+        for line in text.split("\n"):
+            stripped = line.strip()
+            if not stripped:
+                if current_ref:
+                    merged_refs.append(("\n".join(current_ref), current_start))
+                    current_ref = []
+                line_num += 1
+                continue
+
+            if ref_start_re.match(stripped):
+                # New reference — save previous if any
+                if current_ref:
+                    merged_refs.append(("\n".join(current_ref), current_start))
+                current_ref = [stripped]
+                current_start = line_num
+            else:
+                # Continuation line
+                current_ref.append(stripped)
+
+            line_num += 1
+
+        # Don't forget the last reference
+        if current_ref:
+            merged_refs.append(("\n".join(current_ref), current_start))
+
+        # Now extract DOIs and titles from merged references
+        citations: list[dict[str, Any]] = []
+        for ref_text, start_line in merged_refs:
+            dois = DOI_PATTERN.findall(ref_text)
+            if dois:
+                for doi in dois:
                     citations.append({
-                        "doi": None,
-                        "title": stripped,
-                        "line": offset,
+                        "doi": doi,
+                        "title": None,
+                        "line": start_line,
                         "section": "references",
-                        "raw": stripped,
+                        "raw": ref_text,
                     })
+            else:
+                citations.append({
+                    "doi": None,
+                    "title": ref_text,
+                    "line": start_line,
+                    "section": "references",
+                    "raw": ref_text,
+                })
 
         return citations
 
@@ -229,7 +254,7 @@ class CitationVerifyValidator:
             "rule_id": rule_id,
             "finding_id": "",
             "severity": severity,
-            "file": "",
+            "file": getattr(self, "_manuscript_path", ""),
             "line": line,
             "column": 0,
             "span": [line, line],

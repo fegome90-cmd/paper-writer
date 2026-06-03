@@ -23,3 +23,15 @@ def test_write_command_log_persists_structured_yaml(tmp_path: Path) -> None:
     data = yaml.safe_load(log_path.read_text(encoding="utf-8"))
     assert data["command"] == "lint_bib"
     assert data["summary"] == "Bibliography normalized successfully."
+
+
+def test_write_command_log_uses_unique_paths_for_same_command(tmp_path: Path) -> None:
+    runner = FilesystemActionRunner(tmp_path)
+    payload = {"command": "screen", "status": "pass"}
+
+    path1 = Path(runner.write_command_log("screen", payload))
+    path2 = Path(runner.write_command_log("screen", payload))
+
+    assert path1 != path2
+    assert path1.exists()
+    assert path2.exists()

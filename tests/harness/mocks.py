@@ -58,6 +58,7 @@ class InMemoryActionRunner(ActionRunner):
         self.checker = checker
         self.actions_run: list[tuple[str, dict[str, Any]]] = []
         self.manifest_emitted: dict[str, bool] | None = None
+        self.command_logs: list[tuple[str, dict[str, Any]]] = []
 
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
         self.actions_run.append((command, args))
@@ -105,6 +106,12 @@ class InMemoryActionRunner(ActionRunner):
         manifest_path = "outputs/manifest.yaml"
         self.checker.existing_paths.add(manifest_path)
         return manifest_path
+
+    def write_command_log(self, command: str, payload: dict[str, Any]) -> str:
+        self.command_logs.append((command, payload))
+        log_path = f"outputs/logs/{command}_mock.yaml"
+        self.checker.existing_paths.add(log_path)
+        return log_path
 
 
 class InMemoryToolWrapper(ToolWrapper):

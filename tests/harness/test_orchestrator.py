@@ -49,7 +49,7 @@ def test_orchestrator_init() -> None:
 
 
 def test_orchestrator_precondition_failure() -> None:
-    orch, _, _, _ = _create_orchestrator()
+    orch, _, _, action_runner = _create_orchestrator()
     # Run screen without init/search (state doesn't exist yet)
     req = OrchestratorRequest(
         command="screen", requested_stage="outline", failure_policy="stop_on_error"
@@ -60,6 +60,25 @@ def test_orchestrator_precondition_failure() -> None:
     assert result.blockers
     assert result.stage_before == "unknown"
     assert result.stage_after == "unknown"
+    assert len(action_runner.command_logs) == 1
+    assert action_runner.command_logs[0][0] == "screen"
+    assert action_runner.command_logs[0][1]["success"] is False
+
+
+def test_orchestrator_success_writes_command_log() -> None:
+    orch, _, _, action_runner = _create_orchestrator()
+
+    result = orch.execute(OrchestratorRequest("init", "search", "stop_on_error"))
+
+    assert result.success is True
+    assert len(action_runner.command_logs) == 1
+    command, payload = action_runner.command_logs[0]
+    assert command == "init"
+    assert payload["command"] == "init"
+    assert payload["success"] is True
+    assert payload["stage_before"] == "bootstrap"
+    assert payload["stage_after"] == "search"
+    assert payload["exit_code"] == 0
 
 
 def test_orchestrator_sequential_flow() -> None:

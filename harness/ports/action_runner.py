@@ -17,3 +17,8 @@ class ActionRunner(ABC):
     def emit_manifest(self, gate_snapshot: dict[str, bool]) -> str:
         """Emits the final manifest and returns its path."""
         pass
+
+    @abstractmethod
+    def write_command_log(self, command: str, payload: dict[str, Any]) -> str:
+        """Persist a structured command log entry and return its path."""
+        pass

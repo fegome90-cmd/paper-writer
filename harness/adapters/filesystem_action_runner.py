@@ -275,7 +275,7 @@ class FilesystemActionRunner(ActionRunner):
 
         log_dir = self._resolve("outputs/logs")
         log_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S")
+        timestamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S_%f")
         log_path = log_dir / f"{command}_{timestamp}.yaml"
         with open(log_path, "w", encoding="utf-8") as f:
             yaml.dump(payload, f, default_flow_style=False, sort_keys=False)
