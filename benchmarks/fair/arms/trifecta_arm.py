@@ -161,7 +161,8 @@ class TrifectaArm:
                         {
                             "file": r.get("file_rel", ""),
                             "line": r.get("line", 0),
-                            "name": r.get("symbol_name", ""),
+                            "name": r.get("qualified_name", "")
+                            or r.get("symbol_name", ""),
                             "text": (f"{r.get('qualified_name', '')} calls {symbol_name}"),
                             "score": 1.0,
                         }

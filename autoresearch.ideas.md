@@ -1,32 +1,36 @@
-# Autoresearch Ideas — Deferred Optimizations
+# Autoresearch Ideas — Session 2 (CVR 0.90 → 1.26, recall 0.63 → 0.88)
 
-## Session results (CVR 0.90 → 1.26, recall 0.63 → 0.88)
+## Applied fixes (7 experiments, 6 kept)
 
-5 fixes applied, all legitimate product improvements:
-1. Nested call visiting in _DirectCallCollector (+57 edges)
-2. Closure edge extraction (+4 edges)
-3. Import-based name resolution (17→0 wrong edges)
-4. Stop word removal in search (T-S1, T-S2 fixed)
-5. Dynamic import detection (T-W2 fixed)
+1. **Nested call visiting** — self.generic_visit(node) in visit_Call (+57 edges)
+2. **Closure edge extraction** — nested function def→call edges (+4 edges)
+3. **Import-based name resolution** — module.name→node_id map + per-file import parsing (17→0 wrong)
+4. **Stop word removal** — shared _STOP_WORDS set in production + benchmark (T-S1, T-S2 fixed)
+5. **Dynamic import detection** — module nodes tagged with has_dynamic_imports metadata (T-W2 fixed)
+6. **Orphan detection filter** — exclude methods on reachable classes + their parent classes (77→8 orphans)
 
-## Remaining gaps
+## Failed experiments
 
-- **Orphan precision**: Paper-writer T-O1 P=0.60 vs RAG P=1.00. Trifecta reports
-  false orphans (_get_version, _cmd_audit_prose, _assert_gate_true) that ARE called
-  but via argparse callbacks or same-file patterns the graph misses. Fixing this
-  risks losing recall on synthetic (currently R=1.00). Precision/recall tradeoff.
+- **file_rel token matching** — CVR 1.26→1.18. Broader matching diluted precision on semantic tasks.
+  Architecture queries need a DIFFERENT search mode, not broader token matching.
 
-- **T-D2 callers**: All arms R=0.50 on synthetic. The graph misses indirect callers
-  (callbacks passed as arguments). Would need callback flow analysis.
+## Remaining gaps (fundamental or high-risk)
 
-- **T-A1 architecture**: Paper-writer Trifecta R=0.60 vs RAG R=0.80. Trifecta's
-  search returns fewer relevant files for "map architecture layers" queries.
-  Could boost results for directory-level matching.
+- **Orphan precision 0.60**: 2 false alarms remain — argparse callbacks (set_defaults pattern)
+  and entry point name collision (verification/main.py matching cli/main.py::main).
+  Would need callback flow analysis or scoring fix.
 
-## Ideas for future sessions
+- **T-D2 callers R=0.50**: All arms tied. Graph misses indirect callers (callbacks, DI dispatch).
+  Would need callback flow analysis or DI-aware edge extraction.
 
-- **Inheritance-based method resolution**: When code calls validator.validate(),
-  resolve to the concrete class method, not the abstract base.
-- **Callback flow analysis**: Track functions passed as arguments to detect
-  indirect call edges (e.g., set_defaults(func=_cmd_audit_prose)).
-- **File-level node weighting**: Boost nodes imported by many files (high fan-in).
+- **T-A1 architecture R=0.60**: Trifecta can't match directory names via token search.
+  File_rel matching was tried but hurt precision. Needs a dedicated directory search mode.
+
+- **T-D1 paper-writer R=1.00**: Trifecta already wins. No action needed.
+
+## Key insight
+
+The biggest wins came from graph ACCURACY fixes (name resolution +17% CVR) and 
+search QUALITY fixes (stop words +15%, dynamic imports +14%). Graph COVERAGE fixes
+(nested calls +8% edges) had smaller CVR impact but improved edge count.
+The orphan filter is correct behavior but doesn't change scored metrics.
