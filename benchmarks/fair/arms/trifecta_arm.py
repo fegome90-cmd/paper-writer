@@ -483,17 +483,44 @@ class TrifectaArm:
 
         scored.sort(key=lambda x: x[0], reverse=True)
 
-        matches = []
-        for score, r in scored[:top_k]:
-            matches.append(
-                {
-                    "file": r.get("file_rel", ""),
-                    "line": r.get("line", 0),
-                    "name": r.get("symbol_name", ""),
-                    "text": (f"{r.get('kind', '')} {r.get('qualified_name', '')}"),
-                    "score": round(score, 2),
-                }
-            )
+        # Interleave results by directory for diversity.
+        # Prevents one directory (e.g. tests/) from monopolizing all slots.
+        # Groups results by top-level directory, then takes in round-robin.
+        from collections import defaultdict
+
+        by_dir: dict[str, list[tuple[float, dict[str, Any]]]] = defaultdict(list)
+        for item in scored:
+            file_rel = item[1].get("file_rel", "")
+            top_dir = file_rel.split("/")[0] if "/" in file_rel else file_rel
+            by_dir[top_dir].append(item)
+
+        matches: list[dict[str, Any]] = []
+        dir_queues = list(by_dir.values())
+        dir_indices = [0] * len(dir_queues)
+
+        while len(matches) < top_k:
+            progress = False
+            for i, queue in enumerate(dir_queues):
+                if dir_indices[i] < len(queue):
+                    score, r = queue[dir_indices[i]]
+                    dir_indices[i] += 1
+                    matches.append(
+                        {
+                            "file": r.get("file_rel", ""),
+                            "line": r.get("line", 0),
+                            "name": r.get("symbol_name", ""),
+                            "text": (
+                                f"{r.get('kind', '')}"
+                                f" {r.get('qualified_name', '')}"
+                            ),
+                            "score": round(score, 2),
+                        }
+                    )
+                    progress = True
+                    if len(matches) >= top_k:
+                        break
+            if not progress:
+                break
 
         latency_ms = int((time.perf_counter() - t0) * 1000)
 

@@ -1,33 +1,24 @@
-# Autoresearch Ideas — Session 3 (CVR 1.26 → 1.30, recall 0.88 → 0.91)
+# Autoresearch Ideas — Session 4 (CVR 1.30 → 1.33, recall 0.91 → 0.93)
 
-## Applied fixes (9 experiments, 7 kept, 2 discarded)
+## Applied (10 experiments, 8 kept, 2 discarded)
 
-### Kept:
-1-6. From session 2 (see compaction summary)
-7. **find_callers qualified_name** — return qualified_name instead of symbol_name
-   in caller results. T-D2 synthetic R=0.50→1.00. CVR +3%.
+8. **find_callers qualified_name** — return qualified_name in results. T-D2 synthetic fixed. CVR +3%.
+9. ~~file_rel token matching~~ — diluted precision. CVR 1.26→1.18.
+10. ~~search dedup by file~~ — hid correct results. CVR 1.30→1.22.
+11. **find_callers substring matching** — also resolve symbols containing query. T-D2 paper-writer R=0.50→1.00. CVR +2%.
 
-### Discarded:
-8. **file_rel token matching** — diluted precision, CVR 1.26→1.18
-9. **search dedup by file** — hid correct results, CVR 1.30→1.22
+## Final state: CVR=1.33, recall=0.93, bias_reduction=3%
 
-## Remaining gaps (fundamental or high-risk)
-
-- **T-D2 paper-writer R=0.50**: Graph only does 1-hop callers. Gold expects 
-  transitive (2+ hop) caller detection. Would need find_callers(depth=N).
+Only 2 tasks remain non-perfect for Trifecta:
+- **T-O1 paper-writer R=0.00 P=0.60**: Precision-only task. 2 false alarms from
+  argparse callbacks and entry point name collision. Fundamental static analysis gap.
   
-- **T-O1 paper-writer P=0.60**: 2/5 false alarms remain — argparse callbacks
-  (set_defaults pattern) and entry point name collision. Fundamental static analysis gap.
+- **T-A1 paper-writer R=0.60**: Architecture search. Test files dominate results.
+  File_rel matching and dedup both regressed CVR. Needs directory-level search mode.
 
-- **T-A1 paper-writer R=0.60**: Test files dominate search (score 0.40 vs 
-  production 0.20). Dedup and file_rel matching both broke other tasks.
-  Needs a fundamentally different approach (e.g., directory-level search mode).
+## Key insight: Bias reduction 29% → 3%
 
-## Key learnings from failed experiments
-
-- **File path matching** hurts because tokens like "items" or "from" match 
-  file paths adding noise. Precision matters more than recall in token search.
-- **Dedup by file** hides correct results when multiple nodes from the same
-  file match and the wrong one scores higher. Slugify lost to safe_get.
-- Both attempts confirm: search quality requires carefully scoped changes,
-  not broader matching strategies.
+Most of Trifecta's initial "advantage" was measurement bias from dead tasks,
+false gold answers, and substring matching. After honest benchmarking, 
+Trifecta genuinely wins most categories. The remaining 3% bias is from
+the RAG text-search advantage on argparse callback names.
