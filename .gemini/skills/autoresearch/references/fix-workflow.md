@@ -1,3 +1,10 @@
+# Governed Loop: FIX
+
+## TDD Enforcement
+1. Identify the bug.
+2. Write a failing test case (Phase 2.5 RED).
+3. `Verify` must demonstrate failure before starting the Fix.
+4. Call `mem_save` for every root cause discovered.
 # Fix Workflow (`/autoresearch:fix`)
 
 The `fix` workflow is a lightweight version of the `debug` loop. It is designed for situations where you have a specific, known failure (e.g., a TypeScript error or a lint violation) and you want to fix it without the overhead of full reproduction and isolation.

@@ -1,3 +1,9 @@
+# Gentle SHIP Protocol
+
+## Governance
+- Use Evidence Layers for every finding.
+- Anchor to `SDD: security-audit` or similar.
+- Call `mem_session_summary` at completion.
 # Ship workflow — `/autoresearch:ship`
 
 Run a pre-flight checklist before shipping — tests, types, lint, bundle size,

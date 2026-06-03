@@ -1,3 +1,10 @@
+# Governed Loop: DEBUG
+
+## TDD Enforcement
+1. Identify the bug.
+2. Write a failing test case (Phase 2.5 RED).
+3. `Verify` must demonstrate failure before starting the Fix.
+4. Call `mem_save` for every root cause discovered.
 # /autoresearch:debug — Autonomous Debug Loop
 
 This workflow is triggered by the `/autoresearch:debug` subcommand. It is designed to reproduce, isolate, and fix specific bugs autonomously.

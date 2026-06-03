@@ -1,3 +1,15 @@
+# Plan Workflow — Governed Edition (Gentle AI)
+
+This sub-workflow auto-detects the project stack and configures the loop.
+
+## Pre-requisites
+1. **Memory Check**: Call `mem_search` for previous plans.
+2. **SDD Anchor**: A task in `openspec/` must exist or be proposed.
+
+## Execution
+- Auto-detect stack.
+- Generate goal/scope/verify.
+- Persist plan to Engram via `mem_save`.
 # Plan workflow — `/autoresearch:plan`
 
 Auto-detect the project stack, propose a complete autoresearch configuration,
