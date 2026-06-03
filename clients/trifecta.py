@@ -86,7 +86,7 @@ class TrifectaClient:
 
         Never raises — all errors are returned as TrifectaResult(success=False).
         """
-        full_cmd = ["trifecta"] + cmd + ["--json"]
+        full_cmd = ["trifecta", *cmd, "--json"]
         try:
             result = subprocess.run(
                 full_cmd,

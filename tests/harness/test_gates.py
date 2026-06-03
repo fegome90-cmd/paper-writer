@@ -150,6 +150,8 @@ def test_validate_ready_for_delivery(checker: InMemoryArtifactChecker) -> None:
         "reporting_passed": True,
         "render_passed": True,
         "ready_for_delivery": False,
+        "citation_verified": True,
+        "ethics_passed": True,
     }
 
     result1 = validate_ready_for_delivery(checker, gates_state)

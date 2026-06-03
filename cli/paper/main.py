@@ -136,6 +136,143 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
         print(format_claims_output(result))
 
 
+def _cmd_audit_citations(args: argparse.Namespace) -> None:
+    """Verify citations against Crossref + Semantic Scholar."""
+    import json
+
+    from engine.formatter import format_terminal
+    from parsers.manuscript import ManuscriptParser
+    from validators.citation_verify import CitationVerifyValidator
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = CitationVerifyValidator(offline=args.offline)
+    findings = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    by_sev: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
+    for f in findings:
+        sev = f.get("severity", "P2")
+        by_sev[sev] = by_sev.get(sev, 0) + 1
+
+    result = {
+        "command": "audit_citations",
+        "file": str(path),
+        "format": manuscript.format,
+        "findings": findings,
+        "summary": {
+            "total_findings": len(findings),
+            "by_severity": by_sev,
+        },
+        "metadata": {
+            "parser_version": "1.0",
+            "offline": args.offline,
+            "execution_time_ms": elapsed,
+        },
+    }
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(format_terminal(findings))
+
+    if any(f.get("severity") == "P0" for f in findings):
+        sys.exit(1)
+
+
+def _cmd_audit_ethics(args: argparse.Namespace) -> None:
+    """Check AI disclosure compliance."""
+    import json
+
+    from engine.formatter import format_terminal
+    from parsers.manuscript import ManuscriptParser
+    from validators.ethics import EthicsValidator
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = EthicsValidator()
+    findings = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    result = {
+        "command": "audit_ethics",
+        "file": str(path),
+        "format": manuscript.format,
+        "findings": findings,
+        "summary": {
+            "total_findings": len(findings),
+        },
+        "metadata": {
+            "parser_version": "1.0",
+            "execution_time_ms": elapsed,
+        },
+    }
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(format_terminal(findings))
+
+    if any(f.get("severity") == "P0" for f in findings):
+        sys.exit(1)
+
+
+def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
+    """Detect AI-typical writing patterns."""
+    import json
+
+    from engine.formatter import format_terminal
+    from parsers.manuscript import ManuscriptParser
+    from validators.writing_quality import WritingQualityValidator
+
+    path = Path(args.file)
+    if not path.is_file():
+        print(f"Error: File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    manuscript = ManuscriptParser().parse(path)
+    validator = WritingQualityValidator(whitelist=set(args.whitelist or []))
+    findings = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    by_sev: dict[str, int] = {"P0": 0, "P1": 0, "P2": 0}
+    for f in findings:
+        sev = f.get("severity", "P2")
+        by_sev[sev] = by_sev.get(sev, 0) + 1
+
+    result = {
+        "command": "audit_writing_quality",
+        "file": str(path),
+        "format": manuscript.format,
+        "findings": findings,
+        "summary": {
+            "total_findings": len(findings),
+            "by_severity": by_sev,
+        },
+        "metadata": {
+            "parser_version": "1.0",
+            "rules_loaded": len(validator.rules),
+            "execution_time_ms": elapsed,
+        },
+    }
+
+    if args.output == "json":
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print(format_terminal(findings))
+
+
 def _cmd_trace(args: argparse.Namespace) -> None:
     """Trace a symbol's callers, callees, or call path using Trifecta.
 
@@ -409,6 +546,26 @@ def main() -> None:
     )
     audit_code_health.set_defaults(func=_cmd_audit_code_health)
 
+    # paper audit citations
+    audit_citations = audit_sub.add_parser("citations", help="Verify citations against Crossref + Semantic Scholar.")
+    audit_citations.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_citations.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_citations.add_argument("--offline", action="store_true", help="Skip API calls (offline mode)")
+    audit_citations.set_defaults(func=_cmd_audit_citations)
+
+    # paper audit ethics
+    audit_ethics = audit_sub.add_parser("ethics", help="Check AI disclosure compliance.")
+    audit_ethics.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_ethics.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_ethics.set_defaults(func=_cmd_audit_ethics)
+
+    # paper audit writing-quality
+    audit_wq = audit_sub.add_parser("writing-quality", help="Detect AI-typical writing patterns.")
+    audit_wq.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_wq.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_wq.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
+    audit_wq.set_defaults(func=_cmd_audit_writing_quality)
+
     # paper trace — code traceability via Trifecta graph
     trace_parser = subparsers.add_parser(
         "trace", help="Trace code structure (callers, callees, paths) via Trifecta graph."
@@ -434,9 +591,7 @@ def main() -> None:
         default=1,
         help="Traversal depth for callers (1=direct, 3=transitive). Default: 1",
     )
-    trace_parser.add_argument(
-        "--output", "-o", choices=["terminal", "json"], default="terminal"
-    )
+    trace_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
     trace_parser.set_defaults(func=_cmd_trace)
 
     # paper graph-overview — graph health summary
@@ -444,9 +599,7 @@ def main() -> None:
         "graph-overview",
         help="Show Trifecta graph health overview (nodes, edges, cycles, orphans, hubs).",
     )
-    overview_parser.add_argument(
-        "--output", "-o", choices=["terminal", "json"], default="terminal"
-    )
+    overview_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
     overview_parser.set_defaults(func=_cmd_graph_overview)
 
     # paper gate (Phase 0)

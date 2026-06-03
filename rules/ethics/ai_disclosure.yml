@@ -1,0 +1,15 @@
+rule_group: ethics.ai_disclosure
+description: "AI disclosure compliance checks"
+severity_default: P0
+
+rules:
+  - id: ethics.ai_disclosure.missing
+    patterns:
+      - "(?i)\\bAI\\b.*\\b(used|assist|generat|writ|draft|tool)\\b"
+      - "(?i)\\b(chatgpt|claude|gemini|copilot|llm|large language model)\\b"
+      - "(?i)\\bartificial intelligence\\b.*\\b(used|assist|generat)\\b"
+    message: "AI disclosure statement should be present in methods or acknowledgments"
+    severity: P0
+    recommendation: "Add explicit AI disclosure: which tools, how used, who is accountable."
+    scope: section
+    evidence_required: ["methods", "acknowledgments"]

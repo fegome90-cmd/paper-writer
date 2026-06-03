@@ -192,3 +192,122 @@ class AcademicWriterAdapter(SkillAdapter):
             artifacts=[str(a) for a in result["artifacts"]],
             gate_changes={"sections_completed": True},
         )
+
+
+class CitationVerifyAdapter(SkillAdapter):
+    """Adapter for citation verification skill integration."""
+
+    @property
+    def name(self) -> str:
+        return "citation_verify"
+
+    def execute(
+        self,
+        command: str,
+        inputs: dict[str, Any],
+        context: dict[str, Any],
+    ) -> SkillResult:
+        from parsers.manuscript import ManuscriptParser
+        from validators.citation_verify import CitationVerifyValidator
+
+        try:
+            manuscript_path = inputs["file"]
+            offline = inputs.get("offline", False)
+            validator = CitationVerifyValidator(offline=offline)
+            manuscript = ManuscriptParser().parse(Path(manuscript_path))
+            findings = validator.validate(manuscript)
+            return SkillResult(
+                adapter=self.name,
+                status="pass" if not findings else "warn",
+                summary=f"Citation verification: {len(findings)} findings",
+                artifacts=[manuscript_path],
+                gate_changes={"citation_verified": len(findings) == 0},
+            )
+        except Exception as exc:
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary=f"Citation verification failed: {exc}",
+                artifacts=[],
+                gate_changes={},
+                warnings=[str(exc)],
+            )
+
+
+class EthicsAdapter(SkillAdapter):
+    """Adapter for ethics check skill integration."""
+
+    @property
+    def name(self) -> str:
+        return "ethics"
+
+    def execute(
+        self,
+        command: str,
+        inputs: dict[str, Any],
+        context: dict[str, Any],
+    ) -> SkillResult:
+        from parsers.manuscript import ManuscriptParser
+        from validators.ethics import EthicsValidator
+
+        try:
+            manuscript_path = inputs["file"]
+            validator = EthicsValidator()
+            manuscript = ManuscriptParser().parse(Path(manuscript_path))
+            findings = validator.validate(manuscript)
+            return SkillResult(
+                adapter=self.name,
+                status="pass" if not findings else "warn",
+                summary=f"Ethics check: {len(findings)} findings",
+                artifacts=[manuscript_path],
+                gate_changes={"ethics_passed": len(findings) == 0},
+            )
+        except Exception as exc:
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary=f"Ethics check failed: {exc}",
+                artifacts=[],
+                gate_changes={},
+                warnings=[str(exc)],
+            )
+
+
+class WritingQualityAdapter(SkillAdapter):
+    """Adapter for writing quality skill integration."""
+
+    @property
+    def name(self) -> str:
+        return "writing_quality"
+
+    def execute(
+        self,
+        command: str,
+        inputs: dict[str, Any],
+        context: dict[str, Any],
+    ) -> SkillResult:
+        from parsers.manuscript import ManuscriptParser
+        from validators.writing_quality import WritingQualityValidator
+
+        try:
+            manuscript_path = inputs["file"]
+            whitelist = context.get("whitelist", set())
+            validator = WritingQualityValidator(whitelist=whitelist)
+            manuscript = ManuscriptParser().parse(Path(manuscript_path))
+            findings = validator.validate(manuscript)
+            return SkillResult(
+                adapter=self.name,
+                status="pass" if not findings else "warn",
+                summary=f"Writing quality: {len(findings)} findings",
+                artifacts=[manuscript_path],
+                gate_changes={},
+            )
+        except Exception as exc:
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary=f"Writing quality check failed: {exc}",
+                artifacts=[],
+                gate_changes={},
+                warnings=[str(exc)],
+            )

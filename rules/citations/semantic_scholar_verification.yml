@@ -1,0 +1,18 @@
+rule_group: citations.s2
+description: "Semantic Scholar verification rules"
+severity_default: P0
+
+rules:
+  - id: citations.s2.not_found
+    patterns: []
+    message: "Citation not found in Semantic Scholar"
+    severity: P0
+    recommendation: "Verify source exists. May be fabricated or very obscure."
+    scope: reference
+
+  - id: citations.s2.low_citations
+    patterns: []
+    message: "Source has very low citation count — verify credibility"
+    severity: P2
+    recommendation: "Consider if this source is authoritative enough for the claim."
+    scope: reference

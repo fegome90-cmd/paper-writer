@@ -5,60 +5,48 @@ Defines how `paper-writer` is verified across all layers of the system.
 ## Quick path
 
 1. Tests run via `uv run pytest` (or `make test`).
-2. CI enforces `ruff check`, `mypy strict`, and `pytest` on every push.
+2. Repository docs describe CI enforcement for `ruff check`, `mypy strict`, and `pytest`; current CI state was not re-run in this audit pass.
 3. E2E tests run real subprocess I/O — not mocked.
 4. Verification claims match the current maturity of the repository.
 
 ## Current State
 
-**~540 tests passing** across unit, integration, contract, and E2E layers.
+The repository contains unit, integration, adapter, CLI, skill, and E2E coverage.
+This audit pass did not re-run the suite, so fixed test counts are intentionally omitted.
 
 | Metric | Value |
 |--------|-------|
-| Linter | ruff (see `make lint` for current status) |
-| Type checker | mypy strict, 0 issues (source dirs) |
-| CI | GitHub Actions (lint + typecheck + unit + E2E) |
+| Linter | Repository-documented: ruff |
+| Type checker | Repository-documented: mypy strict |
+| CI | Repository-documented: GitHub Actions with lint, typecheck, tests |
 
-> **Note**: Test count changes with every commit. Run `uv run pytest --collect-only -q | tail -1` for current count.
+> **Requires re-verification**: current test counts, current CI pass/fail state, and current linter/typechecker cleanliness.
 
 ## Test Directory Structure
 
 ```text
 tests/
-  adapters/        — Adapter layer tests (YAML repository, filesystem adapters)
   cli/             — CLI integration and exit-code matrix tests
   e2e/             — End-to-end subprocess tests (real I/O, real Pandoc)
-  fixtures/        — Shared test fixtures
   harness/         — State manager, gates, orchestrator, assembler tests
   integrations/    — Tool wrapper integration tests (Pandoc, bibtex-tidy, Zotero)
   skills/          — Skill adapter, scoring engine, and portability tests
-  validators/      — Domain validator tests + engine/parsers/rules cross-module tests
-  verification/    — Real material validation runner tests
-  test_packaging_contract.py — Package install asset resolution contract
 ```
 
-> **Note**: `tests/validators/` also covers `engine/`, `parsers/`, `rules/`, and `schemas/` modules.
-> These are separate top-level packages with their test files located under `tests/validators/`.
+This page is limited to the test files used as evidence in this audit pass. Other test directories may exist, but they were not part of the required evidence set here.
 
 ## Test Layers
 
 ### Unit Tests
 
-Domain logic in isolation — no I/O, no subprocesses.
+Focused logic tests evidenced in this audit set include:
 
 | Module | What is tested | Location |
 |--------|---------------|----------|
-| `validators/refs.py` | DOI/URL metadata completeness | `tests/validators/test_validators.py` |
-| `validators/citations.py` | Citation key consistency | `tests/validators/test_validators.py` |
-| `validators/style.py` | Passive voice, strong claims, forbidden phrases | `tests/validators/test_validators.py` |
-| `validators/bibliography.py` | Entry types, required fields, DOI format, year range, duplicates | `tests/validators/test_validators.py` |
-| `validators/reporting.py` | Study design, sample size, limitations | `tests/validators/test_validators.py` |
-| `validators/structure.py` | Required section presence | `tests/validators/test_validators.py` |
-| `validators/preset.py` | Journal preset schema validation | `tests/validators/test_validators.py` |
-| `harness/services/state_manager.py` | State transitions, schema validation, gate reset | `tests/harness/test_state_manager.py` |
+| `harness/services/gates.py` | Gate evaluation and malformed validator handling | `tests/harness/test_gates.py` |
+| `harness/domain/state.py` + `harness/services/orchestrator.py` | Stage invariants and transition behavior through orchestrator fixtures | `tests/harness/test_orchestrator.py` |
 | `harness/services/gates.py` | Gate evaluation, precondition checks | `tests/harness/test_gates.py` |
-| `skills/imported/literature_search/scoring.py` | Scoring engine, dedup, tier classification (56 tests) | `tests/skills/test_scoring.py` |
-| `skills/local/adapters.py` | Adapter normalization, SkillResult contract | `tests/skills/test_adapters.py` |
+| `skills/local/adapters.py` | Search/screen/draft adapter behavior and "no state.yaml" invariant | `tests/skills/test_adapters.py` |
 
 ### Integration Tests
 
@@ -67,24 +55,20 @@ Component interaction — real adapters, real filesystem on `tmp_path`.
 | Surface | What is tested | Location |
 |---------|---------------|----------|
 | Orchestrator + state manager + gates | Full stage transition flow | `tests/harness/test_orchestrator.py` |
-| Orchestrator builder dependency wiring | Dependency assembly | `tests/harness/test_orchestrator_builder.py` |
-| FilesystemActionRunner + skill adapters | Search/screen/draft with real scoring | `tests/harness/test_orchestrator.py` |
-| Tool wrappers (Pandoc, bibtex-tidy, Vale) | Real tool invocation on temp dirs | `tests/integrations/test_pandoc.py`, `tests/integrations/test_bibtex_tidy_hardening.py` |
-| Zotero import | .bib file ingestion | `tests/integrations/test_zotero_import.py` |
-| CLI subprocess | Request mapping and exit codes | `tests/cli/test_cli_request_mapping.py`, `tests/cli/test_cli_exit_code_matrix.py` |
-| Adapters (YAML repo, filesystem) | Persistence and path resolution | `tests/adapters/test_yaml_repository.py`, `tests/adapters/test_filesystem_adapters.py` |
+| CLI request mapping | Argument-to-request translation, failure policy, render flag forwarding | `tests/cli/test_cli_request_mapping.py` |
+| CLI workflow | End-to-end command flow, preset init, import bib, render flags, negative paths | `tests/cli/test_paper_cli.py` |
+| Doctor and degraded mode | Tool reporting and degraded wrapper warnings | `tests/cli/test_doctor_and_degraded.py` |
+| Pandoc wrapper | Availability, failures, multi-output behavior, CSL/reference-doc forwarding | `tests/integrations/test_pandoc.py` |
+| Skill adapters | Search/screen/draft behavior with real adapter surfaces | `tests/skills/test_adapters.py` |
 
 ### Contract Tests
 
-Architectural invariants — dependency direction, port compliance.
+Some contract-like invariants are covered by the evidence set, but this audit does not restate broader architecture claims without direct support from the selected files.
 
 | Invariant | Verification |
 |-----------|-------------|
-| `harness/` never imports from `skills/` | `tests/skills/test_portability.py` |
-| `skills/imported/` never imports from `harness/` | `tests/skills/test_portability.py` |
-| No absolute user paths in vendored skills | `tests/skills/test_portability.py` |
-| Adapter outputs are normalized `SkillResult` | `tests/skills/test_adapters.py` |
-| Asset resolution from package install | `tests/harness/test_asset_resolution.py` |
+| Skill adapters do not write `outputs/state.yaml` | `tests/skills/test_adapters.py` |
+| CLI request mapping preserves render args exactly | `tests/cli/test_cli_request_mapping.py` |
 
 ### End-to-End Tests
 
@@ -94,32 +78,35 @@ Full pipeline via subprocess — real CLI invocation, real I/O, real Pandoc.
 |------|-----------------|----------|
 | `init → search → screen → draft → validate → render → verify` | Complete stage progression | `tests/e2e/test_smoke_e2e.py` |
 | `paper init --preset nature` | Preset template scaffolding | `tests/e2e/test_smoke_e2e.py` |
-| `paper render --format docx` | Pandoc produces real DOCX (12KB+) | `tests/e2e/test_smoke_e2e.py` |
+| `paper render --format docx` | Pandoc produces a real DOCX artifact when Pandoc is available | `tests/e2e/test_smoke_e2e.py` |
 | `paper doctor` | Environment check with degraded mode | `tests/e2e/test_smoke_e2e.py` |
 | `paper import bib` | Bibliography import from external .bib | `tests/e2e/test_smoke_e2e.py` |
 
 E2E tests are marked `pytestmark = pytest.mark.e2e` and run in CI with Pandoc installed.
+
+### Alignment note
+
+The render stage currently advances the orchestrator to `verified` on successful `paper render`, and `paper verify` remains a separate command that checks `ready_for_delivery` and emits `outputs/manifest.yaml`. Documentation that treats render as a terminal "done" stage is stale and should be considered corrected by the code-level model.
 
 ## Test Markers
 
 | Marker | Usage | Purpose |
 |--------|-------|---------|
 | `@pytest.mark.e2e` | `tests/e2e/test_smoke_e2e.py` (module-level) | End-to-end tests with real subprocess I/O |
-| `@pytest.mark.integration` | `tests/harness/test_orchestrator_builder.py` (1 test) | Integration test with real dependency wiring |
 | `@pytest.mark.parametrize` | `tests/cli/`, `tests/harness/` | Parametrized test cases |
 
 ## CI Pipeline
 
-GitHub Actions runs on every push/PR to `main`:
+Repository documentation currently describes the following CI flow:
 
 1. **Lint**: `ruff check .`
 2. **Type check**: `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (strict mode)
 3. **Unit + integration tests**: `pytest tests/ -m "not e2e" --tb=short`
 4. **E2E smoke tests**: subprocess, real I/O (requires Pandoc installed)
 
-Matrix: Python 3.10, 3.11, 3.12, 3.13 on Ubuntu latest.
+Python matrix and current run status require re-verification.
 
-> **Scope differences**: Local `make typecheck` runs `mypy harness cli validators integrations verification` (local-only includes `verification/`). CI runs `mypy harness/ cli/ validators/ integrations/ tests/ skills/` (CI includes `tests/` and `skills/` but NOT `verification/`). These are different scopes, not a strict superset. Note: `pyproject.toml` excludes `tests/` from mypy, so the CI step may produce warnings.
+> **Repository-documented scope note**: local and CI mypy scopes may differ. That claim was preserved as an operational note, but the current CI configuration was not re-executed in this audit pass.
 
 ## Local Verification
 
@@ -145,8 +132,8 @@ make validate CASE=verification/local-data/<case>.local.yaml
 
 ## Audit Checklist
 
-- [ ] Current docs reflect real test count (verify with `pytest --collect-only`).
-- [ ] Test directories match actual filesystem layout.
-- [ ] CI mypy scope matches documented scope.
-- [ ] Test markers are documented only if actually used.
-- [ ] New tests are added at the correct layer (unit / integration / e2e).
+- [ ] Current docs reflect a freshly re-verified test count.
+- [x] This page now limits strong claims to the evidence set inspected in this audit.
+- [ ] CI mypy scope matches documented scope after re-verification.
+- [x] `@pytest.mark.e2e` is documented because it is present in `tests/e2e/test_smoke_e2e.py`.
+- [ ] New tests continue to be added at the correct layer (unit / integration / e2e).

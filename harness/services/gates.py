@@ -281,9 +281,9 @@ def validate_render_passed(checker: ArtifactChecker) -> GateResult:
 def validate_ready_for_delivery(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
-    """Final check gate."""
-    # All gates except ready_for_delivery itself must be True
+    """Final check gate — all hard gates must be True, soft gates warn."""
     required_gates = sorted(ManuscriptState.REQUIRED_GATES - {"ready_for_delivery"})
+    soft_gates = sorted(ManuscriptState.SOFT_GATES)
 
     checks = []
     for g in required_gates:
@@ -300,6 +300,24 @@ def validate_ready_for_delivery(
 
         checks.append(make_check())
 
+    for g in soft_gates:
+
+        def make_soft_check(gate_name: str = g) -> Check:
+            def run_fn() -> None:
+                if not state_gates.get(gate_name, False):
+                    raise ValueError(
+                        f"Soft gate '{gate_name}' is not satisfied (warning only)."
+                    )
+
+            return Check(
+                id=f"gate_satisfied_{gate_name}",
+                description=f"Verify if soft gate '{gate_name}' is satisfied",
+                run_fn=run_fn,
+                soft=True,
+            )
+
+        checks.append(make_soft_check())
+
     manifest_file = "outputs/manifest.yaml"
     return run_gate("ready_for_delivery", checks, [checker.get_full_path_str(manifest_file)])
 
@@ -310,3 +328,41 @@ def validate_ready_for_delivery(
 def _assert_gate_true(gates: dict[str, Any], gate_name: str) -> None:
     if not gates.get(gate_name, False):
         raise ValueError(f"Required gate '{gate_name}' is not satisfied (must be True).")
+
+
+def validate_citation_verify_gate(
+    checker: ArtifactChecker, state_gates: dict[str, Any]
+) -> GateResult:
+    """Soft gate: citation_verified. Warns if not yet run."""
+    def check_gate() -> None:
+        if "citation_verified" not in state_gates:
+            raise ValueError("citation_verified gate not yet evaluated")
+
+    checks = [
+        Check(
+            id="citation_verified",
+            description="Verify citations have been checked",
+            run_fn=check_gate,
+            soft=True,
+        )
+    ]
+    return run_gate("citation_verified", checks, [])
+
+
+def validate_ethics_passed_gate(
+    checker: ArtifactChecker, state_gates: dict[str, Any]
+) -> GateResult:
+    """Soft gate: ethics_passed. Warns if not yet run."""
+    def check_gate() -> None:
+        if "ethics_passed" not in state_gates:
+            raise ValueError("ethics_passed gate not yet evaluated")
+
+    checks = [
+        Check(
+            id="ethics_passed",
+            description="Verify ethics check has been performed",
+            run_fn=check_gate,
+            soft=True,
+        )
+    ]
+    return run_gate("ethics_passed", checks, [])

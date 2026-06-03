@@ -1,0 +1,18 @@
+rule_group: citations.crossref
+description: "Crossref DOI verification rules"
+severity_default: P0
+
+rules:
+  - id: citations.crossref.not_found
+    patterns: []  # Deterministic, not regex-based
+    message: "Citation not found in Crossref database"
+    severity: P0
+    recommendation: "Verify DOI is correct. If fabricated, remove citation."
+    scope: reference
+
+  - id: citations.crossref.title_mismatch
+    patterns: []
+    message: "DOI resolves but title does not match cited reference"
+    severity: P1
+    recommendation: "Verify correct DOI. May be wrong DOI for this paper."
+    scope: reference

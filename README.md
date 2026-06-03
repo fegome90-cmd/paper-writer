@@ -49,18 +49,16 @@ paper gate method outputs/drafts/introduction.md --study-type rct
 
 ### Verification Evidence
 
-- `pytest` — ~540 passing (unit, integration, E2E)
-- `ruff check .` — clean
-- `mypy strict` — 0 issues in 46 source files
-- `make verify` — lint + format + typecheck + tests (single command)
-- Full pipeline E2E verified: `init → search → screen → draft → validate → render → verify`
-- Installed wheel verified: 26/26 features pass from isolated venv
-- Pandoc produces real DOCX (12KB+, Word 2007+)
+- Repository-audited command surface includes orchestrated commands such as `init`, `search`, `screen`, `draft`, `lint`, `check refs`, `audit reporting`, `import bib`, `render`, `verify`, plus direct commands such as `doctor`, `audit prose`, `audit claims`, and `gate method`.
+- Test files in `tests/cli/`, `tests/harness/`, `tests/integrations/`, `tests/skills/`, and `tests/e2e/` provide repository evidence for CLI mapping, orchestrator flow, degraded mode, Pandoc wrapper behavior, adapter behavior, and subprocess smoke coverage.
+- Full pipeline coverage is documented in tests for `init -> import bib -> search -> screen -> draft -> validate -> render -> verify`.
+- `tests/e2e/test_smoke_e2e.py` verifies real DOCX generation when Pandoc is available.
+- Current aggregate test counts, current CI status, and current lint/typecheck cleanliness require re-verification before being treated as live status.
 
 The repository has:
 
 - a thin `paper` CLI (`cli/paper/main.py`)
-- a hexagonal harness (`state_manager`, `gates`, `orchestrator`, `assembler`)
+- a harness centered on `state_manager`, `gates`, `orchestrator`, and the dependency builder in `harness/services/orchestrator_builder.py`
 - domain validators (`validators/`) — pure functions, no I/O
   - `refs.py` — metadata completeness (year, DOI/URL)
   - `citations.py` — key consistency
@@ -74,15 +72,17 @@ The repository has:
 - CSL citation styles (`styles/csl/`) — Vancouver, APA 7th
 - journal presets (`templates/journals/nature/`) — template, preset.yaml, seeded references
 - imported skills with provenance-tracked adapters:
-  - `literature-search` — real scoring engine (dedup, tier classification, citation verify)
+  - `literature-search` — real scoring engine (dedup, tier classification)
   - `academic-writer` — section structures from manifest derived from SKILL.md
 - fail-closed gate system — no gate passes without evidence
 - multi-output render (docx, pdf) with CSL and reference-doc support
 - optional Zotero/Better BibTeX ingestion surface
 - `paper doctor` — environment check with explicit degraded-mode reporting
-- CI pipeline (`.github/workflows/ci.yml`) — lint, typecheck, unit + E2E tests
+- repository-documented CI pipeline (`.github/workflows/ci.yml`) — lint, typecheck, unit + E2E tests; current status requires re-verification
 
 ## Phase Status
+
+Repository-documented phase history. Preserved here as project context; not re-verified in this audit pass.
 
 ### Completed
 
@@ -111,6 +111,11 @@ paper init
 # Import bibliography
 paper import bib references.bib
 
+# Optional direct audits
+paper audit prose outputs/drafts/introduction.md
+paper audit claims outputs/drafts/introduction.md
+paper gate method outputs/drafts/introduction.md --study-type rct
+
 # Run pipeline
 paper search
 paper screen
@@ -124,6 +129,7 @@ paper lint bib
 paper lint style
 paper audit reporting
 paper render --format docx
+paper verify
 
 # Check environment
 paper doctor

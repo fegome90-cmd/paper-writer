@@ -58,6 +58,13 @@ class ManuscriptState:
         }
     )
 
+    SOFT_GATES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "citation_verified",
+            "ethics_passed",
+        }
+    )
+
     # Preconditions required to ENTER a stage
     STAGE_PRECONDITIONS: ClassVar[dict[str, frozenset[str]]] = {
         "bootstrap": frozenset(),

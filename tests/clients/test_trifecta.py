@@ -6,6 +6,7 @@ for using Trifecta as a subprocess client.
 
 Strict TDD: these tests were written FIRST, before the implementation.
 """
+
 from __future__ import annotations
 
 import json
@@ -108,12 +109,20 @@ class TestTrifectaSuccessPath:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "orphans": [
-                {"id": "x", "symbol_name": "foo", "qualified_name": "foo", "kind": "function", "file_rel": "a.py"}
-            ],
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "orphans": [
+                    {
+                        "id": "x",
+                        "symbol_name": "foo",
+                        "qualified_name": "foo",
+                        "kind": "function",
+                        "file_rel": "a.py",
+                    }
+                ],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_orphans()
@@ -126,10 +135,12 @@ class TestTrifectaSuccessPath:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "callers": [{"symbol": "main", "file_rel": "cli.py"}],
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "callers": [{"symbol": "main", "file_rel": "cli.py"}],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_callers("Foo.bar")
@@ -141,29 +152,30 @@ class TestTrifectaSuccessPath:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "node_count": 1000,
-            "edge_count": 1500,
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "node_count": 1000,
+                "edge_count": 1500,
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.health()
         assert result.success is True
         assert result.data["node_count"] == 1000
 
-
-
-
     def test_find_callers_parses_nodes_key(self, tmp_path: Path) -> None:
         """find_callers handles Trifecta's 'nodes' key (newer CLI versions)."""
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "nodes": [{"symbol_name": "main", "file_rel": "cli.py"}],
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "nodes": [{"symbol_name": "main", "file_rel": "cli.py"}],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_callers("Foo.bar")
@@ -175,10 +187,12 @@ class TestTrifectaSuccessPath:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "nodes": [{"symbol_name": "validate", "file_rel": "validators.py"}],
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "nodes": [{"symbol_name": "validate", "file_rel": "validators.py"}],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_callees("Foo")
@@ -224,13 +238,15 @@ class TestTrifectaGraphActions:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "status": "ok",
-            "node_count": 1000,
-            "edge_count": 1500,
-            "orphan_count": 50,
-            "top_hubs": [{"symbol": "main", "in_degree": 30}],
-        })
+        mock.stdout = json.dumps(
+            {
+                "status": "ok",
+                "node_count": 1000,
+                "edge_count": 1500,
+                "orphan_count": 50,
+                "top_hubs": [{"symbol": "main", "in_degree": 30}],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_overview()
@@ -252,12 +268,14 @@ class TestTrifectaGraphActions:
         client = TrifectaClient(repo_path=tmp_path)
         mock = MagicMock()
         mock.returncode = 0
-        mock.stdout = json.dumps({
-            "hubs": [
-                {"symbol_name": "main", "in_degree": 30},
-                {"symbol_name": "validate", "in_degree": 15},
-            ],
-        })
+        mock.stdout = json.dumps(
+            {
+                "hubs": [
+                    {"symbol_name": "main", "in_degree": 30},
+                    {"symbol_name": "validate", "in_degree": 15},
+                ],
+            }
+        )
         mock.stderr = ""
         with patch("subprocess.run", return_value=mock):
             result = client.find_hubs(top_n=5)

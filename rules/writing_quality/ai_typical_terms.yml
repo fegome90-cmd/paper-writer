@@ -1,0 +1,62 @@
+rule_group: writing_quality.ai_typical
+description: "AI-typical writing patterns"
+severity_default: P1
+
+rules:
+  - id: writing_quality.ai_typical.delve
+    patterns:
+      - "\\bdelve[sd]?\\b"
+      - "\\bdelving\\b"
+    message: "AI-typical term: 'delve'"
+    severity: P1
+    recommendation: "Replace with 'examine', 'investigate', 'explore', or discipline-specific verb."
+    scope: sentence
+
+  - id: writing_quality.ai_typical.tapestry
+    patterns:
+      - "\\btapestry\\b"
+      - "\\bintricate tapestry\\b"
+    message: "AI-typical term: 'tapestry'"
+    severity: P1
+    recommendation: "Replace with 'mosaic', 'patchwork', or describe the structure directly."
+    scope: sentence
+
+  - id: writing_quality.ai_typical.landscape
+    patterns:
+      - "\\b(?:research|scientific|academic|computational|regulatory)\\s+landscape\\b"
+    message: "AI-typical phrase: 'landscape'"
+    severity: P2
+    recommendation: "Replace with 'field', 'domain', 'area', or 'state of the art'."
+    scope: sentence
+
+  - id: writing_quality.ai_typical.robust
+    patterns:
+      - "\\brobust\\b"
+    message: "Potentially overused term: 'robust'"
+    severity: P2
+    section_severity:
+      abstract: P1
+      conclusions: P1
+    recommendation: "Consider 'rigorous', 'reliable', 'well-validated', or specific technical term."
+    scope: sentence
+
+  - id: writing_quality.ai_typical.hedging_crumbs
+    patterns:
+      - "\\bit is worth noting\\b"
+      - "\\bit is important to note\\b"
+      - "\\bneedless to say\\b"
+    message: "Filler hedge phrase"
+    severity: P1
+    recommendation: "Remove or replace with direct statement."
+    scope: sentence
+
+  - id: writing_quality.ai_typical.transition_crutch
+    patterns:
+      - "\\bfurthermore\\b"
+      - "\\bmoreover\\b"
+      - "\\bin addition\\b"
+      - "\\badditionally\\b"
+    message: "Transitional crutch — check if connection is clear"
+    severity: P2
+    recommendation: "Use explicit logical connectors or restructure paragraphs."
+    scope: sentence
