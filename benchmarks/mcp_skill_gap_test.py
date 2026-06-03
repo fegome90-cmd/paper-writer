@@ -1,13 +1,11 @@
-import socket
-import json
 import subprocess
-import time
+import json
 import sys
 from pathlib import Path
 
-SOCKET_PATH = "/tmp/trifecta_f1_0a9954b40438.sock"
+REPO_PATH = "/Users/felipe_gonzalez/Developer/paper-writer"
+DAEMON_PATH = "/Users/felipe_gonzalez/Developer/agent_h/trifecta_dope/src/interfaces/mcp/server.py"
 
-# These represent the exact usage patterns instructed by the trifecta-mcp SKILL and Guide.
 SCENARIOS = [
     ("ctx_search", {"query": "ManuscriptState"}),
     ("ctx_get", {"ids": ["repo:harness/domain/state.py:f60249cebb"]}),
@@ -20,11 +18,11 @@ SCENARIOS = [
     ("ctx_graph", {"action": "parents", "symbol": "BibliographyNormalizer"}),
     ("ctx_graph", {"action": "path", "from_symbol": "Orchestrator.execute", "to_symbol": "ManuscriptState"}),
     ("ctx_graph", {"action": "impact", "symbol": "ManuscriptState"}),
-    ("ctx_graph", {"action": "orphans"}),
-    ("ctx_graph", {"action": "cycles"}),
-    ("ctx_graph", {"action": "hubs"}),
-    ("ctx_graph", {"action": "overview"}),
-    ("ctx_graph", {"action": "status"}),
+    ("ctx_graph", {"action": "orphans", "symbol": ""}),
+    ("ctx_graph", {"action": "cycles", "edge_kind": "calls"}),
+    ("ctx_graph", {"action": "hubs", "top_n": 5}),
+    ("ctx_graph", {"action": "overview", "symbol": ""}),
+    ("ctx_graph", {"action": "status", "symbol": ""}),
     ("ctx_graph", {"action": "search", "symbol": "State"}),
     ("ast_analyze", {"path": "harness/domain/state.py"}),
     ("ast_hover", {"path": "harness/domain/state.py", "line": 12, "col": 5}),
@@ -38,27 +36,40 @@ SCENARIOS = [
 
 def run_tool(name, args):
     payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": args}}
+    
+    process = subprocess.Popen(
+        ["/Users/felipe_gonzalez/Developer/agent_h/trifecta_dope/.venv/bin/python", DAEMON_PATH, "--repo", REPO_PATH, "--mode", "manual"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1
+    )
+    
     try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-            client.settimeout(10)
-            client.connect(SOCKET_PATH)
-            client.sendall((json.dumps(payload) + "\n").encode())
-            
-            data = b""
-            while True:
-                chunk = client.recv(4096)
-                if not chunk: break
-                data += chunk
-                if b"\n" in data: break
-                
-            response = json.loads(data.decode())
-            if "error" in response:
-                return False, response["error"]["message"]
-            
-            # Simple success: returned a valid response
-            return True, "OK"
+        # Send input
+        process.stdin.write(json.dumps(payload) + "\n")
+        process.stdin.flush()
+        
+        # Read a single line of output
+        line = process.stdout.readline()
+        
+        # Kill immediately after we get the line
+        process.terminate()
+        process.wait(timeout=2)
+        
+        if line and line.strip().startswith("{") and "jsonrpc" in line:
+            try:
+                response = json.loads(line)
+                if "error" in response:
+                    return False, f"JSON-RPC Error: {response['error']['message']}"
+                return True, "OK"
+            except Exception as e:
+                return False, f"Parse error: {e} | Line: {line[:100]}"
+        return False, f"Invalid output: {line[:100]}"
     except Exception as e:
-        return False, f"Exception: {e}"
+        process.kill()
+        return False, str(e)
 
 def main():
     passed = 0
@@ -75,7 +86,6 @@ def main():
             print(f"❌ {gap_msg}")
             
     Path("benchmarks/mcp_gaps.log").write_text("\n".join(gaps))
-    # Autoresearch metric: number of passed tools (we want this to equal len(SCENARIOS))
     print(f"\nMetric: {passed}/{len(SCENARIOS)}")
     sys.exit(0 if passed == len(SCENARIOS) else 1)
 

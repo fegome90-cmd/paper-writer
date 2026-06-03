@@ -237,3 +237,5 @@
 {"ts": 1780455138.255281, "query_type": "path", "fidelity": "degraded", "latency_ms": 61, "timings": {"pack_load_and_search_ms": 15, "ast_resolution_ms": 19, "graph_signal_ms": 26, "lsp_signal_ms": 0}}
 {"ts": 1780455993.381898, "query_type": "impact", "fidelity": "full", "latency_ms": 33, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 9, "graph_signal_ms": 9, "lsp_signal_ms": 0}}
 {"ts": 1780497691.758511, "query_type": "impact", "fidelity": "full", "latency_ms": 47, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 19, "graph_signal_ms": 14, "lsp_signal_ms": 0}}
+{"ts": 1780498350.548254, "query_type": "impact", "fidelity": "full", "latency_ms": 37, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 14, "graph_signal_ms": 10, "lsp_signal_ms": 0}}
+{"ts": 1780498428.7275462, "query_type": "impact", "fidelity": "full", "latency_ms": 31, "timings": {"pack_load_and_search_ms": 11, "ast_resolution_ms": 9, "graph_signal_ms": 9, "lsp_signal_ms": 0}}

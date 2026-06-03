@@ -65,6 +65,9 @@ class ManuscriptState:
         }
     )
 
+    # Legacy stage names that are auto-upgraded on load.
+    LEGACY_STAGE_MAP: ClassVar[dict[str, str]] = {"verified": "rendered"}
+
     # Preconditions required to ENTER a stage
     STAGE_PRECONDITIONS: ClassVar[dict[str, frozenset[str]]] = {
         "bootstrap": frozenset(),

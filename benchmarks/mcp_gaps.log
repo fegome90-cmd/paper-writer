@@ -1,25 +1,2 @@
-GAP: ctx_search {'query': 'ManuscriptState'} -> Timeout
-GAP: ctx_get {'ids': ['repo:harness/domain/state.py:f60249cebb']} -> Timeout
-GAP: ctx_oracle {'query': 'impact of changing ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'callers', 'symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'callees', 'symbol': 'ManuscriptState.validate'} -> Timeout
-GAP: ctx_graph {'action': 'importers', 'symbol': 'harness.domain.state'} -> Timeout
-GAP: ctx_graph {'action': 'import_targets', 'symbol': 'harness.domain.state'} -> Timeout
-GAP: ctx_graph {'action': 'subclasses', 'symbol': 'ToolWrapper'} -> Timeout
-GAP: ctx_graph {'action': 'parents', 'symbol': 'BibliographyNormalizer'} -> Timeout
-GAP: ctx_graph {'action': 'path', 'from_symbol': 'Orchestrator.execute', 'to_symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'impact', 'symbol': 'ManuscriptState'} -> Timeout
-GAP: ctx_graph {'action': 'orphans', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'cycles', 'edge_kind': 'calls'} -> Timeout
-GAP: ctx_graph {'action': 'hubs', 'top_n': 5} -> Timeout
-GAP: ctx_graph {'action': 'overview', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'status', 'symbol': ''} -> Timeout
-GAP: ctx_graph {'action': 'search', 'symbol': 'State'} -> Timeout
-GAP: ast_analyze {'path': 'harness/domain/state.py'} -> Timeout
-GAP: ast_hover {'path': 'harness/domain/state.py', 'line': 12, 'col': 5} -> Timeout
-GAP: ctx_health {} -> Timeout
-GAP: ctx_oracle_health {} -> Timeout
-GAP: ctx_validate {} -> Timeout
-GAP: ctx_reindex_graph {} -> Timeout
-GAP: ctx_plan {'query': 'how to add a new command'} -> Timeout
-GAP: ctx_graph_metrics {'last_n': 10} -> Timeout
+GAP: ast_hover {'path': 'harness/domain/state.py', 'line': 12, 'col': 5} -> JSON-RPC Error: LSP client not initialized
+GAP: ctx_health {} -> JSON-RPC Error: cannot access local variable 'datetime' where it is not associated with a value

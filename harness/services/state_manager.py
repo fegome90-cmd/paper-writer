@@ -36,7 +36,11 @@ class StateManager:
     def validate_state(self, data: dict[str, Any]) -> None:
         """Helper to validate arbitrary state structure using domain invariants."""
         try:
-            temp_state = ManuscriptState(stage=data.get("stage", ""), gates=data.get("gates", {}))
+            stage = data.get("stage", "")
+            # Auto-upgrade legacy stage names (e.g. "verified" -> "rendered")
+            if stage in ManuscriptState.LEGACY_STAGE_MAP:
+                stage = ManuscriptState.LEGACY_STAGE_MAP[stage]
+            temp_state = ManuscriptState(stage=stage, gates=data.get("gates", {}))
             temp_state.validate()
         except DomainStateError as e:
             raise StateManagerError(f"Validation failed: {e}") from e
