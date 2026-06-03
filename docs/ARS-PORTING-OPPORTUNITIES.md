@@ -15,7 +15,7 @@
 | Resiliency patterns | 2 | 🟡 Medium |
 | Feature parity gaps | 2 | 🟡 Medium |
 | Testability improvements | 1 | 🟢 Low |
-| New capability (temporal audit) | 1 system | 🔵 Feature |
+| New capability (temporal audit) | 5 passes + bootstrap + 15 tests | 🔵 Feature (~1,160 lines, ~7 days) |
 
 ---
 
@@ -235,65 +235,374 @@ def __init__(self, ...):
 
 ## 🔵 Feature — Temporal Audit System (NEW)
 
-**Status**: NOT ported. This is a complete new capability.
+**Status**: NOT ported. Complete new capability — 840-line Python script + 438-line test file + 52 fixture files.
 
-**ARS Source**: `tests/fixtures/v3.9.4-temporal/` (52 fixture files across 11 modes)
+**ARS Source Files**:
+- `scripts/temporal_integrity_audit.py` (840 lines) — main implementation
+- `scripts/test_temporal_integrity_audit.py` (438 lines) — test suite
+- `scripts/bootstrap_timeline_yaml.py` (137 lines) — timeline bootstrap from Crossref
+- `tests/fixtures/v3.9.4-temporal/` — 11 fixture directories, 52 files
 
-### What It Detects
+### Architecture: 5-Pass Verifier
 
-| Mode | Finding Kind | Severity | Block? | Description |
-|------|-------------|----------|--------|-------------|
-| 1 | `TEMPORAL-ARITHMETIC-IMPOSSIBLE` | HIGH | ✅ | "As of March 2025, the system completed June 2025 deliverables" |
-| 2 | `TEMPORAL-VERSION-EVIDENCE` | MEDIUM | ❌ | Using version X to prove something about version Y |
-| 3 | `TEMPORAL-METADATA-MISSING` | LOW | ❌ | Missing date metadata prevents anachronism check |
-| 4 | `TEMPORAL-CAUSAL-INVERSION` | MEDIUM | ❌ | "Policy A (2026) enabled Policy B (2020)" |
-| 5 | `TEMPORAL-DEICTIC` | LOW | ❌ | "Currently", "most recent", "today" |
+The temporal audit runs 5 sequential passes over the draft, each detecting a different class of temporal integrity issue:
 
-### Required Infrastructure
+```
+Pass 1 → TEMPORAL-ARITHMETIC-IMPOSSIBLE (Mode 1)
+Pass 2 → TEMPORAL-ANACHRONISTIC-CITATION (Mode 2)
+Pass 3 → TEMPORAL-COMPARATOR-UNMATERIALIZED (Mode 3)
+Pass 4 → TEMPORAL-CAUSAL-INVERSION (Mode 4)
+Pass 5 → TEMPORAL-DEICTIC (Mode 5)
++ TEMPORAL-METADATA-MISSING (cross-cutting)
+```
 
-| Component | Description | Effort |
-|-----------|-------------|--------|
-| `timeline.yaml` parser | Load citation publication dates with precision/confidence | Small |
-| `citation_provenance.yaml` parser | Load provenance metadata | Small |
-| Deictic detector | Regex-based: "currently", "today", "most recent", "as of" | Medium |
-| Temporal arithmetic checker | Compare date ranges: anchor vs event | Medium |
-| Causal verb lexicon | "enabled", "caused", "preceded", "followed" + ordering rules | Medium |
-| `temporal_audit()` validator | Main orchestrator | Large |
-| YAML rule file | `rules/temporal/deictic.yml`, `rules/temporal/causal_inversion.yml`, etc. | Medium |
+### Pass 1: Future-as-Past Arithmetic (Mode 1)
 
-### Fixture Structure (ARS)
+**Finding Kind**: `TEMPORAL-ARITHMETIC-IMPOSSIBLE`
+**Severity**: HIGH | **Block eligible**: YES
+
+**What it catches**: Claims where the event date is after the anchor date, making the statement physically impossible.
+
+**Two regex patterns**:
+
+```python
+# Pattern A: retrospective "as of X ... had already Y"
+PATTERN_A = re.compile(
+    r"(?:as of|on|in|reported in|stated in|noted in)\s+"
+    r"(?P<anchor>" + DATE_REGEX + r")"
+    r".*?\b(?:had already|already|completed|finished|delivered)\b.*?"
+    r"(?P<event>" + DATE_REGEX + r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# Pattern B: prospective "X (will be) ... (as of Y)"
+PATTERN_B = re.compile(
+    r"(?P<event>" + DATE_REGEX + r")"
+    r".*?\b(?:will be|to be|scheduled for|forthcoming|upcoming|planned)\b.*?"
+    r"(?:as of|in|by)\s+"
+    r"(?P<anchor>" + DATE_REGEX + r")",
+    re.IGNORECASE | re.DOTALL,
+)
+```
+
+**Violation logic**:
+- Pattern A: `event_start > anchor_end` → impossible (event hasn't happened yet at anchor time)
+- Pattern B: `event_start <= anchor_end` → impossible (forthcoming event already past at anchor time)
+
+**Fixture examples**:
+| Draft | Verdict | Why |
+|-------|---------|-----|
+| "As of March 2025, the system had already completed June 2025 deliverables" | VIOLATION | Event (June 2025) > Anchor (March 2025) |
+| "Smith (2026) reports that programme X completed its 2025 cycle in December 2025" | OK | No "as of" anchor pattern |
+
+### Pass 2: Version-as-Evidence Anachronism (Mode 2)
+
+**Finding Kind**: `TEMPORAL-ANACHRONISTIC-CITATION`
+**Severity**: HIGH | **Block eligible**: YES
+
+**What it catches**: Citing a version of a document that didn't exist yet at the time of the event being described.
+
+**How it works**:
+1. Find all `<!--ref:slug-->` markers in draft
+2. Look up slug in `timeline.yaml` → get `effective_date_range`
+3. Find nearest date in ±200 chars around ref marker (the "event date")
+4. Check two predicates:
+   - **Future-version**: `edr_start > event_end` → version postdates the event
+   - **Superseded-version**: `edr_end < event_start` → version was superseded before event
+
+**Requires**: `timeline.yaml` with `effective_date_range` per source.
+
+**Fixture examples**:
+| Draft | Timeline | Verdict |
+|-------|----------|---------|
+| "The 2026 Handbook governed the 2022 review cycle" | handbook-2026ed starts 2026-09-15 | VIOLATION — 2026 version didn't exist in 2022 |
+| "The 2020 Handbook governed the 2022 review cycle" | handbook-2020ed range 2020-10-01..2024-09-30 | OK — version was in effect during 2022 |
+
+**Provenance gate** (v3.9.4.1 hotfix): If `citation_provenance` confidence is `low` or `conflict`, emits `TEMPORAL-METADATA-MISSING` instead — doesn't use unverified dates as ground truth.
+
+### Pass 3: Comparator Unmaterialized (Mode 3)
+
+**Finding Kind**: `TEMPORAL-COMPARATOR-UNMATERIALIZED`
+**Severity**: MEDIUM | **Block eligible**: NO
+
+**What it catches**: Prose references a specific year/edition that doesn't exist in the timeline.
+
+**Three regex forms**:
+```python
+# Form A: "prior/previous/earlier edition"
+COMPARATOR_FORM_A = re.compile(
+    r"(?P<adj>prior|previous|earlier|older|preceding)\s+"
+    r"(?P<noun>edition|version|...)", re.IGNORECASE)
+
+# Form B: "YYYY edition/version/standard"
+COMPARATOR_FORM_B = re.compile(
+    r"\b(?P<year>(?:19|20)\d{2})\s+"
+    r"(?P<noun>edition|version|standard|handbook|guideline)", re.IGNORECASE)
+
+# Form C: "edition/version of YYYY"
+COMPARATOR_FORM_C = re.compile(
+    r"(?P<noun>edition|version|standard)\s+(?:of|from)\s+"
+    r"(?P<year>(?:19|20)\d{2})", re.IGNORECASE)
+```
+
+**Logic**: For each match, resolve `version_family_id` via nearest `<!--ref:slug-->`. Check if any source in that family has a `published_date` matching the comparator year. If not → emit finding.
+
+**Fixture examples**:
+| Draft | Timeline | Verdict |
+|-------|----------|---------|
+| "This differs from the 1998 edition" + ref:standard-2020ed | standard-family has only 2020 | VIOLATION — 1998 edition not in timeline |
+| "This differs from the 2018 edition" + ref:standard-2020ed | standard-family has 2018 + 2020 | OK |
+
+### Pass 4: Causal Inversion (Mode 4)
+
+**Finding Kind**: `TEMPORAL-CAUSAL-INVERSION`
+**Severity**: MEDIUM | **Block eligible**: NO
+
+**What it catches**: Causal claims where the cause comes after the effect.
+
+**8 causal trigger verbs with required ordering**:
+```python
+CAUSAL_TRIGGERS = [
+    (r"\benabled\b",          "left<right"),  # cause before effect
+    (r"\bcaused\b",           "left<right"),
+    (r"\bled\s+to\b",         "left<right"),
+    (r"\bin\s+response\s+to\b", "left>right"),  # effect after cause
+    (r"\bsuperseded\b",       "left>right"),
+    (r"\bpreceded\b",         "left<right"),
+    (r"\bfollowed\s+by\b",    "left<right"),
+    (r"\bfollowed\b(?!\s+by)", "left>right"),
+]
+```
+
+**Binding logic**: For each trigger, bind left argument (nearest `<!--ref:slug-->` BEFORE trigger, or direct date) and right argument (nearest `<!--ref:slug-->` AFTER trigger, or direct date). Then verify required ordering.
+
+**v3.9.4.1 hotfix**: Also binds to direct date captures when ref markers are absent (not just slugs).
+
+**Fixture examples**:
+| Draft | Timeline | Verdict |
+|-------|----------|---------|
+| "Policy A enabled Policy B" | A=2026, B=2020 | VIOLATION — cause (2026) > effect (2020) |
+| "Policy A enabled Policy B" | A=2020, B=2026 | OK — cause before effect |
+
+### Pass 5: Deictic Time-Bomb (Mode 5)
+
+**Finding Kind**: `TEMPORAL-DEICTIC`
+**Severity**: LOW | **Block eligible**: NO
+
+**What it catches**: Temporal deictic expressions that anchor claims to writing time, making them stale over time.
+
+**Regex pattern**:
+```python
+DEICTIC_PATTERN = re.compile(
+    r"\b(currently|now|at present|most recent|the latest|new(?:est)?|recently|"
+    r"last\s+year|this\s+year|nowadays|presently|today|emerging|recent\s+cycle|"
+    r"latest\s+available)\b",
+    re.IGNORECASE,
+)
+```
+
+**Fixture examples**:
+| Draft | Verdict |
+|-------|---------|
+| "Currently, the framework is under review" | VIOLATION — "Currently" is deictic |
+| "Currently, the most recent edition prescribes" | VIOLATION — "Currently" + "most recent" (2 findings) |
+| "As of 2026-05-18, the 2024 edition prescribes" | OK — anchored to specific date |
+
+### Cross-Cutting: TEMPORAL-METADATA-MISSING
+
+**Severity**: LOW | **Block eligible**: NO
+
+**Fires when** (in P2 or P4):
+- `<!--ref:slug-->` has no entry in `timeline.yaml`
+- `effective_date_range` is absent
+- `effective_date_range.start` is null or low/unverified confidence
+- `citation_provenance` confidence is `low` or `conflict`
+
+### Date Normalization: `_date_to_interval()`
+
+Handles 5 schema-valid date shapes:
+
+| Input | Output | Precision |
+|-------|--------|-----------|
+| `2024-09-15` | `(2024-09-15, 2024-09-15)` | Day |
+| `2024-09` | `(2024-09-01, 2024-09-30)` | Month |
+| `2024` | `(2024-01-01, 2024-12-31)` | Year |
+| `March 2025` | `(2025-03-01, 2025-03-31)` | Prose month |
+| `2022-04-01..2022-12-31` | `(2022-04-01, 2022-12-31)` | Interval |
+
+### Input File Schemas
+
+**`timeline.yaml`**:
+```yaml
+schema_version: "1.0"
+sources:
+  - citation_key: handbook-2026ed
+    type: institutional-document
+    published_date:
+      value: "2026-09-15"
+      precision: day
+      open_ended: false
+      provenance:
+        method: crossref_lookup
+        confidence: high
+    effective_date_range:
+      start:
+        value: "2026-09-15"
+        precision: day
+        open_ended: false
+        provenance: {method: crossref_lookup, confidence: high}
+      end:
+        value: null
+        precision: unknown
+        open_ended: true
+        provenance: {method: user_override, confidence: high}
+    version_family_id: handbook-family  # optional
+events: []
+```
+
+**`citation_provenance.yaml`**:
+```yaml
+schema_version: "1.0"
+audit_run_id: "2026-05-18T12:34:56Z-a1b2"
+entries:
+  - citation_key: handbook-2026ed
+    crossref_issued: null
+    pdftotext_cover_first_line: null
+    verification_method: none
+    confidence: low  # high | medium | low | conflict
+    notes: null
+```
+
+### Output Schema
+
+```yaml
+schema_version: "1.0"
+audit_run_id: "2026-05-18T12:34:56Z-a1b2"
+report_reference_date: "2026-05-18"
+findings:
+  - finding_id: "TF-001"
+    finding_kind: "TEMPORAL-ARITHMETIC-IMPOSSIBLE"
+    severity: "HIGH"
+    mode: 1
+    block_eligible: true
+    draft_locator:
+      file: "phase4_composition/draft.md"
+      line: 1
+      sentence: "As of March 2025, ..."
+    matched_span: {text: "currently", char_start: 0, char_end: 9}
+    bound_refs: [{ref_slug: "slug", timeline_entry: "slug"}]
+    bound_event: {event_id: null, date: "2022-01-01..2022-12-31"}
+    bound_dates:
+      left: {role: "anchor", value: "2025-03-01..2025-03-31", source: "draft_capture"}
+      right: {role: "event", value: "2025-06-01..2025-06-30", source: "draft_capture"}
+    rationale: "Pattern A: anchor 'March 2025' before event 'June 2025'"
+    suggested_fix: "Restate the claim to match the anchor's true time horizon"
+```
+
+### Test Suite Patterns (438 lines)
+
+| Test | What it verifies |
+|------|-----------------|
+| `test_p5_currently_emits_deictic_finding` | "Currently" → TEMPORAL-DEICTIC |
+| `test_p5_anchored_phrase_no_finding` | "As of 2026-05-18" → no finding |
+| `test_p1_future_as_past_emits_arithmetic_impossible` | Pattern A violation |
+| `test_p1_prospective_already_past` | Pattern B violation |
+| `test_p2_2026_handbook_governing_2022_event` | Anachronistic citation |
+| `test_p3_unmaterialized_comparator` | "1998 edition" not in timeline |
+| `test_p4_causal_inversion` | "enabled" with wrong ordering |
+| `test_positive_fixture_golden` | 5 parametrized golden tests (modes 1-5) |
+| `test_negative_fixture_golden` | 5 parametrized legitimate tests (modes 1-5) |
+| `test_audit_writes_markdown_report` | YAML + MD output |
+| `test_metadata_missing_fixture` | Missing effective_date_range |
+| `test_freeze_regression_byte_identical` | Same date → byte-identical output |
+| `test_date_to_interval_parses_all_shapes` | 8 date format parametrized tests |
+| `test_p2_provenance_low_emits_metadata_missing` | Provenance confidence gate |
+| `test_p4_direct_date_causal_inversion_no_refs` | Direct date binding (no slugs) |
+
+### Bootstrap Timeline Script
+
+`bootstrap_timeline_yaml.py` — Populates `timeline.yaml` from `literature_corpus[]`:
+1. For each entry with `doi`: calls Crossref API for `published_date`
+2. For each entry with local PDF: runs `pdftotext` for first-line scan
+3. Emits skeleton with `effective_date_range`, `supersedes`, etc. as null
+4. Supports `--dry-run` (no API calls, uses corpus year fallback)
+
+### Fixture Directory Structure (11 fixtures)
 
 ```
 tests/fixtures/v3.9.4-temporal/
-├── mode_1_future_as_past/
-│   ├── draft.md                    # Manuscript with temporal issue
-│   ├── citation_provenance.yaml    # Citation metadata
-│   ├── timeline.yaml               # Publication dates
-│   └── expected_temporal_audit_results.yaml  # Expected findings
-├── mode_4_causal_inversion/
-│   ├── draft.md
-│   ├── citation_provenance.yaml
-│   ├── timeline.yaml
-│   └── expected_temporal_audit_results.yaml
-├── mode_5_time_bomb/
-│   └── ... (same structure)
-└── report_reference_date_freeze/
-    └── ... (same structure)
+├── mode_1_future_as_past/          # P1 VIOLATION
+│   ├── draft.md                    # "As of March 2025, ... June 2025 deliverables"
+│   ├── citation_provenance.yaml    # Empty entries
+│   ├── timeline.yaml               # Empty sources
+│   └── expected_temporal_audit_results.yaml  # 1 TEMPORAL-ARITHMETIC-IMPOSSIBLE
+├── mode_1_legitimate/              # P1 OK
+│   ├── draft.md                    # "Smith (2026) reports ... December 2025"
+│   └── expected_temporal_audit_results.yaml  # 0 findings
+├── mode_2_version_as_evidence_past/ # P2 VIOLATION
+│   ├── draft.md                    # "2026 Handbook governed 2022 review cycle"
+│   ├── timeline.yaml               # handbook-2026ed starts 2026-09-15
+│   └── expected_temporal_audit_results.yaml  # 1 TEMPORAL-ANACHRONISTIC-CITATION
+├── mode_2_legitimate/              # P2 OK
+│   ├── draft.md                    # "2020 Handbook governed 2022 review cycle"
+│   ├── timeline.yaml               # handbook-2020ed range 2020-10-01..2024-09-30
+│   └── expected_temporal_audit_results.yaml  # 0 findings
+├── mode_3_comparator_unmaterialized/ # P3 VIOLATION
+│   ├── draft.md                    # "differs from the 1998 edition"
+│   ├── timeline.yaml               # standard-family has only 2020
+│   └── expected_temporal_audit_results.yaml  # 1 METADATA-MISSING + 1 COMPARATOR-UNMATERIALIZED
+├── mode_3_legitimate/              # P3 OK
+│   ├── draft.md                    # "differs from the 2018 edition"
+│   ├── timeline.yaml               # standard-family has 2018 + 2020
+│   └── expected_temporal_audit_results.yaml  # 1 METADATA-MISSING (no edr)
+├── mode_4_causal_inversion/        # P4 VIOLATION
+│   ├── draft.md                    # "Policy A enabled Policy B"
+│   ├── timeline.yaml               # A=2026, B=2020 (wrong order)
+│   └── expected_temporal_audit_results.yaml  # 2 METADATA-MISSING + 1 CAUSAL-INVERSION
+├── mode_4_legitimate/              # P4 OK
+│   ├── draft.md                    # "Policy A enabled Policy B"
+│   ├── timeline.yaml               # A=2020, B=2026 (correct order)
+│   └── expected_temporal_audit_results.yaml  # 2 METADATA-MISSING (no edr)
+├── mode_5_time_bomb/               # P5 VIOLATION
+│   ├── draft.md                    # "Currently, the most recent edition..."
+│   └── expected_temporal_audit_results.yaml  # 2 TEMPORAL-DEICTIC
+├── mode_5_legitimate/              # P5 OK
+│   ├── draft.md                    # "As of 2026-05-18, the 2024 edition..."
+│   └── expected_temporal_audit_results.yaml  # 0 findings
+├── metadata_missing_p2/            # Cross-cutting
+│   ├── draft.md                    # "handbook governed 2022 review cycle"
+│   ├── timeline.yaml               # handbook-2024ed has no effective_date_range
+│   └── expected_temporal_audit_results.yaml  # 1 METADATA-MISSING
+└── report_reference_date_freeze/   # Regression
+    ├── draft.md                    # "Currently, the framework..."
+    └── expected_temporal_audit_results.yaml  # 1 TEMPORAL-DEICTIC
 ```
 
-### Effort Estimate
+### Key Implementation Details
 
-| Phase | Tasks | Days |
-|-------|-------|------|
-| Parsers (timeline + provenance) | 2 | 0.5 |
-| Deictic detector | 1 | 0.5 |
-| Temporal arithmetic | 1 | 1 |
-| Causal inversion | 1 | 1 |
-| YAML rules | 3-4 | 0.5 |
-| Validator orchestrator | 1 | 1 |
-| Tests (using ARS fixtures) | 5-6 | 1 |
-| CLI subcommand | 1 | 0.5 |
-| **Total** | | **~6 days** |
+1. **Sentence splitting**: Uses `re.split(r"(?<=[.!?])\s+", draft)` — splits on sentence terminators
+2. **Line numbers**: Computed via `draft[:char_pos].count("\n") + 1`
+3. **Ref markers**: `<!--ref:slug-->` HTML comments — parsed via `REF_MARKER_PATTERN`
+4. **Event window**: ±200 chars around ref marker for nearest-date binding
+5. **Report reference date**: Frozen via CLI arg — not `datetime.now()` — ensures deterministic output
+6. **Markdown output**: `_render_markdown()` generates human-readable `.md` alongside YAML
+7. **Dependencies**: `pyyaml` + stdlib only (no external packages)
+
+### Effort Estimate (Revised)
+
+| Phase | Tasks | Lines | Days |
+|-------|-------|-------|------|
+| `_date_to_interval()` + helpers | 1 | 60 | 0.5 |
+| Pass 1: Deictic regex (P5) | 1 | 30 | 0.5 |
+| Pass 2: Future-as-past (P1) | 1 | 80 | 0.5 |
+| Pass 3: Anachronism (P2) | 1 | 120 | 1 |
+| Pass 4: Comparator (P3) | 1 | 90 | 0.5 |
+| Pass 5: Causal inversion (P4) | 1 | 150 | 1 |
+| `audit()` orchestrator | 1 | 20 | 0.5 |
+| Timeline bootstrap script | 1 | 140 | 0.5 |
+| Tests (adapt ARS fixtures) | 15 | 440 | 1 |
+| CLI subcommand | 1 | 30 | 0.5 |
+| **Total** | **~20** | **~1,160** | **~7 days** |
 
 ---
 
@@ -310,7 +619,7 @@ tests/fixtures/v3.9.4-temporal/
 | 7 | Year tiebreaker | 10 lines | Medium | None | Next |
 | 8 | Polite email env var | 1 line | Low | None | Quick win |
 | 9 | DI for testability | 5 lines | Low | None | When testing |
-| 10 | Temporal audit system | ~500 lines | High | Medium | Feature scope |
+| 10 | Temporal audit system | ~1,160 lines | High | Medium | Feature scope (~7 days) |
 
 ---
 
