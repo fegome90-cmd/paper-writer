@@ -8,6 +8,8 @@ any network error — never raises.
 from __future__ import annotations
 
 import json
+import logging
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -51,6 +53,7 @@ class SemanticScholarClient:
         self.api_key = api_key
         self.timeout = timeout
         self.offline = offline
+        self._last_request_at: float = 0.0
 
     def verify_doi(self, doi: str) -> S2Result:
         """Verify a DOI against Semantic Scholar.
@@ -82,6 +85,8 @@ class SemanticScholarClient:
                 is_open_access=data.get("isOpenAccess"),
                 score=1.0,
             )
+        except urllib.error.URLError:
+            return S2Result(found=False)
         except Exception:
             return S2Result(found=False)
 
@@ -128,6 +133,8 @@ class SemanticScholarClient:
 
             results.sort(key=lambda r: -r.score)
             return results
+        except urllib.error.URLError:
+            return []
         except Exception:
             return []
 
@@ -145,7 +152,16 @@ class SemanticScholarClient:
                 return json.loads(resp.read().decode("utf-8"))  # type: ignore[no-any-return]
 
         try:
-            return retry_with_backoff(_do_request)
+            res = retry_with_backoff(
+                _do_request,
+                on_retry=lambda: setattr(self, "_last_request_at", time.time()),
+            )
+            if res:
+                self._last_request_at = time.time()
+            return res
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logging.warning(f"Request failed: {type(e).__name__}: {e}")
+            return None
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return {}

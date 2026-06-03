@@ -8,6 +8,9 @@ any network error — never raises.
 from __future__ import annotations
 
 import json
+import logging
+import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -76,9 +79,10 @@ class CrossrefClient:
         timeout: int = 10,
         offline: bool = False,
     ) -> None:
-        self.email = email
+        self.email = email or os.environ.get("CROSSREF_POLITE_EMAIL")
         self.timeout = timeout
         self.offline = offline
+        self._last_request_at: float = 0.0
 
     def verify_doi(self, doi: str) -> CrossrefResult:
         """Verify a DOI against Crossref.
@@ -115,6 +119,8 @@ class CrossrefClient:
                 is_oa=is_oa,
                 score=1.0,
             )
+        except urllib.error.URLError:
+            return CrossrefResult(found=False)
         except Exception:
             return CrossrefResult(found=False)
 
@@ -158,6 +164,8 @@ class CrossrefClient:
 
             results.sort(key=lambda r: -r.score)
             return results
+        except urllib.error.URLError:
+            return []
         except Exception:
             return []
 
@@ -178,7 +186,16 @@ class CrossrefClient:
                 return json.loads(resp.read().decode("utf-8"))  # type: ignore[no-any-return]
 
         try:
-            return retry_with_backoff(_do_request)
+            res = retry_with_backoff(
+                _do_request,
+                on_retry=lambda: setattr(self, "_last_request_at", time.time()),
+            )
+            if res:
+                self._last_request_at = time.time()
+            return res
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logging.warning(f"Request failed: {type(e).__name__}: {e}")
+            return None
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return {}
