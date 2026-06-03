@@ -1,2 +1,3 @@
 iteration	commit	metric	delta	status	guard	description
 1	b5d3e7a	0	-4.0	keep	pass	Implemented ctx_validate, ctx_reset, ctx_plan, and ast_hover tools with corrected imports and instantiation.
+2	5a6f0f5	0	0.0	keep	pass	Finalized the missing tools implementation. MCP server achieves full parity with CLI for core graph and ctx functions.
