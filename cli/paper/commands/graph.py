@@ -1,7 +1,7 @@
 """Graph/tracing subcommand handlers for paper CLI."""
+import argparse
 import json
 import sys
-from pathlib import Path
 
 
 def _cmd_trace(args: argparse.Namespace) -> None:
@@ -9,8 +9,6 @@ def _cmd_trace(args: argparse.Namespace) -> None:
 
     Useful for code review, understanding impact, and verifying reachability.
     """
-    import json
-
     from clients.trifecta import get_trifecta_client
 
     client = get_trifecta_client()
@@ -80,7 +78,6 @@ def _cmd_trace(args: argparse.Namespace) -> None:
 
 def _cmd_graph_overview(args: argparse.Namespace) -> None:
     """Show graph overview: nodes, edges, cycles, orphans, top hubs."""
-    import json
 
     from clients.trifecta import get_trifecta_client
 

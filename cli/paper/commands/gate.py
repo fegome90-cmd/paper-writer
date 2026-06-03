@@ -1,4 +1,5 @@
 """Gate subcommand handlers for paper CLI."""
+import argparse
 import json
 import sys
 import time
@@ -7,8 +8,6 @@ from pathlib import Path
 
 def _cmd_gate_method(args: argparse.Namespace) -> None:
     """Run methodological gate (Phase 0)."""
-    import json
-
     from engine.formatter import format_gate_result
     from parsers.manuscript import ManuscriptParser
     from validators.method_gate import MethodGateValidator

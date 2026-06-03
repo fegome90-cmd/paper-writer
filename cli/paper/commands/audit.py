@@ -1,15 +1,13 @@
 """Audit subcommand handlers for paper CLI."""
+import argparse
 import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
     """Run prose analysis (Phase 0)."""
-    import json
-
     from engine.formatter import format_terminal
     from parsers.manuscript import ManuscriptParser
     from validators.prose import ProseValidator
@@ -65,7 +63,6 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
 
 def _cmd_audit_claims(args: argparse.Namespace) -> None:
     """Run claim candidate detection (Phase 0)."""
-    import json
 
     from parsers.manuscript import ManuscriptParser
     from validators.claims import ClaimsValidator, build_claims_report
@@ -93,7 +90,6 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
 
 def _cmd_audit_citations(args: argparse.Namespace) -> None:
     """Verify citations against Crossref + Semantic Scholar."""
-    import json
 
     from engine.formatter import format_terminal
     from parsers.manuscript import ManuscriptParser
@@ -142,7 +138,6 @@ def _cmd_audit_citations(args: argparse.Namespace) -> None:
 
 def _cmd_audit_ethics(args: argparse.Namespace) -> None:
     """Check AI disclosure compliance."""
-    import json
 
     from engine.formatter import format_terminal
     from parsers.manuscript import ManuscriptParser
@@ -184,7 +179,6 @@ def _cmd_audit_ethics(args: argparse.Namespace) -> None:
 
 def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
     """Detect AI-typical writing patterns."""
-    import json
 
     from engine.formatter import format_terminal
     from parsers.manuscript import ManuscriptParser
@@ -240,7 +234,6 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
     out known false positives (tests, mixin inheritance, CLI dispatch).
     Requires MCP_TRIFECTA_MODE=real to be useful.
     """
-    import json
 
     from validators.code_health import analyze_code_health
 

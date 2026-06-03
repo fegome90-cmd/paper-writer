@@ -63,7 +63,7 @@ class WritingQualityValidator:
         for pattern in rule.get("patterns", []):
             for m in re.finditer(pattern, text, re.IGNORECASE):
                 matched = m.group().lower()
-                # Check: exact match, stem match (delves→delve), or contained (tapestry in "intricate tapestry")
+                # Check: exact match, stem match (delves→delve), or contained
                 if any(
                     matched == w or matched.startswith(w) or w in matched
                     for w in self.whitelist

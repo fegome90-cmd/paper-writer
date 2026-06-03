@@ -1,10 +1,19 @@
 import argparse
 import importlib.metadata
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
+from cli.paper.commands.audit import (
+    _cmd_audit_citations,
+    _cmd_audit_claims,
+    _cmd_audit_code_health,
+    _cmd_audit_ethics,
+    _cmd_audit_prose,
+    _cmd_audit_writing_quality,
+)
+from cli.paper.commands.gate import _cmd_gate_method
+from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
 
@@ -49,18 +58,6 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
 
     # Fallback: CWD
     return cwd.resolve()
-
-
-from cli.paper.commands.audit import (
-    _cmd_audit_claims,
-    _cmd_audit_citations,
-    _cmd_audit_code_health,
-    _cmd_audit_ethics,
-    _cmd_audit_prose,
-    _cmd_audit_writing_quality,
-)
-from cli.paper.commands.gate import _cmd_gate_method
-from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
 
 
 def main() -> None:
@@ -148,10 +145,14 @@ def main() -> None:
     audit_code_health.set_defaults(func=_cmd_audit_code_health)
 
     # paper audit citations
-    audit_citations = audit_sub.add_parser("citations", help="Verify citations against Crossref + Semantic Scholar.")
+    audit_citations = audit_sub.add_parser(
+        "citations", help="Verify citations against Crossref + Semantic Scholar."
+    )
     audit_citations.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
     audit_citations.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    audit_citations.add_argument("--offline", action="store_true", help="Skip API calls (offline mode)")
+    audit_citations.add_argument(
+        "--offline", action="store_true", help="Skip API calls (offline mode)"
+    )
     audit_citations.set_defaults(func=_cmd_audit_citations)
 
     # paper audit ethics
