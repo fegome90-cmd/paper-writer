@@ -208,30 +208,45 @@ class DependencyRiskReport:
 
     Attributes:
         trifecta_enabled: True if Trifecta subprocess was available.
-        findings: Dead hubs (highly-connected orphaned symbols).
+        findings: Dead hubs and coupling hotspots found.
         hub_count: Number of hubs analyzed.
+        coupling_hotspots: Symbols with high fan-out (many callees).
         error: Description of any error encountered.
     """
 
     trifecta_enabled: bool
     findings: list[DependencyRiskFinding] = field(default_factory=list)
     hub_count: int = 0
+    coupling_hotspots: list[DependencyRiskFinding] = field(default_factory=list)
     error: str = ""
 
     def summary(self) -> str:
         """Human-readable summary for CLI output."""
         if not self.trifecta_enabled:
             return f"Dependency risk: SKIPPED ({self.error})"
-        if not self.findings:
-            return f"Dependency risk: OK ({self.hub_count} hubs analyzed, 0 dead)"
+        parts: list[str] = []
+        dead = [f for f in self.findings if f.risk_reason == "dead_hub"]
+        coupled = [f for f in self.findings if f.risk_reason == "high_coupling"]
+        if dead:
+            parts.append(f"{len(dead)} dead hubs")
+        if coupled:
+            parts.append(f"{len(coupled)} coupling hotspots")
+        if not parts:
+            return (
+                f"Dependency risk: OK "
+                f"({self.hub_count} hubs analyzed, 0 risks)"
+            )
         return (
-            f"Dependency risk: {len(self.findings)} dead hubs "
+            f"Dependency risk: {', '.join(parts)} "
             f"({self.hub_count} hubs analyzed)"
         )
 
 
 HUB_IN_DEGREE_THRESHOLD = 5
 """Minimum in_degree for a symbol to be considered a hub."""
+
+COUPLING_FAN_OUT_THRESHOLD = 8
+"""Minimum number of callees to flag as a coupling hotspot."""
 
 
 def _find_dead_hubs(
@@ -261,6 +276,47 @@ def _find_dead_hubs(
                 )
             )
     return dead_hubs
+
+
+def _find_coupling_hotspots(
+    client: Any,
+    hubs: list[dict[str, Any]],
+) -> list[DependencyRiskFinding]:
+    """Find symbols with high fan-out (many callees) indicating tight coupling.
+
+    These are architectural risk: changing them has wide blast radius.
+    Uses find_callees() on top hubs to measure coupling depth.
+    """
+    hotspots: list[DependencyRiskFinding] = []
+    for hub in hubs:
+        qname = hub.get("qualified_name", "")
+        file_rel = hub.get("file_rel", "")
+        # Skip test files
+        if _is_test_file(file_rel):
+            continue
+        if not qname:
+            continue
+        callees_result = client.find_callees(qname)
+        if not callees_result.success:
+            continue
+        callees = callees_result.data if isinstance(callees_result.data, list) else []
+        # Filter out test-file callees
+        source_callees = [
+            c for c in callees
+            if not _is_test_file(c.get("file_rel", ""))
+        ]
+        if len(source_callees) >= COUPLING_FAN_OUT_THRESHOLD:
+            hotspots.append(
+                DependencyRiskFinding(
+                    file_rel=file_rel,
+                    symbol_name=hub.get("symbol_name", ""),
+                    qualified_name=qname,
+                    kind=hub.get("kind", "function"),
+                    in_degree=len(source_callees),
+                    risk_reason="high_coupling",
+                )
+            )
+    return hotspots
 
 
 def analyze_dependency_risk(
@@ -316,10 +372,14 @@ def analyze_dependency_risk(
         if not _is_test_file(dh.file_rel) and not _is_test_symbol(dh.symbol_name)
     ]
 
+    # Step 4: Find coupling hotspots (high fan-out symbols)
+    coupling_hotspots = _find_coupling_hotspots(client, hubs)
+
     return DependencyRiskReport(
         trifecta_enabled=True,
-        findings=dead_hubs,
+        findings=dead_hubs + coupling_hotspots,
         hub_count=len(hubs),
+        coupling_hotspots=coupling_hotspots,
         error="",
     )
 
