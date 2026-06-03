@@ -47,30 +47,26 @@ def run_tool(name, args):
     )
     
     try:
-        # Send input
-        process.stdin.write(json.dumps(payload) + "\n")
-        process.stdin.flush()
+        stdout_data, stderr_data = process.communicate(input=json.dumps(payload) + "\n", timeout=10)
         
-        # Read a single line of output
-        line = process.stdout.readline()
-        
-        # Kill immediately after we get the line
-        process.terminate()
-        process.wait(timeout=2)
-        
-        if line and line.strip().startswith("{") and "jsonrpc" in line:
-            try:
-                response = json.loads(line)
-                if "error" in response:
-                    if name == "ast_hover" and response["error"].get("code") == -32001:
-                        return True, "Graceful Error (No LSP)"
-                    return False, f"JSON-RPC Error: {response['error']['message']}"
-                return True, "OK"
-            except Exception as e:
-                return False, f"Parse error: {e} | Line: {line[:100]}"
-        return False, f"Invalid output: {line[:100]}"
-    except Exception as e:
+        for line in reversed(stdout_data.split("\n")):
+            line = line.strip()
+            if not line: continue
+            if line.startswith("{") and "jsonrpc" in line:
+                try:
+                    response = json.loads(line)
+                    if "error" in response:
+                        if name == "ast_hover" and response["error"].get("code") == -32001:
+                            return True, "Graceful Error (No LSP)"
+                        return False, f"JSON-RPC Error: {response['error']['message']}"
+                    return True, "OK"
+                except Exception as e:
+                    return False, f"Parse error: {e} | Line: {line[:100]}"
+        return False, f"No JSON-RPC response found. Stderr: {stderr_data[:200]}"
+    except subprocess.TimeoutExpired:
         process.kill()
+        return False, "Timeout"
+    except Exception as e:
         return False, str(e)
 
 def main():
