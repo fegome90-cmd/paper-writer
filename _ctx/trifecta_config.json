@@ -4,5 +4,5 @@
   "repo_root": "/Users/felipe_gonzalez/Developer/paper-writer",
   "last_verified": "2026-05-29",
   "default_profile": "impl_patch",
-  "source_roots": ["cli", "harness", "integrations", "validators", "verification", "tests"]
+  "source_roots": ["cli", "engine", "harness", "integrations", "parsers", "validators", "verification", "tests"]
 }
