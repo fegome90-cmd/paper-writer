@@ -59,54 +59,56 @@ def test_artifact_checker_get_full_path_str(tmp_path: Path) -> None:
     assert checker.get_full_path_str("templates/ref.bib") == str(tmp_path / "templates" / "ref.bib")
 
 
+RUN_ID = "20260603T120000"
+
+
+def _run_path(tmp_path: Path, *parts: str) -> Path:
+    """Helper to build per-run artifact path."""
+    return tmp_path / "outputs" / "runs" / RUN_ID / Path(*parts) if parts else tmp_path / "outputs" / "runs" / RUN_ID
+
+
 def test_action_runner_init(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("init", {})
 
     assert len(artifacts) == 3
     assert (tmp_path / "templates" / "manuscript.qmd").is_file()
     assert (tmp_path / "templates" / "references.bib").is_file()
-    assert (tmp_path / "outputs" / "search").is_dir()
-    assert (tmp_path / "outputs" / "drafts").is_dir()
-    assert (tmp_path / "outputs" / "render").is_dir()
+    assert (tmp_path / "outputs" / "runs").is_dir()
     assert (tmp_path / "outputs" / "logs").is_dir()
 
 
 def test_action_runner_search(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("search", {})
 
     assert len(artifacts) == 2
-    plan_path = tmp_path / "outputs" / "search" / "search_plan.json"
-    results_path = tmp_path / "outputs" / "search" / "raw_results.json"
+    plan_path = _run_path(tmp_path, "search", "search_plan.json")
+    results_path = _run_path(tmp_path, "search", "raw_results.json")
     assert plan_path.is_file()
     assert results_path.is_file()
 
 
 def test_action_runner_screen(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
-    # create search directory first since screen action expects it to write screened_evidence
-    (tmp_path / "outputs" / "search").mkdir(parents=True, exist_ok=True)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("screen", {})
 
     assert len(artifacts) == 1
-    evidence_path = tmp_path / "outputs" / "search" / "screened_evidence.json"
+    evidence_path = _run_path(tmp_path, "search", "screened_evidence.json")
     assert evidence_path.is_file()
 
 
 def test_action_runner_draft_outline(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
-    (tmp_path / "outputs" / "drafts").mkdir(parents=True, exist_ok=True)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("draft_outline", {})
 
     assert len(artifacts) == 1
-    outline_path = tmp_path / "outputs" / "drafts" / "outline.md"
+    outline_path = _run_path(tmp_path, "drafts", "outline.md")
     assert outline_path.is_file()
 
 
 def test_action_runner_draft_section(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
-    (tmp_path / "outputs" / "drafts").mkdir(parents=True, exist_ok=True)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
 
     # Missing name
     with pytest.raises(ValueError, match="Missing 'name' argument"):
@@ -119,25 +121,25 @@ def test_action_runner_draft_section(tmp_path: Path) -> None:
     # Valid section
     artifacts = runner.run_action("draft_section", {"name": "introduction"})
     assert len(artifacts) == 1
-    intro_path = tmp_path / "outputs" / "drafts" / "introduction.md"
+    intro_path = _run_path(tmp_path, "drafts", "introduction.md")
     assert intro_path.is_file()
 
 
 def test_action_runner_validation_logs(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     for cmd in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
         artifacts = runner.run_action(cmd, {})
         assert len(artifacts) == 1
-        log_path = tmp_path / "outputs" / "logs" / f"{cmd}.log"
+        log_path = _run_path(tmp_path, "logs", f"{cmd}.log")
         assert log_path.is_file()
 
 
 def test_action_runner_render(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path)
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("render", {})
 
     assert len(artifacts) == 1
-    assert (tmp_path / "outputs" / "render").is_dir()
+    assert _run_path(tmp_path, "render").is_dir()
 
 
 def test_action_runner_emit_manifest(tmp_path: Path) -> None:

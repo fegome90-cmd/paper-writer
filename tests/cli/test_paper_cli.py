@@ -48,14 +48,14 @@ def _write_test_content(tmp_path: Path) -> None:
 
 def _write_section(tmp_path: Path, section: str) -> None:
     """Write a section file with content that references the bib key."""
-    section_file = tmp_path / "outputs" / "drafts" / f"{section}.md"
+    section_file = tmp_path / "outputs" / "latest" / "drafts" / f"{section}.md"
     content = MINIMAL_SECTION.replace("{section}", section.capitalize())
     section_file.write_text(content, encoding="utf-8")
 
 
 def _write_outline(tmp_path: Path) -> None:
     """Write an outline file that only references keys in the test bib."""
-    outline_file = tmp_path / "outputs" / "drafts" / "outline.md"
+    outline_file = tmp_path / "outputs" / "latest" / "drafts" / "outline.md"
     outline_file.write_text(MINIMAL_OUTLINE, encoding="utf-8")
 
 

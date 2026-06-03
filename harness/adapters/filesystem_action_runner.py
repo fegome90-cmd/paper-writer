@@ -39,9 +39,24 @@ class FilesystemActionRunner(ActionRunner):
 
     @property
     def run_id(self) -> str:
-        """Current run ID, lazily generated on first access."""
-        if self._run_id is None:
-            self._run_id = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
+        """Current run ID.
+
+        Resolution order:
+        1. Explicit run_id passed to constructor
+        2. run_id stored in outputs/.run_id (created by init)
+        3. Lazily generated and persisted
+        """
+        if self._run_id is not None:
+            return self._run_id
+        # Try to read from .run_id file
+        run_id_file = self._resolve("outputs/.run_id")
+        if run_id_file.exists():
+            stored = run_id_file.read_text(encoding="utf-8").strip()
+            if stored:
+                self._run_id = stored
+                return self._run_id
+        # Generate new run_id
+        self._run_id = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
         return self._run_id
 
     def _resolve(self, rel_path: str) -> Path:
@@ -64,10 +79,13 @@ class FilesystemActionRunner(ActionRunner):
         # Update latest symlink
         latest = self._resolve("outputs/latest")
         try:
-            latest.unlink()
-        except FileNotFoundError:
+            latest.unlink(missing_ok=True)
+        except (FileNotFoundError, PermissionError, OSError):
             pass
-        latest.symlink_to(run_dir, target_is_directory=True)
+        try:
+            latest.symlink_to(run_dir, target_is_directory=True)
+        except OSError:
+            pass  # Symlinks may not be supported on all platforms
         return resolved
 
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
@@ -84,6 +102,10 @@ class FilesystemActionRunner(ActionRunner):
             ]
             for d in dirs:
                 self._resolve(d).mkdir(parents=True, exist_ok=True)
+
+            # Persist run_id so subsequent commands reuse it
+            run_id_file = self._resolve("outputs/.run_id")
+            run_id_file.write_text(self.run_id, encoding="utf-8")
 
             state_file = self._resolve("outputs/state.yaml")
 
@@ -213,12 +235,12 @@ class FilesystemActionRunner(ActionRunner):
                 artifacts.append(str(evidence_file))
 
         elif command == "draft_outline":
-            drafts_dir = self._resolve("outputs/drafts")
+            drafts_dir = self._resolve_run("drafts")
             drafts_dir.mkdir(parents=True, exist_ok=True)
 
             adapter = self._skill_adapters.get("academic_writer")
             if adapter:
-                evidence_path = str(self._resolve("outputs/search/screened_evidence.json"))
+                evidence_path = str(self._resolve_run("search/screened_evidence.json"))
                 bib_path = str(self._resolve("templates/references.bib"))
                 result = adapter.execute(
                     command="draft_outline",
@@ -231,7 +253,7 @@ class FilesystemActionRunner(ActionRunner):
                 )
                 artifacts.extend(result.artifacts)
             else:
-                outline_file = self._resolve("outputs/drafts/outline.md")
+                outline_file = self._resolve_run("drafts/outline.md")
                 with open(outline_file, "w", encoding="utf-8") as f:
                     f.write("# Outline\n\n- Introduction\n- Methods\n- Results\n- Discussion\n")
                 artifacts.append(str(outline_file))
@@ -247,7 +269,7 @@ class FilesystemActionRunner(ActionRunner):
                     f"Invalid section name '{section_name}'. Must be one of {valid_sections}"
                 )
 
-            drafts_dir = self._resolve("outputs/drafts")
+            drafts_dir = self._resolve_run("drafts")
             drafts_dir.mkdir(parents=True, exist_ok=True)
 
             adapter = self._skill_adapters.get("academic_writer")
@@ -256,9 +278,9 @@ class FilesystemActionRunner(ActionRunner):
                     command="draft_section",
                     inputs={
                         "section_name": section_name,
-                        "outline_path": str(self._resolve("outputs/drafts/outline.md")),
+                        "outline_path": str(self._resolve_run("drafts/outline.md")),
                         "evidence_path": str(
-                            self._resolve("outputs/search/screened_evidence.json")
+                            self._resolve_run("search/screened_evidence.json")
                         ),
                         "bib_path": str(self._resolve("templates/references.bib")),
                         "output_dir": str(drafts_dir),
@@ -267,23 +289,23 @@ class FilesystemActionRunner(ActionRunner):
                 )
                 artifacts.extend(result.artifacts)
             else:
-                section_file = self._resolve(f"outputs/drafts/{section_name}.md")
+                section_file = self._resolve_run(f"drafts/{section_name}.md")
                 with open(section_file, "w", encoding="utf-8") as f:
                     f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
         elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting", "import_bib"]:
-            log_dir = self._resolve("outputs/logs")
+            log_dir = self._resolve_run("logs")
             log_dir.mkdir(parents=True, exist_ok=True)
-            log_file = self._resolve(f"outputs/logs/{command}.log")
+            log_file = self._resolve_run(f"logs/{command}.log")
             with open(log_file, "w", encoding="utf-8") as f:
                 f.write(f"Log for {command} at {datetime.datetime.now().isoformat()}\n")
             artifacts.append(str(log_file))
 
         elif command == "render":
-            render_dir = self._resolve("outputs/render")
+            render_dir = self._resolve_run("render")
             render_dir.mkdir(parents=True, exist_ok=True)
-            draft_dir = self._resolve("outputs/drafts")
+            draft_dir = self._resolve_run("drafts")
             manuscript_path = assemble_manuscript(draft_dir)
             if manuscript_path.is_file():
                 artifacts.append(str(manuscript_path))
@@ -295,7 +317,7 @@ class FilesystemActionRunner(ActionRunner):
         """Persist a structured command log entry as YAML."""
         import datetime as dt
 
-        log_dir = self._resolve("outputs/logs")
+        log_dir = self._resolve_run("logs")
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S_%f")
         log_path = log_dir / f"{command}_{timestamp}.yaml"

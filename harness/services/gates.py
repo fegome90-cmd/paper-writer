@@ -112,8 +112,8 @@ def validate_search_completed(checker: ArtifactChecker) -> GateResult:
 
     Fail-closed: missing search artifacts are hard blockers.
     """
-    plan_file = "outputs/search/search_plan.json"
-    results_file = "outputs/search/raw_results.json"
+    plan_file = "outputs/latest/search/search_plan.json"
+    results_file = "outputs/latest/search/raw_results.json"
 
     def check_plan() -> None:
         checker.check_file_exists(plan_file)
@@ -145,7 +145,7 @@ def validate_screened_evidence(checker: ArtifactChecker) -> GateResult:
 
     Fail-closed: missing screened evidence is a hard blocker.
     """
-    evidence_file = "outputs/search/screened_evidence.json"
+    evidence_file = "outputs/latest/search/screened_evidence.json"
 
     def check_evidence() -> None:
         checker.check_file_exists(evidence_file)
@@ -165,7 +165,7 @@ def validate_outline_drafted(checker: ArtifactChecker) -> GateResult:
 
     Fail-closed: missing outline is a hard blocker.
     """
-    outline_file = "outputs/drafts/outline.md"
+    outline_file = "outputs/latest/drafts/outline.md"
 
     def check_outline() -> None:
         checker.check_file_exists(outline_file)
@@ -189,7 +189,7 @@ def validate_sections_completed(checker: ArtifactChecker) -> GateResult:
     checks = []
 
     for section in required_sections:
-        sec_file = f"outputs/drafts/{section}"
+        sec_file = f"outputs/latest/drafts/{section}"
 
         def make_check(file_path: str = sec_file, name: str = section) -> Check:
             def run_fn() -> None:
@@ -206,7 +206,7 @@ def validate_sections_completed(checker: ArtifactChecker) -> GateResult:
     return run_gate(
         "sections_completed",
         checks,
-        [checker.get_full_path_str(f"outputs/drafts/{s}") for s in required_sections],
+        [checker.get_full_path_str(f"outputs/latest/drafts/{s}") for s in required_sections],
     )
 
 
@@ -283,8 +283,8 @@ def validate_render_passed(checker: ArtifactChecker) -> GateResult:
 
     Fail-closed: missing rendered documents are hard blockers.
     """
-    render_docx = "outputs/render/manuscript.docx"
-    render_pdf = "outputs/render/manuscript.pdf"
+    render_docx = "outputs/latest/render/manuscript.docx"
+    render_pdf = "outputs/latest/render/manuscript.pdf"
 
     def check_render() -> None:
         checker.check_any_file_exists([render_docx, render_pdf])

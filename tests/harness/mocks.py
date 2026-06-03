@@ -75,20 +75,20 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "search":
-            new_files = ["outputs/search/search_plan.json", "outputs/search/raw_results.json"]
+            new_files = ["outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "screen":
-            new_files = ["outputs/search/screened_evidence.json"]
+            new_files = ["outputs/latest/search/screened_evidence.json"]
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "draft_outline":
-            new_files = ["outputs/drafts/outline.md"]
+            new_files = ["outputs/latest/drafts/outline.md"]
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "draft_section":
             name = args.get("name", "unknown")
-            new_files = [f"outputs/drafts/{name}.md"]
+            new_files = [f"outputs/latest/drafts/{name}.md"]
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
@@ -96,7 +96,7 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "render":
-            new_files = ["outputs/render/manuscript.docx", "outputs/render/manuscript.pdf"]
+            new_files = ["outputs/latest/render/manuscript.docx", "outputs/latest/render/manuscript.pdf"]
             self.checker.existing_paths.update(new_files)
             return new_files
         return []

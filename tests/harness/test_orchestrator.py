@@ -92,19 +92,19 @@ def test_orchestrator_sequential_flow() -> None:
     res_search = orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
     assert res_search.success is True
     assert res_search.stage_after == "screen"
-    assert "outputs/search/search_plan.json" in checker.existing_paths
+    assert "outputs/latest/search/search_plan.json" in checker.existing_paths
 
     # 3. Screen
     res_screen = orch.execute(OrchestratorRequest("screen", "outline", "stop_on_error"))
     assert res_screen.success is True
     assert res_screen.stage_after == "outline"
-    assert "outputs/search/screened_evidence.json" in checker.existing_paths
+    assert "outputs/latest/search/screened_evidence.json" in checker.existing_paths
 
     # 4. Outline
     res_outline = orch.execute(OrchestratorRequest("draft_outline", "drafting", "stop_on_error"))
     assert res_outline.success is True
     assert res_outline.stage_after == "drafting"
-    assert "outputs/drafts/outline.md" in checker.existing_paths
+    assert "outputs/latest/drafts/outline.md" in checker.existing_paths
 
     # 5. Draft Sections (Must draft all 4 to transition to validating)
     for section in ["introduction", "methods", "results"]:
@@ -159,7 +159,7 @@ def test_orchestrator_sequential_flow() -> None:
     res_render = orch.execute(OrchestratorRequest("render", "rendered", "stop_on_error"))
     assert res_render.success is True
     assert res_render.stage_after == "rendered"
-    assert "outputs/render/manuscript.docx" in checker.existing_paths
+    assert "outputs/latest/render/manuscript.docx" in checker.existing_paths
 
     # 8. Verify (Emits manifest and sets ready_for_delivery)
     res_verify = orch.execute(OrchestratorRequest("verify", "rendered", "stop_on_error"))

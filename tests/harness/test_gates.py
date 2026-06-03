@@ -38,7 +38,7 @@ def test_validate_repo_initialized_fail(checker: InMemoryArtifactChecker) -> Non
 
 def test_validate_search_completed_success(checker: InMemoryArtifactChecker) -> None:
     checker.existing_paths.update(
-        ["outputs/search", "outputs/search/search_plan.json", "outputs/search/raw_results.json"]
+        ["outputs/latest/search", "outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]
     )
     result = validate_search_completed(checker)
     assert result.status == "pass"
@@ -54,7 +54,7 @@ def test_validate_screened_evidence(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_screened_evidence(checker)
     assert result1.status == "fail"
 
-    checker.existing_paths.update(["outputs/search", "outputs/search/screened_evidence.json"])
+    checker.existing_paths.update(["outputs/latest/search", "outputs/latest/search/screened_evidence.json"])
     result2 = validate_screened_evidence(checker)
     assert result2.status == "pass"
 
@@ -63,7 +63,7 @@ def test_validate_outline_drafted(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_outline_drafted(checker)
     assert result1.status == "fail"
 
-    checker.existing_paths.update(["outputs/drafts", "outputs/drafts/outline.md"])
+    checker.existing_paths.update(["outputs/latest/drafts", "outputs/latest/drafts/outline.md"])
     result2 = validate_outline_drafted(checker)
     assert result2.status == "pass"
 
@@ -73,9 +73,9 @@ def test_validate_sections_completed(checker: InMemoryArtifactChecker) -> None:
     assert result1.status == "fail"
     assert len(result1.blockers) == 4
 
-    checker.existing_paths.update(["outputs/drafts"])
+    checker.existing_paths.update(["outputs/latest/drafts"])
     for sec in ["introduction.md", "methods.md", "results.md", "discussion.md"]:
-        checker.existing_paths.add(f"outputs/drafts/{sec}")
+        checker.existing_paths.add(f"outputs/latest/drafts/{sec}")
 
     result2 = validate_sections_completed(checker)
     assert result2.status == "pass"
@@ -133,7 +133,7 @@ def test_validate_render_passed(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_render_passed(checker)
     assert result1.status == "fail"
 
-    checker.existing_paths.update(["outputs/render", "outputs/render/manuscript.docx"])
+    checker.existing_paths.update(["outputs/latest/render", "outputs/latest/render/manuscript.docx"])
     result2 = validate_render_passed(checker)
     assert result2.status == "pass"
 

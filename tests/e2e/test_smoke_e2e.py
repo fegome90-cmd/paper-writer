@@ -174,7 +174,7 @@ class TestE2ESearchAndScreen:
 
         result = _run(CLI_CMD + ["search"], project)
         assert result.returncode == 0
-        assert (project / "outputs" / "search" / "search_plan.json").exists()
+        assert (project / "outputs" / "latest" / "search" / "search_plan.json").exists()
 
     def test_screen_creates_artifacts(self, project: Path) -> None:
         _run(CLI_CMD + ["init"], project)
@@ -184,7 +184,7 @@ class TestE2ESearchAndScreen:
 
         result = _run(CLI_CMD + ["screen"], project)
         assert result.returncode == 0
-        assert (project / "outputs" / "search" / "screened_evidence.json").exists()
+        assert (project / "outputs" / "latest" / "search" / "screened_evidence.json").exists()
 
 
 class TestE2EDrafting:
@@ -197,7 +197,7 @@ class TestE2EDrafting:
 
         result = _run(CLI_CMD + ["draft", "outline"], project)
         assert result.returncode == 0
-        assert (project / "outputs" / "drafts" / "outline.md").exists()
+        assert (project / "outputs" / "latest" / "drafts" / "outline.md").exists()
 
     def test_draft_section(self, project: Path) -> None:
         _run(CLI_CMD + ["init"], project)
@@ -208,7 +208,7 @@ class TestE2EDrafting:
         for sec in ["introduction", "methods", "results", "discussion"]:
             result = _run(CLI_CMD + ["draft", "section", sec], project)
             assert result.returncode == 0
-            assert (project / "outputs" / "drafts" / f"{sec}.md").exists()
+            assert (project / "outputs" / "latest" / "drafts" / f"{sec}.md").exists()
 
 
 class TestE2EValidation:
@@ -267,7 +267,7 @@ class TestE2EFullPipeline:
         assert result.returncode == 0, f"Render failed: {result.stdout}"
 
         # Verify real DOCX artifact
-        docx = project / "outputs" / "render" / "manuscript.docx"
+        docx = project / "outputs" / "latest" / "render" / "manuscript.docx"
         assert docx.exists(), "DOCX not produced"
         assert docx.stat().st_size > 1000, f"DOCX too small: {docx.stat().st_size}B"
 

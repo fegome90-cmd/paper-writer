@@ -179,8 +179,7 @@ class TestPrepareWorkspace:
         ws = prepare_workspace(manifest, tmp_root=tmp_path)
         assert ws.exists()
         assert (ws / "outputs").exists()
-        assert (ws / "outputs" / "drafts").exists()
-        assert (ws / "outputs" / "render").exists()
+        assert (ws / "outputs" / "runs").exists()
         assert (ws / "outputs" / "state.yaml").exists()
         # Cleanup
         shutil.rmtree(ws, ignore_errors=True)
