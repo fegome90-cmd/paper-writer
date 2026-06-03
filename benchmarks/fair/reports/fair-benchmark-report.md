@@ -1,15 +1,15 @@
 # Fair Benchmark Report — Bias-Corrected Results
 
-> Generated: 2026-06-02 19:56
+> Generated: 2026-06-02 20:18
 > Purpose: Address the 4 critical biases in the original Trifecta A/B study
 
 ## Aggregate Results
 
 | Arm | Avg Recall | Avg Precision | Avg MRR | Avg Latency (ms) | Tasks |
 |-----|-----------|--------------|---------|-----------------|-------|
-| rag_tfidf | 0.70 | 0.47 | 0.57 | 1837 | 20 |
-| grep_pyright | 0.65 | 0.47 | 0.52 | 677 | 20 |
-| trifecta | 0.88 | 0.72 | 0.75 | 4 | 20 |
+| rag_tfidf | 0.70 | 0.47 | 0.57 | 1860 | 20 |
+| grep_pyright | 0.65 | 0.47 | 0.52 | 736 | 20 |
+| trifecta | 0.88 | 0.73 | 0.75 | 4 | 20 |
 
 ## Honest Context Value Ratio
 
@@ -36,19 +36,19 @@ Bias reduction: **8%** of original claim was bias
 Tasks specifically targeting Trifecta's known limitations:
 
 - **T-W1** (rag_tfidf): recall=1.00, latency=1ms
-- **T-W1** (grep_pyright): recall=1.00, latency=10ms
-- **T-W1** (trifecta): recall=1.00, latency=0ms
+- **T-W1** (grep_pyright): recall=1.00, latency=13ms
+- **T-W1** (trifecta): recall=1.00, latency=1ms
 - **T-W2** (rag_tfidf): recall=1.00, latency=0ms
-- **T-W2** (grep_pyright): recall=1.00, latency=2ms
+- **T-W2** (grep_pyright): recall=1.00, latency=4ms
 - **T-W2** (trifecta): recall=1.00, latency=0ms
 - **T-W3** (rag_tfidf): recall=1.00, latency=0ms
 - **T-W3** (grep_pyright): recall=1.00, latency=9ms
 - **T-W3** (trifecta): recall=1.00, latency=0ms
-- **T-W1** (rag_tfidf): recall=1.00, latency=84ms
-- **T-W1** (grep_pyright): recall=1.00, latency=5068ms
-- **T-W1** (trifecta): recall=1.00, latency=6ms
-- **T-W2** (rag_tfidf): recall=1.00, latency=2ms
-- **T-W2** (grep_pyright): recall=1.00, latency=308ms
+- **T-W1** (rag_tfidf): recall=1.00, latency=86ms
+- **T-W1** (grep_pyright): recall=1.00, latency=5848ms
+- **T-W1** (trifecta): recall=1.00, latency=3ms
+- **T-W2** (rag_tfidf): recall=1.00, latency=1ms
+- **T-W2** (grep_pyright): recall=1.00, latency=224ms
 - **T-W2** (trifecta): recall=1.00, latency=0ms
 
 **Trifecta matches or beats RAG on weakness tasks**: 1.00 vs RAG 1.00
@@ -61,7 +61,7 @@ Tasks specifically targeting Trifecta's known limitations:
 - **trifecta**: 0ms
 
 ### Repo: (varies)
-- **rag_tfidf**: 785ms
+- **rag_tfidf**: 668ms
 - **grep_pyright**: 0ms
 - **trifecta**: 0ms
 

@@ -176,28 +176,80 @@ class TrifectaArm:
         )
 
     def find_orphans(self) -> TrifectaResult:
-        """Find orphans using pre-computed graph (O(1) operation)."""
+        """Find orphans using pre-computed graph.
+
+        Excludes methods on reachable classes — if a class is
+        instantiated or referenced, its methods are accessible via DI.
+        """
         t0 = time.perf_counter()
 
         conn = self._get_conn()
 
-        # Nodes with no incoming edges (excluding module nodes)
+        # Step 1: Find classes that ARE reachable (have incoming call/import edges)
+        # Note: inheritance alone does NOT make a class reachable —
+        # a subclass inheriting doesn't mean the parent's methods are called.
+        # But if a class has reachable SUBCLASSES, its methods are accessible
+        # via polymorphism / DI through the subclass instances.
+        reachable_classes: set[str] = set()
+        cur_classes = conn.execute(
+            "SELECT DISTINCT n.id FROM nodes n "
+            "WHERE n.kind = 'class' "
+            "AND n.id IN (SELECT DISTINCT to_node_id FROM edges "
+            "WHERE edge_kind IN ('calls', 'imports'))"
+        )
+        for row in cur_classes.fetchall():
+            reachable_classes.add(row[0])
+
+        # Also include parent classes of reachable classes
+        # (their methods are accessible via subclass instances)
+        for cls_id in list(reachable_classes):
+            cur_parents = conn.execute(
+                "SELECT DISTINCT e.to_node_id FROM edges e "
+                "WHERE e.edge_kind = 'inherits' AND e.from_node_id = ?",
+                (cls_id,),
+            )
+            for row in cur_parents.fetchall():
+                reachable_classes.add(row[0])
+
+        # Step 2: Find files containing reachable classes
+        reachable_class_files: dict[str, set[str]] = {}  # file_rel -> {class_name}
+        for cls_id in reachable_classes:
+            cur_rc = conn.execute(
+                "SELECT file_rel, symbol_name FROM nodes WHERE id = ?",
+                (cls_id,),
+            )
+            row = cur_rc.fetchone()
+            if row:
+                reachable_class_files.setdefault(row[0], set()).add(row[1])
+
+        # Step 3: Find orphans, excluding methods on reachable classes
         cur = conn.execute(
-            "SELECT n.* FROM nodes n WHERE n.kind != 'module' "
+            "SELECT n.* FROM nodes n WHERE n.kind NOT IN ('module', 'class') "
             "AND n.id NOT IN "
             "(SELECT DISTINCT to_node_id FROM edges "
-            "WHERE edge_kind IN ('calls', 'imports', 'inherits'))"
+            "WHERE edge_kind IN ('calls', 'imports'))"
         )
 
         matches = []
         for row in cur.fetchall():
             r = dict(row)
+            file_rel = r.get("file_rel", "")
+            qual = r.get("qualified_name", "")
+            kind = r.get("kind", "")
+
+            # Skip methods/init on reachable classes
+            if kind in ("method", "init") and "." in qual:
+                class_name = qual.rsplit(".", 1)[0]
+                reachable_in_file = reachable_class_files.get(file_rel, set())
+                if class_name in reachable_in_file:
+                    continue
+
             matches.append(
                 {
-                    "file": r.get("file_rel", ""),
+                    "file": file_rel,
                     "line": r.get("line", 0),
                     "name": r.get("symbol_name", ""),
-                    "text": (f"orphan {r.get('kind', '')}: {r.get('qualified_name', '')}"),
+                    "text": (f"orphan {kind}: {qual}"),
                     "score": 1.0,
                 }
             )
@@ -330,14 +382,63 @@ class TrifectaArm:
         )
 
     # Stop words shared with production GraphStore.search_nodes
-    _STOP_WORDS = frozenset({
-        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
-        "has", "he", "in", "is", "it", "its", "of", "on", "that", "the",
-        "to", "was", "were", "will", "with", "find", "get", "show",
-        "all", "any", "can", "do", "does", "how", "i", "if", "me",
-        "my", "no", "not", "or", "so", "this", "what", "when", "which",
-        "who", "why", "function", "class", "method", "module", "file",
-    })
+    _STOP_WORDS = frozenset(
+        {
+            "a",
+            "an",
+            "and",
+            "are",
+            "as",
+            "at",
+            "be",
+            "by",
+            "for",
+            "from",
+            "has",
+            "he",
+            "in",
+            "is",
+            "it",
+            "its",
+            "of",
+            "on",
+            "that",
+            "the",
+            "to",
+            "was",
+            "were",
+            "will",
+            "with",
+            "find",
+            "get",
+            "show",
+            "all",
+            "any",
+            "can",
+            "do",
+            "does",
+            "how",
+            "i",
+            "if",
+            "me",
+            "my",
+            "no",
+            "not",
+            "or",
+            "so",
+            "this",
+            "what",
+            "when",
+            "which",
+            "who",
+            "why",
+            "function",
+            "class",
+            "method",
+            "module",
+            "file",
+        }
+    )
 
     def search(self, query: str, top_k: int = 10) -> TrifectaResult:
         """Search using graph symbol names with stop word removal."""
