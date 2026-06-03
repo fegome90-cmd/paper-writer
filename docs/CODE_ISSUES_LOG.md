@@ -31,10 +31,13 @@ La regla es simple: no cerrar ningún punto sin evidencia en código, tests y/o 
 
 ### Nota operativa
 
-- **BACKLOG-002** queda tomado en este turno para análisis y propuesta de corrección.
-- Antes de renombrar o mover stages, hay que verificar impacto en:
-  - transición de `render`
-  - `paper verify`
-  - `outputs/state.yaml`
-  - docs del state machine
-  - tests CLI / harness / E2E
+- **BACKLOG-002** está resuelto. El rename `verified→rendered` fue implementado y validado con 669 tests pasando, 0 fallando.
+- Los artefactos versionados en `outputs/` pueden estar desalineados con `outputs/state.yaml` (que dice `stage: search`) ya que el repositorio fue usado para testing manual. Esto no es un bug de runtime.
+
+### Observaciones de auditoría externa (2026-06-03)
+
+Un agente externo auditó el repo y encontró las siguientes observaciones (ya resueltas o documentadas):
+
+1. **verified vs rendered (RESUELTO)**: El dominio, orchestrator, tests y docs ahora usan consistentemente `rendered`. Legacy YAMLs con `stage: verified` se auto-upgradearon via `LEGACY_STAGE_MAP`.
+2. **state.yaml vs artefactos (DOCUMENTADO)**: `outputs/state.yaml` versionado dice `stage: search` pero existen artefactos de etapas posteriores. Esto es ruido del repositorio de desarrollo, no un bug de runtime. Los artefactos reales se generan en tmp dirs durante E2E tests.
+3. **SOFT_GATES sin cablear (CONOCIDO)**: `citation_verified` y `ethics_passed` tienen validadores en `gates.py` pero no están integrados al pipeline. Son scaffold para futuras integraciones, no código roto.

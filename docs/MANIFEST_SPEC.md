@@ -18,7 +18,7 @@ Defines the contract for `outputs/manifest.yaml`.
 ## Canonical Shape
 
 ```yaml
-schema_version: 1.0
+schema_version: 1.1
 project: paper-writer
 status: ready_for_delivery
 generated_at: 2026-05-24T14:00:00Z
@@ -62,6 +62,7 @@ notes: []
 - The manifest is immutable audit output for a completed verification point.
 - If verification fails, the manifest must not claim delivery readiness.
 - A new successful verification may replace a previous manifest with a new snapshot.
+- Schema 1.1: stage field changed from `verified` to `rendered`. Legacy manifests with `stage: verified` are from schema 1.0.
 
 ## Audit Checklist
 

@@ -27,7 +27,9 @@ The file `outputs/state.yaml` tracks two things:
 ### State Schema (`outputs/state.yaml`)
 
 ```yaml
-# Schema version: 1.0
+# Schema version: 1.1
+# Note: stage "verified" was renamed to "rendered" in schema 1.1 (BACKLOG-002).
+# Legacy YAMLs with stage: verified are auto-upgraded on load.
 stage: bootstrap          # [bootstrap | search | screen | outline | drafting | validating | rendering | rendered]
 gates:
   repo_initialized: true  # Base repo structure exists
@@ -58,8 +60,8 @@ The table below defines what is required to **enter** a stage, what command init
 | **outline** | `paper draft outline` | `screened_evidence: true` | Create manuscript outline using evidence keys. | `outputs/drafts/outline.md` | `outline_drafted: true` -> Move to **drafting** |
 | **drafting** | `paper draft section <name>` | `outline_drafted: true` | Draft manuscript sections using citation keys only. | `outputs/drafts/introduction.md`<br>`outputs/drafts/methods.md`<br>`outputs/drafts/results.md`<br>`outputs/drafts/discussion.md` | `sections_completed: true` -> Move to **validating** |
 | **validating** | `paper lint bib`<br>`paper check refs`<br>`paper lint style`<br>`paper audit reporting` | `sections_completed: true` | Run validators: check references, styles, claim policy, and structure. | `outputs/logs/bib_tidy.log`<br>`outputs/logs/refs_check.log`<br>`outputs/logs/style_lint.log`<br>`outputs/logs/reporting_audit.log` | `bib_normalized: true`<br>`citations_resolved: true`<br>`refs_validated: true`<br>`style_passed: true`<br>`reporting_passed: true` -> Move to **rendering** |
-| **rendering** | `paper render` | All validations `true` | Compile draft + bibliography using Pandoc/Quarto. | `outputs/render/manuscript.docx`<br>`outputs/render/manuscript.pdf` | `render_passed: true` -> Move to **verified** |
-| **verified** | `paper verify` | `render_passed: true` | Final gate check, locking the delivery manifest. | `outputs/manifest.yaml` | `ready_for_delivery: true` |
+| **rendering** | `paper render` | All validations `true` | Compile draft + bibliography using Pandoc/Quarto. | `outputs/render/manuscript.docx`<br>`outputs/render/manuscript.pdf` | `render_passed: true` -> Move to **rendered** |
+| **rendered** | `paper verify` | `render_passed: true` | Final gate check, locking the delivery manifest. | `outputs/manifest.yaml` | `ready_for_delivery: true` |
 
 ---
 
