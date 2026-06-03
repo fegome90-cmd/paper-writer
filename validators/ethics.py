@@ -59,7 +59,9 @@ class EthicsValidator:
                 "message": "No AI disclosure statement found in methods or acknowledgments",
                 "section": "methods",
                 "evidence": {"patterns_checked": len(self.rules)},
-                "recommendation": "Add explicit AI disclosure: which tools, how used, who is accountable.",
+                "recommendation": (
+                    "Add explicit AI disclosure: which tools, how used, who is accountable."
+                ),
             })
 
         return deduplicate_findings(findings)
