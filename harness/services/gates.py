@@ -63,7 +63,10 @@ def run_gate(gate_name: str, checks: list[Check], artifacts: list[str]) -> GateR
 
 
 def validate_repo_initialized(checker: ArtifactChecker) -> GateResult:
-    """Checks if project directories and state file exist."""
+    """Checks if project directories and state file exist.
+
+    Fail-closed: missing directories or state file are hard blockers.
+    """
     required_dirs = ["templates", "outputs"]
     required_files = ["outputs/state.yaml"]
     checks = []
@@ -105,7 +108,10 @@ def validate_repo_initialized(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_search_completed(checker: ArtifactChecker) -> GateResult:
-    """Checks if search artifacts exist."""
+    """Checks if search artifacts (plan and raw results) exist.
+
+    Fail-closed: missing search artifacts are hard blockers.
+    """
     plan_file = "outputs/search/search_plan.json"
     results_file = "outputs/search/raw_results.json"
 
@@ -135,7 +141,10 @@ def validate_search_completed(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_screened_evidence(checker: ArtifactChecker) -> GateResult:
-    """Checks if screened evidence exists."""
+    """Checks if screened evidence file exists.
+
+    Fail-closed: missing screened evidence is a hard blocker.
+    """
     evidence_file = "outputs/search/screened_evidence.json"
 
     def check_evidence() -> None:
@@ -152,7 +161,10 @@ def validate_screened_evidence(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_outline_drafted(checker: ArtifactChecker) -> GateResult:
-    """Checks if outline exists."""
+    """Checks if outline file exists.
+
+    Fail-closed: missing outline is a hard blocker.
+    """
     outline_file = "outputs/drafts/outline.md"
 
     def check_outline() -> None:
@@ -169,7 +181,10 @@ def validate_outline_drafted(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_sections_completed(checker: ArtifactChecker) -> GateResult:
-    """Checks if required sections exist."""
+    """Checks if required manuscript sections exist.
+
+    Fail-closed: missing required sections are hard blockers.
+    """
     required_sections = ["introduction.md", "methods.md", "results.md", "discussion.md"]
     checks = []
 
@@ -196,7 +211,10 @@ def validate_sections_completed(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_bib_normalized(checker: ArtifactChecker) -> GateResult:
-    """Checks if references.bib is present."""
+    """Checks if references.bib is present and non-empty.
+
+    Fail-closed: missing or empty bibliography is a hard blocker.
+    """
     bib_file = "templates/references.bib"
 
     def check_bib() -> None:
@@ -213,7 +231,11 @@ def validate_bib_normalized(checker: ArtifactChecker) -> GateResult:
 
 
 def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | None) -> GateResult:
-    """Generic validator gate evaluation."""
+    """Generic validator gate evaluation.
+
+    Fail-closed: validator_result.status=fail or missing result is a hard blocker.
+    Warn: validator_result.status=warn produces a warning but gate passes.
+    """
     if not validator_result:
         return GateResult(
             gate=gate_name,
@@ -257,7 +279,10 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
 
 
 def validate_render_passed(checker: ArtifactChecker) -> GateResult:
-    """Checks if rendered document exists."""
+    """Checks if rendered document (docx/pdf) exists.
+
+    Fail-closed: missing rendered documents are hard blockers.
+    """
     render_docx = "outputs/render/manuscript.docx"
     render_pdf = "outputs/render/manuscript.pdf"
 
