@@ -55,6 +55,7 @@ def build_orchestrator_dependencies(
     project_root: Path | None = None,
     skill_adapters: dict[str, SkillAdapter] | None = None,
 ) -> OrchestratorDependencies:
+    """Construct all orchestrator dependencies: state, checker, action runner, tool wrappers."""
     # 1. Resolve and validate project_root
     if project_root is None:
         raise ValueError(

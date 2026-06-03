@@ -9,6 +9,7 @@ from parsers.source_map import SourceMap
 
 @dataclass
 class Sentence:
+    """A single sentence extracted from manuscript text."""
     text: str
     line: int
     col: int
@@ -18,6 +19,7 @@ class Sentence:
 
 @dataclass
 class Section:
+    """A manuscript section identified by heading."""
     heading: str
     text: str
     line_start: int
@@ -26,6 +28,7 @@ class Section:
 
 @dataclass
 class Manuscript:
+    """Parsed manuscript with sections, sentences, and source mapping."""
     path: str
     format: str
     clean_text: str

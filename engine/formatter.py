@@ -5,6 +5,7 @@ from typing import Any
 
 
 def format_json(data: dict[str, Any]) -> str:
+    """Serialize data to indented JSON with UTF-8 preservation."""
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
