@@ -102,3 +102,9 @@ Las herramientas de `ctx_graph` son deterministas y O(1) o O(E). Son **superiore
 
 ### `ctx_calibrate`
 - **When to use ctx_calibrate**: Para auto-calibrar los pesos TF-IDF en base a un dataset de pruebas. Rara vez usado por agentes operativos.
+
+### `ctx_init`
+- **When to use ctx_init**: Para bootstrapear (crear desde cero) un nuevo segment o context pack si no existe.
+
+### `ctx_graph_metrics`
+- **When to use ctx_graph_metrics**: Para ver un agregado histórico de métricas de desempeño y fidelidad del oráculo (latencia, uso de señales).
