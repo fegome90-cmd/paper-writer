@@ -2,6 +2,7 @@
 
 Measures non-test orphan count with overrides reachability.
 """
+
 import sqlite3
 
 DB_PATH = ".trifecta/cache/graph_paper-writer_0a9954b4.db"
@@ -20,9 +21,7 @@ if nodes_with_incoming:
     ov_rows = db.execute(
         "SELECT from_node_id FROM edges "
         "WHERE edge_kind = 'overrides' "
-        "AND to_node_id IN ("
-        + ",".join("?" for _ in nodes_with_incoming)
-        + ")",
+        "AND to_node_id IN (" + ",".join("?" for _ in nodes_with_incoming) + ")",
         list(nodes_with_incoming),
     ).fetchall()
     for row in ov_rows:
@@ -82,12 +81,8 @@ di = db.execute("""
 """).fetchone()[0]
 
 # Override edges
-ovr = db.execute(
-    "SELECT COUNT(*) FROM edges WHERE edge_kind = 'overrides'"
-).fetchone()[0]
-inh = db.execute(
-    "SELECT COUNT(*) FROM edges WHERE edge_kind = 'inherits'"
-).fetchone()[0]
+ovr = db.execute("SELECT COUNT(*) FROM edges WHERE edge_kind = 'overrides'").fetchone()[0]
+inh = db.execute("SELECT COUNT(*) FROM edges WHERE edge_kind = 'inherits'").fetchone()[0]
 
 db.close()
 

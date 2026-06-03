@@ -258,6 +258,18 @@ class TrifectaArm:
                 if class_name in reachable_in_file:
                     continue
 
+            # Skip methods that override a reachable parent method
+            # (polymorphic dispatch: child is reachable via parent)
+            if kind in ("method", "init") and r.get("id"):
+                is_override_reachable = conn.execute(
+                    "SELECT 1 FROM edges "
+                    "WHERE edge_kind = 'overrides' AND from_node_id = ? "
+                    "AND to_node_id IN (SELECT DISTINCT to_node_id FROM edges)",
+                    (r["id"],),
+                ).fetchone()
+                if is_override_reachable:
+                    continue
+
             matches.append(
                 {
                     "file": file_rel,
