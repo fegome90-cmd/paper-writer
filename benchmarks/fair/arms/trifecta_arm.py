@@ -125,14 +125,28 @@ class TrifectaArm:
         )
 
     def find_callers(self, symbol_name: str) -> TrifectaResult:
-        """Find callers using graph edges."""
+        """Find callers using graph edges.
+
+        Resolves target nodes by exact match, then also includes
+        related symbols whose name contains the query (e.g. querying
+        'run_gate' also finds callers of '_run_gate_verification').
+        """
         t0 = time.perf_counter()
 
         conn = self._get_conn()
 
-        # Find the target node(s)
+        # Find the target node(s) — exact match + substring relatives
         nodes = self._resolve_symbol(symbol_name)
-        target_ids = [n["id"] for n in nodes]
+        target_ids = {n["id"] for n in nodes}
+
+        # Also include symbols whose name contains the query
+        # (e.g. _run_gate_verification contains "run_gate")
+        cur_related = conn.execute(
+            "SELECT id FROM nodes WHERE symbol_name LIKE ?",
+            (f"%{symbol_name}%",),
+        )
+        for row in cur_related.fetchall():
+            target_ids.add(row[0])
 
         if not target_ids:
             return TrifectaResult(
@@ -161,8 +175,7 @@ class TrifectaArm:
                         {
                             "file": r.get("file_rel", ""),
                             "line": r.get("line", 0),
-                            "name": r.get("qualified_name", "")
-                            or r.get("symbol_name", ""),
+                            "name": r.get("qualified_name", "") or r.get("symbol_name", ""),
                             "text": (f"{r.get('qualified_name', '')} calls {symbol_name}"),
                             "score": 1.0,
                         }
