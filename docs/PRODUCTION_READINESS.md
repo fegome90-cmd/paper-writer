@@ -112,7 +112,7 @@ validation commands → render → verify
 ```
 
 - **Tested behavior**: stage progression is asserted in orchestrator and CLI tests, and the smoke E2E test runs the CLI via subprocess.
-- **Current code behavior**: the final stage name is `verified`, not `done`.
+- **Current code behavior**: the final stage name is `rendered`; `paper verify` keeps the stage at `rendered` and sets the final delivery gate `ready_for_delivery`.
 - **Requires re-verification**: prior fixed numeric claims about total tests, artifact sizes, or current CI green status.
 
 ## Exit Criteria for Phase 5
