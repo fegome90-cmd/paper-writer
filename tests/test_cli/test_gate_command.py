@@ -1,4 +1,5 @@
 """Tests for cli/paper/commands/gate.py — gate subcommand handler."""
+
 from __future__ import annotations
 
 import argparse
@@ -78,7 +79,9 @@ class TestCmdGateMethod:
                 _cmd_gate_method(args)
             assert exc_info.value.code == 1
 
-    def test_json_output_contains_metadata(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_json_output_contains_metadata(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """JSON output includes execution_time_ms metadata."""
         md = tmp_path / "test.md"
         md.write_text("# Test\n\nSome content.")

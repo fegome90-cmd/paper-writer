@@ -1,4 +1,5 @@
 """Tests for cli/paper/commands/graph.py — trace and graph-overview handlers."""
+
 from __future__ import annotations
 
 import argparse
@@ -37,7 +38,9 @@ class TestCmdTraceCallers:
     def test_callers_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """callers action produces JSON."""
         mock_client = MagicMock()
-        mock_result = MagicMock(success=True, error=None, data=[{"symbol_name": "caller1", "file_rel": "a.py"}])
+        mock_result = MagicMock(
+            success=True, error=None, data=[{"symbol_name": "caller1", "file_rel": "a.py"}]
+        )
         mock_client.find_callers.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
             _cmd_trace(_make_trace_args(action="callers", output="json"))
@@ -55,17 +58,74 @@ class TestCmdTraceCallers:
                 _cmd_trace(_make_trace_args(action="callers"))
             assert exc.value.code == 1
 
+    def test_callers_text_output_with_data(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """callers text output shows callers list."""
+        mock_client = MagicMock()
+        mock_result = MagicMock(
+            success=True, error=None, data=[{"symbol_name": "caller1", "file_rel": "a.py"}]
+        )
+        mock_client.find_callers.return_value = mock_result
+        with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
+            _cmd_trace(_make_trace_args(action="callers", output="text"))
+        out = capsys.readouterr().out
+        assert "caller1" in out
+        assert "a.py" in out
+
+    def test_callers_text_no_data(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """callers text output when no callers found."""
+        mock_client = MagicMock()
+        mock_result = MagicMock(success=True, error=None, data=[])
+        mock_client.find_callers.return_value = mock_result
+        with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
+            _cmd_trace(_make_trace_args(action="callers", output="text"))
+        out = capsys.readouterr().out
+        assert "No callers found" in out
+
 
 class TestCmdTraceCallees:
     def test_callees_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """callees action produces JSON."""
         mock_client = MagicMock()
-        mock_result = MagicMock(success=True, error=None, data=[{"symbol_name": "callee1", "file_rel": "b.py"}])
+        mock_result = MagicMock(
+            success=True, error=None, data=[{"symbol_name": "callee1", "file_rel": "b.py"}]
+        )
         mock_client.find_callees.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
             _cmd_trace(_make_trace_args(action="callees", output="json"))
         data = json.loads(capsys.readouterr().out)
         assert data[0]["symbol_name"] == "callee1"
+
+    def test_callees_text_output_with_data(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """callees text output shows callees list."""
+        mock_client = MagicMock()
+        mock_result = MagicMock(
+            success=True, error=None, data=[{"symbol_name": "callee1", "file_rel": "b.py"}]
+        )
+        mock_client.find_callees.return_value = mock_result
+        with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
+            _cmd_trace(_make_trace_args(action="callees", output="text"))
+        out = capsys.readouterr().out
+        assert "callee1" in out
+
+    def test_callees_text_no_data(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """callees text output when no callees found."""
+        mock_client = MagicMock()
+        mock_result = MagicMock(success=True, error=None, data=[])
+        mock_client.find_callees.return_value = mock_result
+        with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
+            _cmd_trace(_make_trace_args(action="callees", output="text"))
+        out = capsys.readouterr().out
+        assert "No callees found" in out
+
+    def test_callees_failure_exits_1(self) -> None:
+        """callees failure → exit 1."""
+        mock_client = MagicMock()
+        mock_result = MagicMock(success=False, error="unavailable")
+        mock_client.find_callees.return_value = mock_result
+        with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
+            with pytest.raises(SystemExit) as exc:
+                _cmd_trace(_make_trace_args(action="callees"))
+            assert exc.value.code == 1
 
 
 class TestCmdTracePath:
@@ -80,7 +140,9 @@ class TestCmdTracePath:
     def test_path_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """path action produces JSON."""
         mock_client = MagicMock()
-        mock_result = MagicMock(success=True, error=None, data={"path": ["A", "B", "C"], "path_exists": True})
+        mock_result = MagicMock(
+            success=True, error=None, data={"path": ["A", "B", "C"], "path_exists": True}
+        )
         mock_client.find_path.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
             _cmd_trace(_make_trace_args(action="path", output="json", to_symbol="C"))
