@@ -20,12 +20,12 @@ La regla es simple: no cerrar ningún punto sin evidencia en código, tests y/o 
 
 | Rank | ID | Prioridad | Área | Descripción | Evidencia principal | Responsable | Estado |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| 1 | BACKLOG-001 | **Crítica** | Documentación | Alinear documentación con el comportamiento real del sistema, especialmente CLI, harness y flujo operativo. | `cli/paper/main.py`, `docs/tools/paper-cli.md`, `docs/HARNESS_AND_STATE_MACHINE.md`, `docs/REPO_ARCHITECTURE.md` | Pendiente | 🔴 Abierto |
+| 1 | BACKLOG-001 | **Crítica** | Documentación | Alinear documentación con el comportamiento real del sistema, especialmente CLI, harness y flujo operativo. | `cli/paper/main.py`, `docs/tools/paper-cli.md`, `docs/HARNESS_AND_STATE_MACHINE.md`, `docs/REPO_ARCHITECTURE.md` | **Completado** | ✅ Resuelto |
 | 2 | BACKLOG-002 | **Crítica** | State machine / Harness | Corregir la semántica de stages: stage `verified` renombrado a `rendered`. `paper verify` queda en `rendered` como no-op; la verificación real es el gate `ready_for_delivery`. | `harness/services/orchestrator.py`, `harness/domain/state.py`, `harness/adapters/yaml_repository.py` | **Completado** | ✅ Resuelto |
 | 3 | BACKLOG-003 | **Alta** | Artifacts / Outputs | Diseñar y aplicar una nomenclatura seria de artifacts (`case_id`, `run_id` o timestamp) para evitar nombres genéricos y colisiones. | `harness/adapters/filesystem_action_runner.py`, `integrations/tools/pandoc.py`, `harness/services/gates.py` | Pendiente | 🔴 Abierto |
 | 4 | BACKLOG-004 | **Alta** | Gobernanza documental | Definir qué documentos son source of truth, cuáles son design intent y cuáles son históricos. | `docs/REPO_ARCHITECTURE.md`, `docs/HARNESS_AND_STATE_MACHINE.md`, `docs/TESTING_STRATEGY.md`, `docs/tools/*` | Pendiente | 🔴 Abierto |
-| 5 | BACKLOG-005 | **Media-Alta** | Observabilidad | Cablear logs estructurados por comando al flujo principal; `write_command_log()` existe pero no es columna vertebral del runtime. | `harness/adapters/filesystem_action_runner.py` | Pendiente | 🔴 Abierto |
-| 6 | BACKLOG-006 | **Media** | Degraded mode | Hacer explícito en docs y contratos de gates cuándo degraded mode implica warning y cuándo implica fail-closed. | `harness/services/doctor.py`, `integrations/tools/bibtex_tidy.py`, `docs/PRODUCTION_READINESS.md` | Pendiente | 🔴 Abierto |
+| 5 | BACKLOG-005 | **Media-Alta** | Observabilidad | Cablear logs estructurados por comando al flujo principal. `write_command_log()` ahora es parte del runtime del orchestrator. | `harness/adapters/filesystem_action_runner.py` | **Completado** | ✅ Resuelto |
+| 6 | BACKLOG-006 | **Media** | Degraded mode | Semántica warn vs fail-closed documentada en todos los gate validators. | `harness/services/gates.py` | **Completado** | ✅ Resuelto |
 | 7 | BACKLOG-007 | **Media** | Testing / Docs | Reconciliar claims documentales con el estado real de tests y coverage reportado. | `docs/TESTING_STRATEGY.md`, `tests/`, salida real de `pytest --collect-only` | Pendiente | 🔴 Abierto |
 | 8 | BACKLOG-008 | **Media-Baja** | CLI | Modularizar la CLI si la superficie sigue creciendo; hoy funciona, pero `cli/paper/main.py` concentra demasiado. | `cli/paper/main.py`, `docs/REPO_ARCHITECTURE.md` | Pendiente | 🔴 Abierto |
 
@@ -40,4 +40,4 @@ Un agente externo auditó el repo y encontró las siguientes observaciones (ya r
 
 1. **verified vs rendered (RESUELTO)**: El dominio, orchestrator, tests y docs ahora usan consistentemente `rendered`. Legacy YAMLs con `stage: verified` se auto-upgradearon via `LEGACY_STAGE_MAP`.
 2. **state.yaml vs artefactos (DOCUMENTADO)**: `outputs/state.yaml` versionado dice `stage: search` pero existen artefactos de etapas posteriores. Esto es ruido del repositorio de desarrollo, no un bug de runtime. Los artefactos reales se generan en tmp dirs durante E2E tests.
-3. **SOFT_GATES sin cablear (CONOCIDO)**: `citation_verified` y `ethics_passed` tienen validadores en `gates.py` pero no están integrados al pipeline. Son scaffold para futuras integraciones, no código roto.
+3. **SOFT_GATES cableados (RESUELTO)**: `citation_verified` wired via check_refs. `ethics_passed` checked as soft gate during verify command. Both validators now called from orchestrator `_run_gate_verification`.

@@ -143,8 +143,8 @@ skills/imported/
 ```
 
 **Source paths:**
-- literature-search: `/Users/felipe_gonzalez/Developer/examen_grado/skills/literature-search/`
-- academic-writer: `/Users/felipe_gonzalez/Developer/examen_grado/skills/academic-writer/`
+- literature-search: `skills/imported/literature_search/` (vendored)
+- academic-writer: `skills/imported/academic_writer/` (vendored)
 
 **What `scoring.py` contains (REAL imported code):**
 - `PaperMetrics` — frozen dataclass with all scoring dimensions
