@@ -97,7 +97,7 @@ Every orchestrator call should be normalized into an internal request object con
 
 ```yaml
 command: paper verify
-requested_stage: verified
+requested_stage: rendered
 failure_policy: stop_on_error
 args:
   format: docx

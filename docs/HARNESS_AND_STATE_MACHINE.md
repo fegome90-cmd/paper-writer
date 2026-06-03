@@ -28,7 +28,7 @@ The file `outputs/state.yaml` tracks two things:
 
 ```yaml
 # Schema version: 1.0
-stage: bootstrap          # [bootstrap | search | screen | outline | drafting | validating | rendering | verified]
+stage: bootstrap          # [bootstrap | search | screen | outline | drafting | validating | rendering | rendered]
 gates:
   repo_initialized: true  # Base repo structure exists
   search_completed: false # Literature search completed, raw results saved

@@ -333,14 +333,14 @@ def _assert_gate_true(gates: dict[str, Any], gate_name: str) -> None:
 def validate_citation_verify_gate(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
-    """Soft gate: citation_verified. Warns if not yet run."""
+    """Soft gate: citation_verified. Warns if not yet run or False."""
     def check_gate() -> None:
-        if "citation_verified" not in state_gates:
-            raise ValueError("citation_verified gate not yet evaluated")
+        if not state_gates.get("citation_verified", False):
+            raise ValueError("citation_verified gate not yet evaluated or not satisfied")
 
     checks = [
         Check(
-            id="citation_verified",
+            id="soft_citation_verified",
             description="Verify citations have been checked",
             run_fn=check_gate,
             soft=True,
@@ -352,14 +352,14 @@ def validate_citation_verify_gate(
 def validate_ethics_passed_gate(
     checker: ArtifactChecker, state_gates: dict[str, Any]
 ) -> GateResult:
-    """Soft gate: ethics_passed. Warns if not yet run."""
+    """Soft gate: ethics_passed. Warns if not yet run or False."""
     def check_gate() -> None:
-        if "ethics_passed" not in state_gates:
-            raise ValueError("ethics_passed gate not yet evaluated")
+        if not state_gates.get("ethics_passed", False):
+            raise ValueError("ethics_passed gate not yet evaluated or not satisfied")
 
     checks = [
         Check(
-            id="ethics_passed",
+            id="soft_ethics_passed",
             description="Verify ethics check has been performed",
             run_fn=check_gate,
             soft=True,

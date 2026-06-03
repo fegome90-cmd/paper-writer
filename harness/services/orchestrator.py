@@ -214,8 +214,8 @@ class Orchestrator:
             else:
                 result.stage_after = stage_before
 
-            # Emit manifest if we transitioned successfully to 'verified' stage (paper verify)
-            if request.command == "verify" and result.stage_after == "verified":
+            # Emit manifest after successful paper verify (stage is now 'rendered')
+            if request.command == "verify" and result.stage_after == "rendered":
                 full_snapshot = self.state_manager.load_state().get("gates", {})
                 manifest_path = self.action_runner.emit_manifest(full_snapshot)
                 artifacts.append(manifest_path)
@@ -272,7 +272,7 @@ class Orchestrator:
             "audit_reporting": "validating",
             "render": "rendering",
             "import_bib": "bootstrap",
-            "verify": "verified",
+            "verify": "rendered",
         }
 
         min_stage = command_min_stages.get(command)
@@ -364,9 +364,9 @@ class Orchestrator:
             if all(state_gates.get(g, False) for g in validation_gates):
                 return "rendering"
         elif command == "render":
-            return "verified"
+            return "rendered"
         elif command == "verify":
-            return "verified"
+            return "rendered"
         return None
 
     def _run_wrapper_gate(

@@ -60,7 +60,7 @@ class TestStageGatesConsistency:
 
     def test_verified_without_render_passed_invalid(self) -> None:
         """verified requires render_passed=True."""
-        state = ManuscriptState(stage="verified", gates=_make_all_gates_false())
+        state = ManuscriptState(stage="rendered", gates=_make_all_gates_false())
         with pytest.raises(DomainStateError, match="render_passed"):
             state.validate()
 
@@ -68,7 +68,7 @@ class TestStageGatesConsistency:
         """verified with render_passed=True should be valid."""
         gates = _make_all_gates_false()
         gates["render_passed"] = True
-        state = ManuscriptState(stage="verified", gates=gates)
+        state = ManuscriptState(stage="rendered", gates=gates)
         state.validate()
 
     def test_full_progression_valid(self) -> None:
@@ -152,7 +152,7 @@ class TestTransitionTo:
     def test_backward_from_verified_rejected(self) -> None:
         """verified -> rendering should be rejected."""
         gates = _make_all_gates_true()
-        state = ManuscriptState(stage="verified", gates=gates)
+        state = ManuscriptState(stage="rendered", gates=gates)
         with pytest.raises(DomainStateError, match="Backward transition"):
             state.transition_to("rendering")
 
@@ -177,5 +177,5 @@ class TestPostInitGateAutoFill:
     def test_complete_gates_dict_unchanged(self) -> None:
         """Complete gates dict should not be modified by __post_init__."""
         gates = dict.fromkeys(ManuscriptState.REQUIRED_GATES, True)
-        state = ManuscriptState(stage="verified", gates=gates)
+        state = ManuscriptState(stage="rendered", gates=gates)
         assert all(v is True for v in state.gates.values())

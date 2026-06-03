@@ -166,9 +166,9 @@ def test_action_runner_emit_manifest(tmp_path: Path) -> None:
     with open(manifest_path, encoding="utf-8") as f:
         manifest = yaml.safe_load(f)
 
-    assert manifest["schema_version"] == "1.0"
+    assert manifest["schema_version"] == "1.1"
     assert manifest["status"] == "ready_for_delivery"
-    assert manifest["stage"] == "verified"
+    assert manifest["stage"] == "rendered"
     assert manifest["gate_snapshot"] == gates
     assert manifest["verdict"] == "pass"
     assert len(manifest["gate_snapshot"]) == 12

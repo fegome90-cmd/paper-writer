@@ -23,6 +23,51 @@ paper --help
 paper doctor
 ```
 
+### Optional: Trifecta Integration (code traceability, dead code detection)
+
+paper-writer can use [Trifecta](https://github.com/davebcn87/pi-autoresearch)
+as an **optional external dependency** to power these commands:
+
+- `paper audit code-health` — find dead code / orphan methods
+- `paper trace <symbol>` — find callers, callees, call paths
+- `paper graph-overview` — show code graph health summary
+
+**Trifecta is NOT required.** By default, `MCP_TRIFECTA_MODE=off` and these
+commands show a "Trifecta not enabled" message. Install Trifecta only if you
+need code-traceability features.
+
+**Install Trifecta** (separate repo, not bundled with paper-writer):
+
+```bash
+# Option A: Install as a uv tool (recommended)
+git clone https://github.com/davebcn87/pi-autoresearch.git
+cd pi-autoresearch
+uv tool install .
+
+# Option B: Install editable from a local clone
+git clone https://github.com/davebcn87/pi-autoresearch.git ~/Developer/agent_h/trifecta_dope
+cd ~/Developer/agent_h/trifecta_dope
+uv sync && uv pip install -e .
+
+# Verify Trifecta is on PATH
+which trifecta
+trifecta --help
+```
+
+**Enable Trifecta in paper-writer**:
+
+```bash
+# Per-command
+MCP_TRIFECTA_MODE=real paper audit code-health
+
+# Or export for the session
+export MCP_TRIFECTA_MODE=real
+paper audit code-health
+```
+
+See `docs/integration/TRIFECTA_NEXT_STEPS.md` for the integration plan
+and `docs/integration/trifecta-bench-results.md` for benchmark results.
+
 ### Quick Start
 
 ```bash

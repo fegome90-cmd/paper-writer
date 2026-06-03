@@ -1,6 +1,6 @@
 """Shared retry utility for API clients.
 
-Exponential backoff on HTTP 429: 1s, 2s, 4s, max 3 retries.
+Exponential backoff on HTTP 429: 2s, 4s, 8s, max 3 retries.
 Ported from ARS scripts/_text_similarity.py retry constants.
 """
 from __future__ import annotations
@@ -19,8 +19,8 @@ MAX_RETRIES = 3
 def retry_with_backoff(fn: Callable[[], T]) -> T:
     """Call fn() with exponential backoff on HTTP 429.
 
-    Retries up to MAX_RETRIES times with increasing delays.
-    Non-429 errors are re-raised immediately.
+    Retries up to MAX_RETRIES times with increasing delays:
+    2s, 4s, 8s. Non-429 errors are re-raised immediately.
 
     Args:
         fn: Callable that performs the HTTP request.
@@ -40,7 +40,5 @@ def retry_with_backoff(fn: Callable[[], T]) -> T:
                 time.sleep(BACKOFF_SECONDS * (2**attempt))
                 last_error = e
                 continue
-            raise
-        except Exception:
             raise
     raise last_error  # type: ignore[misc]

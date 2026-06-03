@@ -272,6 +272,10 @@ def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
     else:
         print(format_terminal(findings))
 
+    # Fail-closed: exit code 1 if P0 findings
+    if any(f.get("severity") == "P0" for f in findings):
+        sys.exit(1)
+
 
 def _cmd_trace(args: argparse.Namespace) -> None:
     """Trace a symbol's callers, callees, or call path using Trifecta.

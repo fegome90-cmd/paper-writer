@@ -137,23 +137,23 @@ def test_orchestrator_sequential_flow() -> None:
     assert res_audit.stage_after == "rendering"
 
     # 7. Render
-    res_render = orch.execute(OrchestratorRequest("render", "verified", "stop_on_error"))
+    res_render = orch.execute(OrchestratorRequest("render", "rendered", "stop_on_error"))
     assert res_render.success is True
-    assert res_render.stage_after == "verified"
+    assert res_render.stage_after == "rendered"
     assert "outputs/render/manuscript.docx" in checker.existing_paths
 
     # 8. Verify (Emits manifest and sets ready_for_delivery)
-    res_verify = orch.execute(OrchestratorRequest("verify", "verified", "stop_on_error"))
+    res_verify = orch.execute(OrchestratorRequest("verify", "rendered", "stop_on_error"))
     assert res_verify.success is True
-    assert res_verify.stage_after == "verified"
+    assert res_verify.stage_after == "rendered"
 
     assert "outputs/manifest.yaml" in checker.existing_paths
 
     # Check manifest emitted snapshot in action runner mock
     assert action_runner.manifest_emitted is not None
     snapshot = action_runner.manifest_emitted
-    # Assert snapshot keys match the domain gate contract
-    assert set(snapshot.keys()) == set(ManuscriptState.REQUIRED_GATES)
+    # Assert snapshot includes all required gates (may also contain soft gates)
+    assert set(ManuscriptState.REQUIRED_GATES).issubset(set(snapshot.keys()))
     assert snapshot["ready_for_delivery"] is True
     assert snapshot["style_passed"] is True
     assert snapshot["bib_normalized"] is True
@@ -230,7 +230,7 @@ def test_orchestrator_render_warn_is_success_and_transitions_to_verified() -> No
     result = orch.execute(
         OrchestratorRequest(
             command="render",
-            requested_stage="verified",
+            requested_stage="rendered",
             failure_policy="stop_on_error",
         )
     )
@@ -238,7 +238,7 @@ def test_orchestrator_render_warn_is_success_and_transitions_to_verified() -> No
     assert result.success is True
     assert result.exit_code == 0
     assert result.stage_before == "rendering"
-    assert result.stage_after == "verified"
+    assert result.stage_after == "rendered"
     assert result.gate_changes["render_passed"] is True
 
 
@@ -248,7 +248,7 @@ def test_orchestrator_render_fail_blocks_and_keeps_rendering_stage() -> None:
     result = orch.execute(
         OrchestratorRequest(
             command="render",
-            requested_stage="verified",
+            requested_stage="rendered",
             failure_policy="stop_on_error",
         )
     )
@@ -262,7 +262,7 @@ def test_orchestrator_render_fail_blocks_and_keeps_rendering_stage() -> None:
 
 def test_orchestrator_verify_requires_render_passed_gate() -> None:
     # O-9 fix: use a state with valid preconditions for 'verified' stage
-    preconditions = ManuscriptState.STAGE_PRECONDITIONS.get("verified", frozenset())
+    preconditions = ManuscriptState.STAGE_PRECONDITIONS.get("rendered", frozenset())
     initial_gates: dict[str, bool] = dict.fromkeys(preconditions, True)
     for gate in ManuscriptState.REQUIRED_GATES:
         initial_gates.setdefault(gate, False)
@@ -270,7 +270,7 @@ def test_orchestrator_verify_requires_render_passed_gate() -> None:
     initial_gates["render_passed"] = False
     repo = InMemoryStateRepository(
         ManuscriptState(
-            stage="verified",
+            stage="rendered",
             gates=initial_gates,
         )
     )
@@ -283,7 +283,7 @@ def test_orchestrator_verify_requires_render_passed_gate() -> None:
     result = orch.execute(
         OrchestratorRequest(
             command="verify",
-            requested_stage="verified",
+            requested_stage="rendered",
             failure_policy="stop_on_error",
         )
     )

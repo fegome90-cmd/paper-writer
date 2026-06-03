@@ -304,11 +304,11 @@ class FilesystemActionRunner(ActionRunner):
             artifacts["bibliography"] = bib_path
 
         manifest_data = {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "project": "paper-writer",
             "status": "ready_for_delivery" if all_passed else "incomplete",
             "generated_at": datetime.datetime.now().isoformat(),
-            "stage": "verified",
+            "stage": "rendered",
             "gate_snapshot": gate_snapshot,
             "artifacts": artifacts,
             "verdict": "pass" if all_passed else "fail",

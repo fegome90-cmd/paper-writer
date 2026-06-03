@@ -277,7 +277,7 @@ class TestE2EFullPipeline:
 
         # Verify stage advanced
         state_after = yaml.safe_load(state_file.read_text())
-        assert state_after["stage"] in ("verified", "rendering")
+        assert state_after["stage"] in ("rendered", "rendering")
 
 
 class TestE2EDoctor:

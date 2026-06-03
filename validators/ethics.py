@@ -25,20 +25,20 @@ class EthicsValidator:
 
         rules_dir = get_rules_dir("ethics")
         self.rules = load_rules(rules_dir)
-        for rule in self.rules:
-            rule["command"] = "audit_ethics"
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Check for AI disclosure statement in methods/acknowledgments."""
         findings: list[dict[str, Any]] = []
 
-        # Check if any AI disclosure pattern exists anywhere in the manuscript
+        # Determine which sections to search based on evidence_required
+        search_text = self._get_scoped_text(manuscript)
+
         has_disclosure = False
         for rule in self.rules:
             patterns = rule.get("patterns", [])
             for pattern in patterns:
                 try:
-                    if re.search(pattern, manuscript.clean_text):
+                    if re.search(pattern, search_text):
                         has_disclosure = True
                         break
                 except re.error:
@@ -65,3 +65,19 @@ class EthicsValidator:
             })
 
         return deduplicate_findings(findings)
+
+    def _get_scoped_text(self, manuscript: Manuscript) -> str:
+        """Get text from evidence_required sections, or full text as fallback."""
+        for rule in self.rules:
+            evidence_sections = rule.get("evidence_required", [])
+            if evidence_sections:
+                scoped_parts: list[str] = []
+                for section_name in evidence_sections:
+                    section = manuscript.sections.get(section_name)
+                    if section:
+                        scoped_parts.append(section.text)
+                if scoped_parts:
+                    return "\n".join(scoped_parts)
+
+        # Fallback: search entire manuscript
+        return manuscript.clean_text

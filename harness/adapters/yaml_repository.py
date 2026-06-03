@@ -31,6 +31,12 @@ class YamlFileStateRepository(StateRepository):
         stage = data.get("stage", "")
         gates = data.get("gates", {})
 
+        # Auto-upgrade: map legacy stage names to current names.
+        # schema_version < 1.1 used "verified" (now "rendered").
+        _LEGACY_STAGE_MAP: dict[str, str] = {"verified": "rendered"}
+        if stage in _LEGACY_STAGE_MAP:
+            stage = _LEGACY_STAGE_MAP[stage]
+
         try:
             state = ManuscriptState(stage=stage, gates=gates)
             state.validate()

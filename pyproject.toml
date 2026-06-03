@@ -10,6 +10,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0.1"]
 
+[project.optional-dependencies]
+# Optional Trifecta integration for code traceability features
+# Install with: uv sync --extra trifecta
+trifecta = ["trifecta @ git+https://github.com/davebcn87/pi-autoresearch.git"]
+
 [project.scripts]
 paper = "cli.paper.main:main"
 

@@ -15,7 +15,6 @@ from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
 
 DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
-INLINE_CITATION_PATTERN = re.compile(r"\(([^)]+\d{4}[a-z]?)\)|\[(\d+)\]")
 
 
 class CitationVerifyValidator:
@@ -43,7 +42,7 @@ class CitationVerifyValidator:
         findings: list[dict[str, Any]] = []
 
         for citation in citations:
-            finding = self._verify_citation(citation, manuscript)
+            finding = self.verify_single(citation)
             if finding:
                 findings.append(finding)
 
@@ -125,17 +124,23 @@ class CitationVerifyValidator:
 
         ref_section = manuscript.sections.get("references")
         if ref_section:
-            for line in ref_section.text.split("\n"):
-                line = line.strip()
-                if not line:
+            # Track position iteratively to avoid str.find() fragility
+            text = ref_section.text
+            search_start = 0
+            for line in text.split("\n"):
+                stripped = line.strip()
+                if not stripped:
+                    search_start += len(line) + 1  # +1 for newline
                     continue
 
-                offset = (
-                    ref_section.line_start
-                    + ref_section.text[:ref_section.text.find(line)].count("\n")
-                    + 1
-                )
-                dois = DOI_PATTERN.findall(line)
+                # Find this line's position relative to search_start
+                idx = text.find(stripped, search_start)
+                if idx == -1:
+                    idx = search_start
+                offset = ref_section.line_start + text[:idx].count("\n") + 1
+                search_start = idx + len(stripped)
+
+                dois = DOI_PATTERN.findall(stripped)
                 if dois:
                     for doi in dois:
                         citations.append({
@@ -143,15 +148,15 @@ class CitationVerifyValidator:
                             "title": None,
                             "line": offset,
                             "section": "references",
-                            "raw": line,
+                            "raw": stripped,
                         })
                 else:
                     citations.append({
                         "doi": None,
-                        "title": line,
+                        "title": stripped,
                         "line": offset,
                         "section": "references",
-                        "raw": line,
+                        "raw": stripped,
                     })
 
         return citations
@@ -208,42 +213,6 @@ class CitationVerifyValidator:
             return "partial", "P2"
 
         return "not_found", "P0"
-
-    def _verify_citation(
-        self, citation: dict[str, Any], manuscript: Manuscript
-    ) -> dict[str, Any] | None:
-        """Verify a single citation and return a finding or None."""
-        if self.offline:
-            ref = citation.get("doi") or citation.get("title", "unknown")
-            return self._make_finding(
-                rule_id="citation_verify.skipped",
-                severity="P2",
-                message=f"Citation verification skipped (offline): {ref}",
-                line=citation.get("line", 0),
-                section=citation.get("section", "references"),
-                evidence={"doi": citation.get("doi"), "title": citation.get("title")},
-            )
-
-        crossref = self._query_crossref(citation)
-        s2 = self._query_s2(citation)
-
-        verdict, severity = self._classify_citation(crossref, s2)
-
-        if verdict == "verified":
-            return None
-
-        return self._make_finding(
-            rule_id=f"citation_verify.{verdict}",
-            severity=severity or "P2",
-            message=self._build_message(verdict, citation),
-            line=citation.get("line", 0),
-            section=citation.get("section", "references"),
-            evidence={
-                "doi": citation.get("doi"),
-                "crossref_found": crossref.found if crossref else False,
-                "s2_found": s2.found if s2 else False,
-            },
-        )
 
     def _build_message(self, verdict: str, citation: dict[str, Any]) -> str:
         """Build human-readable finding message."""

@@ -36,7 +36,7 @@ class ManuscriptState:
         "drafting",
         "validating",
         "rendering",
-        "verified",
+        "rendered",
     )
 
     VALID_STAGES: ClassVar[frozenset[str]] = frozenset(STAGE_ORDER)
@@ -82,7 +82,7 @@ class ManuscriptState:
                 "reporting_passed",
             }
         ),
-        "verified": frozenset({"render_passed"}),
+        "rendered": frozenset({"render_passed"}),
     }
 
     def validate(self) -> None:
@@ -105,7 +105,7 @@ class ManuscriptState:
             raise DomainStateError(f"Missing required gates: {missing_gates}")
 
         for gate, value in self.gates.items():
-            if gate not in self.REQUIRED_GATES:
+            if gate not in self.REQUIRED_GATES and gate not in self.SOFT_GATES:
                 raise DomainStateError(f"Unknown gate key: {gate}")
             if not isinstance(value, bool):
                 raise DomainStateError(f"Gate '{gate}' value must be boolean.")
@@ -137,7 +137,7 @@ class ManuscriptState:
 
     def set_gate(self, gate_name: str, value: bool) -> None:
         """Updates a single gate value."""
-        if gate_name not in self.REQUIRED_GATES:
+        if gate_name not in self.REQUIRED_GATES and gate_name not in self.SOFT_GATES:
             raise DomainStateError(f"Unknown gate: {gate_name}")
         self.gates[gate_name] = value
 
@@ -185,6 +185,8 @@ class ManuscriptState:
                 "reporting_passed",
                 "render_passed",
                 "ready_for_delivery",
+                "citation_verified",
+                "ethics_passed",
             ]
         elif modified_artifact_type == "bib":
             resets = [

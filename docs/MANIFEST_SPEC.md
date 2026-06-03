@@ -22,7 +22,7 @@ schema_version: 1.0
 project: paper-writer
 status: ready_for_delivery
 generated_at: 2026-05-24T14:00:00Z
-stage: verified
+stage: rendered
 gate_snapshot:
   repo_initialized: true
   search_completed: true
