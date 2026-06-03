@@ -291,7 +291,7 @@ class WritingQualityAdapter(SkillAdapter):
 
         try:
             manuscript_path = inputs["file"]
-            whitelist = context.get("whitelist", set())
+            whitelist = set(context.get("whitelist", set()))
             validator = WritingQualityValidator(whitelist=whitelist)
             manuscript = ManuscriptParser().parse(Path(manuscript_path))
             findings = validator.validate(manuscript)

@@ -20,7 +20,7 @@ class WritingQualityValidator:
     """Detect AI-typical writing patterns with section-aware severity."""
 
     def __init__(self, whitelist: set[str] | None = None) -> None:
-        self.whitelist = whitelist or set()
+        self.whitelist = {t.lower() for t in (whitelist or set())}
         self.rules: list[dict[str, Any]] = []
         self._load_rules()
 

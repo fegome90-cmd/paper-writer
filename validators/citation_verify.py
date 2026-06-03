@@ -173,7 +173,7 @@ class CitationVerifyValidator:
                 return results[0] if results else CrossrefResult(found=False)
         except Exception:
             return CrossrefResult(found=False)
-        return None
+        return CrossrefResult(found=False)
 
     def _query_s2(self, citation: dict[str, Any]) -> S2Result | None:
         """Query Semantic Scholar for a citation."""
@@ -187,7 +187,7 @@ class CitationVerifyValidator:
                 return results[0] if results else S2Result(found=False)
         except Exception:
             return S2Result(found=False)
-        return None
+        return S2Result(found=False)
 
     def _classify_citation(
         self,
@@ -213,16 +213,6 @@ class CitationVerifyValidator:
             return "partial", "P2"
 
         return "not_found", "P0"
-
-    def _build_message(self, verdict: str, citation: dict[str, Any]) -> str:
-        """Build human-readable finding message."""
-        ref = citation.get("doi") or citation.get("title", "unknown")
-        messages = {
-            "not_found": f"Citation not found in any database: {ref}",
-            "title_mismatch": f"DOI resolves but title does not match: {ref}",
-            "partial": f"Citation found in only one source: {ref}",
-        }
-        return messages.get(verdict, f"Citation {verdict}: {ref}")
 
     def _make_finding(
         self,

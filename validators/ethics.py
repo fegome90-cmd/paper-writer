@@ -68,16 +68,18 @@ class EthicsValidator:
 
     def _get_scoped_text(self, manuscript: Manuscript) -> str:
         """Get text from evidence_required sections, or full text as fallback."""
+        all_evidence_sections: set[str] = set()
         for rule in self.rules:
-            evidence_sections = rule.get("evidence_required", [])
-            if evidence_sections:
-                scoped_parts: list[str] = []
-                for section_name in evidence_sections:
-                    section = manuscript.sections.get(section_name)
-                    if section:
-                        scoped_parts.append(section.text)
-                if scoped_parts:
-                    return "\n".join(scoped_parts)
+            all_evidence_sections.update(rule.get("evidence_required", []))
+
+        if all_evidence_sections:
+            scoped_parts: list[str] = []
+            for section_name in all_evidence_sections:
+                section = manuscript.sections.get(section_name)
+                if section:
+                    scoped_parts.append(section.text)
+            if scoped_parts:
+                return "\n".join(scoped_parts)
 
         # Fallback: search entire manuscript
         return manuscript.clean_text

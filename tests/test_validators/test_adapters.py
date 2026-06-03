@@ -15,32 +15,30 @@ class TestCitationVerifyAdapter:
         adapter = CitationVerifyAdapter()
         assert adapter.name == "citation_verify"
 
-    @patch("validators.citation_verify.CrossrefClient")
     @patch("parsers.manuscript.ManuscriptParser")
-    def test_execute_offline_returns_gate_change(self, mock_parser, mock_crossref):
+    def test_execute_offline_returns_gate_change(self, mock_parser):
         mock_manuscript = MagicMock()
         mock_parser.return_value.parse.return_value = mock_manuscript
 
         adapter = CitationVerifyAdapter()
         result = adapter.execute(
             command="audit_citations",
-            inputs={"file": "/tmp/test.md"},
-            context={"offline": True},
+            inputs={"file": "/tmp/test.md", "offline": True},
+            context={},
         )
 
         assert result.status in ("pass", "warn")
         assert result.gate_changes.get("citation_verified") is True
 
-    @patch("validators.citation_verify.CrossrefClient")
     @patch("parsers.manuscript.ManuscriptParser")
-    def test_execute_with_findings(self, mock_parser, mock_crossref):
+    def test_execute_with_findings(self, mock_parser):
         mock_parser.return_value.parse.return_value = MagicMock()
 
         adapter = CitationVerifyAdapter()
         result = adapter.execute(
             command="audit_citations",
-            inputs={"file": "/tmp/test.md"},
-            context={"offline": True},
+            inputs={"file": "/tmp/test.md", "offline": True},
+            context={},
         )
 
         assert result.status in ("pass", "warn")
