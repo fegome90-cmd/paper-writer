@@ -67,7 +67,8 @@ def _extract_authors(item: dict[str, Any]) -> list[str]:
 class CrossrefClient:
     """Crossref API client for DOI verification.
 
-    Uses the polite pool (mailto in User-Agent) when email is provided.
+    Uses the polite pool (mailto in User-Agent) when email is provided
+    (falls back to CROSSREF_POLITE_EMAIL env var).
     Returns CrossrefResult(found=False) on any error — never raises.
     """
 
@@ -124,7 +125,7 @@ class CrossrefClient:
         except Exception:
             return CrossrefResult(found=False)
 
-    def search_by_title(self, title: str) -> list[CrossrefResult]:
+    def search_by_title(self, title: str, year: int | None = None) -> list[CrossrefResult]:
         """Search Crossref by title, return results ranked by similarity.
 
         Returns list of CrossrefResult with score = title_similarity.
@@ -147,18 +148,20 @@ class CrossrefClient:
                     continue
 
                 authors = _extract_authors(cand)
-                year = _extract_year(cand)
+                item_year = _extract_year(cand)
                 venue_list = cand.get("container-title") or []
                 venue = venue_list[0] if venue_list else None
+                year_match = year is not None and item_year == year
+                score = sim + (0.05 if year_match else 0.0)
                 results.append(
                     CrossrefResult(
                         found=True,
                         doi=cand.get("DOI"),
                         title=cand_title,
                         authors=authors,
-                        year=year,
+                        year=item_year,
                         venue=venue,
-                        score=sim,
+                        score=score,
                     )
                 )
 

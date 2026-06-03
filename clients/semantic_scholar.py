@@ -49,11 +49,16 @@ class SemanticScholarClient:
         api_key: str | None = None,
         timeout: int = 10,
         offline: bool = False,
+        sleep: Any = time.sleep,
+        clock: Any = time.time,
     ) -> None:
         self.api_key = api_key
         self.timeout = timeout
         self.offline = offline
+        self._sleep = sleep
+        self._clock = clock
         self._last_request_at: float = 0.0
+        self._latched_unavailable: bool = False
 
     def verify_doi(self, doi: str) -> S2Result:
         """Verify a DOI against Semantic Scholar.
@@ -86,11 +91,12 @@ class SemanticScholarClient:
                 score=1.0,
             )
         except urllib.error.URLError:
+            self._latched_unavailable = True
             return S2Result(found=False)
         except Exception:
             return S2Result(found=False)
 
-    def search_by_title(self, title: str) -> list[S2Result]:
+    def search_by_title(self, title: str, year: int | None = None) -> list[S2Result]:
         """Search Semantic Scholar by title, return results ranked by similarity.
 
         Returns list of S2Result with score = title_similarity.
@@ -116,6 +122,9 @@ class SemanticScholarClient:
                     continue
 
                 authors = [a.get("name", "") for a in cand.get("authors", []) if a.get("name")]
+                item_year = cand.get("year")
+                year_match = year is not None and item_year == year
+                score = sim + (0.05 if year_match else 0.0)
 
                 results.append(
                     S2Result(
@@ -123,23 +132,27 @@ class SemanticScholarClient:
                         paper_id=cand.get("paperId"),
                         title=cand_title,
                         authors=authors,
-                        year=cand.get("year"),
+                        year=item_year,
                         venue=cand.get("venue"),
                         citation_count=cand.get("citationCount"),
                         is_open_access=cand.get("isOpenAccess"),
-                        score=sim,
+                        score=score,
                     )
                 )
 
             results.sort(key=lambda r: -r.score)
             return results
         except urllib.error.URLError:
+            self._latched_unavailable = True
             return []
         except Exception:
             return []
 
     def _get(self, path: str) -> dict[str, Any] | None:
         """Single GET request with retry on 429."""
+        if self._latched_unavailable:
+            logging.warning("S2 API latched unavailable (fail-fast)")
+            return None
         url = f"{self.BASE_URL}{path}"
         headers = {"User-Agent": "paper-writer/0.1"}
         if self.api_key:
@@ -154,11 +167,15 @@ class SemanticScholarClient:
         try:
             res = retry_with_backoff(
                 _do_request,
-                on_retry=lambda: setattr(self, "_last_request_at", time.time()),
+                on_retry=lambda: setattr(self, "_last_request_at", self._clock()),
             )
             if res:
-                self._last_request_at = time.time()
+                self._last_request_at = self._clock()
             return res
+        except (OSError, TimeoutError) as e:
+            self._latched_unavailable = True
+            logging.warning(f"S2 API I/O failure: {e}")
+            return None
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             logging.warning(f"Request failed: {type(e).__name__}: {e}")
             return None
@@ -168,3 +185,7 @@ class SemanticScholarClient:
             return None
         except Exception:
             return None
+
+    def reset_outage_latch(self) -> None:
+        """Reset the fail-fast outage latch."""
+        self._latched_unavailable = False
