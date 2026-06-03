@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 SCRIPTS = [
-    "benchmarks/mcp_skill_gap_test_v3.py",
+    "benchmarks/mcp_skill_gap_stdio_test_v3.py",
     "benchmarks/verify_skill_alignment.py",
     "benchmarks/verify_mcp_agent_docs.py"
 ]
