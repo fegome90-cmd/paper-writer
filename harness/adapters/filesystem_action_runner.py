@@ -31,15 +31,43 @@ class FilesystemActionRunner(ActionRunner):
         self,
         repo_path: Path,
         skill_adapters: dict[str, SkillAdapter] | None = None,
+        run_id: str | None = None,
     ) -> None:
         self.repo_path = repo_path.resolve()
         self._skill_adapters = skill_adapters or {}
+        self._run_id: str | None = run_id
+
+    @property
+    def run_id(self) -> str:
+        """Current run ID, lazily generated on first access."""
+        if self._run_id is None:
+            self._run_id = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
+        return self._run_id
 
     def _resolve(self, rel_path: str) -> Path:
         """Resolve a relative path and verify it stays within repo boundaries."""
         resolved = (self.repo_path / rel_path).resolve()
         if not str(resolved).startswith(str(self.repo_path)):
             raise ValueError(f"Path traversal detected: '{rel_path}' resolves outside repo root.")
+        return resolved
+
+    def _resolve_run(self, rel_path: str) -> Path:
+        """Resolve a per-run artifact path under outputs/runs/{run_id}/.
+
+        Also updates the 'outputs/latest' symlink to point at the current run.
+        """
+        run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+        run_dir.mkdir(parents=True, exist_ok=True)
+        resolved = (run_dir / rel_path).resolve()
+        if not str(resolved).startswith(str(self.repo_path)):
+            raise ValueError(f"Path traversal detected: '{rel_path}' resolves outside repo root.")
+        # Update latest symlink
+        latest = self._resolve("outputs/latest")
+        try:
+            latest.unlink()
+        except FileNotFoundError:
+            pass
+        latest.symlink_to(run_dir, target_is_directory=True)
         return resolved
 
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
@@ -51,9 +79,7 @@ class FilesystemActionRunner(ActionRunner):
             dirs = [
                 "templates",
                 "outputs",
-                "outputs/search",
-                "outputs/drafts",
-                "outputs/render",
+                "outputs/runs",
                 "outputs/logs",
             ]
             for d in dirs:
@@ -123,14 +149,11 @@ class FilesystemActionRunner(ActionRunner):
             artifacts.extend([str(state_file), str(manuscript_qmd), str(references_bib)])
 
         elif command == "search":
-            search_dir = self._resolve("outputs/search")
+            search_dir = self._resolve_run("search")
             search_dir.mkdir(parents=True, exist_ok=True)
 
             adapter = self._skill_adapters.get("literature_search")
             if adapter:
-                # When no external agent provided papers, use fallback papers
-                # so the scoring engine can demonstrate tier classification.
-                # In production, an agent following SKILL.md provides real papers.
                 raw_papers = args.get("raw_papers")
                 result = adapter.execute(
                     command="search",
@@ -141,9 +164,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
-                # If search only produced a plan (no papers), write fallback
-                # raw_results so the pipeline can continue for testing.
-                raw_results_path = self._resolve("outputs/search/raw_results.json")
+                raw_results_path = self._resolve_run("search/raw_results.json")
                 if not raw_results_path.exists():
                     raw_results_path.write_text(
                         '{"query":"fallback","papers":['
@@ -158,18 +179,19 @@ class FilesystemActionRunner(ActionRunner):
                     artifacts.append(str(raw_results_path))
                 artifacts.extend(result.artifacts)
             else:
-                plan_file = self._resolve("outputs/search/search_plan.json")
+                plan_file = self._resolve_run("search/search_plan.json")
                 with open(plan_file, "w", encoding="utf-8") as f:
                     f.write('{"query": "mock search", "date": "2026-05-24"}')
 
-                results_file = self._resolve("outputs/search/raw_results.json")
+                results_file = self._resolve_run("search/raw_results.json")
                 with open(results_file, "w", encoding="utf-8") as f:
                     f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123"}]')
 
                 artifacts.extend([str(plan_file), str(results_file)])
 
         elif command == "screen":
-            search_dir = self._resolve("outputs/search")
+            search_dir = self._resolve_run("search")
+            search_dir.mkdir(parents=True, exist_ok=True)
 
             adapter = self._skill_adapters.get("literature_search")
             if adapter:
@@ -183,7 +205,7 @@ class FilesystemActionRunner(ActionRunner):
                 )
                 artifacts.extend(result.artifacts)
             else:
-                evidence_file = self._resolve("outputs/search/screened_evidence.json")
+                evidence_file = self._resolve_run("search/screened_evidence.json")
                 with open(evidence_file, "w", encoding="utf-8") as f:
                     f.write(
                         '[{"title": "Mock Paper 1", "doi": "10.1000/xyz123", "screened": true}]'
