@@ -4,6 +4,7 @@ Verifies sources and gets citation counts via the Semantic Scholar API.
 Uses stdlib only (urllib, json). Returns S2Result(found=False) on
 any network error — never raises.
 """
+
 from __future__ import annotations
 
 import json
@@ -111,17 +112,19 @@ class SemanticScholarClient:
 
                 authors = [a.get("name", "") for a in cand.get("authors", []) if a.get("name")]
 
-                results.append(S2Result(
-                    found=True,
-                    paper_id=cand.get("paperId"),
-                    title=cand_title,
-                    authors=authors,
-                    year=cand.get("year"),
-                    venue=cand.get("venue"),
-                    citation_count=cand.get("citationCount"),
-                    is_open_access=cand.get("isOpenAccess"),
-                    score=sim,
-                ))
+                results.append(
+                    S2Result(
+                        found=True,
+                        paper_id=cand.get("paperId"),
+                        title=cand_title,
+                        authors=authors,
+                        year=cand.get("year"),
+                        venue=cand.get("venue"),
+                        citation_count=cand.get("citationCount"),
+                        is_open_access=cand.get("isOpenAccess"),
+                        score=sim,
+                    )
+                )
 
             results.sort(key=lambda r: -r.score)
             return results

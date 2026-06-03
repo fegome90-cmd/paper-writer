@@ -4,6 +4,7 @@ Verifies DOIs against the Crossref REST API to catch fabricated citations.
 Uses stdlib only (urllib, json). Returns CrossrefResult(found=False) on
 any network error — never raises.
 """
+
 from __future__ import annotations
 
 import json
@@ -102,9 +103,7 @@ class CrossrefClient:
             is_oa = None
             licenses = message.get("license") or []
             if licenses:
-                is_oa = any(
-                    "creativecommons" in lic.get("URL", "") for lic in licenses
-                )
+                is_oa = any("creativecommons" in lic.get("URL", "") for lic in licenses)
 
             return CrossrefResult(
                 found=True,
@@ -145,15 +144,17 @@ class CrossrefClient:
                 year = _extract_year(cand)
                 venue_list = cand.get("container-title") or []
                 venue = venue_list[0] if venue_list else None
-                results.append(CrossrefResult(
-                    found=True,
-                    doi=cand.get("DOI"),
-                    title=cand_title,
-                    authors=authors,
-                    year=year,
-                    venue=venue,
-                    score=sim,
-                ))
+                results.append(
+                    CrossrefResult(
+                        found=True,
+                        doi=cand.get("DOI"),
+                        title=cand_title,
+                        authors=authors,
+                        year=year,
+                        venue=venue,
+                        score=sim,
+                    )
+                )
 
             results.sort(key=lambda r: -r.score)
             return results

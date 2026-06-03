@@ -1,4 +1,5 @@
 """Graph/tracing subcommand handlers for paper CLI."""
+
 import argparse
 import json
 import sys
@@ -112,5 +113,3 @@ def _cmd_graph_overview(args: argparse.Namespace) -> None:
                 name = hub.get("symbol_name", hub.get("qualified_name", "?"))
                 in_deg = hub.get("in_degree", "?")
                 print(f"    {name} (in_degree={in_deg})")
-
-

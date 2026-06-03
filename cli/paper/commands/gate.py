@@ -1,4 +1,5 @@
 """Gate subcommand handlers for paper CLI."""
+
 import argparse
 import json
 import sys
@@ -37,5 +38,3 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
     # Fail-closed: exit code 1 if gate blocked
     if not result.get("gate_passed", True):
         sys.exit(1)
-
-

@@ -1,4 +1,5 @@
 """Audit subcommand handlers for paper CLI."""
+
 import argparse
 import json
 import sys
@@ -226,7 +227,6 @@ def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
-
 def _cmd_audit_code_health(args: argparse.Namespace) -> None:
     """Run code health audit using Trifecta graph index.
 
@@ -265,5 +265,3 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
 
     # Exit 1 if there are actionable findings, 0 otherwise
     sys.exit(1 if report.findings else 0)
-
-

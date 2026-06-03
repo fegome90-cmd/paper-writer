@@ -3,6 +3,7 @@
 Detects AI-typical writing patterns (delve, tapestry, landscape, etc.)
 with section-aware severity overrides (abstract/conclusions → P1).
 """
+
 from __future__ import annotations
 
 import re
@@ -65,8 +66,7 @@ class WritingQualityValidator:
                 matched = m.group().lower()
                 # Check: exact match, stem match (delves→delve), or contained
                 if any(
-                    matched == w or matched.startswith(w) or w in matched
-                    for w in self.whitelist
+                    matched == w or matched.startswith(w) or w in matched for w in self.whitelist
                 ):
                     continue
                 matches.append(m)
