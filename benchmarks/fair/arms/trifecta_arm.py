@@ -241,7 +241,7 @@ class TrifectaArm:
             "SELECT n.* FROM nodes n WHERE n.kind NOT IN ('module', 'class') "
             "AND n.id NOT IN "
             "(SELECT DISTINCT to_node_id FROM edges "
-            "WHERE edge_kind IN ('calls', 'imports'))"
+            "WHERE edge_kind IN ('calls', 'imports', 'decorates'))"
         )
 
         matches = []

@@ -1,8 +1,9 @@
-"""Baseline validation for Paso 2: Constructor-reachability.
+"""Baseline validation for Paso 3: Decorator-call resolution.
 
-Measures orphan count across overrides + constructor reachability.
+Measures orphan count across overrides + constructor + decorator reachability.
 Works on any repo with a Trifecta graph DB.
 """
+
 import sqlite3
 import sys
 
@@ -10,7 +11,7 @@ DB_PATH = sys.argv[1] if len(sys.argv) > 1 else ".trifecta/cache/graph_paper-wri
 
 db = sqlite3.connect(DB_PATH)
 
-# Raw orphans (no incoming edges, non-test)
+# Raw orphans (no incoming edges of any kind, non-test)
 raw = db.execute("""
     SELECT COUNT(*) FROM nodes n
     WHERE n.kind IN ('function', 'method', 'class')
@@ -21,9 +22,7 @@ raw = db.execute("""
 """).fetchone()[0]
 
 # Build incoming set with overrides reachability
-incoming = {r[0] for r in db.execute(
-    "SELECT DISTINCT to_node_id FROM edges"
-).fetchall()}
+incoming = {r[0] for r in db.execute("SELECT DISTINCT to_node_id FROM edges").fetchall()}
 if incoming:
     ph = ",".join("?" for _ in incoming)
     ov = db.execute(
@@ -74,9 +73,7 @@ for o in raw_orphans:
             continue
     final += 1
 
-ovr_count = db.execute(
-    "SELECT COUNT(*) FROM edges WHERE edge_kind='overrides'"
-).fetchone()[0]
+ovr_count = db.execute("SELECT COUNT(*) FROM edges WHERE edge_kind='overrides'").fetchone()[0]
 
 db.close()
 
