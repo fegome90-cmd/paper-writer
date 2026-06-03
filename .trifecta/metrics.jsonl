@@ -249,3 +249,4 @@
 {"ts": 1780500904.262629, "query_type": "search", "fidelity": "fallback", "latency_ms": 32, "timings": {"pack_load_and_search_ms": 18, "ast_resolution_ms": 14, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780501230.787256, "query_type": "search", "fidelity": "fallback", "latency_ms": 30, "timings": {"pack_load_and_search_ms": 13, "ast_resolution_ms": 16, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
 {"ts": 1780501676.765203, "query_type": "search", "fidelity": "fallback", "latency_ms": 28, "timings": {"pack_load_and_search_ms": 16, "ast_resolution_ms": 11, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
+{"ts": 1780502400.590623, "query_type": "semantic_hover", "fidelity": "degraded", "latency_ms": 48, "timings": {"pack_load_and_search_ms": 39, "ast_resolution_ms": 9, "graph_signal_ms": 0, "lsp_signal_ms": 0}}
