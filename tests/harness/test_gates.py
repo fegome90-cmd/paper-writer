@@ -2,6 +2,8 @@ import pytest
 
 from harness.services.gates import (
     validate_bib_normalized,
+    validate_citation_verify_gate,
+    validate_ethics_passed_gate,
     validate_outline_drafted,
     validate_ready_for_delivery,
     validate_render_passed,
@@ -198,3 +200,47 @@ class TestValidateValidatorGateMalformed:
         )
         assert result.status == "fail"
         assert len(result.blockers) == 1  # only the dict finding counted
+
+
+class TestCitationVerifyGate:
+    """Soft gate: citation_verified warns when not satisfied."""
+
+    def test_passes_when_gate_true(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_citation_verify_gate(checker, {"citation_verified": True})
+        assert result.gate == "citation_verified"
+        assert result.status == "pass"
+
+    def test_warns_when_gate_false(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_citation_verify_gate(checker, {"citation_verified": False})
+        assert result.gate == "citation_verified"
+        assert result.status == "warn"
+        assert len(result.warnings) > 0
+
+    def test_warns_when_gate_missing(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_citation_verify_gate(checker, {})
+        assert result.status == "warn"
+
+
+class TestEthicsPassedGate:
+    """Soft gate: ethics_passed warns when not satisfied."""
+
+    def test_passes_when_gate_true(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_ethics_passed_gate(checker, {"ethics_passed": True})
+        assert result.gate == "ethics_passed"
+        assert result.status == "pass"
+
+    def test_warns_when_gate_false(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_ethics_passed_gate(checker, {"ethics_passed": False})
+        assert result.gate == "ethics_passed"
+        assert result.status == "warn"
+        assert len(result.warnings) > 0
+
+    def test_warns_when_gate_missing(self) -> None:
+        checker = InMemoryArtifactChecker()
+        result = validate_ethics_passed_gate(checker, {})
+        assert result.status == "warn"
