@@ -25,7 +25,7 @@ paper doctor
 
 ### Optional: Trifecta Integration (code traceability, dead code detection)
 
-paper-writer can use [Trifecta](https://github.com/davebcn87/pi-autoresearch)
+paper-writer can use [Trifecta](https://github.com/fegome90-cmd/trifecta_dope)
 as an **optional external dependency** to power these commands:
 
 - `paper audit code-health` — find dead code / orphan methods
@@ -39,15 +39,13 @@ need code-traceability features.
 **Install Trifecta** (separate repo, not bundled with paper-writer):
 
 ```bash
-# Option A: Install as a uv tool (recommended)
-git clone https://github.com/davebcn87/pi-autoresearch.git
-cd pi-autoresearch
-uv tool install .
+# Clone the Trifecta repository
+git clone https://github.com/fegome90-cmd/trifecta_dope.git
+cd trifecta_dope
 
-# Option B: Install editable from a local clone
-git clone https://github.com/davebcn87/pi-autoresearch.git ~/Developer/agent_h/trifecta_dope
-cd ~/Developer/agent_h/trifecta_dope
-uv sync && uv pip install -e .
+# Install (editable or as tool)
+uv sync
+# or: uv tool install .
 
 # Verify Trifecta is on PATH
 which trifecta

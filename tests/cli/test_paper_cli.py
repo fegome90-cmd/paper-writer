@@ -145,7 +145,7 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "to 'verified'" in captured.out
+    assert "to 'rendered'" in captured.out
 
     # Verify the assembled manuscript was created and used for rendering
     assembled = tmp_path / "outputs" / "drafts" / "manuscript.md"

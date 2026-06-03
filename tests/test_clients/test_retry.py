@@ -4,6 +4,8 @@ from __future__ import annotations
 import urllib.error
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from clients._retry import MAX_RETRIES, retry_with_backoff
 
 
@@ -29,30 +31,23 @@ class TestRetryWithBackoff:
         error = urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None)
         fn = MagicMock(side_effect=error)
         with patch("clients._retry.time.sleep"):
-            try:
+            with pytest.raises(urllib.error.HTTPError) as exc_info:
                 retry_with_backoff(fn)
-                assert False, "Should have raised"
-            except urllib.error.HTTPError as e:
-                assert e.code == 429
+            assert exc_info.value.code == 429
         assert fn.call_count == MAX_RETRIES + 1
 
     def test_non_429_error_raises_immediately(self):
         error = urllib.error.HTTPError(None, 500, "Server Error", {}, None)
         fn = MagicMock(side_effect=error)
-        try:
+        with pytest.raises(urllib.error.HTTPError) as exc_info:
             retry_with_backoff(fn)
-            assert False, "Should have raised"
-        except urllib.error.HTTPError as e:
-            assert e.code == 500
+        assert exc_info.value.code == 500
         assert fn.call_count == 1
 
     def test_non_http_error_raises_immediately(self):
         fn = MagicMock(side_effect=ValueError("bad input"))
-        try:
+        with pytest.raises(ValueError, match="bad input"):
             retry_with_backoff(fn)
-            assert False, "Should have raised"
-        except ValueError as e:
-            assert str(e) == "bad input"
         assert fn.call_count == 1
 
     @patch("clients._retry.time.sleep")
