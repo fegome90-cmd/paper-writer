@@ -26,7 +26,7 @@ La regla es simple: no cerrar ningún punto sin evidencia en código, tests y/o 
 | 4 | BACKLOG-004 | **Alta** | Gobernanza documental | Definir qué documentos son source of truth, cuáles son design intent y cuáles son históricos. | `docs/REPO_ARCHITECTURE.md`, `docs/HARNESS_AND_STATE_MACHINE.md`, `docs/TESTING_STRATEGY.md`, `docs/tools/*` | Pendiente | 🔴 Abierto |
 | 5 | BACKLOG-005 | **Media-Alta** | Observabilidad | Cablear logs estructurados por comando al flujo principal. `write_command_log()` ahora es parte del runtime del orchestrator. | `harness/adapters/filesystem_action_runner.py` | **Completado** | ✅ Resuelto |
 | 6 | BACKLOG-006 | **Media** | Degraded mode | Semántica warn vs fail-closed documentada en todos los gate validators. | `harness/services/gates.py` | **Completado** | ✅ Resuelto |
-| 7 | BACKLOG-007 | **Media** | Testing / Docs | Reconciliar claims documentales con el estado real de tests y coverage reportado. | `docs/TESTING_STRATEGY.md`, `tests/`, salida real de `pytest --collect-only` | Pendiente | 🔴 Abierto |
+| 7 | BACKLOG-007 | **Media** | Testing / Docs | Reconciliar claims documentales con el estado real de tests y coverage. Stale paths fixed. | `docs/TESTING_STRATEGY.md`, `tests/`, `docs/REPO_ARCHITECTURE.md` | **Completado** | ✅ Resuelto |
 | 8 | BACKLOG-008 | **Media-Baja** | CLI | Modularizar la CLI si la superficie sigue creciendo; hoy funciona, pero `cli/paper/main.py` concentra demasiado. | `cli/paper/main.py`, `docs/REPO_ARCHITECTURE.md` | Pendiente | 🔴 Abierto |
 
 ### Nota operativa
