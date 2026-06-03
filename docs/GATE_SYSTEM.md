@@ -45,11 +45,18 @@ Required fields:
 | `reporting_passed` | Reporting/structure rules pass | reporting/structure validators |
 | `render_passed` | Render completed successfully | Pandoc wrapper |
 | `ready_for_delivery` | Final verification and manifest succeeded | `paper verify` |
+| `citation_verified` | Citations verified against Crossref + Semantic Scholar | `citation_verify` validator (soft) |
+| `ethics_passed` | AI disclosure statement present | `ethics` validator (soft) |
 
 Render policy for `render_passed`:
 - At least one requested output format must render successfully.
 - Partial success in mixed format requests is allowed as `warn` (for example, docx success + pdf fail).
 - If all requested formats fail, `render_passed` is `fail`.
+
+## Soft Gates
+
+Soft gates (`citation_verified`, `ethics_passed`) warn but do not block the pipeline.
+They are defined in `ManuscriptState.SOFT_GATES` and checked separately from `REQUIRED_GATES`.
 
 ## Fail-Closed Rules
 
@@ -58,6 +65,7 @@ Render policy for `render_passed`:
 - Error-severity findings on required validators -> gate fails.
 - A warning-only result may still fail if the gate policy explicitly says so.
 - `paper verify` requires `render_passed=True` as precondition, even if stage is `verified`.
+- Soft gates produce warnings in `validate_ready_for_delivery` but never block.
 
 ## Evaluation Order
 

@@ -100,6 +100,9 @@ paper import bib references.bib
 # Optional direct audits
 paper audit prose outputs/drafts/introduction.md
 paper audit claims outputs/drafts/introduction.md
+paper audit citations outputs/drafts/manuscript.md --offline
+paper audit ethics outputs/drafts/manuscript.md
+paper audit writing-quality outputs/drafts/manuscript.md
 paper gate method outputs/drafts/introduction.md --study-type rct
 
 # Run pipeline

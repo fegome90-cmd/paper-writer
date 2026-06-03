@@ -16,6 +16,10 @@ This contract applies to:
 - `validators/structure.py`
 - `validators/reporting.py`
 - `validators/style.py`
+- `validators/citation_verify.py` — Crossref + Semantic Scholar citation verification
+- `validators/claim_alignment.py` — claim-reference alignment
+- `validators/ethics.py` — AI disclosure compliance
+- `validators/writing_quality.py` — AI-typical writing detection
 - any future validator integrated through the harness
 
 ## Canonical Input Contract
@@ -83,6 +87,10 @@ Required output fields:
 | `style` | `style_passed` |
 | `reporting` | `reporting_passed` |
 | `structure` | `reporting_passed` or future `structure_passed` |
+| `citation_verify` | `citation_verified` (soft) |
+| `claim_alignment` | `refs_validated` (extends existing) |
+| `ethics` | `ethics_passed` (soft) |
+| `writing_quality` | `style_passed` (extends existing) |
 
 ## Rules
 
