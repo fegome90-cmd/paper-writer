@@ -306,3 +306,130 @@ class TestTrifectaGraphActions:
         call_args = run.call_args[0][0]
         assert "--depth" in call_args
         assert "3" in call_args
+
+
+class TestTrifectaResponseNormalization:
+    """Test response normalization edge cases."""
+
+    def test_find_orphans_extracts_orphans_key(self, tmp_path: Path) -> None:
+        """find_orphans extracts data from 'orphans' key in dict response."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"orphans": ["orphan1", "orphan2"]})
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_orphans()
+        assert result.success is True
+        assert result.data == ["orphan1", "orphan2"]
+
+    def test_find_orphans_non_dict_non_list_normalizes(self, tmp_path: Path) -> None:
+        """find_orphans normalizes unexpected types to empty list."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = "42"
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_orphans()
+        assert result.success is True
+        assert result.data == []
+
+    def test_find_callers_nodes_key_fallback(self, tmp_path: Path) -> None:
+        """find_callers falls back to 'nodes' key when 'callers' missing."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"nodes": [{"name": "caller1"}]})
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_callers("some_func")
+        assert result.success is True
+        assert result.data[0]["name"] == "caller1"
+
+    def test_find_callers_failure_returns_empty(self, tmp_path: Path) -> None:
+        """find_callers returns empty list on failure."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = client.find_callers("func")
+        assert result.success is False
+        assert result.data == []
+
+    def test_find_callees_callees_key(self, tmp_path: Path) -> None:
+        """find_callees extracts from 'callees' key."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"callees": [{"name": "callee1"}]})
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_callees("some_func")
+        assert result.success is True
+        assert result.data[0]["name"] == "callee1"
+
+    def test_find_callees_nodes_key_fallback(self, tmp_path: Path) -> None:
+        """find_callees falls back to 'nodes' key."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"nodes": [{"name": "callee1"}]})
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_callees("some_func")
+        assert result.success is True
+        assert result.data[0]["name"] == "callee1"
+
+    def test_find_callees_failure_returns_empty(self, tmp_path: Path) -> None:
+        """find_callees returns empty list on failure."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = client.find_callees("func")
+        assert result.success is False
+        assert result.data == []
+
+    def test_find_path_success(self, tmp_path: Path) -> None:
+        """find_path returns path info."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = json.dumps({"path": ["A", "B", "C"], "length": 2})
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_path("A", "C")
+        assert result.success is True
+        assert result.data["length"] == 2
+
+    def test_find_path_failure_returns_empty(self, tmp_path: Path) -> None:
+        """find_path returns empty dict on failure."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = client.find_path("A", "C")
+        assert result.success is False
+        assert result.data == {}
+
+    def test_find_hubs_non_dict_normalizes(self, tmp_path: Path) -> None:
+        """find_hubs normalizes non-dict/non-list responses to empty list."""
+        client = TrifectaClient(repo_path=tmp_path)
+        mock = MagicMock()
+        mock.returncode = 0
+        mock.stdout = "42"
+        mock.stderr = ""
+        with patch("subprocess.run", return_value=mock):
+            result = client.find_hubs()
+        assert result.success is True
+        assert result.data == []
+
+    def test_health_failure_returns_empty(self, tmp_path: Path) -> None:
+        """health returns empty dict on failure."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            result = client.health()
+        assert result.success is False
+        assert result.data == {}
+
+    def test_run_oserror(self, tmp_path: Path) -> None:
+        """_run catches OSError and returns failed result."""
+        client = TrifectaClient(repo_path=tmp_path)
+        with patch("subprocess.run", side_effect=OSError("no such file")):
+            result = client.find_orphans()
+        assert result.success is False
