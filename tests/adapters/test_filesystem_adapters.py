@@ -120,13 +120,18 @@ def test_action_runner_draft_section(tmp_path: Path) -> None:
 
     # Invalid name
     with pytest.raises(ValueError, match="Invalid section name"):
-        runner.run_action("draft_section", {"name": "conclusion"})
+        runner.run_action("draft_section", {"name": "bibliography"})
 
     # Valid section
     artifacts = runner.run_action("draft_section", {"name": "introduction"})
     assert len(artifacts) == 1
     intro_path = _run_path(tmp_path, "drafts", "introduction.md")
     assert intro_path.is_file()
+
+    # Previously rejected sections now accepted
+    for section in ["abstract", "literature_review", "conclusion"]:
+        artifacts = runner.run_action("draft_section", {"name": section})
+        assert len(artifacts) == 1
 
 
 def test_action_runner_validation_logs(tmp_path: Path) -> None:

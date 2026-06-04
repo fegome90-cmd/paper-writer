@@ -300,7 +300,15 @@ class FilesystemActionRunner(ActionRunner):
             if not section_name:
                 raise ValueError("Missing 'name' argument for draft_section.")
 
-            valid_sections = ["introduction", "methods", "results", "discussion"]
+            valid_sections = [
+                "abstract",
+                "introduction",
+                "literature_review",
+                "methods",
+                "results",
+                "discussion",
+                "conclusion",
+            ]
             if section_name not in valid_sections:
                 raise ValueError(
                     f"Invalid section name '{section_name}'. Must be one of {valid_sections}"
@@ -326,7 +334,8 @@ class FilesystemActionRunner(ActionRunner):
             else:
                 section_file = self._resolve_run(f"drafts/{section_name}.md")
                 with open(section_file, "w", encoding="utf-8") as f:
-                    f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
+                    title = section_name.replace("_", " ").title()
+                    f.write(f"# {title}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
         elif command in [
