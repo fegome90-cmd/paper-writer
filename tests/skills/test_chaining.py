@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 
@@ -320,3 +322,209 @@ class TestIterativeSearch:
             assert len(seed_prov) == 1
             assert len(chain_prov) == 1
             assert chain_prov[0]["chain_from"] == "seed1"
+
+
+class TestDedupByDoiAndTitle:
+    """Test DOI + title fuzzy dedup in iterative_search."""
+
+    def _make_seed(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "title": "Attention is all you need",
+                "doi": "10.1/seed1",
+                "year": 2017,
+                "abstract": "Transformer architecture for sequence transduction.",
+                "citation_count": 80000,
+                "venue": "NeurIPS",
+                "scoring": {"final_score": 8.5, "tier": "Tier 1"},
+            },
+        ]
+
+    def test_dedup_by_doi(self, tmp_path: Path) -> None:
+        """Same DOI via different paperId is filtered."""
+        from skills.imported.literature_search.chaining import (
+            _cache_put,
+            iterative_search,
+        )
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        # Reference with same DOI as seed but different paperId
+        refs = {
+            "data": [
+                {
+                    "citedPaper": {
+                        "paperId": "DUPE_DIFFERENT_PID",
+                        "title": "Attention is all you need (published version)",
+                        "year": 2017,
+                        "abstract": "Transformer architecture for sequence transduction.",
+                        "externalIds": {"DOI": "10.1/seed1"},
+                        "citationCount": 80000,
+                        "venue": "NeurIPS",
+                    }
+                },
+            ]
+        }
+        cites: dict[str, list[dict[str, object]]] = {"data": []}
+        seed_pid = "DOI:10.1/seed1"
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/references?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            refs,
+            cache_dir=cache_dir,
+        )
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/citations?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            cites,
+            cache_dir=cache_dir,
+        )
+
+        result = iterative_search(
+            self._make_seed(),
+            query="transformer attention",
+            max_rounds=1,
+            cache_dir=cache_dir,
+        )
+        # Should only have the seed — DOI duplicate filtered
+        assert result["total_unique"] == 1
+
+    def test_dedup_by_title_case_insensitive(self, tmp_path: Path) -> None:
+        """Same title with different casing is filtered."""
+        from skills.imported.literature_search.chaining import (
+            _cache_put,
+            iterative_search,
+        )
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        refs = {
+            "data": [
+                {
+                    "citedPaper": {
+                        "paperId": "TITLE_DUPE",
+                        "title": "ATTENTION IS ALL YOU NEED",
+                        "year": 2017,
+                        "abstract": "Transformer architecture for sequence transduction.",
+                        "externalIds": {"DOI": "10.1/different-doi"},
+                        "citationCount": 80000,
+                        "venue": "NeurIPS",
+                    }
+                },
+            ]
+        }
+        cites: dict[str, list[dict[str, object]]] = {"data": []}
+        seed_pid = "DOI:10.1/seed1"
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/references?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            refs,
+            cache_dir=cache_dir,
+        )
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/citations?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            cites,
+            cache_dir=cache_dir,
+        )
+
+        result = iterative_search(
+            self._make_seed(),
+            query="transformer attention",
+            max_rounds=1,
+            cache_dir=cache_dir,
+        )
+        # Title dedup should catch the case-insensitive duplicate
+        assert result["total_unique"] == 1
+
+    def test_dedup_by_title_punctuation(self, tmp_path: Path) -> None:
+        """Title with extra punctuation/whitespace is still deduped."""
+        from skills.imported.literature_search.chaining import (
+            _cache_put,
+            iterative_search,
+        )
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        refs = {
+            "data": [
+                {
+                    "citedPaper": {
+                        "paperId": "PUNCT_DUPE",
+                        "title": "Attention  is  all  you  need!",
+                        "year": 2017,
+                        "abstract": "Transformer architecture for sequence transduction.",
+                        "externalIds": {"DOI": "10.1/punct-doi"},
+                        "citationCount": 80000,
+                        "venue": "NeurIPS",
+                    }
+                },
+            ]
+        }
+        cites: dict[str, list[dict[str, object]]] = {"data": []}
+        seed_pid = "DOI:10.1/seed1"
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/references?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            refs,
+            cache_dir=cache_dir,
+        )
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/citations?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            cites,
+            cache_dir=cache_dir,
+        )
+
+        result = iterative_search(
+            self._make_seed(),
+            query="transformer attention",
+            max_rounds=1,
+            cache_dir=cache_dir,
+        )
+        # Punctuation-stripped title should match
+        assert result["total_unique"] == 1
+
+    def test_different_paper_passes(self, tmp_path: Path) -> None:
+        """Genuinely different papers are not deduped."""
+        from skills.imported.literature_search.chaining import (
+            _cache_put,
+            iterative_search,
+        )
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+
+        refs = {
+            "data": [
+                {
+                    "citedPaper": {
+                        "paperId": "NEW_PAPER",
+                        "title": "Scaling laws for neural language models",
+                        "year": 2023,
+                        "abstract": "Empirical scaling laws for language model performance.",
+                        "externalIds": {"DOI": "10.1/scaling"},
+                        "citationCount": 2000,
+                        "venue": "ICML",
+                    }
+                },
+            ]
+        }
+        cites: dict[str, list[dict[str, object]]] = {"data": []}
+        seed_pid = "DOI:10.1/seed1"
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/references?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            refs,
+            cache_dir=cache_dir,
+        )
+        _cache_put(
+            f"https://api.semanticscholar.org/graph/v1/paper/{seed_pid}/citations?limit=20&fields=title,year,abstract,externalIds,citationCount",
+            cites,
+            cache_dir=cache_dir,
+        )
+
+        result = iterative_search(
+            self._make_seed(),
+            query="transformer attention language models",
+            max_rounds=1,
+            cache_dir=cache_dir,
+        )
+        # Seed + new paper = 2
+        assert result["total_unique"] == 2

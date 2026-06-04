@@ -317,6 +317,9 @@ def iterative_search(
 
     # Track all papers by ID to avoid duplicates
     corpus: dict[str, dict[str, Any]] = {}
+    # Secondary dedup indices: DOI and normalized title
+    seen_dois: dict[str, str] = {}  # doi -> corpus key
+    seen_titles: dict[str, str] = {}  # normalized_title -> corpus key
     provenance: list[dict[str, Any]] = []
     stats: dict[str, Any] = {
         "rounds_completed": 0,
@@ -325,11 +328,41 @@ def iterative_search(
         "saturation": False,
     }
 
+    def _normalize_title(title: str) -> str:
+        """Normalize title for fuzzy dedup: lowercase, strip punctuation/whitespace."""
+        import re as _re
+
+        return _re.sub(r"\s+", " ", _re.sub(r"[^a-z0-9]", "", title.lower())).strip()
+
+    def _is_duplicate(paper: dict[str, Any], key: str) -> bool:
+        """Check if paper is a duplicate via DOI or title fuzzy match."""
+        doi = paper.get("doi") or paper.get("externalIds", {}).get("DOI")
+        if doi and doi in seen_dois:
+            return True
+        title = paper.get("title", "")
+        if title:
+            norm = _normalize_title(title)
+            if norm and norm in seen_titles:
+                return True
+        return False
+
+    def _register_indices(paper: dict[str, Any], key: str) -> None:
+        """Register paper in secondary dedup indices."""
+        doi = paper.get("doi") or paper.get("externalIds", {}).get("DOI")
+        if doi:
+            seen_dois[doi] = key
+        title = paper.get("title", "")
+        if title:
+            norm = _normalize_title(title)
+            if norm:
+                seen_titles[norm] = key
+
     # Add seeds to corpus
     for paper in seed_papers:
         pid = resolve_paper_id(paper) or paper.get("doi") or paper.get("title", "")
         if pid and pid not in corpus:
             corpus[pid] = paper
+            _register_indices(paper, pid)
             provenance.append(
                 {
                     "paper_id": pid,
@@ -363,6 +396,8 @@ def iterative_search(
                 ref_id = ref.get("paperId")
                 if not ref_id or ref_id in corpus:
                     continue
+                if _is_duplicate(ref, ref_id):
+                    continue
                 if len(corpus) >= max_papers:
                     break
 
@@ -380,6 +415,7 @@ def iterative_search(
 
                 paper_dict = s2_paper_to_dict(ref, source="backward_chaining")
                 corpus[ref_id] = paper_dict
+                _register_indices(paper_dict, ref_id)
                 next_frontier.append(ref_id)
                 provenance.append(
                     {
@@ -399,6 +435,8 @@ def iterative_search(
                 cite_id = cite.get("paperId")
                 if not cite_id or cite_id in corpus:
                     continue
+                if _is_duplicate(cite, cite_id):
+                    continue
                 if len(corpus) >= max_papers:
                     break
 
@@ -416,6 +454,7 @@ def iterative_search(
 
                 paper_dict = s2_paper_to_dict(cite, source="forward_chaining")
                 corpus[cite_id] = paper_dict
+                _register_indices(paper_dict, cite_id)
                 next_frontier.append(cite_id)
                 provenance.append(
                     {
