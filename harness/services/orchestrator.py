@@ -560,7 +560,7 @@ class Orchestrator:
             base["outline"] = outline_path
 
         if command == "render":
-            render_dir = self.repo_path / "outputs" / "render"
+            render_dir = self.repo_path / "outputs" / "latest" / "render"
             base["output_dir"] = str(render_dir)
             # Priority: assembled manuscript (real content) > placeholder template
             assembled = draft_dir / "manuscript.md"
