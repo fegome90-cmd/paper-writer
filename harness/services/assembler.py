@@ -60,6 +60,10 @@ def assemble_manuscript(draft_dir: Path) -> Path:
 
     if not parts:
         logger.warning("No sections found — manuscript not written")
+        # Remove stale manuscript from previous run to prevent outdated content
+        if manuscript_path.is_file():
+            manuscript_path.unlink()
+            logger.info("Removed stale manuscript: %s", manuscript_path)
         return manuscript_path
 
     assembled = "\n\n".join(parts) + "\n"
