@@ -1,6 +1,7 @@
 """Manuscript assembler — combines draft sections into a single renderable file.
 
-Canonical section order: introduction → methods → results → discussion.
+Canonical section order follows the sections_manifest.json:
+abstract → introduction → literature_review → methods → results → discussion → conclusion.
 Missing sections are skipped with a warning. If no sections are found,
 the assembled manuscript is NOT written (to avoid overwriting with empty content).
 """
@@ -10,7 +11,15 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-CANONICAL_ORDER = ("introduction", "methods", "results", "discussion")
+CANONICAL_ORDER = (
+    "abstract",
+    "introduction",
+    "literature_review",
+    "methods",
+    "results",
+    "discussion",
+    "conclusion",
+)
 
 
 def assemble_manuscript(draft_dir: Path) -> Path:

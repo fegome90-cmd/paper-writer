@@ -142,3 +142,42 @@ class TestAssembleManuscript:
             assert result == target
         finally:
             os.chmod(target, 0o644)
+
+    def test_assembles_all_seven_manifest_sections(self, tmp_path: Path) -> None:
+        """All 7 manifest sections are included in assembled manuscript."""
+        draft_dir = tmp_path / "drafts"
+        draft_dir.mkdir()
+
+        sections = {
+            "abstract": "# Abstract\n\nAbstract content.",
+            "introduction": "# Introduction\n\nIntro content.",
+            "literature_review": "# Literature Review\n\nLit review content.",
+            "methods": "# Methods\n\nMethods content.",
+            "results": "# Results\n\nResults content.",
+            "discussion": "# Discussion\n\nDiscussion content.",
+            "conclusion": "# Conclusion\n\nConclusion content.",
+        }
+
+        for name, content in sections.items():
+            (draft_dir / f"{name}.md").write_text(content, encoding="utf-8")
+
+        result = assemble_manuscript(draft_dir)
+
+        assert result.is_file()
+        content = result.read_text(encoding="utf-8")
+
+        # All 7 sections present
+        for name in sections:
+            assert name.replace("_", " ").title() in content, f"Missing section: {name}"
+
+        # Verify ordering: abstract first, conclusion last
+        abstract_pos = content.index("Abstract")
+        intro_pos = content.index("Introduction")
+        lit_review_pos = content.index("Literature Review")
+        methods_pos = content.index("Methods")
+        results_pos = content.index("Results")
+        discussion_pos = content.index("Discussion")
+        conclusion_pos = content.index("Conclusion")
+
+        assert abstract_pos < intro_pos < lit_review_pos < methods_pos
+        assert methods_pos < results_pos < discussion_pos < conclusion_pos
