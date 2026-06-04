@@ -166,6 +166,27 @@ class TestResolvePaperId:
 
         assert resolve_paper_id({}) is None
 
+    def test_falls_back_to_top_level_doi(self) -> None:
+        """Search pipeline format: doi is top-level, not in externalIds."""
+        from skills.imported.literature_search.chaining import resolve_paper_id
+
+        paper = {"title": "Test", "doi": "10.1234/test"}
+        assert resolve_paper_id(paper) == "DOI:10.1234/test"
+
+    def test_falls_back_to_top_level_arxiv_id(self) -> None:
+        """Search pipeline format: arxiv_id is top-level."""
+        from skills.imported.literature_search.chaining import resolve_paper_id
+
+        paper = {"title": "Test", "arxiv_id": "2406.14497"}
+        assert resolve_paper_id(paper) == "ArXiv:2406.14497"
+
+    def test_falls_back_to_s2_id(self) -> None:
+        """Chaining output format: s2_id from s2_paper_to_dict."""
+        from skills.imported.literature_search.chaining import resolve_paper_id
+
+        paper = {"title": "Test", "s2_id": "abc123"}
+        assert resolve_paper_id(paper) == "abc123"
+
 
 class TestS2PaperToDict:
     """s2_paper_to_dict() — normalize S2 paper to our format."""
