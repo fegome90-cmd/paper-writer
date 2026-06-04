@@ -143,8 +143,13 @@ def test_action_runner_draft_all(tmp_path: Path) -> None:
 
     # Verify all 7 manifest sections are created
     expected_sections = [
-        "introduction", "methods", "results", "discussion",
-        "abstract", "literature_review", "conclusion",
+        "introduction",
+        "methods",
+        "results",
+        "discussion",
+        "abstract",
+        "literature_review",
+        "conclusion",
     ]
     for sec in expected_sections:
         sec_path = _run_path(tmp_path, "drafts", f"{sec}.md")

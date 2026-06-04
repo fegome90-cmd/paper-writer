@@ -112,8 +112,13 @@ def test_cli_full_pipeline(
 
     # Overwrite mock content with real content referencing bib keys
     for sec in [
-        "introduction", "methods", "results", "discussion",
-        "abstract", "literature_review", "conclusion",
+        "introduction",
+        "methods",
+        "results",
+        "discussion",
+        "abstract",
+        "literature_review",
+        "conclusion",
     ]:
         _write_section(tmp_path, sec)
 
