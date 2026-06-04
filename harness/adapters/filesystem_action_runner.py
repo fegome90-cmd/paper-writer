@@ -358,8 +358,13 @@ class FilesystemActionRunner(ActionRunner):
             else:
                 # Fallback: create mock sections for all manifest sections
                 for sec in [
-                    "introduction", "methods", "results", "discussion",
-                    "abstract", "literature_review", "conclusion",
+                    "introduction",
+                    "methods",
+                    "results",
+                    "discussion",
+                    "abstract",
+                    "literature_review",
+                    "conclusion",
                 ]:
                     section_file = self._resolve_run(f"drafts/{sec}.md")
                     title = sec.replace("_", " ").title()
