@@ -62,7 +62,9 @@ def _cache_put(url: str, response: dict[str, Any], cache_dir: Path | None = None
     cp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
-def _api_get(url: str, timeout: float = 15.0, cache_dir: Path | None = None) -> dict[str, Any] | None:
+def _api_get(
+    url: str, timeout: float = 15.0, cache_dir: Path | None = None
+) -> dict[str, Any] | None:
     """Make a rate-limited GET to Semantic Scholar API.
 
     Returns parsed JSON or None on failure. Never raises.

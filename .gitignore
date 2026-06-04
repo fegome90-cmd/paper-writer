@@ -61,3 +61,6 @@ openspec/
 
 # Node toolchain deps (package.json and lock are tracked)
 tools/node/node_modules/
+
+# External tool clones (not part of this repo)
+gemini-autoresearch/
