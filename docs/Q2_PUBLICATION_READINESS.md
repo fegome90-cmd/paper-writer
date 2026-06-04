@@ -211,17 +211,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Acceptance** | `screened_evidence.json` includes `prisma_flow` with source counts and exclusion reasons. |
 | **Estado** | ✅ DONE — 4 stages from source provenance, 6 tests |
 
-### GAP-012: No reproducibility protocol document
+### GAP-012: ~~No reproducibility protocol~~ (Protocol generator DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟢 Baja-Media — P2 |
-| **Componente** | Command logs, state machine |
-| **Problema** | No command generates protocol summary for reviewers. Search strings, decisions scattered across files. |
-| **Solución** | Add `paper protocol` command that aggregates all pipeline metadata. |
-| **Acceptance** | `paper protocol > protocol.md` produces complete document. |
-| **Esfuerzo** | Medio día |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟢 Baja-Media~~ → ✅ RESOLVED |
+| **Componente** | `validators/protocol_generator.py` |
+| **Problema** | No command generates protocol summary for reviewers. |
+| **Solución** | `generate_protocol()` aggregates raw_results, provenance, PRISMA flow, quality appraisal into 6-section Markdown. |
+| **Acceptance** | 6/6 protocol sections generated from pipeline metadata. |
+| **Estado** | ✅ DONE — `validators/protocol_generator.py`, 8 tests |
 
 ---
 

@@ -148,7 +148,9 @@ def _build_search_results(search_dir: Path) -> str:
         ident = flow.get("identification", {})
         lines.append("### Identification\n")
         lines.append("| Source | Count |\n|---|---|\n")
-        lines.append(f"| Database results (backward chaining) | {ident.get('database_results', 0)} |\n")
+        lines.append(
+            f"| Database results (backward chaining) | {ident.get('database_results', 0)} |\n"
+        )
         lines.append(f"| Other sources (forward chaining) | {ident.get('other_sources', 0)} |\n")
         lines.append(f"| Seed papers | {ident.get('seed_papers', 0)} |\n")
         lines.append(f"| **Total identified** | **{ident.get('total_identified', 0)}** |\n")
