@@ -94,6 +94,35 @@ def main() -> None:
         help="Path to JSON file containing raw paper candidates.",
     )
 
+    # paper chain
+    chain_parser = subparsers.add_parser(
+        "chain",
+        help="Expand corpus via Semantic Scholar citation chaining.",
+    )
+    chain_parser.add_argument(
+        "--max-rounds",
+        type=int,
+        default=2,
+        help="Maximum chaining iterations (default: 2).",
+    )
+    chain_parser.add_argument(
+        "--max-papers",
+        type=int,
+        default=80,
+        help="Stop when corpus reaches this size (default: 80).",
+    )
+    chain_parser.add_argument(
+        "--relevance-threshold",
+        type=float,
+        default=0.25,
+        help="Minimum relevance score to include (default: 0.25).",
+    )
+    chain_parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable API response caching.",
+    )
+
     # paper screen
     subparsers.add_parser("screen", help="Screen search results to evidence set.")
 
@@ -320,6 +349,13 @@ def main() -> None:
     elif cmd_name == "search":
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
+    elif cmd_name == "chain":
+        orch_command = "chain"
+        orch_args["max_rounds"] = args.max_rounds
+        orch_args["max_papers"] = args.max_papers
+        orch_args["relevance_threshold"] = args.relevance_threshold
+        if not args.no_cache:
+            orch_args["cache_dir"] = "outputs/.cache/s2_api"
     elif cmd_name == "draft":
         if sub_name == "outline":
             orch_command = "draft_outline"

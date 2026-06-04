@@ -234,6 +234,28 @@ class FilesystemActionRunner(ActionRunner):
                     )
                 artifacts.append(str(evidence_file))
 
+        elif command == "chain":
+            search_dir = self._resolve_run("search")
+            search_dir.mkdir(parents=True, exist_ok=True)
+
+            adapter = self._skill_adapters.get("literature_search")
+            if adapter:
+                cache_dir = args.get("cache_dir")
+                result = adapter.execute(
+                    command="chain",
+                    inputs={
+                        "search_dir": str(search_dir),
+                        "output_dir": str(search_dir),
+                        "query": args.get("query", ""),
+                        "max_rounds": args.get("max_rounds", 2),
+                        "max_papers": args.get("max_papers", 80),
+                        "relevance_threshold": args.get("relevance_threshold", 0.25),
+                        "cache_dir": cache_dir,
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+
         elif command == "draft_outline":
             drafts_dir = self._resolve_run("drafts")
             drafts_dir.mkdir(parents=True, exist_ok=True)

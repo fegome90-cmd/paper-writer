@@ -309,6 +309,7 @@ class Orchestrator:
         command_min_stages = {
             "init": "bootstrap",
             "search": "search",
+            "chain": "screen",  # chain requires search results to exist
             "screen": "screen",
             "draft_outline": "outline",
             "draft_section": "drafting",
@@ -352,6 +353,8 @@ class Orchestrator:
         if cmd == "init":
             return [validate_repo_initialized(self.checker)]
         elif cmd == "search":
+            return [validate_search_completed(self.checker)]
+        elif cmd == "chain":
             return [validate_search_completed(self.checker)]
         elif cmd == "screen":
             return [validate_screened_evidence(self.checker)]
@@ -414,6 +417,8 @@ class Orchestrator:
             return "search"
         elif command == "search":
             return "screen"
+        elif command == "chain":
+            return "screen"  # chain produces more search results, advances to screen-ready
         elif command == "screen":
             return "outline"
         elif command == "draft_outline":

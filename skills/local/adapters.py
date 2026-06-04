@@ -54,6 +54,8 @@ class LiteratureSearchAdapter(SkillAdapter):
                 return self._handle_search(inputs)
             if command == "screen":
                 return self._handle_screen(inputs)
+            if command == "chain":
+                return self._handle_chain(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
         except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
             return SkillResult(
@@ -111,6 +113,96 @@ class LiteratureSearchAdapter(SkillAdapter):
             summary="Screening completed using real tier classification",
             artifacts=[str(a) for a in result["artifacts"]],
             gate_changes={"screened_evidence": True},
+        )
+
+    def _handle_chain(self, inputs: dict[str, Any]) -> SkillResult:
+        """Handle the 'chain' command — expand corpus via S2 citation chaining.
+
+        Reads scored papers from raw_results.json, runs iterative_search(),
+        merges expanded results, re-scores, and writes updated raw_results.json.
+        """
+        from skills.imported.literature_search import chaining
+
+        search_dir = Path(inputs.get("search_dir", "outputs/search"))
+        output_dir = Path(inputs.get("output_dir", str(search_dir)))
+        query = str(inputs.get("query", ""))
+        max_rounds = int(inputs.get("max_rounds", 2))
+        max_papers = int(inputs.get("max_papers", 80))
+        relevance_threshold = float(inputs.get("relevance_threshold", 0.25))
+        cache_dir = inputs.get("cache_dir")
+
+        # 1. Load scored papers from raw_results.json (seeds for chaining)
+        raw_results_path = search_dir / "raw_results.json"
+        if not raw_results_path.exists():
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary="No raw_results.json found — run 'search' first",
+                artifacts=[],
+                gate_changes={},
+                warnings=["raw_results.json not found"],
+            )
+
+        raw_data = json.loads(raw_results_path.read_text(encoding="utf-8"))
+        seed_papers = raw_data.get("papers", [])
+        if not seed_papers:
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary="No scored papers in raw_results.json — nothing to chain from",
+                artifacts=[],
+                gate_changes={},
+                warnings=["empty papers list"],
+            )
+
+        # 2. Run chaining
+        chain_cache = Path(cache_dir) if cache_dir else None
+        chain_result = chaining.iterative_search(
+            seed_papers=seed_papers,
+            query=query or raw_data.get("query", ""),
+            max_rounds=max_rounds,
+            max_papers=max_papers,
+            relevance_threshold=relevance_threshold,
+            cache_dir=chain_cache,
+        )
+
+        # 3. Re-score expanded corpus through the full search pipeline
+        expanded_papers = chain_result["papers"]
+        result = search_module.search(
+            query=query or raw_data.get("query", ""),
+            output_dir=output_dir,
+            raw_papers=expanded_papers,
+            weights_phase=str(inputs.get("weights_phase", "balanced")),
+        )
+
+        # 4. Write chaining provenance
+        provenance_path = output_dir / "chain_provenance.json"
+        provenance_path.write_text(
+            json.dumps(
+                {
+                    "stats": chain_result["stats"],
+                    "total_unique": chain_result["total_unique"],
+                    "provenance": chain_result["provenance"],
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+        artifacts = [str(p) for p in result.get("artifacts", [])]
+        artifacts.append(str(provenance_path))
+
+        return SkillResult(
+            adapter=self.name,
+            status="pass",
+            summary=(
+                f"Chaining complete: {chain_result['total_unique']} papers "
+                f"in {chain_result['stats']['rounds_completed']} rounds, "
+                f"{chain_result['stats']['total_api_calls']} API calls"
+            ),
+            artifacts=artifacts,
+            gate_changes={"search_completed": True, "chaining_completed": True},
         )
 
 

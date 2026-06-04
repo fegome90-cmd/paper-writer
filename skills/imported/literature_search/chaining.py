@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -24,12 +25,55 @@ from urllib.request import Request, urlopen
 _last_request_time: float = 0.0
 _MIN_INTERVAL: float = 1.0  # seconds between requests (conservative)
 
+# Caching: file-based cache for deterministic test runs
+_DEFAULT_CACHE_DIR = Path("outputs/.cache/s2_api")
+_CACHE_TTL_SECONDS: float = 7 * 24 * 3600  # 7 days
 
-def _api_get(url: str, timeout: float = 15.0) -> dict[str, Any] | None:
+
+def _cache_path(url: str, cache_dir: Path | None = None) -> Path:
+    """Compute cache file path from URL hash."""
+    cdir = cache_dir or _DEFAULT_CACHE_DIR
+    import hashlib
+
+    h = hashlib.sha256(url.encode()).hexdigest()[:16]
+    return cdir / f"{h}.json"
+
+
+def _cache_get(url: str, cache_dir: Path | None = None) -> dict[str, Any] | None:
+    """Read cached response if fresh enough."""
+    cp = _cache_path(url, cache_dir)
+    if not cp.exists():
+        return None
+    try:
+        data = json.loads(cp.read_text(encoding="utf-8"))
+        ts = data.get("_cached_at", 0)
+        if time.time() - ts > _CACHE_TTL_SECONDS:
+            return None  # stale
+        return data.get("response")  # type: ignore[no-any-return]
+    except (json.JSONDecodeError, OSError, KeyError):
+        return None
+
+
+def _cache_put(url: str, response: dict[str, Any], cache_dir: Path | None = None) -> None:
+    """Write response to cache."""
+    cp = _cache_path(url, cache_dir)
+    cp.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"_cached_at": time.time(), "url": url, "response": response}
+    cp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def _api_get(url: str, timeout: float = 15.0, cache_dir: Path | None = None) -> dict[str, Any] | None:
     """Make a rate-limited GET to Semantic Scholar API.
 
     Returns parsed JSON or None on failure. Never raises.
+    Uses file-based cache when cache_dir is provided.
     """
+    # Check cache first
+    if cache_dir is not None:
+        cached = _cache_get(url, cache_dir)
+        if cached is not None:
+            return cached
+
     global _last_request_time
 
     # Rate limiting
@@ -48,7 +92,11 @@ def _api_get(url: str, timeout: float = 15.0) -> dict[str, Any] | None:
         with urlopen(req, timeout=timeout) as resp:
             if resp.status == 200:
                 data = resp.read().decode("utf-8")
-                return json.loads(data)  # type: ignore[no-any-return]
+                result: dict[str, Any] = json.loads(data)
+                # Store in cache
+                if cache_dir is not None:
+                    _cache_put(url, result, cache_dir)
+                return result
             return None
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, OSError):
         return None
@@ -59,6 +107,7 @@ def search_by_keyword(
     limit: int = 20,
     year: str | None = None,
     fields: str = "title,year,abstract,externalIds,citationCount",
+    cache_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Search Semantic Scholar by keyword query.
 
@@ -67,6 +116,7 @@ def search_by_keyword(
         limit: Max results (max 100).
         year: Year filter, e.g. "2020-2025".
         fields: Comma-separated fields to return.
+        cache_dir: Optional cache directory for deterministic results.
 
     Returns:
         List of paper dicts, empty on failure.
@@ -78,7 +128,7 @@ def search_by_keyword(
     if year:
         url += f"&year={year}"
 
-    result = _api_get(url)
+    result = _api_get(url, cache_dir=cache_dir)
     if result is None:
         return []
 
@@ -89,6 +139,7 @@ def get_references(
     paper_id: str,
     limit: int = 50,
     fields: str = "title,year,abstract,externalIds,citationCount",
+    cache_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Get papers cited BY this paper (backward chaining).
 
@@ -96,6 +147,7 @@ def get_references(
         paper_id: Semantic Scholar paper ID or DOI.
         limit: Max results.
         fields: Fields to return.
+        cache_dir: Optional cache directory for deterministic results.
 
     Returns:
         List of paper dicts from references.
@@ -105,7 +157,7 @@ def get_references(
         f"?limit={limit}&fields={fields}"
     )
 
-    result = _api_get(url)
+    result = _api_get(url, cache_dir=cache_dir)
     if result is None:
         return []
 
@@ -122,6 +174,7 @@ def get_citations(
     paper_id: str,
     limit: int = 50,
     fields: str = "title,year,abstract,externalIds,citationCount",
+    cache_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Get papers that CITE this paper (forward chaining).
 
@@ -129,6 +182,7 @@ def get_citations(
         paper_id: Semantic Scholar paper ID or DOI.
         limit: Max results.
         fields: Fields to return.
+        cache_dir: Optional cache directory for deterministic results.
 
     Returns:
         List of paper dicts from citations.
@@ -138,7 +192,7 @@ def get_citations(
         f"?limit={limit}&fields={fields}"
     )
 
-    result = _api_get(url)
+    result = _api_get(url, cache_dir=cache_dir)
     if result is None:
         return []
 
@@ -154,21 +208,20 @@ def get_citations(
 def get_paper(
     paper_id: str,
     fields: str = "title,year,abstract,externalIds,citationCount,venue",
+    cache_dir: Path | None = None,
 ) -> dict[str, Any] | None:
     """Get a single paper's details by ID or DOI.
 
     Args:
         paper_id: Semantic Scholar paper ID, DOI, or arXiv ID.
         fields: Fields to return.
+        cache_dir: Optional cache directory for deterministic results.
 
     Returns:
         Paper dict or None if not found.
     """
-    url = (
-        f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}"
-        f"?fields={fields}"
-    )
-    return _api_get(url)
+    url = f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}?fields={fields}"
+    return _api_get(url, cache_dir=cache_dir)
 
 
 def resolve_paper_id(paper: dict[str, Any]) -> str | None:
@@ -223,6 +276,7 @@ def iterative_search(
     max_rounds: int = 3,
     max_papers: int = 80,
     relevance_threshold: float = 0.3,
+    cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Run iterative citation chaining from seed papers.
 
@@ -242,6 +296,7 @@ def iterative_search(
         max_rounds: Maximum chaining iterations.
         max_papers: Stop when corpus reaches this size.
         relevance_threshold: Minimum keyword overlap to include.
+        cache_dir: Optional cache directory for deterministic results.
 
     Returns:
         Dict with: papers, provenance, stats.
@@ -263,12 +318,14 @@ def iterative_search(
         pid = resolve_paper_id(paper) or paper.get("doi") or paper.get("title", "")
         if pid and pid not in corpus:
             corpus[pid] = paper
-            provenance.append({
-                "paper_id": pid,
-                "round": 0,
-                "source": "seed",
-                "chain_from": None,
-            })
+            provenance.append(
+                {
+                    "paper_id": pid,
+                    "round": 0,
+                    "source": "seed",
+                    "chain_from": None,
+                }
+            )
 
     stats["papers_by_round"][0] = len(corpus)
 
@@ -287,7 +344,7 @@ def iterative_search(
                 break
 
             # Backward chaining (references)
-            refs = get_references(pid, limit=20)
+            refs = get_references(pid, limit=20, cache_dir=cache_dir)
             stats["total_api_calls"] += 1
 
             for ref in refs:
@@ -307,16 +364,18 @@ def iterative_search(
                 paper_dict = s2_paper_to_dict(ref, source="backward_chaining")
                 corpus[ref_id] = paper_dict
                 next_frontier.append(ref_id)
-                provenance.append({
-                    "paper_id": ref_id,
-                    "round": round_num,
-                    "source": "backward",
-                    "chain_from": pid,
-                })
+                provenance.append(
+                    {
+                        "paper_id": ref_id,
+                        "round": round_num,
+                        "source": "backward",
+                        "chain_from": pid,
+                    }
+                )
                 new_papers_this_round += 1
 
             # Forward chaining (citations)
-            cites = get_citations(pid, limit=20)
+            cites = get_citations(pid, limit=20, cache_dir=cache_dir)
             stats["total_api_calls"] += 1
 
             for cite in cites:
@@ -335,12 +394,14 @@ def iterative_search(
                 paper_dict = s2_paper_to_dict(cite, source="forward_chaining")
                 corpus[cite_id] = paper_dict
                 next_frontier.append(cite_id)
-                provenance.append({
-                    "paper_id": cite_id,
-                    "round": round_num,
-                    "source": "forward",
-                    "chain_from": pid,
-                })
+                provenance.append(
+                    {
+                        "paper_id": cite_id,
+                        "round": round_num,
+                        "source": "forward",
+                        "chain_from": pid,
+                    }
+                )
                 new_papers_this_round += 1
 
         stats["papers_by_round"][round_num] = new_papers_this_round

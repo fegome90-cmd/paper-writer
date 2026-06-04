@@ -18,7 +18,9 @@ class TestApiGet:
         mock_response.__enter__ = lambda s: s
         mock_response.__exit__ = MagicMock(return_value=False)
 
-        with patch("skills.imported.literature_search.chaining.urlopen", return_value=mock_response):
+        with patch(
+            "skills.imported.literature_search.chaining.urlopen", return_value=mock_response
+        ):
             result = _api_get("https://api.semanticscholar.org/test")
             assert result == {"data": [1, 2]}
 
@@ -27,13 +29,18 @@ class TestApiGet:
 
         from skills.imported.literature_search.chaining import _api_get
 
-        with patch("skills.imported.literature_search.chaining.urlopen", side_effect=HTTPError("url", 429, "rate limited", {}, None)):
+        with patch(
+            "skills.imported.literature_search.chaining.urlopen",
+            side_effect=HTTPError("url", 429, "rate limited", {}, None),
+        ):
             assert _api_get("https://api.semanticscholar.org/test") is None
 
     def test_returns_none_on_timeout(self) -> None:
         from skills.imported.literature_search.chaining import _api_get
 
-        with patch("skills.imported.literature_search.chaining.urlopen", side_effect=TimeoutError()):
+        with patch(
+            "skills.imported.literature_search.chaining.urlopen", side_effect=TimeoutError()
+        ):
             assert _api_get("https://api.semanticscholar.org/test") is None
 
     def test_sends_api_key_if_set(self) -> None:
@@ -46,11 +53,16 @@ class TestApiGet:
         mock_response.__exit__ = MagicMock(return_value=False)
 
         with patch.dict("os.environ", {"S2_API_KEY": "test-key"}):
-            with patch("skills.imported.literature_search.chaining.urlopen", return_value=mock_response) as mock_urlopen:
+            with patch(
+                "skills.imported.literature_search.chaining.urlopen", return_value=mock_response
+            ) as mock_urlopen:
                 _api_get("https://api.semanticscholar.org/test")
                 req = mock_urlopen.call_args[0][0]
                 # Request stores headers with capitalized first letter
-                assert req.get_header("X-api-key") == "test-key" or req.get_header("x-api-key") == "test-key"
+                assert (
+                    req.get_header("X-api-key") == "test-key"
+                    or req.get_header("x-api-key") == "test-key"
+                )
 
 
 class TestSearchByKeyword:
@@ -190,18 +202,36 @@ class TestIterativeSearch:
         ]
 
         # Mock: get_references returns 2 refs, get_citations returns 1 cite
-        with patch("skills.imported.literature_search.chaining.get_references") as mock_refs, \
-             patch("skills.imported.literature_search.chaining.get_citations") as mock_cites:
-
+        with (
+            patch("skills.imported.literature_search.chaining.get_references") as mock_refs,
+            patch("skills.imported.literature_search.chaining.get_citations") as mock_cites,
+        ):
             mock_refs.return_value = [
-                {"paperId": "ref1", "title": "retrieval augmented code generation paper", "year": 2023, "externalIds": {}},
-                {"paperId": "ref2", "title": "code generation with retrieval", "year": 2022, "externalIds": {}},
+                {
+                    "paperId": "ref1",
+                    "title": "retrieval augmented code generation paper",
+                    "year": 2023,
+                    "externalIds": {},
+                },
+                {
+                    "paperId": "ref2",
+                    "title": "code generation with retrieval",
+                    "year": 2022,
+                    "externalIds": {},
+                },
             ]
             mock_cites.return_value = [
-                {"paperId": "cite1", "title": "new retrieval code generation study", "year": 2025, "externalIds": {}},
+                {
+                    "paperId": "cite1",
+                    "title": "new retrieval code generation study",
+                    "year": 2025,
+                    "externalIds": {},
+                },
             ]
 
-            result = iterative_search(seeds, query="retrieval augmented code generation", max_rounds=1)
+            result = iterative_search(
+                seeds, query="retrieval augmented code generation", max_rounds=1
+            )
             assert result["total_unique"] == 4  # 1 seed + 2 refs + 1 cite
             assert result["stats"]["rounds_completed"] == 1
 
@@ -210,16 +240,24 @@ class TestIterativeSearch:
 
         seeds = [{"paperId": "seed1", "title": "test", "doi": "10.1/a"}]
 
-        with patch("skills.imported.literature_search.chaining.get_references") as mock_refs, \
-             patch("skills.imported.literature_search.chaining.get_citations") as mock_cites:
-
+        with (
+            patch("skills.imported.literature_search.chaining.get_references") as mock_refs,
+            patch("skills.imported.literature_search.chaining.get_citations") as mock_cites,
+        ):
             mock_refs.return_value = [
-                {"paperId": f"ref{i}", "title": f"retrieval code generation paper {i}", "year": 2024, "externalIds": {}}
+                {
+                    "paperId": f"ref{i}",
+                    "title": f"retrieval code generation paper {i}",
+                    "year": 2024,
+                    "externalIds": {},
+                }
                 for i in range(50)
             ]
             mock_cites.return_value = []
 
-            result = iterative_search(seeds, query="retrieval code generation", max_rounds=2, max_papers=10)
+            result = iterative_search(
+                seeds, query="retrieval code generation", max_rounds=2, max_papers=10
+            )
             assert result["total_unique"] <= 10
 
     def test_handles_api_failure_gracefully(self) -> None:
@@ -227,9 +265,10 @@ class TestIterativeSearch:
 
         seeds = [{"paperId": "seed1", "title": "test", "doi": "10.1/a"}]
 
-        with patch("skills.imported.literature_search.chaining.get_references", return_value=[]), \
-             patch("skills.imported.literature_search.chaining.get_citations", return_value=[]):
-
+        with (
+            patch("skills.imported.literature_search.chaining.get_references", return_value=[]),
+            patch("skills.imported.literature_search.chaining.get_citations", return_value=[]),
+        ):
             result = iterative_search(seeds, query="test query", max_rounds=1)
             assert result["total_unique"] == 1  # just the seed
             assert result["stats"]["saturation"] is True
@@ -239,11 +278,17 @@ class TestIterativeSearch:
 
         seeds = [{"paperId": "seed1", "title": "retrieval code gen", "doi": "10.1/a"}]
 
-        with patch("skills.imported.literature_search.chaining.get_references") as mock_refs, \
-             patch("skills.imported.literature_search.chaining.get_citations") as mock_cites:
-
+        with (
+            patch("skills.imported.literature_search.chaining.get_references") as mock_refs,
+            patch("skills.imported.literature_search.chaining.get_citations") as mock_cites,
+        ):
             mock_refs.return_value = [
-                {"paperId": "ref1", "title": "retrieval code generation", "year": 2023, "externalIds": {}},
+                {
+                    "paperId": "ref1",
+                    "title": "retrieval code generation",
+                    "year": 2023,
+                    "externalIds": {},
+                },
             ]
             mock_cites.return_value = []
 
