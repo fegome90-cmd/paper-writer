@@ -1,0 +1,18 @@
+{
+  "query": "",
+  "date": "2026-06-04",
+  "strategy": "systematic_keyword_search",
+  "databases": [
+    "PubMed",
+    "Embase",
+    "CINAHL",
+    "Semantic Scholar"
+  ],
+  "inclusion_criteria": [
+    "Published between 2019 and 2024",
+    "Peer-reviewed",
+    "English language",
+    "Related to: "
+  ],
+  "weights_phase": "balanced"
+}

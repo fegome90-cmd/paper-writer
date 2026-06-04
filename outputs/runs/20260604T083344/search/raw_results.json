@@ -1,0 +1,1 @@
+{"query":"fallback","papers":[{"title":"Fallback Paper","doi":"10.1000/fallback","year":2024,"authors":"Demo et al.","metrics":{"population_score":7,"intervention_score":6,"outcome_score":5,"evidence_score":4,"sample_score":0.5,"journal_score":1.5,"citations_score":0.1,"coi_penalty":0,"context_score":5}}]}

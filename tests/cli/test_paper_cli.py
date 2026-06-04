@@ -104,13 +104,17 @@ def test_cli_full_pipeline(
     # Overwrite with clean outline referencing only bib-resolvable keys
     _write_outline(tmp_path)
 
-    # 5. Draft sections — rewrite with real content after mock creation
-    for sec in ["introduction", "methods", "results", "discussion"]:
-        monkeypatch.setattr(sys, "argv", ["paper", "draft", "section", sec])
-        with pytest.raises(SystemExit) as exc_info:
-            main()
-        assert exc_info.value.code == 0
-        # Overwrite mock content with real content referencing bib keys
+    # 5. Draft all sections using draft_all handler
+    monkeypatch.setattr(sys, "argv", ["paper", "draft", "all"])
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+
+    # Overwrite mock content with real content referencing bib keys
+    for sec in [
+        "introduction", "methods", "results", "discussion",
+        "abstract", "literature_review", "conclusion",
+    ]:
         _write_section(tmp_path, sec)
 
     captured = capsys.readouterr()
