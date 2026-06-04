@@ -181,3 +181,23 @@ class TestAssembleManuscript:
 
         assert abstract_pos < intro_pos < lit_review_pos < methods_pos
         assert methods_pos < results_pos < discussion_pos < conclusion_pos
+
+
+def test_stale_manuscript_removed_when_no_sections(tmp_path: Path) -> None:
+    """Assembler removes stale manuscript when no sections are found."""
+    draft_dir = tmp_path / "drafts"
+    draft_dir.mkdir()
+
+    # First: create a valid manuscript
+    (draft_dir / "introduction.md").write_text("# Introduction\n\nContent.\n")
+    manuscript = assemble_manuscript(draft_dir)
+    assert manuscript.is_file(), "First assembly should create manuscript"
+
+    # Remove all sections
+    for f in draft_dir.glob("*.md"):
+        if f.name != "manuscript.md":
+            f.unlink()
+
+    # Second: no sections → stale file should be REMOVED
+    manuscript = assemble_manuscript(draft_dir)
+    assert not manuscript.is_file(), "Stale manuscript should be removed when no sections found"
