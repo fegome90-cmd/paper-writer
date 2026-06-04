@@ -556,7 +556,7 @@ class Orchestrator:
         }
 
         if command == "audit_reporting":
-            outline_path = self.checker.get_full_path_str("outputs/drafts/outline.md")
+            outline_path = str(draft_dir / "outline.md")
             base["outline"] = outline_path
 
         if command == "render":
