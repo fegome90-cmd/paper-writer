@@ -338,6 +338,35 @@ class FilesystemActionRunner(ActionRunner):
                     f.write(f"# {title}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
+        elif command == "draft_all":
+            drafts_dir = self._resolve_run("drafts")
+            drafts_dir.mkdir(parents=True, exist_ok=True)
+
+            adapter = self._skill_adapters.get("academic_writer")
+            if adapter:
+                result = adapter.execute(
+                    command="draft_all",
+                    inputs={
+                        "outline_path": str(self._resolve_run("drafts/outline.md")),
+                        "evidence_path": str(self._resolve_run("search/screened_evidence.json")),
+                        "bib_path": str(self._resolve("templates/references.bib")),
+                        "output_dir": str(drafts_dir),
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+            else:
+                # Fallback: create mock sections for all manifest sections
+                for sec in [
+                    "introduction", "methods", "results", "discussion",
+                    "abstract", "literature_review", "conclusion",
+                ]:
+                    section_file = self._resolve_run(f"drafts/{sec}.md")
+                    title = sec.replace("_", " ").title()
+                    with open(section_file, "w", encoding="utf-8") as f:
+                        f.write(f"# {title}\n\nMock content for {sec}.\n")
+                    artifacts.append(str(section_file))
+
         elif command in [
             "lint_bib",
             "check_refs",
