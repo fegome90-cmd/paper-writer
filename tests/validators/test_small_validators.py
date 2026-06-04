@@ -17,39 +17,50 @@ from validators.structure import REQUIRED_SECTIONS, validate_section_structure
 # ===================================================================
 class TestValidateSectionStructure:
     def test_all_required_present(self) -> None:
-        sections = ["introduction", "methods", "results", "discussion", "conclusion"]
+        sections = [
+            "abstract", "introduction", "literature_review",
+            "methods", "results", "discussion", "conclusion",
+        ]
         assert validate_section_structure(sections) == []
 
     def test_case_insensitive(self) -> None:
         sections = ["Introduction", "METHODS", "Results", "Discussion"]
-        assert validate_section_structure(sections) == []
+        findings = validate_section_structure(sections)
+        errors = [f for f in findings if f["severity"] == "error"]
+        assert errors == []
 
     def test_missing_methods(self) -> None:
         sections = ["introduction", "results", "discussion"]
         findings = validate_section_structure(sections)
-        assert len(findings) == 1
-        assert findings[0]["code"] == "missing_section"
-        assert findings[0]["location"] == "methods"
+        errors = [f for f in findings if f["code"] == "missing_section"]
+        assert len(errors) == 1
+        assert errors[0]["location"] == "methods"
 
     def test_missing_multiple(self) -> None:
         sections = ["introduction"]
         findings = validate_section_structure(sections)
-        missing = {f["location"] for f in findings}
+        errors = [f for f in findings if f["severity"] == "error"]
+        missing = {f["location"] for f in errors}
         assert "methods" in missing
         assert "results" in missing
         assert "discussion" in missing
 
     def test_empty_list(self) -> None:
         findings = validate_section_structure([])
-        assert len(findings) == len(REQUIRED_SECTIONS)
+        errors = [f for f in findings if f["code"] == "missing_section"]
+        assert len(errors) == len(REQUIRED_SECTIONS)
 
     def test_extra_sections_ok(self) -> None:
-        sections = ["introduction", "methods", "results", "discussion", "ethics", "data"]
+        sections = [
+            "abstract", "introduction", "literature_review",
+            "methods", "results", "discussion", "conclusion", "ethics", "data",
+        ]
         assert validate_section_structure(sections) == []
 
-    def test_severity_is_error(self) -> None:
+    def test_errors_have_error_severity(self) -> None:
         findings = validate_section_structure([])
-        for f in findings:
+        errors = [f for f in findings if f["code"] == "missing_section"]
+        for f in errors:
             assert f["severity"] == "error"
 
 

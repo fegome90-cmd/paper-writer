@@ -334,43 +334,69 @@ class TestValidateSectionStructure:
     def test_all_required_sections_present(self) -> None:
         sections = ["introduction", "methods", "results", "discussion"]
         findings = validate_section_structure(sections)
+        errors = [f for f in findings if f["severity"] == "error"]
+        assert errors == []
+        # Recommended sections produce warnings, not errors
+        warnings = [f for f in findings if f["severity"] == "warning"]
+        assert len(warnings) == 3  # abstract, literature_review, conclusion
+
+    def test_all_required_and_recommended_present(self) -> None:
+        sections = [
+            "abstract", "introduction", "literature_review",
+            "methods", "results", "discussion", "conclusion",
+        ]
+        findings = validate_section_structure(sections)
         assert findings == []
 
     def test_all_required_sections_case_insensitive(self) -> None:
         sections = ["Introduction", "METHODS", "Results", "Discussion"]
         findings = validate_section_structure(sections)
-        assert findings == []
+        errors = [f for f in findings if f["severity"] == "error"]
+        assert errors == []
 
     def test_missing_one_section(self) -> None:
         sections = ["introduction", "methods", "results"]
         findings = validate_section_structure(sections)
-        assert len(findings) == 1
-        assert findings[0]["code"] == "missing_section"
-        assert findings[0]["severity"] == "error"
-        assert "discussion" in findings[0]["message"]
+        errors = [f for f in findings if f["code"] == "missing_section"]
+        assert len(errors) == 1
+        assert errors[0]["severity"] == "error"
+        assert "discussion" in errors[0]["message"]
 
     def test_missing_multiple_sections(self) -> None:
         sections = ["introduction"]
         findings = validate_section_structure(sections)
-        assert len(findings) == 3
-        missing = {f["location"] for f in findings}
+        errors = [f for f in findings if f["severity"] == "error"]
+        assert len(errors) == 3
+        missing = {f["location"] for f in errors}
         assert missing == {"methods", "results", "discussion"}
 
     def test_empty_list_four_errors(self) -> None:
         findings = validate_section_structure([])
-        assert len(findings) == 4
-        assert all(f["code"] == "missing_section" for f in findings)
+        errors = [f for f in findings if f["code"] == "missing_section"]
+        assert len(errors) == 4
+        assert all(f["severity"] == "error" for f in errors)
 
-    def test_extra_sections_no_findings(self) -> None:
+    def test_extra_sections_no_errors(self) -> None:
         sections = ["introduction", "methods", "results", "discussion", "appendix"]
         findings = validate_section_structure(sections)
-        assert findings == []
+        errors = [f for f in findings if f["severity"] == "error"]
+        assert errors == []
 
     def test_findings_location_matches_section_name(self) -> None:
         sections = ["introduction", "methods"]
         findings = validate_section_structure(sections)
-        locations = {f["location"] for f in findings}
+        errors = [f for f in findings if f["severity"] == "error"]
+        locations = {f["location"] for f in errors}
         assert locations == {"results", "discussion"}
+
+    def test_recommended_sections_are_warnings(self) -> None:
+        sections = ["introduction", "methods", "results", "discussion"]
+        findings = validate_section_structure(sections)
+        warnings = [f for f in findings if f["code"] == "missing_recommended_section"]
+        assert len(warnings) == 3
+        warned = {f["location"] for f in warnings}
+        assert warned == {"abstract", "literature_review", "conclusion"}
+        assert all(f["severity"] == "warning" for f in warnings)
 
 
 # ---------------------------------------------------------------------------
