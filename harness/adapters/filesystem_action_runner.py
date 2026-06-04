@@ -486,8 +486,11 @@ class FilesystemActionRunner(ActionRunner):
         all_passed = all(gate_snapshot.values()) if gate_snapshot else False
 
         # Collect only artifacts that actually exist on disk.
+        # Check both run-specific (outputs/latest/render/) and root (outputs/render/) paths.
         manuscript_artifacts: list[str] = []
         for candidate in [
+            "outputs/latest/render/manuscript.docx",
+            "outputs/latest/render/manuscript.pdf",
             "outputs/render/manuscript.docx",
             "outputs/render/manuscript.pdf",
         ]:
