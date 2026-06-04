@@ -319,6 +319,7 @@ class Orchestrator:
             "check_refs": "validating",
             "lint_style": "validating",
             "audit_reporting": "validating",
+            "audit_ethics": "outline",
             "audit_factuality": "screen",
             "audit_tables": "drafting",
             "audit_quality_appraisal": "screen",
@@ -395,6 +396,8 @@ class Orchestrator:
             return [self._run_wrapper_gate("lint_style")]
         elif cmd == "audit_reporting":
             return [self._run_wrapper_gate("audit_reporting")]
+        elif cmd == "audit_ethics":
+            return [self._run_wrapper_gate("audit_ethics", gate_override="ethics_passed")]
         elif cmd == "render":
             wrapper_result = self._run_wrapper_gate("render", request_args=request.args)
             # Only check artifact existence if the wrapper succeeded.

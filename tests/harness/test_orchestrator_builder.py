@@ -75,7 +75,7 @@ class TestBuilderContract:
         with pytest.raises(dataclasses.FrozenInstanceError):
             deps.repo_path = Path("/other")  # type: ignore[misc]
 
-    def test_wrappers_has_seven_keys(self, tmp_path: Path) -> None:
+    def test_wrappers_has_eight_keys(self, tmp_path: Path) -> None:
         deps = build_orchestrator_dependencies(project_root=tmp_path)
         expected_keys = {
             "lint_bib",
@@ -83,6 +83,7 @@ class TestBuilderContract:
             "check_refs_metadata",
             "lint_style",
             "audit_reporting",
+            "audit_ethics",
             "render",
             "import_bib",
         }

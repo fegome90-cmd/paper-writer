@@ -15,6 +15,7 @@ from harness.ports.tool_wrapper import ToolWrapper
 from harness.services.state_manager import StateManager
 from integrations.tools import (
     BibliographyNormalizer,
+    EthicsAuditor,
     PandocRenderer,
     RefsMetadataValidator,
     RefsValidator,
@@ -95,6 +96,7 @@ def build_orchestrator_dependencies(
         "check_refs_metadata": RefsMetadataValidator(),
         "lint_style": StyleLinter(resolver=tool_resolver),
         "audit_reporting": ReportingAuditor(),
+        "audit_ethics": EthicsAuditor(),
         "render": PandocRenderer(resolver=tool_resolver),
         "import_bib": ZoteroImporter(),
     }

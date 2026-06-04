@@ -14,6 +14,7 @@ and return ValidatorResult objects consumed by the gate system.
 
 from integrations.tools.base import ToolNotAvailableError, ToolWrapper, ValidatorResult
 from integrations.tools.bibtex_tidy import BibliographyNormalizer
+from integrations.tools.ethics_auditor import EthicsAuditor
 from integrations.tools.pandoc import PandocRenderer
 from integrations.tools.refs_metadata_validator import RefsMetadataValidator
 from integrations.tools.refs_validator import RefsValidator
@@ -23,6 +24,7 @@ from integrations.tools.zotero_import import ZoteroImporter
 
 __all__ = [
     "BibliographyNormalizer",
+    "EthicsAuditor",
     "PandocRenderer",
     "RefsMetadataValidator",
     "RefsValidator",

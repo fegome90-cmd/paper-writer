@@ -444,6 +444,9 @@ def main() -> None:
         failure_policy = "continue_on_error"
         if sub_name == "reporting":
             orch_command = "audit_reporting"
+        elif sub_name == "ethics":
+            orch_command = "audit_ethics"
+            orch_args["manuscript"] = args.file
     elif cmd_name == "import":
         if sub_name == "bib":
             orch_command = "import_bib"
