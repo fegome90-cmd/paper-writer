@@ -289,3 +289,301 @@ class TestRefsMetadataValidator:
 
     def test_name(self) -> None:
         assert RefsMetadataValidator().name == "refs-metadata-validator"
+
+
+# --- Tests for audit command wrappers added in experiment #310 ---
+
+
+MANUSCRIPT_WITH_ISSUES = """# Introduction
+
+It is well known that AI is transforming everything. This claim needs evidence.
+
+## Methods
+
+The study was conducted with a sample size of 500 participants.
+
+It should be noted that the results are preliminary.
+
+## Results
+
+In conclusion, the findings suggest a paradigm shift in the field.
+"""
+
+MANUSCRIPT_CLEAN = """# Introduction
+
+Smith et al. (2024) demonstrated that retrieval-augmented generation
+improves code completion accuracy by 23%. The study surveyed 150 developers.
+
+## Methods
+
+We used a mixed-methods approach combining quantitative analysis of
+completion logs with semi-structured developer interviews.
+
+## Results
+
+The results show statistically significant improvements in task completion
+time (p < 0.01, Cohen's d = 0.82).
+"""
+
+MANUSCRIPT_NO_AI_DISCLOSURE = """# Introduction
+
+This paper presents a novel approach to code generation.
+"""
+
+MANUSCRIPT_WITH_AI_DISCLOSURE = """# Introduction
+
+This paper presents a novel approach to code generation.
+
+## AI Use Disclosure
+
+The authors used GPT-4 for code generation assistance in the implementation.
+"""
+
+
+class TestEthicsAuditor:
+    def test_no_manuscript_skips(self) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        wrapper = EthicsAuditor()
+        result = wrapper.run({}, {})
+        assert result.status == "pass"
+        assert "skipped" in result.summary.lower()
+
+    def test_missing_file_skips(self, tmp_path: Path) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        wrapper = EthicsAuditor()
+        result = wrapper.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})
+        assert result.status == "pass"
+
+    def test_no_disclosure_passes(self, tmp_path: Path) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_NO_AI_DISCLOSURE)
+        wrapper = EthicsAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "ethics"
+
+    def test_gate_is_ethics_passed(self) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        assert EthicsAuditor().gate == "ethics_passed"
+
+    def test_name(self) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        assert EthicsAuditor().name == "ethics-auditor"
+
+    def test_is_available(self) -> None:
+        from integrations.tools.ethics_auditor import EthicsAuditor
+
+        assert EthicsAuditor().is_available() is True
+
+
+class TestProseAuditor:
+    def test_no_manuscript_skips(self) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        wrapper = ProseAuditor()
+        result = wrapper.run({}, {})
+        assert result.status == "pass"
+        assert "skipped" in result.summary.lower()
+
+    def test_missing_file_skips(self, tmp_path: Path) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        wrapper = ProseAuditor()
+        result = wrapper.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})
+        assert result.status == "pass"
+
+    def test_clean_manuscript_passes(self, tmp_path: Path) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_CLEAN)
+        wrapper = ProseAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "prose"
+        assert result.artifacts_checked
+
+    def test_issues_manuscript_returns_findings(self, tmp_path: Path) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_WITH_ISSUES)
+        wrapper = ProseAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "prose"
+        # May have findings for passive voice, long sentences, etc.
+        assert isinstance(result.findings, list)
+
+    def test_gate_is_style_passed(self) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        assert ProseAuditor().gate == "style_passed"
+
+    def test_name(self) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        assert ProseAuditor().name == "prose-auditor"
+
+    def test_is_available(self) -> None:
+        from integrations.tools.prose_auditor import ProseAuditor
+
+        assert ProseAuditor().is_available() is True
+
+
+class TestClaimsAuditor:
+    def test_no_manuscript_skips(self) -> None:
+        from integrations.tools.claims_auditor import ClaimsAuditor
+
+        wrapper = ClaimsAuditor()
+        result = wrapper.run({}, {})
+        assert result.status == "pass"
+        assert "skipped" in result.summary.lower()
+
+    def test_missing_file_skips(self, tmp_path: Path) -> None:
+        from integrations.tools.claims_auditor import ClaimsAuditor
+
+        wrapper = ClaimsAuditor()
+        result = wrapper.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})
+        assert result.status == "pass"
+
+    def test_manuscript_returns_result(self, tmp_path: Path) -> None:
+        from integrations.tools.claims_auditor import ClaimsAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_WITH_ISSUES)
+        wrapper = ClaimsAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "claims"
+        assert isinstance(result.findings, list)
+
+    def test_gate_is_style_passed(self) -> None:
+        from integrations.tools.claims_auditor import ClaimsAuditor
+
+        assert ClaimsAuditor().gate == "style_passed"
+
+    def test_name(self) -> None:
+        from integrations.tools.claims_auditor import ClaimsAuditor
+
+        assert ClaimsAuditor().name == "claims-auditor"
+
+
+class TestCitationsAuditor:
+    def test_no_manuscript_skips(self) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        wrapper = CitationsAuditor()
+        result = wrapper.run({}, {})
+        assert result.status == "pass"
+        assert "skipped" in result.summary.lower()
+
+    def test_missing_file_skips(self, tmp_path: Path) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        wrapper = CitationsAuditor()
+        result = wrapper.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})
+        assert result.status == "pass"
+
+    def test_manuscript_returns_result(self, tmp_path: Path) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_CLEAN)
+        wrapper = CitationsAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "citations"
+        assert isinstance(result.findings, list)
+
+    def test_offline_context(self, tmp_path: Path) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_CLEAN)
+        wrapper = CitationsAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {"offline": True})
+        assert result.validator == "citations"
+
+    def test_gate_is_citations_resolved(self) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        assert CitationsAuditor().gate == "citations_resolved"
+
+    def test_name(self) -> None:
+        from integrations.tools.citations_auditor import CitationsAuditor
+
+        assert CitationsAuditor().name == "citations-auditor"
+
+
+class TestWritingQualityAuditor:
+    def test_no_manuscript_skips(self) -> None:
+        from integrations.tools.writing_quality_auditor import WritingQualityAuditor
+
+        wrapper = WritingQualityAuditor()
+        result = wrapper.run({}, {})
+        assert result.status == "pass"
+        assert "skipped" in result.summary.lower()
+
+    def test_missing_file_skips(self, tmp_path: Path) -> None:
+        from integrations.tools.writing_quality_auditor import WritingQualityAuditor
+
+        wrapper = WritingQualityAuditor()
+        result = wrapper.run({"manuscript": str(tmp_path / "nonexistent.md")}, {})
+        assert result.status == "pass"
+
+    def test_manuscript_returns_result(self, tmp_path: Path) -> None:
+        from integrations.tools.writing_quality_auditor import WritingQualityAuditor
+
+        mf = tmp_path / "manuscript.md"
+        mf.write_text(MANUSCRIPT_WITH_ISSUES)
+        wrapper = WritingQualityAuditor()
+        result = wrapper.run({"manuscript": str(mf)}, {})
+        assert result.validator == "writing_quality"
+        assert isinstance(result.findings, list)
+
+    def test_gate_is_style_passed(self) -> None:
+        from integrations.tools.writing_quality_auditor import WritingQualityAuditor
+
+        assert WritingQualityAuditor().gate == "style_passed"
+
+    def test_name(self) -> None:
+        from integrations.tools.writing_quality_auditor import WritingQualityAuditor
+
+        assert WritingQualityAuditor().name == "writing-quality-auditor"
+
+
+class TestCodeHealthAuditor:
+    def test_returns_result(self) -> None:
+        from integrations.tools.code_health_auditor import CodeHealthAuditor
+
+        wrapper = CodeHealthAuditor()
+        result = wrapper.run({}, {})
+        assert result.validator == "code_health"
+        assert isinstance(result.findings, list)
+        assert isinstance(result.summary, str)
+
+    def test_no_manuscript_needed(self) -> None:
+        """Code health operates on Trifecta graph, not manuscript files."""
+        from integrations.tools.code_health_auditor import CodeHealthAuditor
+
+        wrapper = CodeHealthAuditor()
+        result = wrapper.run({}, {})
+        # Should succeed even without manuscript artifact
+        assert result.validator == "code_health"
+
+    def test_gate_is_style_passed(self) -> None:
+        from integrations.tools.code_health_auditor import CodeHealthAuditor
+
+        assert CodeHealthAuditor().gate == "style_passed"
+
+    def test_name(self) -> None:
+        from integrations.tools.code_health_auditor import CodeHealthAuditor
+
+        assert CodeHealthAuditor().name == "code-health-auditor"
+
+    def test_is_available(self) -> None:
+        from integrations.tools.code_health_auditor import CodeHealthAuditor
+
+        assert CodeHealthAuditor().is_available() is True
