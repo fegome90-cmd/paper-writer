@@ -134,6 +134,29 @@ def test_action_runner_draft_section(tmp_path: Path) -> None:
         assert len(artifacts) == 1
 
 
+def test_action_runner_draft_all(tmp_path: Path) -> None:
+    """draft_all handler creates all 7 manifest section files."""
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+
+    artifacts = runner.run_action("draft_all", {})
+    assert len(artifacts) == 7, f"Expected 7 section artifacts, got {len(artifacts)}"
+
+    # Verify all 7 manifest sections are created
+    expected_sections = [
+        "introduction", "methods", "results", "discussion",
+        "abstract", "literature_review", "conclusion",
+    ]
+    for sec in expected_sections:
+        sec_path = _run_path(tmp_path, "drafts", f"{sec}.md")
+        assert sec_path.is_file(), f"Missing section file: {sec}.md"
+        content = sec_path.read_text(encoding="utf-8")
+        assert len(content) > 0, f"Empty section: {sec}.md"
+
+    # Verify artifacts list matches created files
+    for artifact in artifacts:
+        assert Path(artifact).is_file(), f"Artifact not found: {artifact}"
+
+
 def test_action_runner_validation_logs(tmp_path: Path) -> None:
     runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     for cmd in ["lint_bib", "check_refs", "lint_style", "audit_reporting"]:
