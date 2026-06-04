@@ -125,6 +125,21 @@ class FilesystemActionRunner(ActionRunner):
                 if preset_dir.is_dir():
                     for src in preset_dir.iterdir():
                         if src.name == "preset.yaml":
+                            # Validate preset before copying
+                            try:
+                                import yaml
+
+                                from validators.preset import validate_preset
+
+                                preset_data = yaml.safe_load(src.read_text(encoding="utf-8"))
+                                findings = validate_preset(preset_data or {})
+                                for f in findings:
+                                    if f.get("severity") == "error":
+                                        logger.warning(
+                                            "Preset validation: %s", f.get("message", "unknown")
+                                        )
+                            except (ValueError, OSError) as exc:
+                                logger.warning("Preset validation failed: %s", exc)
                             # Copy preset.yaml as-is for reference
                             dst = self._resolve(f"templates/{src.name}")
                             shutil.copy2(src, dst)
@@ -314,13 +329,36 @@ class FilesystemActionRunner(ActionRunner):
                     f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
-        elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting", "import_bib"]:
+        elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting", "audit_ethics", "import_bib"]:
             log_dir = self._resolve_run("logs")
             log_dir.mkdir(parents=True, exist_ok=True)
             log_file = self._resolve_run(f"logs/{command}.log")
             with open(log_file, "w", encoding="utf-8") as f:
                 f.write(f"Log for {command} at {datetime.datetime.now().isoformat()}\n")
             artifacts.append(str(log_file))
+
+        elif command == "protocol":
+            search_dir = Path(args.get("search_dir", str(self._resolve_run("search"))))
+            output_path = args.get("output")
+            project_name = args.get("project_name", "paper-writer")
+            try:
+                from validators.protocol_generator import generate_protocol
+
+                protocol_md = generate_protocol(
+                    search_dir, output_path=Path(output_path) if output_path else None,
+                    project_name=project_name,
+                )
+                if output_path:
+                    out = Path(output_path)
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    out.write_text(protocol_md, encoding="utf-8")
+                    artifacts.append(str(out))
+                else:
+                    protocol_file = self._resolve_run("protocol.md")
+                    protocol_file.write_text(protocol_md, encoding="utf-8")
+                    artifacts.append(str(protocol_file))
+            except (ValueError, OSError) as e:
+                logger.warning("Protocol generation failed: %s", e)
 
         elif command == "export_bib":
             search_dir = self._resolve_run("search")

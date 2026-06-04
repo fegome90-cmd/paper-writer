@@ -177,6 +177,23 @@ def _enrich_section(
             pass
 
 
+def _convert_citations(content: str, bib_path: Path) -> str:
+    """Convert (Author, Year) citations to @key format using bib file.
+
+    Gracefully degrades: if bib file missing or conversion fails,
+    returns content unchanged.
+    """
+    if not bib_path.is_file():
+        return content
+    try:
+        from validators.citation_format import convert_citations
+
+        bib_text = bib_path.read_text(encoding="utf-8", errors="replace")
+        return convert_citations(content, bib_text)
+    except (ValueError, OSError):
+        return content
+
+
 def draft_section(
     section_name: str,
     outline_path: Path,
@@ -274,9 +291,11 @@ def draft_section(
     )
 
     if llm_content is not None:
-        # LLM succeeded — prepend header, append LLM content, then enrich
+        # LLM succeeded — prepend header, convert citations, append enrichment
         section_path = output_dir / f"{key}.md"
         header = "\n".join(lines) + "\n"
+        # Convert (Author, Year) citations to @key format if bib exists
+        converted_content = _convert_citations(llm_content, bib_path)
         # Build enrichment as separate block (goes AFTER LLM content)
         enrich_lines: list[str] = []
         _enrich_section(
@@ -289,7 +308,7 @@ def draft_section(
         )
         enrich_block = "\n".join(enrich_lines) + "\n" if enrich_lines else ""
         section_path.write_text(
-            header + llm_content + "\n" + enrich_block,
+            header + converted_content + "\n" + enrich_block,
             encoding="utf-8",
         )
         return {"artifacts": [str(section_path)]}
