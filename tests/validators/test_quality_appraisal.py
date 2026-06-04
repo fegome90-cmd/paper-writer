@@ -95,19 +95,12 @@ class TestMethodologyRigor:
 class TestReproducibility:
     def test_peer_reviewed_with_arxiv(self) -> None:
         v = QualityAppraisalValidator()
-        assert (
-            v.score_reproducibility(
-                _make_paper(doi="10.1/test", arxiv_id="2301.00001")
-            )
-            >= 3
-        )
+        assert v.score_reproducibility(_make_paper(doi="10.1/test", arxiv_id="2301.00001")) >= 3
 
     def test_open_source(self) -> None:
         v = QualityAppraisalValidator()
         assert (
-            v.score_reproducibility(
-                _make_paper(abstract="Code available at github.com/test/repo")
-            )
+            v.score_reproducibility(_make_paper(abstract="Code available at github.com/test/repo"))
             >= 2
         )
 
@@ -169,12 +162,8 @@ class TestValidate:
             "total_screened": 3,
             "evidence": [
                 _make_paper(title="High", venue="NeurIPS", citation_count=5000, year=2024),
-                _make_paper(
-                    title="Medium", venue="arXiv", citation_count=50, year=2022
-                ),
-                _make_paper(
-                    title="Low", venue="Workshop", citation_count=0, year=2018
-                ),
+                _make_paper(title="Medium", venue="arXiv", citation_count=50, year=2022),
+                _make_paper(title="Low", venue="Workshop", citation_count=0, year=2018),
             ],
         }
         evidence_path = tmp_path / "screened_evidence.json"
@@ -189,7 +178,13 @@ class TestValidate:
         report = json.loads(output_path.read_text())
         assert report["total_appraised"] == 3
         assert "summary" in report
-        assert report["summary"]["high"] + report["summary"]["moderate"] + report["summary"]["low"] + report["summary"]["very_low"] == 3
+        assert (
+            report["summary"]["high"]
+            + report["summary"]["moderate"]
+            + report["summary"]["low"]
+            + report["summary"]["very_low"]
+            == 3
+        )
 
     def test_no_evidence(self, tmp_path: Path) -> None:
         v = QualityAppraisalValidator()

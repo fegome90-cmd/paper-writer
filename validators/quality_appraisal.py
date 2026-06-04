@@ -48,19 +48,41 @@ class QualityAppraisalValidator:
 
     # Top-tier venues for CS/SE (rank 1)
     TOP_TIER_VENUES = {
-        "NeurIPS", "ICML", "ICLR", "AAAI",
-        "EMNLP", "NAACL", "ACL", "TACL",
-        "ICSE", "FSE", "ESEC/FSE", "ASE", "IST",
-        "TSE", "TOSEM", "ACM Comput. Surv.",
-        "Nature", "Science",
+        "NeurIPS",
+        "ICML",
+        "ICLR",
+        "AAAI",
+        "EMNLP",
+        "NAACL",
+        "ACL",
+        "TACL",
+        "ICSE",
+        "FSE",
+        "ESEC/FSE",
+        "ASE",
+        "IST",
+        "TSE",
+        "TOSEM",
+        "ACM Comput. Surv.",
+        "Nature",
+        "Science",
     }
 
     # Well-known venues (rank 2)
     GOOD_VENUES = {
-        "arXiv", "TMLR", "JMLR",
-        "COLING", "LREC",
-        "ECOOP", "OOPSLA", "ISSTA", "MSR",
-        "SPLC", "ICPC", "WCRE", "SCAM",
+        "arXiv",
+        "TMLR",
+        "JMLR",
+        "COLING",
+        "LREC",
+        "ECOOP",
+        "OOPSLA",
+        "ISSTA",
+        "MSR",
+        "SPLC",
+        "ICPC",
+        "WCRE",
+        "SCAM",
     }
 
     def score_venue_reputation(self, paper: dict[str, Any]) -> int:
@@ -170,7 +192,16 @@ class QualityAppraisalValidator:
             score += 1
 
         # Open code/data signals
-        if any(kw in abstract for kw in ["open-source", "open source", "github", "available at", "replication package"]):
+        if any(
+            kw in abstract
+            for kw in [
+                "open-source",
+                "open source",
+                "github",
+                "available at",
+                "replication package",
+            ]
+        ):
             score += 1
 
         # Dataset availability signals
