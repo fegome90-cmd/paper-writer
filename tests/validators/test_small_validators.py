@@ -18,8 +18,13 @@ from validators.structure import REQUIRED_SECTIONS, validate_section_structure
 class TestValidateSectionStructure:
     def test_all_required_present(self) -> None:
         sections = [
-            "abstract", "introduction", "literature_review",
-            "methods", "results", "discussion", "conclusion",
+            "abstract",
+            "introduction",
+            "literature_review",
+            "methods",
+            "results",
+            "discussion",
+            "conclusion",
         ]
         assert validate_section_structure(sections) == []
 
@@ -52,8 +57,15 @@ class TestValidateSectionStructure:
 
     def test_extra_sections_ok(self) -> None:
         sections = [
-            "abstract", "introduction", "literature_review",
-            "methods", "results", "discussion", "conclusion", "ethics", "data",
+            "abstract",
+            "introduction",
+            "literature_review",
+            "methods",
+            "results",
+            "discussion",
+            "conclusion",
+            "ethics",
+            "data",
         ]
         assert validate_section_structure(sections) == []
 

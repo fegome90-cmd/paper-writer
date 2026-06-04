@@ -342,8 +342,13 @@ class TestValidateSectionStructure:
 
     def test_all_required_and_recommended_present(self) -> None:
         sections = [
-            "abstract", "introduction", "literature_review",
-            "methods", "results", "discussion", "conclusion",
+            "abstract",
+            "introduction",
+            "literature_review",
+            "methods",
+            "results",
+            "discussion",
+            "conclusion",
         ]
         findings = validate_section_structure(sections)
         assert findings == []
