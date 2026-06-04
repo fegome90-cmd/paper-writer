@@ -6,6 +6,7 @@ inheritance, CLI dispatch).
 
 Strict TDD: tests written FIRST.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -36,7 +37,11 @@ class TestFilterActionableOrphans:
     def test_excludes_verification_files(self) -> None:
         """Orphans in verification/ directory are excluded."""
         orphans = [
-            {"file_rel": "verification/run_validation.py", "symbol_name": "main", "kind": "function"},
+            {
+                "file_rel": "verification/run_validation.py",
+                "symbol_name": "main",
+                "kind": "function",
+            },
             {"file_rel": "validators/claims.py", "symbol_name": "validate", "kind": "function"},
         ]
         result = filter_actionable_orphans(orphans)
@@ -46,7 +51,11 @@ class TestFilterActionableOrphans:
     def test_excludes_argparse_callbacks(self) -> None:
         """Orphans with _cmd_ prefix (argparse callbacks) are excluded."""
         orphans = [
-            {"file_rel": "cli/paper/main.py", "symbol_name": "_cmd_audit_prose", "kind": "function"},
+            {
+                "file_rel": "cli/paper/main.py",
+                "symbol_name": "_cmd_audit_prose",
+                "kind": "function",
+            },
             {"file_rel": "validators/claims.py", "symbol_name": "validate", "kind": "function"},
         ]
         result = filter_actionable_orphans(orphans)
@@ -67,9 +76,21 @@ class TestFilterActionableOrphans:
         """Methods inherited from Mixin classes are not dead code."""
         orphans = [
             # tool_wrapper mixin methods
-            {"file_rel": "integrations/tools/bibtex_tidy.py", "symbol_name": "name", "kind": "method"},
-            {"file_rel": "integrations/tools/bibtex_tidy.py", "symbol_name": "gate", "kind": "method"},
-            {"file_rel": "integrations/tools/bibtex_tidy.py", "symbol_name": "is_available", "kind": "method"},
+            {
+                "file_rel": "integrations/tools/bibtex_tidy.py",
+                "symbol_name": "name",
+                "kind": "method",
+            },
+            {
+                "file_rel": "integrations/tools/bibtex_tidy.py",
+                "symbol_name": "gate",
+                "kind": "method",
+            },
+            {
+                "file_rel": "integrations/tools/bibtex_tidy.py",
+                "symbol_name": "is_available",
+                "kind": "method",
+            },
             # real orphan
             {"file_rel": "validators/claims.py", "symbol_name": "validate", "kind": "function"},
         ]
@@ -80,7 +101,11 @@ class TestFilterActionableOrphans:
     def test_keeps_validation_methods(self) -> None:
         """Methods starting with validate_ ARE actionable (validation gap)."""
         orphans = [
-            {"file_rel": "validators/claims.py", "symbol_name": "validate_claim", "kind": "function"},
+            {
+                "file_rel": "validators/claims.py",
+                "symbol_name": "validate_claim",
+                "kind": "function",
+            },
         ]
         result = filter_actionable_orphans(orphans)
         assert len(result) == 1
@@ -148,7 +173,11 @@ class TestAnalyzeCodeHealth:
             mock_client.find_orphans.return_value.data = [
                 # False positives (should be filtered)
                 {"file_rel": "tests/test_foo.py", "symbol_name": "test_bar", "kind": "function"},
-                {"file_rel": "cli/paper/main.py", "symbol_name": "_cmd_audit_prose", "kind": "function"},
+                {
+                    "file_rel": "cli/paper/main.py",
+                    "symbol_name": "_cmd_audit_prose",
+                    "kind": "function",
+                },
                 # Real finding
                 {"file_rel": "validators/claims.py", "symbol_name": "validate", "kind": "function"},
             ]

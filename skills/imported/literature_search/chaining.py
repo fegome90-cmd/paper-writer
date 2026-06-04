@@ -229,20 +229,30 @@ def get_paper(
 def resolve_paper_id(paper: dict[str, Any]) -> str | None:
     """Resolve a paper dict to a Semantic Scholar paper ID.
 
-    Tries: paperId → externalIds.DOI → externalIds.ArXiv.
+    Tries: paperId → externalIds.DOI → externalIds.ArXiv → doi → arxiv_id.
+    Handles both S2 API format (externalIds.DOI) and search pipeline format
+    (top-level doi/arxiv_id).
     """
     # Direct S2 ID
     if paper.get("paperId"):
         return paper["paperId"]  # type: ignore[no-any-return]
 
-    # DOI
+    # DOI (nested in externalIds or top-level)
     ext = paper.get("externalIds", {})
     if ext.get("DOI"):
         return f"DOI:{ext['DOI']}"
+    if paper.get("doi"):
+        return f"DOI:{paper['doi']}"
 
-    # arXiv
+    # arXiv (nested or top-level)
     if ext.get("ArXiv"):
         return f"ArXiv:{ext['ArXiv']}"
+    if paper.get("arxiv_id"):
+        return f"ArXiv:{paper['arxiv_id']}"
+
+    # s2_id (from chaining output)
+    if paper.get("s2_id"):
+        return paper["s2_id"]  # type: ignore[no-any-return]
 
     return None
 
