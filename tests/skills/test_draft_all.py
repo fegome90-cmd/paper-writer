@@ -14,16 +14,20 @@ def _setup_project(tmp_path: Path) -> tuple[Path, Path, Path]:
     outline.write_text("# Outline\n")
 
     evidence = tmp_path / "screened_evidence.json"
-    evidence.write_text(json.dumps({
-        "query": "retrieval augmented code generation",
-        "evidence": [
+    evidence.write_text(
+        json.dumps(
             {
-                "title": "CodeBERT",
-                "doi": "10.1/a",
-                "scoring": {"tier": "Tier 1", "final_score": 8.5},
-            },
-        ],
-    }))
+                "query": "retrieval augmented code generation",
+                "evidence": [
+                    {
+                        "title": "CodeBERT",
+                        "doi": "10.1/a",
+                        "scoring": {"tier": "Tier 1", "final_score": 8.5},
+                    },
+                ],
+            }
+        )
+    )
 
     bib = tmp_path / "references.bib"
     bib.write_text("@article{feng2020, title={CodeBERT}}\n")
@@ -87,7 +91,10 @@ class TestDraftAll:
         output = tmp_path / "drafts"
 
         result = draft_all(
-            outline, evidence, bib, output,
+            outline,
+            evidence,
+            bib,
+            output,
             section_keys=["introduction", "conclusion"],
         )
 

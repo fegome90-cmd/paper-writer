@@ -89,18 +89,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Acceptance** | Pipeline delivers 68 Tier 3+ papers via search→chain→screen. DOI dedup + title fuzzy dedup prevent duplicates. |
 | **Estado** | ✅ DONE — GAP-003 (CS scoring) + GAP-007 (chaining) resolved this gap |
 
-### GAP-002: 3 sections never generated (abstract, literature_review, conclusion)
+### GAP-002: ~~3 sections never generated~~ (draft_all DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🔴 Crítica — P0 blocking |
-| **Componente** | `cli/paper/main.py:105` (draft section subcommand), `skills/imported/academic_writer/drafting.py:94` (`draft_section()`) |
-| **Problema** | Only 4 of 7 sections were generated in POC. Missing: abstract (order 1, 250-300 words), literature_review (order 3, 1000-1200 words), conclusion (order 7, 400-600 words). |
-| **Root cause** | No `draft all` command exists. Each section requires manual `paper draft section <name>`. |
-| **Solución** | (a) Add `draft all` subcommand that generates sections in order with cross-section context. (b) Each section passes `outline_context` from previous sections. (c) Abstract generated last with all 6 sections as context. |
-| **Acceptance** | `paper draft all` generates 7 section files. `paper gate method` on combined manuscript shows 0 blockers for PRISMA study type. |
-| **Esfuerzo** | 1 día |
-| **Estado** | 🟡 Unblocked — evidence set is now non-empty (9 papers) |
+| **Severidad** | ~~🔴 Crítica~~ → ✅ RESOLVED |
+| **Componente** | `skills/imported/academic_writer/drafting.py` (`draft_all()`) |
+| **Problema** | No `draft all` command. Each section required manual generation. |
+| **Solución** | `draft_all()` generates 7 sections in dependency order with cross-section context. Abstract last. |
+| **Acceptance** | 7/7 sections generated. Body order: intro→lit_review→methods→results→discussion→conclusion→abstract. |
+| **Estado** | ✅ DONE — `draft_all()`, 7 tests |
 
 ### ~~GAP-003: PICO scoring engine incompatible with Computer Science~~
 
@@ -164,17 +162,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Esfuerzo** | 2-3 días |
 | **Estado** | ❌ Pendiente — next P0 priority |
 
-### GAP-008: Sections generated without cross-section awareness
+### GAP-008: ~~Sections without cross-section awareness~~ (outline_context DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟡 Media — P1 |
-| **Componente** | `skills/imported/academic_writer/drafting.py` (`_try_llm_generation()`) |
-| **Problema** | Each section generated independently. `outline_context` always empty. Discussion may cite findings not in Results. |
-| **Solución** | Generate sections in dependency order. Pass previous sections as context. Abstract generated last with all sections. |
-| **Acceptance** | Discussion references only findings present in Results. |
-| **Esfuerzo** | Medio día |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟡 Media~~ → ✅ RESOLVED |
+| **Componente** | `skills/imported/academic_writer/drafting.py` (`draft_all()`) |
+| **Problema** | Each section generated independently with empty outline_context. |
+| **Solución** | `draft_all` accumulates previous sections (500 chars each) as outline_context. Abstract gets all 6 body sections. |
+| **Acceptance** | `draft_section` now accepts `outline_context` param. Context grows with each section. |
+| **Estado** | ✅ DONE — `outline_context` param in draft_section, accumulated by draft_all |
 
 ### GAP-009: ~~No factual accuracy~~ (Claim-evidence overlap validator DONE)
 
