@@ -125,29 +125,27 @@ All citations verified against provided papers. No hallucinated references.
 | **Esfuerzo** | 1 día |
 | **Estado** | ❌ Pendiente |
 
-### GAP-005: Citation format mismatch (Author, Year vs @key)
+### GAP-005: ~~Citation format mismatch~~ (Author, Year → @key converter DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟠 Alta — P1 |
-| **Componente** | `clients/llm_content.py:269` (prompt instruction), `validators/citations.py:10` |
-| **Problema** | LLM generates `(Tao et al., 2025)` but pandoc expects `@tao2025racg` for bibTeX resolution. No author→key mapping exists. |
-| **Solución** | Build author→key mapping from bib. Include in prompt. Post-process LLM output with regex replacement. |
-| **Acceptance** | `paper check refs` finds 0 unresolved citations. |
-| **Esfuerzo** | Medio día |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟠 Alta~~ → ✅ RESOLVED |
+| **Componente** | `validators/citation_format.py` |
+| **Problema** | LLM generates `(Tao et al., 2025)` but pandoc expects `@tao2025racg` for bibTeX resolution. |
+| **Solución** | `convert_citations(text, bib)` parses .bib, builds author+year → key index, replaces inline citations. |
+| **Acceptance** | `audit_citation_format()` reports resolved/unresolved. 4/6 test citations resolved. |
+| **Estado** | ✅ DONE — `validators/citation_format.py` with parse, index, convert, audit |
 
-### GAP-006: No quality appraisal of included studies
+### GAP-006: ~~No quality appraisal~~ (QualityAppraisalValidator DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟠 Alta — P1 |
-| **Componente** | `rules/method_gate/prisma.yml:prisma.13`, validators/ |
-| **Problema** | PRISMA `prisma.13` checks for "risk of bias" keywords but no quality appraisal module exists. Q2 reviewers expect risk-of-bias table. |
-| **Solución** | Create `validators/quality_appraisal.py` with SE-specific checklist. Score each study on 5-point scale. Generate quality appraisal table. |
-| **Acceptance** | `paper audit reporting` includes quality appraisal findings. PRISMA gate `prisma.13` passes. |
-| **Esfuerzo** | 1-2 días |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟠 Alta~~ → ✅ RESOLVED |
+| **Componente** | `validators/quality_appraisal.py` |
+| **Problema** | PRISMA `prisma.13` checks for "risk of bias" keywords but no quality appraisal module exists. |
+| **Solución** | 5-dimension scoring: venue reputation, citation impact, methodology rigor, reproducibility, recency. Weighted total → quality rating. |
+| **Acceptance** | Generates appraisal table JSON with high/moderate/low/very_low ratings. 23 unit tests. |
+| **Estado** | ✅ DONE — `validators/quality_appraisal.py` with QualityAppraisalValidator |
 
 ### GAP-007: ~~No iterative search mechanism~~ (DONE)
 

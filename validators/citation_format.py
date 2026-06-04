@@ -43,9 +43,7 @@ def parse_bib_keys(bib_text: str) -> dict[str, dict[str, str]]:
 
         # Extract fields
         fields: dict[str, str] = {}
-        for field_match in re.finditer(
-            r"(\w+)\s*=\s*\{([^}]*)\}", body
-        ):
+        for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body):
             fields[field_match.group(1).lower()] = field_match.group(2).strip()
 
         entries[key] = {
@@ -203,17 +201,13 @@ def convert_citations(text: str, bib_text: str) -> str:
     for citation in reversed(citations):
         bib_key = resolve_citation(citation, author_year_index)
         if bib_key:
-            result = (
-                result[: citation["start"]] + f"@{bib_key}" + result[citation["end"] :]
-            )
+            result = result[: citation["start"]] + f"@{bib_key}" + result[citation["end"] :]
             resolved_count += 1
 
     return result
 
 
-def audit_citation_format(
-    text: str, bib_text: str
-) -> list[dict[str, Any]]:
+def audit_citation_format(text: str, bib_text: str) -> list[dict[str, Any]]:
     """Audit text for unresolved (Author, Year) citations.
 
     Returns findings for citations that couldn't be resolved to @key.
@@ -235,9 +229,7 @@ def audit_citation_format(
                 {
                     "gate": "citation_format",
                     "severity": "info",
-                    "message": (
-                        f"Resolved: {citation['raw']} → @{bib_key}"
-                    ),
+                    "message": (f"Resolved: {citation['raw']} → @{bib_key}"),
                 }
             )
         else:

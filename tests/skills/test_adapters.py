@@ -210,6 +210,144 @@ class TestLiteratureSearchAdapter:
         assert result.status == "fail"
         assert "bogus" in result.summary
 
+
+class TestPrismaFlow:
+    """Test PRISMA 2020 flow data in screen output."""
+
+    def _make_raw(self, papers: list[dict[str, object]]) -> dict[str, object]:
+        return {
+            "query": "test",
+            "total_input": len(papers),
+            "total_after_dedup": len(papers),
+            "papers": papers,
+        }
+
+    def test_prisma_flow_present(self, tmp_path: Path) -> None:
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        raw = self._make_raw([
+            {"title": "Good", "doi": "10.1/a", "source": "seed",
+             "scoring": {"tier": "Tier 2"}},
+        ])
+        (search_dir / "raw_results.json").write_text(json.dumps(raw))
+
+        result = adapter.execute(
+            command="screen",
+            inputs={"search_dir": str(search_dir), "output_dir": str(search_dir)},
+            context={},
+        )
+        evidence = json.loads(Path(result.artifacts[0]).read_text())
+        assert "prisma_flow" in evidence
+
+    def test_prisma_four_stages(self, tmp_path: Path) -> None:
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        raw = self._make_raw([
+            {"title": "S1", "doi": "10.1/a", "source": "seed",
+             "scoring": {"tier": "Tier 2"}},
+            {"title": "B1", "doi": "10.1/b", "source": "backward_chaining",
+             "scoring": {"tier": "Tier 1"}},
+            {"title": "F1", "doi": "10.1/c", "source": "forward_chaining",
+             "scoring": {"tier": "Discard"}},
+        ])
+        (search_dir / "raw_results.json").write_text(json.dumps(raw))
+
+        result = adapter.execute(
+            command="screen",
+            inputs={"search_dir": str(search_dir), "output_dir": str(search_dir)},
+            context={},
+        )
+        evidence = json.loads(Path(result.artifacts[0]).read_text())
+        flow = evidence["prisma_flow"]
+
+        # All 4 stages present
+        assert "identification" in flow
+        assert "screening" in flow
+        assert "eligibility" in flow
+        assert "included" in flow
+
+    def test_prisma_source_counts(self, tmp_path: Path) -> None:
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        raw = self._make_raw([
+            {"title": "S1", "doi": "10.1/a", "source": "seed",
+             "scoring": {"tier": "Tier 2"}},
+            {"title": "B1", "doi": "10.1/b", "source": "backward_chaining",
+             "scoring": {"tier": "Tier 2"}},
+            {"title": "F1", "doi": "10.1/c", "source": "forward_chaining",
+             "scoring": {"tier": "Tier 2"}},
+        ])
+        (search_dir / "raw_results.json").write_text(json.dumps(raw))
+
+        result = adapter.execute(
+            command="screen",
+            inputs={"search_dir": str(search_dir), "output_dir": str(search_dir)},
+            context={},
+        )
+        evidence = json.loads(Path(result.artifacts[0]).read_text())
+        ident = evidence["prisma_flow"]["identification"]
+
+        assert ident["seed_papers"] == 1
+        assert ident["database_results"] == 1  # backward_chaining
+        assert ident["other_sources"] == 1  # forward_chaining
+        assert ident["total_identified"] == 3
+
+    def test_prisma_exclusion_reasons(self, tmp_path: Path) -> None:
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        raw = self._make_raw([
+            {"title": "Good", "doi": "10.1/a", "source": "seed",
+             "scoring": {"tier": "Tier 2"}},
+            {"title": "Bad", "doi": "10.1/b", "source": "backward_chaining",
+             "scoring": {"tier": "Discard"}},
+        ])
+        (search_dir / "raw_results.json").write_text(json.dumps(raw))
+
+        result = adapter.execute(
+            command="screen",
+            inputs={"search_dir": str(search_dir), "output_dir": str(search_dir)},
+            context={},
+        )
+        evidence = json.loads(Path(result.artifacts[0]).read_text())
+        scr = evidence["prisma_flow"]["screening"]
+
+        assert scr["records_screened"] == 2
+        assert scr["records_excluded"] == 1
+        assert "tier_discard" in scr["exclusion_reasons"]
+
+    def test_prisma_included_count(self, tmp_path: Path) -> None:
+        adapter = LiteratureSearchAdapter()
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        raw = self._make_raw([
+            {"title": "T1", "doi": "10.1/a", "source": "seed",
+             "scoring": {"tier": "Tier 1"}},
+            {"title": "T2", "doi": "10.1/b", "source": "backward_chaining",
+             "scoring": {"tier": "Tier 2"}},
+            {"title": "Discard", "doi": "10.1/c", "source": "forward_chaining",
+             "scoring": {"tier": "Discard"}},
+        ])
+        (search_dir / "raw_results.json").write_text(json.dumps(raw))
+
+        result = adapter.execute(
+            command="screen",
+            inputs={"search_dir": str(search_dir), "output_dir": str(search_dir)},
+            context={},
+        )
+        evidence = json.loads(Path(result.artifacts[0]).read_text())
+        inc = evidence["prisma_flow"]["included"]
+
+        assert inc["studies_in_synthesis"] == 2  # T1 + T2
+
     def test_skills_do_not_write_state_yaml(self, tmp_path: Path) -> None:
         """Verify that skills never create outputs/state.yaml."""
         adapter = LiteratureSearchAdapter()

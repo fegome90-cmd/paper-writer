@@ -229,6 +229,46 @@ def screen(
         if tier_order.get(p.get("scoring", {}).get("tier", "Discard"), 4) <= min_level
     ]
 
+    # Build PRISMA 2020 flow data from source provenance and tier screening
+    source_counts: dict[str, int] = {}
+    for p in all_papers:
+        src = p.get("source", "unknown")
+        source_counts[src] = source_counts.get(src, 0) + 1
+
+    # Count exclusions by reason
+    excluded = [
+        p for p in all_papers if p not in screened
+    ]
+    exclusion_reasons: dict[str, int] = {}
+    for p in excluded:
+        tier = p.get("scoring", {}).get("tier", "Discard")
+        reason = f"tier_{tier.lower().replace(' ', '_')}"
+        exclusion_reasons[reason] = exclusion_reasons.get(reason, 0) + 1
+
+    prisma_flow = {
+        "identification": {
+            "database_results": source_counts.get("backward_chaining", 0),
+            "other_sources": source_counts.get("forward_chaining", 0)
+            + source_counts.get("keyword_search", 0),
+            "seed_papers": source_counts.get("seed", 0),
+            "total_identified": len(all_papers),
+            "duplicates_removed": raw_data.get("total_input", 0)
+            - raw_data.get("total_after_dedup", len(all_papers)),
+        },
+        "screening": {
+            "records_screened": len(all_papers),
+            "records_excluded": len(excluded),
+            "exclusion_reasons": exclusion_reasons,
+        },
+        "eligibility": {
+            "records_assessed": len(screened),
+            "records_excluded": 0,  # full-text exclusion (future: add full-text review)
+        },
+        "included": {
+            "studies_in_synthesis": len(screened),
+        },
+    }
+
     evidence = {
         "query": raw_data.get("query", ""),
         "date": raw_data.get("date", ""),
@@ -236,6 +276,7 @@ def screen(
         "total_screened": len(screened),
         "min_tier": min_tier,
         "inclusion_criteria": [f"tier <= {min_tier}", "has title", "has DOI"],
+        "prisma_flow": prisma_flow,
         "evidence": screened,
     }
     evidence_path = output_dir / "screened_evidence.json"
