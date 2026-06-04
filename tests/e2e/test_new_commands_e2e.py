@@ -94,8 +94,7 @@ class TestE2EAuditFactuality:
             pytest.skip("screened_evidence.json not generated")
 
         r = _run(
-            CLI_CMD + ["audit", "factuality", str(dummy),
-                       "--evidence", str(evidence)],
+            CLI_CMD + ["audit", "factuality", str(dummy), "--evidence", str(evidence)],
             tmp_path,
         )
         # Should run without crashing
@@ -121,11 +120,7 @@ class TestE2EAuditTables:
     def test_tables_on_complete_drafts(self, tmp_path: Path) -> None:
         draft = tmp_path / "drafts"
         draft.mkdir()
-        content = (
-            "# Results\n\n"
-            "| A | B |\n|---|---|\n| 1 | 2 |\n\n"
-            "```mermaid\nflowchart TD\n```\n"
-        )
+        content = "# Results\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n```mermaid\nflowchart TD\n```\n"
         (draft / "results.md").write_text(content)
 
         r = _run(CLI_CMD + ["audit", "tables", str(draft)], tmp_path)

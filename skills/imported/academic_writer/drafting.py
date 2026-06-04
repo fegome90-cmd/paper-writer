@@ -224,18 +224,57 @@ def draft_section(
         lines.append(f"[Content placeholder: {sub} for {query} [{ref_list}]]")
         lines.append("")
 
-    # For results section, add evidence listing if available
+    # Enrich results with structured study table
     if key == "results" and total > 0:
-        lines.append("## Evidence summary")
-        lines.append(f"{total} studies included in evidence base.")
-        for item in evidence_items[:5]:
-            title = item.get("title", "Untitled")
-            doi = item.get("doi", "no DOI")
-            scoring = item.get("scoring", {})
-            tier = scoring.get("tier", "unclassified")
-            score = scoring.get("final_score", "N/A")
-            lines.append(f"- **{title}** — {tier} (score: {score}) DOI: {doi}")
+        lines.append("## Study Characteristics")
         lines.append("")
+        try:
+            from validators.table_figure import generate_study_table
+
+            # Write a temporary evidence file for the table generator
+            evidence_file = output_dir / "_evidence_for_table.json"
+            evidence_file.write_text(
+                json.dumps(
+                    {"evidence": evidence_items},
+                    indent=2,
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            table_md = generate_study_table(evidence_file, max_rows=30)
+            lines.append(table_md)
+            lines.append("")
+            # Clean up temp file
+            evidence_file.unlink(missing_ok=True)
+        except (ValueError, OSError):
+            # Fallback to bullet list if table generation fails
+            lines.append(f"{total} studies included in evidence base.")
+            for item in evidence_items[:5]:
+                title = item.get("title", "Untitled")
+                doi = item.get("doi", "no DOI")
+                scoring = item.get("scoring", {})
+                tier = scoring.get("tier", "unclassified")
+                score = scoring.get("final_score", "N/A")
+                lines.append(f"- **{title}** — {tier} (score: {score}) DOI: {doi}")
+            lines.append("")
+
+    # Enrich methods with PRISMA flow diagram
+    if key == "methods":
+        # evidence_path points to screened_evidence.json
+        try:
+            from validators.table_figure import generate_prisma_mermaid
+
+            evidence_file = Path(str(evidence_path))
+            if evidence_file.exists():
+                mermaid = generate_prisma_mermaid(evidence_file)
+                lines.append("## PRISMA Flow Diagram")
+                lines.append("")
+                lines.append("```mermaid")
+                lines.append(mermaid)
+                lines.append("```")
+                lines.append("")
+        except (ValueError, OSError):
+            pass
 
     section_path = output_dir / f"{key}.md"
     section_path.write_text("\n".join(lines), encoding="utf-8")
