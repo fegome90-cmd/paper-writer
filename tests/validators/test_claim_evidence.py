@@ -80,11 +80,15 @@ class TestClaimEvidenceValidator:
 
     def test_low_overlap_flagged(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "Quantum error correction in topological codes."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {"abstract": "Quantum error correction in topological codes."},
+            ],
+        )
         validator = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.30,
+            evidence_path=ev_path,
+            overlap_threshold=0.30,
         )
         claims = [
             _claim(
@@ -98,12 +102,18 @@ class TestClaimEvidenceValidator:
 
     def test_high_overlap_not_flagged(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "CodeBERT is a pre-trained model for code search "
-                         "and code generation tasks."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {
+                    "abstract": "CodeBERT is a pre-trained model for code search "
+                    "and code generation tasks."
+                },
+            ],
+        )
         validator = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.30,
+            evidence_path=ev_path,
+            overlap_threshold=0.30,
         )
         claims = [
             _claim(
@@ -116,20 +126,25 @@ class TestClaimEvidenceValidator:
 
     def test_overlap_threshold_configurable(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "We study retrieval augmented generation for code."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {"abstract": "We study retrieval augmented generation for code."},
+            ],
+        )
         claims = [
             _claim("Retrieval augmented approaches improve code generation."),
         ]
 
         strict = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.80,
+            evidence_path=ev_path,
+            overlap_threshold=0.80,
         )
         strict_findings = strict.check_claims(claims)
 
         lenient = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.10,
+            evidence_path=ev_path,
+            overlap_threshold=0.10,
         )
         lenient_findings = lenient.check_claims(claims)
 
@@ -137,11 +152,15 @@ class TestClaimEvidenceValidator:
 
     def test_finding_has_overlap_metadata(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "Quantum computing enables new algorithms."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {"abstract": "Quantum computing enables new algorithms."},
+            ],
+        )
         validator = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.30,
+            evidence_path=ev_path,
+            overlap_threshold=0.30,
         )
         claims = [
             _claim("Code generation models produce functionally correct programs."),
@@ -155,13 +174,19 @@ class TestClaimEvidenceValidator:
 
     def test_multiple_evidence_takes_best(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "Quantum error correction in topological codes."},
-            {"abstract": "Code generation with pre-trained language models "
-                         "improves developer productivity."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {"abstract": "Quantum error correction in topological codes."},
+                {
+                    "abstract": "Code generation with pre-trained language models "
+                    "improves developer productivity."
+                },
+            ],
+        )
         validator = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.30,
+            evidence_path=ev_path,
+            overlap_threshold=0.30,
         )
         claims = [
             _claim("Pre-trained language models improve code generation quality."),
@@ -172,11 +197,15 @@ class TestClaimEvidenceValidator:
 
     def test_multiple_claims_mixed(self, tmp_path: Path) -> None:
         ev_path = tmp_path / "screened_evidence.json"
-        _make_evidence_file(ev_path, [
-            {"abstract": "Retrieval augmented generation combines search with LLMs."},
-        ])
+        _make_evidence_file(
+            ev_path,
+            [
+                {"abstract": "Retrieval augmented generation combines search with LLMs."},
+            ],
+        )
         validator = ClaimEvidenceValidator(
-            evidence_path=ev_path, overlap_threshold=0.30,
+            evidence_path=ev_path,
+            overlap_threshold=0.30,
         )
         claims = [
             _claim("RAG systems combine retrieval with generation capabilities."),
@@ -185,5 +214,7 @@ class TestClaimEvidenceValidator:
         findings = validator.check_claims(claims)
         # First claim should pass, second should be flagged
         assert len(findings) == 1
-        assert "drug" in findings[0]["evidence"]["claim_snippet"] or \
-               "quantum" in findings[0]["evidence"]["claim_snippet"].lower()
+        assert (
+            "drug" in findings[0]["evidence"]["claim_snippet"]
+            or "quantum" in findings[0]["evidence"]["claim_snippet"].lower()
+        )

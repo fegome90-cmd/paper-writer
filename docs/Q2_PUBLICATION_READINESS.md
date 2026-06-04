@@ -176,17 +176,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Esfuerzo** | Medio día |
 | **Estado** | ❌ Pendiente |
 
-### GAP-009: No factual accuracy verification against evidence
+### GAP-009: ~~No factual accuracy~~ (Claim-evidence overlap validator DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟡 Media-Alta — P2 |
-| **Componente** | `validators/claim_alignment.py`, `validators/citation_verify.py` |
-| **Problema** | LLM may hallucinate findings. `ClaimAlignmentValidator` only checks citation existence, not content accuracy. |
-| **Solución** | Extend `ClaimAlignmentValidator` with keyword overlap heuristic. Flag claims with <30% overlap for human review. |
-| **Acceptance** | `paper audit claims` flags hallucinated claims. False positive rate < 20%. |
-| **Esfuerzo** | 2 días |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟡 Media-Alta~~ → ✅ RESOLVED |
+| **Componente** | `validators/claim_evidence.py` |
+| **Problema** | LLM may hallucinate findings. No content accuracy check. |
+| **Solución** | `ClaimEvidenceValidator` compares claim text vs evidence abstracts via keyword overlap. <30% = flagged. |
+| **Acceptance** | 3/3 hallucinated detected, 0/3 supported false-positive (0% FP rate). |
+| **Estado** | ✅ DONE — `validators/claim_evidence.py`, 16 tests |
 
 ### GAP-010: No journal-specific LaTeX template
 

@@ -121,6 +121,7 @@ def draft_section(
     evidence_path: Path,
     bib_path: Path,
     output_dir: Path,
+    outline_context: str = "",
 ) -> dict[str, Any]:
     """Draft a section skeleton using manifest structure.
 
@@ -134,6 +135,7 @@ def draft_section(
         evidence_path: Path to screened_evidence.json.
         bib_path: Path to references.bib.
         output_dir: Directory where the section markdown is written.
+        outline_context: Previous sections' content for cross-section coherence.
 
     Returns:
         Dict with 'artifacts' list of created file paths.
@@ -206,7 +208,7 @@ def draft_section(
         tone=tone,
         word_count=word_count,
         rules=rules,
-        outline_context="",
+        outline_context=outline_context,
     )
 
     if llm_content is not None:
@@ -238,6 +240,86 @@ def draft_section(
     section_path = output_dir / f"{key}.md"
     section_path.write_text("\n".join(lines), encoding="utf-8")
     return {"artifacts": [str(section_path)]}
+
+
+def draft_all(
+    outline_path: Path,
+    evidence_path: Path,
+    bib_path: Path,
+    output_dir: Path,
+    section_keys: list[str] | None = None,
+) -> dict[str, Any]:
+    """Draft all sections in dependency order with cross-section context.
+
+    Generates sections sequentially, passing previously generated
+    content as outline_context to each subsequent section. The
+    abstract is generated last (after all other sections) so it
+    can summarize the complete manuscript.
+
+    Args:
+        outline_path: Path to outline.md.
+        evidence_path: Path to screened_evidence.json.
+        bib_path: Path to references.bib.
+        output_dir: Directory where sections are written.
+        section_keys: Optional explicit list of section keys.
+            If None, uses all sections from manifest.
+
+    Returns:
+        Dict with 'artifacts' list and 'sections' dict mapping
+        section names to their file paths.
+    """
+    manifest = load_manifest()
+    sections_config = manifest.get("sections", {})
+
+    if section_keys is None:
+        section_keys = list(sections_config.keys())
+
+    # Separate abstract from body sections
+    abstract_key = "abstract"
+    body_keys = [k for k in section_keys if k != abstract_key]
+
+    # Sort body sections by their manifest order
+    body_keys.sort(key=lambda k: sections_config.get(k, {}).get("order", 99))
+
+    # Build generation order: body sections first, abstract last
+    generation_order = body_keys[:]
+    if abstract_key in section_keys and abstract_key in sections_config:
+        generation_order.append(abstract_key)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    all_artifacts: list[str] = []
+    section_paths: dict[str, str] = {}
+    context_parts: list[str] = []
+
+    for section_key in generation_order:
+        result = draft_section(
+            section_name=section_key,
+            outline_path=outline_path,
+            evidence_path=evidence_path,
+            bib_path=bib_path,
+            output_dir=output_dir,
+            outline_context="\n\n".join(context_parts) if context_parts else "",
+        )
+
+        all_artifacts.extend(result.get("artifacts", []))
+
+        # Read generated content for cross-section context
+        for artifact_path in result.get("artifacts", []):
+            section_paths[section_key] = artifact_path
+            try:
+                content = Path(artifact_path).read_text(encoding="utf-8")
+                # Truncate context to avoid token explosion
+                # (keep first 500 chars per section as context summary)
+                context_parts.append(content[:500])
+            except OSError:
+                pass
+
+    return {
+        "artifacts": all_artifacts,
+        "sections": section_paths,
+        "generation_order": generation_order,
+    }
 
 
 def _read_section_prompt(section_key: str) -> str | None:

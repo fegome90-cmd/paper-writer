@@ -19,20 +19,115 @@ from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
 
 # Stopwords excluded from overlap calculation
-_STOPWORDS = frozenset({
-    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
-    "being", "have", "has", "had", "do", "does", "did", "will", "would",
-    "could", "should", "may", "might", "shall", "can", "this", "that",
-    "these", "those", "it", "its", "we", "our", "they", "their", "he",
-    "she", "his", "her", "not", "no", "nor", "as", "if", "then", "than",
-    "too", "very", "also", "just", "about", "above", "after", "again",
-    "all", "am", "any", "because", "before", "below", "between", "both",
-    "each", "few", "more", "most", "other", "own", "same", "so", "some",
-    "such", "up", "out", "over", "only", "into", "through", "during",
-    "which", "what", "when", "where", "who", "whom", "how", "why",
-    "while", "there", "here", "further", "once", "under", "until",
-})
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "we",
+        "our",
+        "they",
+        "their",
+        "he",
+        "she",
+        "his",
+        "her",
+        "not",
+        "no",
+        "nor",
+        "as",
+        "if",
+        "then",
+        "than",
+        "too",
+        "very",
+        "also",
+        "just",
+        "about",
+        "above",
+        "after",
+        "again",
+        "all",
+        "am",
+        "any",
+        "because",
+        "before",
+        "below",
+        "between",
+        "both",
+        "each",
+        "few",
+        "more",
+        "most",
+        "other",
+        "own",
+        "same",
+        "so",
+        "some",
+        "such",
+        "up",
+        "out",
+        "over",
+        "only",
+        "into",
+        "through",
+        "during",
+        "which",
+        "what",
+        "when",
+        "where",
+        "who",
+        "whom",
+        "how",
+        "why",
+        "while",
+        "there",
+        "here",
+        "further",
+        "once",
+        "under",
+        "until",
+    }
+)
 
 
 def _tokenize(text: str) -> set[str]:
@@ -103,6 +198,7 @@ class ClaimEvidenceValidator:
             return []
 
         from validators.claims import ClaimsValidator
+
         claims_validator = ClaimsValidator()
         candidates = claims_validator.validate(manuscript)
         return self.check_claims(candidates)
@@ -138,9 +234,7 @@ class ClaimEvidenceValidator:
 
             if best_overlap < self.overlap_threshold:
                 findings.append(
-                    self._make_low_overlap_finding(
-                        candidate, best_overlap, best_evidence_idx
-                    )
+                    self._make_low_overlap_finding(candidate, best_overlap, best_evidence_idx)
                 )
 
         return deduplicate_findings(findings)
@@ -176,10 +270,7 @@ class ClaimEvidenceValidator:
             "line": line,
             "column": col,
             "span": span,
-            "message": (
-                f"Claim has low keyword overlap with evidence "
-                f"({overlap:.0%})"
-            ),
+            "message": (f"Claim has low keyword overlap with evidence ({overlap:.0%})"),
             "section": candidate.get("section", "unknown"),
             "evidence": {
                 "claim_snippet": candidate.get("text", "")[:150],
