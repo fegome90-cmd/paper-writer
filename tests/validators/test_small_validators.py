@@ -60,7 +60,11 @@ class TestValidateRefsMetadata:
     def test_complete_entries(self) -> None:
         entries = {
             "smith2023": {"author": "Smith", "year": "2023", "doi": "10.1/x"},
-            "jones2024": {"author": "Jones", "year": "2024", "url": "https://arxiv.org/abs/2401.00001"},
+            "jones2024": {
+                "author": "Jones",
+                "year": "2024",
+                "url": "https://arxiv.org/abs/2401.00001",
+            },
         }
         assert validate_refs_metadata(entries) == []
 
@@ -197,7 +201,9 @@ class TestValidateReporting:
         assert any(f["code"] == "empty_section" for f in findings)
 
     def test_section_with_content_ok(self) -> None:
-        sections = {"methods": "# Methods\n\nWe enrolled participants (n=200) in a cohort study design.\nThis has some limitations."}
+        sections = {
+            "methods": "# Methods\n\nWe enrolled participants (n=200) in a cohort study design.\nThis has some limitations."
+        }
         findings = validate_reporting(sections)
         empty = [f for f in findings if f["code"] == "empty_section"]
         assert empty == []

@@ -44,7 +44,9 @@ class TestValidatePreset:
     def test_missing_name(self) -> None:
         preset = {"format": "docx", "citation_style": "apa", "required_sections": ["intro"]}
         findings = validate_preset(preset)
-        assert any(f["code"] == "missing_preset_field" and f["location"] == "name" for f in findings)
+        assert any(
+            f["code"] == "missing_preset_field" and f["location"] == "name" for f in findings
+        )
 
     def test_missing_format(self) -> None:
         preset = {"name": "N", "citation_style": "apa", "required_sections": ["intro"]}
@@ -69,7 +71,9 @@ class TestValidatePreset:
     # --- required_sections validation ---
     def test_sections_must_be_list(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
             "required_sections": "not-a-list",
         }
         findings = validate_preset(preset)
@@ -77,7 +81,9 @@ class TestValidatePreset:
 
     def test_sections_must_be_nonempty(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
             "required_sections": [],
         }
         findings = validate_preset(preset)
@@ -87,7 +93,9 @@ class TestValidatePreset:
     def test_valid_formats(self) -> None:
         for fmt in ("docx", "pdf", "html", "latex"):
             preset = {
-                "name": "N", "format": fmt, "citation_style": "apa",
+                "name": "N",
+                "format": fmt,
+                "citation_style": "apa",
                 "required_sections": ["intro"],
             }
             fmt_findings = [f for f in validate_preset(preset) if f["code"] == "invalid_format"]
@@ -95,7 +103,9 @@ class TestValidatePreset:
 
     def test_invalid_format_warning(self) -> None:
         preset = {
-            "name": "N", "format": "rtf", "citation_style": "apa",
+            "name": "N",
+            "format": "rtf",
+            "citation_style": "apa",
             "required_sections": ["intro"],
         }
         findings = validate_preset(preset)
@@ -106,39 +116,54 @@ class TestValidatePreset:
     # --- max_words validation ---
     def test_valid_max_words(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
-            "required_sections": ["intro"], "max_words": 8000,
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
+            "required_sections": ["intro"],
+            "max_words": 8000,
         }
         assert validate_preset(preset) == []
 
     def test_max_words_zero(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
-            "required_sections": ["intro"], "max_words": 0,
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
+            "required_sections": ["intro"],
+            "max_words": 0,
         }
         findings = validate_preset(preset)
         assert any(f["code"] == "invalid_max_words" for f in findings)
 
     def test_max_words_negative(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
-            "required_sections": ["intro"], "max_words": -100,
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
+            "required_sections": ["intro"],
+            "max_words": -100,
         }
         findings = validate_preset(preset)
         assert any(f["code"] == "invalid_max_words" for f in findings)
 
     def test_max_words_string(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
-            "required_sections": ["intro"], "max_words": "5000",
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
+            "required_sections": ["intro"],
+            "max_words": "5000",
         }
         findings = validate_preset(preset)
         assert any(f["code"] == "invalid_max_words" for f in findings)
 
     def test_max_words_float(self) -> None:
         preset = {
-            "name": "N", "format": "docx", "citation_style": "apa",
-            "required_sections": ["intro"], "max_words": 5.5,
+            "name": "N",
+            "format": "docx",
+            "citation_style": "apa",
+            "required_sections": ["intro"],
+            "max_words": 5.5,
         }
         findings = validate_preset(preset)
         assert any(f["code"] == "invalid_max_words" for f in findings)

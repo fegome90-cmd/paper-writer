@@ -280,7 +280,12 @@ def draft_section(
         # Build enrichment as separate block (goes AFTER LLM content)
         enrich_lines: list[str] = []
         _enrich_section(
-            enrich_lines, key, total, evidence_items, evidence_path, output_dir,
+            enrich_lines,
+            key,
+            total,
+            evidence_items,
+            evidence_path,
+            output_dir,
         )
         enrich_block = "\n".join(enrich_lines) + "\n" if enrich_lines else ""
         section_path.write_text(
@@ -296,7 +301,12 @@ def draft_section(
         lines.append("")
 
     _enrich_section(
-        lines, key, total, evidence_items, evidence_path, output_dir,
+        lines,
+        key,
+        total,
+        evidence_items,
+        evidence_path,
+        output_dir,
     )
 
     section_path = output_dir / f"{key}.md"
