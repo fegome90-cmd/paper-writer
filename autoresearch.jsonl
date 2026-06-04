@@ -460,3 +460,4 @@
 {"type":"config","name":"Style validator test coverage","metricName":"new_tests","metricUnit":"tests","bestDirection":"higher"}
 {"run":301,"commit":"be4ad40","metric":0,"metrics":{},"status":"keep","description":"Baseline: style.py has 0 dedicated tests. validate_style() is a pure function checking passive voice, long sentences, unbacked claims, forbidden phrases, and informal language.","timestamp":1780569535759,"segment":159,"confidence":null}
 {"type":"config","name":"Wire study table and PRISMA into LLM production path","metricName":"production_connected","metricUnit":"features","bestDirection":"higher"}
+{"run":302,"commit":"fb79983","metric":0,"metrics":{},"status":"keep","description":"Baseline: generate_study_table() and generate_prisma_mermaid() only run in fallback (no-LLM) path. LLM production path has early return at line ~218 that skips all enrichment. 0 features connected in production.","timestamp":1780569873337,"segment":160,"confidence":null}

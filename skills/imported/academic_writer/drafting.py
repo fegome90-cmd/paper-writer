@@ -115,6 +115,68 @@ def draft_outline(
     return {"artifacts": [str(outline_path)]}
 
 
+def _enrich_section(
+    lines: list[str],
+    key: str,
+    total: int,
+    evidence_items: list[dict[str, Any]],
+    evidence_path: Path,
+    output_dir: Path,
+) -> None:
+    """Append structured enrichment (study table, PRISMA diagram) to section lines.
+
+    Called by both LLM and fallback paths so enrichment is never skipped.
+    All operations are wrapped in try/except for graceful degradation.
+    """
+    # Enrich results with structured study table
+    if key == "results" and total > 0:
+        lines.append("## Study Characteristics")
+        lines.append("")
+        try:
+            from validators.table_figure import generate_study_table
+
+            evidence_file = output_dir / "_evidence_for_table.json"
+            evidence_file.write_text(
+                json.dumps(
+                    {"evidence": evidence_items},
+                    indent=2,
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            table_md = generate_study_table(evidence_file, max_rows=30)
+            lines.append(table_md)
+            lines.append("")
+            evidence_file.unlink(missing_ok=True)
+        except (ValueError, OSError):
+            lines.append(f"{total} studies included in evidence base.")
+            for item in evidence_items[:5]:
+                title = item.get("title", "Untitled")
+                doi = item.get("doi", "no DOI")
+                scoring = item.get("scoring", {})
+                tier = scoring.get("tier", "unclassified")
+                score = scoring.get("final_score", "N/A")
+                lines.append(f"- **{title}** — {tier} (score: {score}) DOI: {doi}")
+            lines.append("")
+
+    # Enrich methods with PRISMA flow diagram
+    if key == "methods":
+        try:
+            from validators.table_figure import generate_prisma_mermaid
+
+            ev_file = Path(str(evidence_path))
+            if ev_file.exists():
+                mermaid = generate_prisma_mermaid(ev_file)
+                lines.append("## PRISMA Flow Diagram")
+                lines.append("")
+                lines.append("```mermaid")
+                lines.append(mermaid)
+                lines.append("```")
+                lines.append("")
+        except (ValueError, OSError):
+            pass
+
+
 def draft_section(
     section_name: str,
     outline_path: Path,
@@ -212,10 +274,13 @@ def draft_section(
     )
 
     if llm_content is not None:
-        # LLM succeeded — prepend header, use real content
+        # LLM succeeded — prepend header, append enrichment, use real content
+        _enrich_section(
+            lines, key, total, evidence_items, evidence_path, output_dir,
+        )
         section_path = output_dir / f"{key}.md"
         header = "\n".join(lines) + "\n"
-        section_path.write_text(header + llm_content, encoding="utf-8")
+        section_path.write_text(header + llm_content + "\n", encoding="utf-8")
         return {"artifacts": [str(section_path)]}
 
     # Fallback: structural placeholders (no LLM available)
@@ -224,57 +289,9 @@ def draft_section(
         lines.append(f"[Content placeholder: {sub} for {query} [{ref_list}]]")
         lines.append("")
 
-    # Enrich results with structured study table
-    if key == "results" and total > 0:
-        lines.append("## Study Characteristics")
-        lines.append("")
-        try:
-            from validators.table_figure import generate_study_table
-
-            # Write a temporary evidence file for the table generator
-            evidence_file = output_dir / "_evidence_for_table.json"
-            evidence_file.write_text(
-                json.dumps(
-                    {"evidence": evidence_items},
-                    indent=2,
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
-            )
-            table_md = generate_study_table(evidence_file, max_rows=30)
-            lines.append(table_md)
-            lines.append("")
-            # Clean up temp file
-            evidence_file.unlink(missing_ok=True)
-        except (ValueError, OSError):
-            # Fallback to bullet list if table generation fails
-            lines.append(f"{total} studies included in evidence base.")
-            for item in evidence_items[:5]:
-                title = item.get("title", "Untitled")
-                doi = item.get("doi", "no DOI")
-                scoring = item.get("scoring", {})
-                tier = scoring.get("tier", "unclassified")
-                score = scoring.get("final_score", "N/A")
-                lines.append(f"- **{title}** — {tier} (score: {score}) DOI: {doi}")
-            lines.append("")
-
-    # Enrich methods with PRISMA flow diagram
-    if key == "methods":
-        # evidence_path points to screened_evidence.json
-        try:
-            from validators.table_figure import generate_prisma_mermaid
-
-            evidence_file = Path(str(evidence_path))
-            if evidence_file.exists():
-                mermaid = generate_prisma_mermaid(evidence_file)
-                lines.append("## PRISMA Flow Diagram")
-                lines.append("")
-                lines.append("```mermaid")
-                lines.append(mermaid)
-                lines.append("```")
-                lines.append("")
-        except (ValueError, OSError):
-            pass
+    _enrich_section(
+        lines, key, total, evidence_items, evidence_path, output_dir,
+    )
 
     section_path = output_dir / f"{key}.md"
     section_path.write_text("\n".join(lines), encoding="utf-8")
