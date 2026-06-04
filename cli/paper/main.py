@@ -114,8 +114,8 @@ def main() -> None:
     chain_parser.add_argument(
         "--relevance-threshold",
         type=float,
-        default=0.25,
-        help="Minimum relevance score to include (default: 0.25).",
+        default=0.15,
+        help="Minimum relevance score to include (default: 0.15, auto-lowered for highly-cited papers).",
     )
     chain_parser.add_argument(
         "--no-cache",

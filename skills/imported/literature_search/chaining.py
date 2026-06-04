@@ -277,7 +277,7 @@ def iterative_search(
     query: str,
     max_rounds: int = 3,
     max_papers: int = 80,
-    relevance_threshold: float = 0.3,
+    relevance_threshold: float = 0.15,
     cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Run iterative citation chaining from seed papers.

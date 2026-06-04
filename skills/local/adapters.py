@@ -128,7 +128,7 @@ class LiteratureSearchAdapter(SkillAdapter):
         query = str(inputs.get("query", ""))
         max_rounds = int(inputs.get("max_rounds", 2))
         max_papers = int(inputs.get("max_papers", 80))
-        relevance_threshold = float(inputs.get("relevance_threshold", 0.25))
+        relevance_threshold = float(inputs.get("relevance_threshold", 0.15))
         cache_dir = inputs.get("cache_dir")
 
         # 1. Load scored papers from raw_results.json (seeds for chaining)

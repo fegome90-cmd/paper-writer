@@ -105,31 +105,33 @@ Trifecta integration value is bounded by the codebase's actual issues:
 
 ## Applied (6 experiments, 4 kept, 2 discarded)
 
-### Baseline (#258)
-- 80 total papers, 75 Tier 3+ (93.8%). Uniform mock data, high quality.
+### Baseline (#258) — KEEP
+- 80 total papers, 75 Tier 3+ (93.8%). Uniform mock data.
 
-### Realistic diverse mock (#259)
-- 34 total papers, 28 Tier 3+ (82.4%). More realistic mix of high/medium/noise/edge.
-- 6 discards: 5 noise + 1 edge. 88% precision for chaining-discovered papers.
-- Round 2 saturated at 0 new papers with threshold=0.25.
+### Realistic diverse mock (#259) — KEEP
+- 34 total, 28 Tier 3+ (82.4%). Realistic mix. Round 2 saturated at 0.
 
 ### Threshold 0.25→0.15 (#260) — KEEP
-- Unlocks round 2: 0→66 papers. Total: 100, 86 T3+ (86%).
-- Deeper chaining works when threshold allows marginal-relevance papers through.
-- API calls: 14 (2 rounds).
+- Unlocks round 2: 0→66 papers. 100 total, 86 T3+ (86%).
 
-### Hybrid keyword+chaining (#261) — KEEP (best: 101 T3+)
-- Single keyword search + chaining from enriched seeds.
-- 120 total, 101 T3+ (84.2%). Keyword adds 5 extra seeds.
-- Best approach: keyword search finds papers outside citation graph, chaining expands.
+### Hybrid keyword+chaining (#261) — KEEP (prev best: 101 T3+)
+- 120 total, 101 T3+ (84.2%). Single keyword search + chaining.
+
+### Adaptive citation-weighted threshold (#264) — KEEP (BEST: 112 T3+)
+- 150 total, 112 T3+ (74.7%). 0.5x for cites>=1000, 0.75x for cites>=100.
+- Captures high-cited papers with marginal keyword overlap.
 
 ### Multi-query enrichment (#262) — DISCARD
-- 5 sub-queries, 8 kw papers. 150 total, 74 T3+ (49.3%).
-- Over-expansion: bigger frontier → more noise. Precision loss > recall gain.
+- Over-expansion: 50.7% discard rate.
 
-### Extended cross-domain mock (#263) — DISCARD
-- ViT, DALL-E, Whisper papers. 87 total, 61 T3+ (70.1%).
-- Cross-domain papers increase noise proportionally.
+### Venue+citation adaptive (#265) — DISCARD
+- Compound multipliers: NeurIPS+2000 cites → threshold=0.051 (no filter).
+
+### Threshold 0.10 + adaptive (#266) — DISCARD
+- Too aggressive: 68% discard rate.
+
+### 3 rounds, 200 cap (#267) — DISCARD
+- Over-expansion: 42% precision.
 
 ## Key insights
 1. **Threshold 0.15 is sweet spot**: enables round 2 chaining without excess noise.
@@ -138,8 +140,10 @@ Trifecta integration value is bounded by the codebase's actual issues:
 4. **Citation graph diversity helps but bounded**: cross-domain papers introduce noise.
 
 ## Remaining ideas
-- **Q1: Adaptive threshold by citation count** — lower threshold for high-cited papers (likely relevant even with marginal keyword overlap).
-- **Q2: Venue-aware relevance** — boost relevance score for papers from top venues (ICSE, NeurIPS, etc).
+- **Q1: Adaptive threshold by citation count** — ✅ DONE (run #264, +49.3%). Citation-only. 0.5x for cites>=1000, 0.75x for cites>=100.
+- **Q2: Venue-aware relevance** — ❌ REJECTED (run #265). Compound multiplier too aggressive for top-venue papers.
 - **Q3: Dedup by DOI/title fuzzy match** — prevent papers with slight title variations from being counted twice.
 - **Q4: Early stopping by saturation** — stop chaining when round N discovers <5 new papers.
 - **Q5: Re-rank by combined score** — after chaining, re-score all papers with full CS weights for final ranking.
+- **Q6: Multi-query enrichment** — ❌ REJECTED (run #262). Over-expansion creates noise.
+- **Q7: Round-aware threshold decay** — lower threshold in later rounds to combat saturation.
