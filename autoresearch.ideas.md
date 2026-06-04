@@ -142,8 +142,8 @@ Trifecta integration value is bounded by the codebase's actual issues:
 ## Remaining ideas
 - **Q1: Adaptive threshold by citation count** — ✅ DONE (run #264, +49.3%). Citation-only. 0.5x for cites>=1000, 0.75x for cites>=100.
 - **Q2: Venue-aware relevance** — ❌ REJECTED (run #265). Compound multiplier too aggressive for top-venue papers.
-- **Q3: Dedup by DOI/title fuzzy match** — prevent papers with slight title variations from being counted twice.
+- **Q3: Dedup by DOI/title fuzzy match** — ✅ DONE (run #279). DOI exact + title normalized (lowercase, strip punctuation). Prevents cross-source duplicates.
 - **Q4: Early stopping by saturation** — stop chaining when round N discovers <5 new papers.
 - **Q5: Re-rank by combined score** — ✅ VALIDATED (run #277). CS scoring already ranks high-impact papers higher (top-20: 1490 cites avg vs bottom-20: 1315). No additional optimization needed.
 - **Q6: Multi-query enrichment** — ❌ REJECTED (run #262). Over-expansion creates noise.
-- **Q7: Round-aware threshold decay** — lower threshold in later rounds to combat saturation.
+- **Q7: Round-aware threshold decay** — ❌ REJECTED (run #280). Saturation is structural (citation graph exhausted), not threshold-driven. Decay adds noise without solving the limitation.
