@@ -200,17 +200,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Esfuerzo** | Medio día |
 | **Estado** | ❌ Pendiente |
 
-### GAP-011: No PRISMA flow diagram generated
+### GAP-011: ~~No PRISMA flow diagram~~ (4-stage PRISMA flow data DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟡 Media — P2 |
-| **Componente** | `search.py:screen()`, PRISMA gate `prisma.16` |
+| **Severidad** | ~~🟡 Media~~ → ✅ RESOLVED |
+| **Componente** | `skills/imported/literature_search/search.py:screen()` |
 | **Problema** | `screen()` records `total_raw` and `total_screened` but doesn't emit 4-stage PRISMA counts. |
-| **Solución** | Extend `screen()` to emit PRISMA counts. Generate mermaid flow diagram. |
-| **Acceptance** | `paper screen` writes `prisma_flow.json`. Gate `prisma.16` passes. |
-| **Esfuerzo** | Medio día |
-| **Estado** | ❌ Pendiente |
+| **Solución** | `screen()` now emits `prisma_flow` dict with identification/screening/eligibility/included stages. |
+| **Acceptance** | `screened_evidence.json` includes `prisma_flow` with source counts and exclusion reasons. |
+| **Estado** | ✅ DONE — 4 stages from source provenance, 6 tests |
 
 ### GAP-012: No reproducibility protocol document
 

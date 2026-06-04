@@ -236,9 +236,7 @@ def screen(
         source_counts[src] = source_counts.get(src, 0) + 1
 
     # Count exclusions by reason
-    excluded = [
-        p for p in all_papers if p not in screened
-    ]
+    excluded = [p for p in all_papers if p not in screened]
     exclusion_reasons: dict[str, int] = {}
     for p in excluded:
         tier = p.get("scoring", {}).get("tier", "Discard")

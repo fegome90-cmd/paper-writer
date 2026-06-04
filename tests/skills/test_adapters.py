@@ -227,10 +227,11 @@ class TestPrismaFlow:
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
 
-        raw = self._make_raw([
-            {"title": "Good", "doi": "10.1/a", "source": "seed",
-             "scoring": {"tier": "Tier 2"}},
-        ])
+        raw = self._make_raw(
+            [
+                {"title": "Good", "doi": "10.1/a", "source": "seed", "scoring": {"tier": "Tier 2"}},
+            ]
+        )
         (search_dir / "raw_results.json").write_text(json.dumps(raw))
 
         result = adapter.execute(
@@ -246,14 +247,23 @@ class TestPrismaFlow:
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
 
-        raw = self._make_raw([
-            {"title": "S1", "doi": "10.1/a", "source": "seed",
-             "scoring": {"tier": "Tier 2"}},
-            {"title": "B1", "doi": "10.1/b", "source": "backward_chaining",
-             "scoring": {"tier": "Tier 1"}},
-            {"title": "F1", "doi": "10.1/c", "source": "forward_chaining",
-             "scoring": {"tier": "Discard"}},
-        ])
+        raw = self._make_raw(
+            [
+                {"title": "S1", "doi": "10.1/a", "source": "seed", "scoring": {"tier": "Tier 2"}},
+                {
+                    "title": "B1",
+                    "doi": "10.1/b",
+                    "source": "backward_chaining",
+                    "scoring": {"tier": "Tier 1"},
+                },
+                {
+                    "title": "F1",
+                    "doi": "10.1/c",
+                    "source": "forward_chaining",
+                    "scoring": {"tier": "Discard"},
+                },
+            ]
+        )
         (search_dir / "raw_results.json").write_text(json.dumps(raw))
 
         result = adapter.execute(
@@ -275,14 +285,23 @@ class TestPrismaFlow:
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
 
-        raw = self._make_raw([
-            {"title": "S1", "doi": "10.1/a", "source": "seed",
-             "scoring": {"tier": "Tier 2"}},
-            {"title": "B1", "doi": "10.1/b", "source": "backward_chaining",
-             "scoring": {"tier": "Tier 2"}},
-            {"title": "F1", "doi": "10.1/c", "source": "forward_chaining",
-             "scoring": {"tier": "Tier 2"}},
-        ])
+        raw = self._make_raw(
+            [
+                {"title": "S1", "doi": "10.1/a", "source": "seed", "scoring": {"tier": "Tier 2"}},
+                {
+                    "title": "B1",
+                    "doi": "10.1/b",
+                    "source": "backward_chaining",
+                    "scoring": {"tier": "Tier 2"},
+                },
+                {
+                    "title": "F1",
+                    "doi": "10.1/c",
+                    "source": "forward_chaining",
+                    "scoring": {"tier": "Tier 2"},
+                },
+            ]
+        )
         (search_dir / "raw_results.json").write_text(json.dumps(raw))
 
         result = adapter.execute(
@@ -303,12 +322,17 @@ class TestPrismaFlow:
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
 
-        raw = self._make_raw([
-            {"title": "Good", "doi": "10.1/a", "source": "seed",
-             "scoring": {"tier": "Tier 2"}},
-            {"title": "Bad", "doi": "10.1/b", "source": "backward_chaining",
-             "scoring": {"tier": "Discard"}},
-        ])
+        raw = self._make_raw(
+            [
+                {"title": "Good", "doi": "10.1/a", "source": "seed", "scoring": {"tier": "Tier 2"}},
+                {
+                    "title": "Bad",
+                    "doi": "10.1/b",
+                    "source": "backward_chaining",
+                    "scoring": {"tier": "Discard"},
+                },
+            ]
+        )
         (search_dir / "raw_results.json").write_text(json.dumps(raw))
 
         result = adapter.execute(
@@ -328,14 +352,23 @@ class TestPrismaFlow:
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
 
-        raw = self._make_raw([
-            {"title": "T1", "doi": "10.1/a", "source": "seed",
-             "scoring": {"tier": "Tier 1"}},
-            {"title": "T2", "doi": "10.1/b", "source": "backward_chaining",
-             "scoring": {"tier": "Tier 2"}},
-            {"title": "Discard", "doi": "10.1/c", "source": "forward_chaining",
-             "scoring": {"tier": "Discard"}},
-        ])
+        raw = self._make_raw(
+            [
+                {"title": "T1", "doi": "10.1/a", "source": "seed", "scoring": {"tier": "Tier 1"}},
+                {
+                    "title": "T2",
+                    "doi": "10.1/b",
+                    "source": "backward_chaining",
+                    "scoring": {"tier": "Tier 2"},
+                },
+                {
+                    "title": "Discard",
+                    "doi": "10.1/c",
+                    "source": "forward_chaining",
+                    "scoring": {"tier": "Discard"},
+                },
+            ]
+        )
         (search_dir / "raw_results.json").write_text(json.dumps(raw))
 
         result = adapter.execute(
