@@ -1,4 +1,6 @@
 """Tests for clients._text_similarity — title normalization and similarity."""
+from __future__ import annotations
+
 from clients._text_similarity import (
     TITLE_SIMILARITY_THRESHOLD,
     normalize_title,

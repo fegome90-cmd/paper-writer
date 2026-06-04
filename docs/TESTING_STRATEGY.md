@@ -31,6 +31,8 @@ tests/
   harness/         — State manager, gates, orchestrator, assembler tests
   integrations/    — Tool wrapper integration tests (Pandoc, bibtex-tidy, Zotero)
   skills/          — Skill adapter, scoring engine, and portability tests
+  test_clients/    — API client unit tests (Crossref, Semantic Scholar, retry, resiliency)
+  clients/         — Trifecta and hardening fidelity tests
 ```
 
 This page is limited to the test files used as evidence in this audit pass. Other test directories may exist, but they were not part of the required evidence set here.
@@ -46,6 +48,19 @@ Focused logic tests evidenced in this audit set include:
 | `harness/services/gates.py` | Gate evaluation and malformed validator handling | `tests/harness/test_gates.py` |
 | `harness/domain/state.py` + `harness/services/orchestrator.py` | Stage invariants and transition behavior through orchestrator fixtures | `tests/harness/test_orchestrator.py` |
 | `skills/local/adapters.py` | Search/screen/draft adapter behavior and "no state.yaml" invariant | `tests/skills/test_adapters.py` |
+
+### API Client Tests
+
+Unit tests for Crossref, Semantic Scholar, Trifecta, and shared utilities. All use dependency injection (DI) for sleep/clock — no monkeypatching.
+
+| Module | What is tested | Location |
+|--------|---------------|----------|
+| `clients/crossref.py` | DOI lookup, title search, rate limiting, JSON/Unicode error handling, DOI URL encoding | `tests/test_clients/test_crossref.py` |
+| `clients/semantic_scholar.py` | DOI lookup, title search, outage latch, year tiebreaker, DI-based error injection | `tests/test_clients/test_semantic_scholar.py` |
+| `clients/_retry.py` | Exponential backoff, max retries, non-429 passthrough, on_retry callback | `tests/test_clients/test_retry.py` |
+| `clients/_text_similarity.py` | Title normalization, SequenceMatcher ratio, threshold boundary cases | `tests/test_clients/test_text_similarity.py` |
+| Client resiliency | Latch lifecycle, DI wiring, year tiebreaker, verify_doi end-to-end | `tests/test_clients/test_resiliency.py` |
+| `clients/trifecta.py` | Response normalization, health checks, error handling | `tests/clients/test_trifecta.py` |
 
 ### Integration Tests
 

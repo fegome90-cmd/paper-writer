@@ -40,6 +40,7 @@
 | `VALIDATOR_CONTRACTS.md` | Validator output contracts |
 | `tools/bibtex-tidy.md` | Bibtex-tidy integration |
 | `tools/vale.md` | Vale style checker integration |
+| `Q2_PUBLICATION_READINESS.md` | Q2 publication gap analysis and progress tracking |
 
 ### Design Intent (aspirational, may diverge from implementation)
 

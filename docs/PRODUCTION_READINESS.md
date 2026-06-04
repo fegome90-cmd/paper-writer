@@ -56,6 +56,22 @@ The gate and stage flow implemented by `harness/domain/state.py`, `harness/servi
 
 The domain model also declares `citation_verified` and `ethics_passed` as soft gates. In `validate_ready_for_delivery()`, missing soft gates produce warnings rather than blockers.
 
+## API Client Resiliency
+
+The `clients/` package (Crossref, Semantic Scholar, Trifecta) implements defense-in-depth error handling:
+
+| Mechanism | Behavior | Evidence |
+|-----------|----------|----------|
+| Retry with backoff | HTTP 429 → 2s, 4s, 8s exponential backoff, max 3 retries | `clients/_retry.py`, `tests/test_clients/test_retry.py` |
+| Outage latch | Semantic Scholar 5xx → 10-minute latch, skips further requests | `clients/semantic_scholar.py`, `tests/test_clients/test_resiliency.py` |
+| Error model | All public methods return `found=False` on error — never raise | `tests/test_clients/test_crossref.py`, `tests/test_clients/test_semantic_scholar.py` |
+| JSON/Unicode safety | `_get()` catches `JSONDecodeError`/`UnicodeDecodeError` before they reach callers | `clients/crossref.py`, `clients/semantic_scholar.py` |
+| URL safety | DOI URLs are percent-encoded (`urllib.parse.quote`) | `tests/test_clients/test_crossref.py` |
+| Logging discipline | All `except Exception:` blocks log before returning — no silent swallowing | Code review verified |
+| DI for testability | Semantic Scholar accepts `_sleep`/`_clock` constructor args | `tests/test_clients/test_semantic_scholar.py` |
+
+**Test coverage**: 92 tests across `tests/test_clients/` and `tests/clients/`, all using DI (no monkeypatching).
+
 ## Degraded Mode Behavior
 
 Current code behavior in `harness/services/doctor.py` and tested wrapper behavior in `tests/cli/test_doctor_and_degraded.py` support the following distinctions:

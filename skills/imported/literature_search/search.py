@@ -80,35 +80,66 @@ def search(
     # 2. Deduplicate using real scoring.deduplicate()
     unique_papers, dedup_log = deduplicate(raw_papers)
 
-    # 3. Score and classify using real scoring engine
-    weights = get_default_weights(weights_phase)
+    # 3. Score and classify using domain-aware scoring engine
     scored_papers: list[dict[str, Any]] = []
     for paper in unique_papers:
+        paper["_search_query"] = query  # available to _extract_metrics
         metrics = _extract_metrics(paper)
-        d_score = calculate_d_score(metrics)
-        final_score = calculate_final_score(metrics, weights)
-        tier = classify_tier(final_score)
-        scored_papers.append(
-            {
-                **paper,
-                "scoring": {
-                    "d_score": d_score,
-                    "final_score": final_score,
-                    "tier": tier,
-                    "population_score": metrics.population_score,
-                    "intervention_score": metrics.intervention_score,
-                    "outcome_score": metrics.outcome_score,
-                    "context_score": metrics.context_score,
-                    "evidence_score": metrics.evidence_score,
-                    "sample_score": metrics.sample_score,
-                    "journal_score": metrics.journal_score,
-                    "citations_score": metrics.citations_score,
-                    "coi_penalty": metrics.coi_penalty,
-                },
-            }
-        )
+        domain = paper.get("_domain", "clinical")
+
+        if domain == "cs":
+            from skills.imported.literature_search.scoring_cs import (
+                calculate_cs_final_score,
+                get_default_cs_weights,
+            )
+
+            cs_weights = get_default_cs_weights(weights_phase)
+            final_score = calculate_cs_final_score(metrics, cs_weights)
+            tier = classify_tier(final_score)
+            scored_papers.append(
+                {
+                    **paper,
+                    "scoring": {
+                        "domain": "cs",
+                        "final_score": final_score,
+                        "tier": tier,
+                        "venue_tier": metrics.venue_tier,
+                        "recency_score": metrics.recency_score,
+                        "citation_score": metrics.citation_score,
+                        "relevance_score": metrics.relevance_score,
+                        "rigor_score": metrics.rigor_score,
+                    },
+                }
+            )
+        else:
+            weights = get_default_weights(weights_phase)
+            d_score = calculate_d_score(metrics)
+            final_score = calculate_final_score(metrics, weights)
+            tier = classify_tier(final_score)
+            scored_papers.append(
+                {
+                    **paper,
+                    "scoring": {
+                        "domain": "clinical",
+                        "d_score": d_score,
+                        "final_score": final_score,
+                        "tier": tier,
+                        "population_score": metrics.population_score,
+                        "intervention_score": metrics.intervention_score,
+                        "outcome_score": metrics.outcome_score,
+                        "context_score": metrics.context_score,
+                        "evidence_score": metrics.evidence_score,
+                        "sample_score": metrics.sample_score,
+                        "journal_score": metrics.journal_score,
+                        "citations_score": metrics.citations_score,
+                        "coi_penalty": metrics.coi_penalty,
+                    },
+                }
+            )
 
     # 4. Write raw results (post-dedup, scored)
+    # Use clinical weights for metadata output (backward compat with raw_results format)
+    clinical_weights = get_default_weights(weights_phase)
     results = {
         "query": query,
         "date": date.today().isoformat(),
@@ -118,11 +149,11 @@ def search(
         "papers": scored_papers,
         "weights": {
             "phase": weights_phase,
-            "A": weights.A_weight,
-            "B": weights.B_weight,
-            "C": weights.C_weight,
-            "D": weights.D_weight,
-            "E": weights.E_weight,
+            "A": clinical_weights.A_weight,
+            "B": clinical_weights.B_weight,
+            "C": clinical_weights.C_weight,
+            "D": clinical_weights.D_weight,
+            "E": clinical_weights.E_weight,
         },
     }
     results_path = output_dir / "raw_results.json"
@@ -164,16 +195,27 @@ def screen(
     all_papers = raw_data.get("papers", [])
 
     # If papers have metrics but no scoring (e.g. fallback data),
-    # compute scoring using the real engine.
+    # compute scoring using the domain-aware engine.
     for paper in all_papers:
         if "scoring" not in paper and "metrics" in paper:
             metrics = _extract_metrics(paper)
-            weights = get_default_weights("balanced")
-            d_score = calculate_d_score(metrics)
-            final_score = calculate_final_score(metrics, weights)
+            domain = paper.get("_domain", "clinical")
+
+            if domain == "cs":
+                from skills.imported.literature_search.scoring_cs import (
+                    calculate_cs_final_score,
+                    get_default_cs_weights,
+                )
+
+                cs_weights = get_default_cs_weights("balanced")
+                final_score = calculate_cs_final_score(metrics, cs_weights)
+            else:
+                weights = get_default_weights("balanced")
+                d_score = calculate_d_score(metrics)
+                final_score = calculate_final_score(metrics, weights)
+
             tier = classify_tier(final_score)
             paper["scoring"] = {
-                "d_score": d_score,
                 "final_score": final_score,
                 "tier": tier,
             }
@@ -206,12 +248,25 @@ def screen(
 
 
 def _extract_metrics(paper: dict[str, Any]) -> Any:
-    """Extract PaperMetrics from a paper dict.
+    """Extract metrics from paper dict. Dispatches CS vs clinical based on content.
 
-    Expects optional 'metrics' sub-dict with scoring dimensions.
-    Falls back to zero scores if not provided — the adapter can populate
-    these from external data before calling search().
+    For CS papers: returns CSMetrics from scoring_cs.
+    For clinical papers: returns PaperMetrics from scoring.py (unchanged).
+    Stores detected domain in paper['_domain'] for later routing.
     """
+    from skills.imported.literature_search.scoring_cs import (
+        detect_domain,
+        extract_cs_metrics,
+    )
+
+    domain = detect_domain(paper)
+    paper["_domain"] = domain
+
+    if domain == "cs":
+        query = paper.get("_search_query", paper.get("query", ""))
+        return extract_cs_metrics(paper, query)
+
+    # Existing PICO path — UNCHANGED
     m = paper.get("metrics", {})
     return PaperMetrics(
         population_score=float(m.get("population_score", 0.0)),

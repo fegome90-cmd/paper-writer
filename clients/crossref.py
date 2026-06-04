@@ -79,11 +79,20 @@ class CrossrefClient:
         email: str | None = None,
         timeout: int = 10,
         offline: bool = False,
+        sleep: Any = time.sleep,
+        clock: Any = time.time,
     ) -> None:
         self.email = email or os.environ.get("CROSSREF_POLITE_EMAIL")
         self.timeout = timeout
         self.offline = offline
+        self._sleep = sleep
+        self._clock = clock
         self._last_request_at: float = 0.0
+        self._latched_unavailable: bool = False
+
+    def reset_outage_latch(self) -> None:
+        """Reset the fail-fast outage latch."""
+        self._latched_unavailable = False
 
     def verify_doi(self, doi: str) -> CrossrefResult:
         """Verify a DOI against Crossref.
@@ -96,7 +105,7 @@ class CrossrefClient:
 
         try:
             data = self._get(f"/works/{doi}", {})
-            if not data:
+            if not data or not data.get("message"):
                 return CrossrefResult(found=False)
 
             message = data.get("message", {})
@@ -120,8 +129,6 @@ class CrossrefClient:
                 is_oa=is_oa,
                 score=1.0,
             )
-        except urllib.error.URLError:
-            return CrossrefResult(found=False)
         except Exception:
             return CrossrefResult(found=False)
 
@@ -151,8 +158,11 @@ class CrossrefClient:
                 item_year = _extract_year(cand)
                 venue_list = cand.get("container-title") or []
                 venue = venue_list[0] if venue_list else None
+                
+                # Tiebreaker logic (Item 7): +0.05 bonus for year match
                 year_match = year is not None and item_year == year
                 score = sim + (0.05 if year_match else 0.0)
+
                 results.append(
                     CrossrefResult(
                         found=True,
@@ -167,12 +177,14 @@ class CrossrefClient:
 
             results.sort(key=lambda r: -r.score)
             return results
-        except urllib.error.URLError:
-            return []
         except Exception:
             return []
 
     def _get(self, path: str, query: dict[str, str]) -> dict[str, Any] | None:
+        if self._latched_unavailable:
+            logging.warning("Crossref API latched unavailable (fail-fast)")
+            return None
+
         """Single GET request with retry on 429."""
         url = f"{self.BASE_URL}{path}"
         if query:
@@ -191,17 +203,24 @@ class CrossrefClient:
         try:
             res = retry_with_backoff(
                 _do_request,
-                on_retry=lambda: setattr(self, "_last_request_at", time.time()),
+                on_retry=lambda: setattr(self, "_last_request_at", self._clock()),
+                sleep_fn=self._sleep,
             )
             if res:
-                self._last_request_at = time.time()
+                self._last_request_at = self._clock()
             return res
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            logging.warning(f"Request failed: {type(e).__name__}: {e}")
-            return None
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return {}
             return None
-        except Exception:
+        except (OSError, TimeoutError, urllib.error.URLError) as e:
+            # Latch ONLY on transport errors, NOT on HTTP 404
+            self._latched_unavailable = True
+            logging.warning("Crossref API I/O failure: %s", e)
+            return None
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logging.warning("Request failed: %s: %s", type(e).__name__, e)
+            return None
+        except Exception as e:
+            logging.warning("_get failed: %s: %s", type(e).__name__, e)
             return None

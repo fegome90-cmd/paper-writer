@@ -41,3 +41,12 @@ Un agente externo auditó el repo y encontró las siguientes observaciones (ya r
 1. **verified vs rendered (RESUELTO)**: El dominio, orchestrator, tests y docs ahora usan consistentemente `rendered`. Legacy YAMLs con `stage: verified` se auto-upgradearon via `LEGACY_STAGE_MAP`.
 2. **state.yaml vs artefactos (DOCUMENTADO)**: `outputs/state.yaml` versionado dice `stage: search` pero existen artefactos de etapas posteriores. Esto es ruido del repositorio de desarrollo, no un bug de runtime. Los artefactos reales se generan en tmp dirs durante E2E tests.
 3. **SOFT_GATES cableados (RESUELTO)**: `citation_verified` wired via check_refs. `ethics_passed` checked as soft gate during verify command. Both validators now called from orchestrator `_run_gate_verification`.
+
+## Backlog Progress — Junio 2026 (Session 2)
+
+| ID | Severidad | Componente | Descripción | Estado |
+|:---|:---|:---|:---|:---|
+| GAP-003 | **Crítica** | `skills/imported/literature_search/scoring.py`, `scoring_cs.py` | PICO scoring daba 0.0 para papers CS. Creado `scoring_cs.py` con 5 dimensiones CS (venue, recency, citations, relevance, rigor). Domain dispatch en `_extract_metrics()`. 68 tests nuevos, 886 total, 0 regresiones. | ✅ Resuelto |
+| LLM-001 | **Alta** | `clients/llm_content.py`, `drafting.py` | Creado cliente LLM subprocess (claude/codex/gemini). Integrado en drafting.py con opt-in explícito (`PAPER_LLM_CLI=claude`). 4 secciones generadas con calidad Q2 (4,941 palabras, 34 citas). | ✅ Resuelto |
+| GAP-001 | **Crítica** | `templates/references.bib` | Bibliografía insuficiente (14 refs, need 40-80). Scoring arreglado (9/14 Tier 3), pero falta búsqueda iterativa (GAP-007). | 🟡 Parcial |
+| GAP-002 | **Crítica** | `cli/paper/main.py`, `drafting.py` | 3 secciones faltan (abstract, lit_review, conclusion). Desbloqueado por GAP-003. | ❌ Pendiente |

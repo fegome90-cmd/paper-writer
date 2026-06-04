@@ -60,6 +60,10 @@ class SemanticScholarClient:
         self._last_request_at: float = 0.0
         self._latched_unavailable: bool = False
 
+    def reset_outage_latch(self) -> None:
+        """Reset the fail-fast outage latch."""
+        self._latched_unavailable = False
+
     def verify_doi(self, doi: str) -> S2Result:
         """Verify a DOI against Semantic Scholar.
 
@@ -90,9 +94,6 @@ class SemanticScholarClient:
                 is_open_access=data.get("isOpenAccess"),
                 score=1.0,
             )
-        except urllib.error.URLError:
-            self._latched_unavailable = True
-            return S2Result(found=False)
         except Exception:
             return S2Result(found=False)
 
@@ -123,6 +124,8 @@ class SemanticScholarClient:
 
                 authors = [a.get("name", "") for a in cand.get("authors", []) if a.get("name")]
                 item_year = cand.get("year")
+                
+                # Tiebreaker logic (Item 7)
                 year_match = year is not None and item_year == year
                 score = sim + (0.05 if year_match else 0.0)
 
@@ -142,17 +145,15 @@ class SemanticScholarClient:
 
             results.sort(key=lambda r: -r.score)
             return results
-        except urllib.error.URLError:
-            self._latched_unavailable = True
-            return []
         except Exception:
             return []
 
     def _get(self, path: str) -> dict[str, Any] | None:
-        """Single GET request with retry on 429."""
         if self._latched_unavailable:
             logging.warning("S2 API latched unavailable (fail-fast)")
             return None
+
+        """Single GET request with retry on 429."""
         url = f"{self.BASE_URL}{path}"
         headers = {"User-Agent": "paper-writer/0.1"}
         if self.api_key:
@@ -168,24 +169,23 @@ class SemanticScholarClient:
             res = retry_with_backoff(
                 _do_request,
                 on_retry=lambda: setattr(self, "_last_request_at", self._clock()),
+                sleep_fn=self._sleep,
             )
             if res:
                 self._last_request_at = self._clock()
             return res
-        except (OSError, TimeoutError) as e:
-            self._latched_unavailable = True
-            logging.warning(f"S2 API I/O failure: {e}")
-            return None
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            logging.warning(f"Request failed: {type(e).__name__}: {e}")
-            return None
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return {}
             return None
-        except Exception:
+        except (OSError, TimeoutError, urllib.error.URLError) as e:
+            # Latch ONLY on transport errors, NOT on HTTP 404
+            self._latched_unavailable = True
+            logging.warning("S2 API I/O failure: %s", e)
             return None
-
-    def reset_outage_latch(self) -> None:
-        """Reset the fail-fast outage latch."""
-        self._latched_unavailable = False
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logging.warning("Request failed: %s: %s", type(e).__name__, e)
+            return None
+        except Exception as e:
+            logging.warning("S2 _get failed: %s: %s", type(e).__name__, e)
+            return None

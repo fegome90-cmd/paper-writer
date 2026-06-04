@@ -232,14 +232,8 @@ class DependencyRiskReport:
         if coupled:
             parts.append(f"{len(coupled)} coupling hotspots")
         if not parts:
-            return (
-                f"Dependency risk: OK "
-                f"({self.hub_count} hubs analyzed, 0 risks)"
-            )
-        return (
-            f"Dependency risk: {', '.join(parts)} "
-            f"({self.hub_count} hubs analyzed)"
-        )
+            return f"Dependency risk: OK ({self.hub_count} hubs analyzed, 0 risks)"
+        return f"Dependency risk: {', '.join(parts)} ({self.hub_count} hubs analyzed)"
 
 
 HUB_IN_DEGREE_THRESHOLD = 5
@@ -304,10 +298,7 @@ def _find_coupling_hotspots(
             continue
         callees = callees_result.data if isinstance(callees_result.data, list) else []
         # Filter out test-file callees
-        source_callees = [
-            c for c in callees
-            if not _is_test_file(c.get("file_rel", ""))
-        ]
+        source_callees = [c for c in callees if not _is_test_file(c.get("file_rel", ""))]
         if len(source_callees) >= COUPLING_FAN_OUT_THRESHOLD:
             hotspots.append(
                 DependencyRiskFinding(

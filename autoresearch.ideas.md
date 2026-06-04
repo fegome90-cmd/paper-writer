@@ -64,3 +64,37 @@ These were ideas to push orphan count further but are now DEPRIORITIZED:
 | P0 | A/B benchmark: paper-writer with/without Trifecta | 1 day | Validates value |
 
 **Strict TDD required for all phases. No new external dependencies (stdlib + subprocess only).**
+
+## Integration Experiments (#249-#252)
+
+### Baseline (#249)
+- Trifecta mock mode: 50 orphan findings (1066 total → 1016 filtered → 50 actionable)
+- Without Trifecta: 0 findings. Delta = 50.
+
+### Dead Hubs (#250)
+- Cross-referenced hubs (top 50) with orphans. 0 dead hubs found.
+- **Insight**: Dead hubs are structurally rare — hubs are the OPPOSITE of orphans.
+- Delta: 50→53 (noise from code changes)
+
+### Coupling Hotspots (#251)
+- Used find_callees() on hubs to find high fan-out (>8 source callees).
+- Found: build_orchestrator_dependencies (fan_out=13). Architecturally significant.
+- Delta: 53→54 (+1 genuine new finding)
+
+### Threshold/Reachability (#252)
+- Lowered coupling threshold to 6, added reachability check (0.6).
+- No new findings: reachability is 80% (healthy), only 1 hotspot exists.
+- Delta: 54 (stable)
+
+### Key conclusion
+Trifecta integration value is bounded by the codebase's actual issues:
+- 53 genuine dead code findings + 1 coupling hotspot = 54 total
+- Architecture is clean: 0 dead hubs, 80% reachability, 0 import cycles
+- Further optimization requires either (a) a messier codebase or (b) different tool usage
+
+### Deferred ideas
+- **I1: Module-level coupling** — count imports per module, flag high fan-out modules
+- **I2: Change impact analysis** — given a file, show all affected symbols via path
+- **I3: Cycle detection alert** — flag when cycles appear (currently 0)
+- **I4: API boundary analysis** — find symbols used across package boundaries
+- **I5: Test coverage gap** — find source orphans that have no test caller

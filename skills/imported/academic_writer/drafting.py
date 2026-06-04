@@ -194,7 +194,29 @@ def draft_section(
         ]
     )
 
-    # Generate subsections from manifest
+    # Try LLM-powered content generation first
+    llm_content = _try_llm_generation(
+        key=key,
+        display_name=display_name,
+        query=query,
+        evidence_items=evidence_items,
+        cite_keys=cite_keys,
+        subsections=subsections,
+        model=model,
+        tone=tone,
+        word_count=word_count,
+        rules=rules,
+        outline_context="",
+    )
+
+    if llm_content is not None:
+        # LLM succeeded — prepend header, use real content
+        section_path = output_dir / f"{key}.md"
+        header = "\n".join(lines) + "\n"
+        section_path.write_text(header + llm_content, encoding="utf-8")
+        return {"artifacts": [str(section_path)]}
+
+    # Fallback: structural placeholders (no LLM available)
     for sub in subsections:
         lines.append(f"## {sub}")
         lines.append(f"[Content placeholder: {sub} for {query} [{ref_list}]]")
@@ -216,3 +238,98 @@ def draft_section(
     section_path = output_dir / f"{key}.md"
     section_path.write_text("\n".join(lines), encoding="utf-8")
     return {"artifacts": [str(section_path)]}
+
+
+def _read_section_prompt(section_key: str) -> str | None:
+    """Read the full prompt text for a section from SKILL.md.
+
+    The SKILL.md has prompts under ### N. SectionName blocks.
+    Returns the prompt text or None if not found.
+    """
+    if not _SKILL_MD_PATH.exists():
+        return None
+
+    content = _SKILL_MD_PATH.read_text(encoding="utf-8")
+
+    # Map section keys to their heading names in SKILL.md
+    name_map = {
+        "abstract": "1. Abstract",
+        "introduction": "2. Introduction",
+        "literature_review": "3. Literature Review",
+        "methods": "4. Methods",
+        "results": "5. Results",
+        "discussion": "6. Discussion",
+        "conclusion": "7. Conclusion",
+    }
+
+    heading = name_map.get(section_key)
+    if not heading:
+        return None
+
+    # Find the section: ### N. Name followed by a ``` block
+    pattern = rf"### {re.escape(heading)}\s*\n\n```\n(.*?)```"
+    match = re.search(pattern, content, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+
+def _try_llm_generation(
+    key: str,
+    display_name: str,
+    query: str,
+    evidence_items: list[dict[str, Any]],
+    cite_keys: list[str],
+    subsections: list[str],
+    model: str,
+    tone: str,
+    word_count: str | None,
+    rules: list[str],
+    outline_context: str,
+) -> str | None:
+    """Attempt LLM-powered section generation. Returns content or None.
+
+    Never raises. If LLM is unavailable or fails, returns None
+    and the caller falls back to structural placeholders.
+
+    Only attempts LLM generation when PAPER_LLM_CLI is explicitly set.
+    Default (auto) does NOT trigger LLM calls — prevents accidental
+    CLI invocations during testing or non-interactive use.
+    """
+    import os
+
+    # Explicit opt-in required: only generate when user explicitly enables
+    mode = os.environ.get("PAPER_LLM_CLI", "").lower()
+    if mode not in ("claude", "codex", "gemini"):
+        return None
+
+    try:
+        from clients.llm_content import generate_section
+    except ImportError:
+        return None
+
+    # Read the full prompt from SKILL.md
+    prompt_template = _read_section_prompt(key)
+    if not prompt_template:
+        return None
+
+    result = generate_section(
+        section_name=key,
+        prompt_template=prompt_template,
+        evidence=evidence_items,
+        bib_keys=cite_keys,
+        outline_context=outline_context,
+    )
+
+    if result.success:
+        return result.text
+
+    # LLM failed — log and fall back
+    import sys
+
+    print(
+        f"  Note: LLM generation failed for {key}: {result.error}",
+        file=sys.stderr,
+    )
+    return None

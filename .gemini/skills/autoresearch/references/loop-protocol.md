@@ -1,37 +1,48 @@
-# Elite Loop Protocol — Gentle AI SDD Integration
+# Elite Loop Protocol — Full Gentle AI SDD
 
-This protocol mandates the full SDD lifecycle for every single iteration of the autonomous loop.
+Every iteration of the Elite Autoresearch loop follows these strict prompts and stages.
 
-## The Iteration Lifecycle
+## Stage 1: Planning (SDD)
 
-### Phase 1: Planning (The SDD Anchor)
-Before proposing any code change, the agent MUST:
-1. **Explore**: Read `openspec/changes/{SDD}/tasks.md` to identify the current frontier.
-2. **Propose**: Formulate a hypothesis that explicitly maps to a pending task.
-3. **Spec/Design**: Verify the hypothesis against the active `spec.md` and `design.md`.
+### 1.1 Exploration Prompt
+> "Read `openspec/changes/{SDD}/tasks.md`. Identify the first pending task. Explore the current implementation of {Scope}. Compare Approaches: [Surgical, Refactor, Pattern-based]. Return Approach, Pros, Cons, and Recommendation."
 
-### Phase 2: Implementation (The TDD Gauntlet)
-1. **RED**: Add a test case to `tests/governance/` or a relevant domain test file.
-2. **Verify Failure**: Run the `Verify` command. It MUST fail. This proves the test is valid and the gap exists.
-3. **GREEN**: Apply the minimal surgical code change.
-4. **Verify Success**: Run `Verify` again. It MUST pass and improve the metric.
+### 1.2 Proposal Prompt
+> "Write `proposal.md` for the chosen approach. Define Intent, Scope, and specific Success Criteria (Measurable). Anchor this iteration to Task {N}."
 
-### Phase 3: Constitutional Guard (The Auditor)
-Run the `Guard` command (e.g., `benchmarks/RIGOROUS_AUDIT.sh`).
-This command MUST verify:
-- **Linting**: No ruff/mypy errors.
-- **Rules**: No forbidden patterns (subprocess, direct file writes in core, etc.) using Audit Hooks.
+### 1.3 Spec & Design Prompt
+> "Update/Read `spec.md` and `design.md`. Ensure the implementation path follows the project's Error Handling and DI patterns."
 
-### Phase 4: Review (Judgment Day)
-Before the `KEEP` decision, the agent MUST initiate a **Judgment Day** review:
-1. Launch Judge A and Judge B (blind, parallel).
-2. Synthesize findings.
-3. **Rule**: If a confirmed CRITICAL or real WARNING exists, the iteration is considered a failure. **REWORK** or **REVERT** immediately.
+---
 
-### Phase 5: Finalisation (The Engram Sync)
-1. **Commit**: Save the state to git with the iteration number and SDD reference.
-2. **Engram**: Call `mem_save` with:
-   - **What**: Iteration result.
-   - **Why**: Task mapping.
-   - **Evidence**: Test output and Judgment Day verdict.
-3. **Archive**: Mark the task as completed in the SDD folder.
+## Stage 2: Implementation (TDD)
+
+### 2.1 RED Prompt
+> "Create a new test file `tests/governance/test_iter_{N}.py` or add to existing. Implement a test case that describes the desired behavior of Task {N}. Run `Verify`. Confirm it FAILs."
+
+### 2.2 GREEN Prompt
+> "Modify code in {Scope}. Implement the minimal logic to satisfy the new test case. Run `Verify`. Confirm it PASSES."
+
+---
+
+## Stage 3: Verification (Guard)
+
+### 3.1 Guard Prompt
+> "Run `Guard`. Verify zero ruff/mypy errors. Execute `benchmarks/RIGOROUS_AUDIT.sh` to ensure no constitutional rules (e.g., direct subprocess) were violated."
+
+---
+
+## Stage 4: Audit (Judgment Day)
+
+### 4.1 Judgment Launch
+> "Launch Judge A and Judge B in parallel. Target: current diff. Criteria: Correctness, Edge Cases, Error Handling, Security (Constitucion AI). No approvals allowed—only findings."
+
+### 4.2 Synthesis Rule
+> "If [Confirmed CRITICAL] or [Confirmed WARNING (real)] → REWORK (max 2 tries) or REVERT. If [Theoretical] or [Suggestion] → KEEP with annotation."
+
+---
+
+## Stage 5: Archive (Engram)
+
+### 5.1 Engram Sync
+> "Call `mem_save`. Content: **What** done, **Why** (Task {N}), **Where** (Files), **Learned** (Findings/Judgments). Topic: `sdd/{SDD}/state`."

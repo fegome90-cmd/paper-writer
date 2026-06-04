@@ -21,4 +21,4 @@ Source of Truth: `https://github.com/fegome90-cmd/constitucion-ai`
 | Skill | Description | File |
 |-------|-------------|------|
 | `trifecta-mcp` | Code navigation and semantic search via Trifecta MCP | [SKILL.md](skills/local/trifecta-mcp/SKILL.md) |
-| `autoresearch` | Elite autonomous engineering (Full SDD + Judgment Day) | [.gemini/skills/autoresearch/SKILL.md](.gemini/skills/autoresearch/SKILL.md) |
+| `autoresearch` | Elite autonomous engineering (Full Gentle AI SDD + Judgment Day) | [.gemini/skills/autoresearch/SKILL.md](.gemini/skills/autoresearch/SKILL.md) |

@@ -72,9 +72,12 @@ class LiteratureSearchAdapter(SkillAdapter):
         raw_papers = inputs.get("raw_papers")
         weights_phase = str(inputs.get("weights_phase", "balanced"))
 
-        # If raw_papers is a string path, load from file
+        # If raw_papers is a string, try JSON parse first, then file path
         if isinstance(raw_papers, str):
-            raw_papers = json.loads(Path(raw_papers).read_text(encoding="utf-8"))
+            try:
+                raw_papers = json.loads(raw_papers)
+            except (json.JSONDecodeError, ValueError):
+                raw_papers = json.loads(Path(raw_papers).read_text(encoding="utf-8"))
         # If raw_papers is a list of dicts from a previous agent run, use directly
 
         result = search_module.search(

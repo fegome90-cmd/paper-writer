@@ -108,7 +108,46 @@ Important rule:
 - tools are **installed**, not cloned, by default
 - clone a tool only if package install is not sufficient or reproducibility requires vendoring
 
-## 4. Imported and Local Skills
+## 4. API Clients
+
+HTTP API clients for citation verification and metadata lookup.
+All clients use stdlib only (`urllib`, `http.client`, `json`) — no external dependencies.
+
+```text
+clients/
+```
+
+Files:
+
+```text
+clients/
+  __init__.py              # Package docstring
+  crossref.py              # Crossref REST API client (DOI lookup, title search)
+  semantic_scholar.py      # Semantic Scholar API client (DOI lookup, title search)
+  trifecta.py              # Trifecta MCP client (code navigation, semantic search)
+  llm_content.py           # LLM content generation client
+  _retry.py                # Shared retry with exponential backoff (HTTP 429)
+  _text_similarity.py      # Shared title normalization + SequenceMatcher (0.70 threshold)
+```
+
+Responsibility:
+
+- verify DOIs and search by title across Crossref and Semantic Scholar
+- return structured `VerificationResult` dataclass (never raise on API errors)
+- handle rate limiting via shared `_retry.retry_with_backoff()` (2s, 4s, 8s backoff)
+- detect outage latches (Semantic Scholar: 5xx → 10-minute latch)
+
+Design rules:
+
+- clients return `found=False` on any error — never raise to callers
+- `_get()` handles `JSONDecodeError`/`UnicodeDecodeError`; public methods handle `URLError`
+- all `except Exception:` blocks log before returning (no silent swallowing)
+- Semantic Scholar uses DI (`_sleep`, `_clock`) for testability
+- Crossref wires `on_retry` callback for observability
+- DOI URLs are percent-encoded (`urllib.parse.quote`)
+- logging uses `%s` lazy evaluation, never f-strings
+
+## 5. Imported and Local Skills
 
 Skills should be split into two groups:
 
@@ -126,11 +165,13 @@ skills/imported/
   academic_writer/
     __init__.py            # Docstring documenting source + what was imported
     SKILL.md               # Vendored from source (prompt collection — no Python code)
-    drafting.py            # Adapted from SKILL.md: section structure extraction
+    drafting.py            # Adapted from SKILL.md: section structure + LLM content generation
+    sections_manifest.json # Section metadata: model, tone, word_count, subsections
   literature_search/
     __init__.py            # Re-exports from scoring.py
-    scoring.py             # Vendored verbatim from source (340+ lines, real scoring engine)
-    search.py              # Wraps scoring engine for dedup+scoring+tier pipeline
+    scoring.py             # Vendored verbatim from source (PICO clinical scoring engine)
+    scoring_cs.py          # NEW: CS domain scoring (venue, recency, citations, relevance, rigor)
+    search.py              # Wraps scoring engines with domain dispatch (CS vs clinical)
     resources/
       __init__.py
       SKILL.md             # Vendored: 5-phase systematic review agent instructions
@@ -156,12 +197,31 @@ skills/imported/
 - `deduplicate()` — DOI/PMID/title similarity dedup with stop-word filtering
 - `verify_citation()` — CrossRef/PubMed API verification
 
+**What `scoring_cs.py` contains (NEW — CS domain scoring):**
+- `CSMetrics` — frozen dataclass: venue_tier, recency, citations, relevance, rigor
+- `CSWeights` — configurable weights (sum to 1.0)
+- `calculate_cs_final_score()` — normalized weighted sum × 10 for classify_tier() scale
+- `score_venue()` — whole-word regex venue matching (ICSE=5.0, EMNLP=4.5, arXiv=2.0)
+- `score_recency()` — linear decay 0.10/yr, floor 0.20
+- `score_citations()` — per-year normalization, None→0.5 conservative default
+- `score_relevance()` — keyword overlap between query and title+abstract
+- `score_rigor()` — priority-ordered keyword heuristic (human > benchmark > case > theoretical)
+- `detect_domain()` — whole-word regex CS venues, multi-word clinical phrases, default "cs"
+- `extract_cs_metrics()` — composes all scoring functions from paper dict
+- `get_default_cs_weights()` — 3 phase presets (balanced, rigorous, exploratory)
+
+**Domain dispatch** (in `search.py:_extract_metrics()`):
+- CS papers → `scoring_cs.py` (CSMetrics + calculate_cs_final_score)
+- Clinical papers → `scoring.py` (PaperMetrics + calculate_final_score, UNCHANGED)
+- Detection: CS venue regex → "cs", ≥2 clinical phrases → "clinical", explicit `domain` field override
+
 **What `drafting.py` adapts (NOT copied verbatim):**
 - Source SKILL.md is a prompt collection with 7 section prompts
 - No Python code in source — `drafting.py` extracts section structures
   (CARS model for intro, CONSORT for methods, APA 7th for results)
-- Generates section skeletons, NOT LLM content
-- For real writing, the SKILL.md prompts must be used with an LLM
+- Generates section skeletons with optional LLM content via `_try_llm_generation()`
+- When `PAPER_LLM_CLI=claude|codex|gemini`, calls LLM CLI via subprocess
+- When no LLM CLI configured, falls back to structural placeholders
 
 Each imported skill is a self-contained module with no dependency on `harness/` or `cli/`.
 
@@ -191,7 +251,7 @@ cli/ ← imports from skills/local/ and harness/
 
 Verified by: `grep -rn "^from skills" harness/` → empty, `grep -rn "^from harness" skills/imported/` → empty.
 
-## 5. Vendored External Repositories
+## 6. Vendored External Repositories
 
 If an external repository truly needs to be cloned for reference or assets, place it under:
 
@@ -213,7 +273,7 @@ Rules:
 - runtime code must not depend on the full vendor tree unless explicitly justified
 - prefer extracting only what is needed into `skills/local/` or docs
 
-## 6. Validators
+## 7. Validators
 
 Custom validators live under:
 
@@ -240,7 +300,7 @@ Responsibility:
 - reporting checklist completeness
 - strong-claim and language policy checks
 
-## 7. Templates and Styles
+## 8. Templates and Styles
 
 Place templates here:
 
@@ -272,7 +332,7 @@ styles/
     apa.csl
 ```
 
-## 8. Outputs and State
+## 9. Outputs and State
 
 Generated artifacts live under:
 
@@ -296,7 +356,7 @@ outputs/
 
 `outputs/state.yaml` is the minimum workflow source of truth.
 
-## 9. Tests
+## 10. Tests
 
 Tests should mirror the system shape:
 
@@ -306,6 +366,8 @@ tests/
   harness/
   validators/
   integrations/
+  test_clients/
+  clients/
 ```
 
 This keeps failures attributable to a single layer.
@@ -320,11 +382,16 @@ flowchart TD
     H --> V[Validators]
     H --> T[Tool Wrappers]
     H --> K[Skill Wrappers]
+    H --> CL[Clients]
 
     T --> P[pandoc]
     T --> VA[vale]
     T --> B[bibtex-tidy]
     T --> R[reference-validator or refchecker]
+
+    CL --> CR[crossref]
+    CL --> SS[semantic_scholar]
+    CL --> TF[trifecta]
 
     K --> LS[skills/imported/literature_search]
     K --> AW[skills/imported/academic_writer]
@@ -336,6 +403,9 @@ flowchart TD
     VA --> O
     B --> O
     R --> O
+    CR --> O
+    SS --> O
+    TF --> O
     LS --> O
     AW --> O
     LA --> O
@@ -356,6 +426,7 @@ paper-writer/
   cli/
     paper/
   harness/
+  clients/
   integrations/
     tools/
   validators/
@@ -397,6 +468,7 @@ paper-writer/
 - The CLI must remain thin.
 - The harness owns workflow truth.
 - Wrappers own external side effects.
+- Clients own API communication and never raise on errors.
 - Skills are invoked through adapters, not ad hoc path reads from commands.
 - Outputs must stay inside this repository.
 - The system must fail closed if a required dependency or gate is missing.
