@@ -76,8 +76,9 @@ class FilesystemActionRunner(ActionRunner):
         resolved = (run_dir / rel_path).resolve()
         if not str(resolved).startswith(str(self.repo_path)):
             raise ValueError(f"Path traversal detected: '{rel_path}' resolves outside repo root.")
-        # Update latest symlink
-        latest = self._resolve("outputs/latest")
+        # Update latest symlink — use raw path (not _resolve) to avoid
+        # following the existing symlink, which would resolve to the old target dir
+        latest = self.repo_path / "outputs" / "latest"
         try:
             latest.unlink(missing_ok=True)
         except (FileNotFoundError, PermissionError, OSError):
