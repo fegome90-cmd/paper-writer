@@ -8,17 +8,15 @@ Strict TDD: tests written FIRST.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from validators.code_health import (
-    CodeHealthReport,
     CodeHealthFinding,
-    filter_actionable_orphans,
+    CodeHealthReport,
+    DependencyRiskFinding,
+    DependencyRiskReport,
     analyze_code_health,
+    filter_actionable_orphans,
 )
 
 
@@ -198,3 +196,91 @@ class TestCodeHealthReport:
         )
         assert "1 actionable" in report.summary()
         assert "2 filtered" in report.summary()
+
+
+class TestDependencyRiskFinding:
+    """DependencyRiskFinding construction and serialization."""
+
+    def test_to_dict(self) -> None:
+        """to_dict returns all fields."""
+        finding = DependencyRiskFinding(
+            file_rel="harness/orchestrator.py",
+            symbol_name="run_all",
+            qualified_name="Orchestrator.run_all",
+            kind="method",
+            in_degree=5,
+        )
+        d = finding.to_dict()
+        assert d["file_rel"] == "harness/orchestrator.py"
+        assert d["symbol_name"] == "run_all"
+        assert d["qualified_name"] == "Orchestrator.run_all"
+        assert d["kind"] == "method"
+        assert d["in_degree"] == 5
+        assert d["risk_reason"] == "dead_hub"
+
+    def test_custom_risk_reason(self) -> None:
+        """risk_reason can be overridden."""
+        finding = DependencyRiskFinding(
+            file_rel="harness/orchestrator.py",
+            symbol_name="build_deps",
+            qualified_name="build_orchestrator_dependencies",
+            kind="function",
+            in_degree=0,
+            risk_reason="high_coupling",
+        )
+        assert finding.risk_reason == "high_coupling"
+
+
+class TestDependencyRiskReport:
+    """DependencyRiskReport summary and state."""
+
+    def test_summary_disabled(self) -> None:
+        """Summary when Trifecta is disabled."""
+        report = DependencyRiskReport(
+            trifecta_enabled=False,
+            error="Trifecta not available",
+        )
+        assert "SKIPPED" in report.summary()
+
+    def test_summary_no_risks(self) -> None:
+        """Summary when no risks found."""
+        report = DependencyRiskReport(
+            trifecta_enabled=True,
+            hub_count=10,
+        )
+        assert "0 risks" in report.summary()
+        assert "10 hubs" in report.summary()
+
+    def test_summary_with_dead_hubs(self) -> None:
+        """Summary reports dead hubs."""
+        finding = DependencyRiskFinding(
+            file_rel="harness/orchestrator.py",
+            symbol_name="run_all",
+            qualified_name="Orchestrator.run_all",
+            kind="method",
+            in_degree=5,
+        )
+        report = DependencyRiskReport(
+            trifecta_enabled=True,
+            findings=[finding],
+            hub_count=10,
+        )
+        assert "1 dead hubs" in report.summary()
+
+    def test_summary_with_coupling_hotspots(self) -> None:
+        """Summary reports coupling hotspots."""
+        finding = DependencyRiskFinding(
+            file_rel="harness/orchestrator.py",
+            symbol_name="build_deps",
+            qualified_name="build_orchestrator_dependencies",
+            kind="function",
+            in_degree=0,
+            risk_reason="high_coupling",
+        )
+        report = DependencyRiskReport(
+            trifecta_enabled=True,
+            findings=[finding],
+            coupling_hotspots=[finding],
+            hub_count=10,
+        )
+        assert "1 coupling hotspots" in report.summary()
