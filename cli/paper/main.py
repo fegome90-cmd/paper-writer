@@ -232,9 +232,7 @@ def main() -> None:
         "factuality", help="Check claim-evidence factual accuracy via keyword overlap."
     )
     audit_fact.add_argument("file", help="Path to manuscript file")
-    audit_fact.add_argument(
-        "--evidence", required=True, help="Path to screened_evidence.json"
-    )
+    audit_fact.add_argument("--evidence", required=True, help="Path to screened_evidence.json")
     audit_fact.add_argument(
         "--threshold", type=float, default=0.30, help="Overlap threshold (default: 0.30)"
     )
@@ -253,9 +251,7 @@ def main() -> None:
     audit_qa = audit_sub.add_parser(
         "quality-appraisal", help="Score study quality on 5 dimensions."
     )
-    audit_qa.add_argument(
-        "--evidence", required=True, help="Path to screened_evidence.json"
-    )
+    audit_qa.add_argument("--evidence", required=True, help="Path to screened_evidence.json")
     audit_qa.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
     audit_qa.set_defaults(func=_cmd_audit_quality_appraisal)
 

@@ -182,7 +182,7 @@ class Orchestrator:
         # ----------------------------------------------------
         try:
             # Trigger downstream gate reset if editing a draft
-            if request.command == "draft_section":
+            if request.command in ("draft_section", "draft_all"):
                 self.state_manager.reset_downstream_gates("draft")
 
             action_artifacts = self.action_runner.run_action(request.command, request.args)
@@ -201,7 +201,7 @@ class Orchestrator:
         # ----------------------------------------------------
         try:
             gate_verdicts = self._run_gate_verification(request)
-            is_draft = request.command == "draft_section"
+            is_draft = request.command in ("draft_section", "draft_all")
 
             for gate_verdict in gate_verdicts:
                 # Record gate changes
@@ -314,10 +314,15 @@ class Orchestrator:
             "export_bib": "screen",
             "draft_outline": "outline",
             "draft_section": "drafting",
+            "draft_all": "drafting",
             "lint_bib": "validating",
             "check_refs": "validating",
             "lint_style": "validating",
             "audit_reporting": "validating",
+            "audit_factuality": "screen",
+            "audit_tables": "drafting",
+            "audit_quality_appraisal": "screen",
+            "protocol": "screen",
             "render": "rendering",
             "import_bib": "bootstrap",
             "verify": "rendered",
@@ -411,6 +416,16 @@ class Orchestrator:
                 validate_citation_verify_gate(self.checker, state_gates),
                 validate_ethics_passed_gate(self.checker, state_gates),
             ]
+        elif cmd == "draft_all":
+            return [validate_sections_completed(self.checker)]
+        elif cmd == "protocol":
+            return [validate_screened_evidence(self.checker)]
+        elif cmd == "audit_factuality":
+            return [validate_screened_evidence(self.checker)]
+        elif cmd == "audit_tables":
+            return [validate_sections_completed(self.checker)]
+        elif cmd == "audit_quality_appraisal":
+            return [validate_screened_evidence(self.checker)]
 
         raise ValueError(f"Unknown gate verification for command: {cmd}")
 
@@ -429,6 +444,10 @@ class Orchestrator:
         elif command == "draft_outline":
             return "drafting"
         elif command == "draft_section":
+            gate_res = validate_sections_completed(self.checker)
+            if gate_res.status == "pass" and current_stage == "drafting":
+                return "validating"
+        elif command == "draft_all":
             gate_res = validate_sections_completed(self.checker)
             if gate_res.status == "pass" and current_stage == "drafting":
                 return "validating"

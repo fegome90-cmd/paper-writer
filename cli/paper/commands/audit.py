@@ -308,6 +308,7 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
 
     # Parse manuscript for claims
     from parsers.manuscript import ManuscriptParser
+
     parser = ManuscriptParser()
     manuscript = parser.parse(manuscript_path)
 
