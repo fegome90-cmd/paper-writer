@@ -284,6 +284,8 @@ class AcademicWriterAdapter(SkillAdapter):
                 return self._handle_draft_outline(inputs)
             if command == "draft_section":
                 return self._handle_draft_section(inputs)
+            if command == "draft_all":
+                return self._handle_draft_all(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
         except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
             return SkillResult(
@@ -334,6 +336,29 @@ class AcademicWriterAdapter(SkillAdapter):
             status="pass",
             summary=f"Section '{section_name}' skeleton from SKILL.md structure",
             artifacts=[str(a) for a in result["artifacts"]],
+            gate_changes={"sections_completed": True},
+        )
+
+    def _handle_draft_all(self, inputs: dict[str, Any]) -> SkillResult:
+        """Handle draft_all: generate all 7 sections with cross-section context."""
+        outline_path = Path(inputs.get("outline_path", "outputs/drafts/outline.md"))
+        evidence_path = Path(inputs.get("evidence_path", "outputs/search/screened_evidence.json"))
+        bib_path = Path(inputs.get("bib_path", "templates/references.bib"))
+        output_dir = Path(inputs.get("output_dir", "outputs/drafts"))
+
+        result = writer_module.draft_all(
+            outline_path=outline_path,
+            evidence_path=evidence_path,
+            bib_path=bib_path,
+            output_dir=output_dir,
+        )
+        sections = result.get("sections", {})
+        order = result.get("generation_order", [])
+        return SkillResult(
+            adapter=self.name,
+            status="pass",
+            summary=f"Drafted {len(sections)} sections in order: {', '.join(order)}",
+            artifacts=[str(a) for a in result.get("artifacts", [])],
             gate_changes={"sections_completed": True},
         )
 
