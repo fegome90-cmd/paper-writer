@@ -281,3 +281,127 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
 
     # Exit 1 if there are actionable findings, 0 otherwise
     sys.exit(1 if (report.findings or dep_report.findings) else 0)
+
+
+def _cmd_audit_factuality(args: argparse.Namespace) -> None:
+    """Audit claim-evidence factual accuracy via keyword overlap.
+
+    Compares claim sentences against screened evidence abstracts.
+    Claims with low overlap (<30%) are flagged as potential hallucinations.
+    """
+    from validators.claim_evidence import ClaimEvidenceValidator
+
+    evidence_path = Path(args.evidence)
+    if not evidence_path.exists():
+        print(f"Error: evidence file not found: {evidence_path}", file=sys.stderr)
+        sys.exit(1)
+
+    manuscript_path = Path(args.file)
+    if not manuscript_path.exists():
+        print(f"Error: manuscript not found: {manuscript_path}", file=sys.stderr)
+        sys.exit(1)
+
+    validator = ClaimEvidenceValidator(
+        evidence_path=evidence_path,
+        overlap_threshold=getattr(args, "threshold", 0.30),
+    )
+
+    # Parse manuscript for claims
+    from parsers.manuscript import ManuscriptParser
+    parser = ManuscriptParser()
+    manuscript = parser.parse(manuscript_path)
+
+    t0 = time.time()
+    findings = validator.validate(manuscript)
+    elapsed = int((time.time() - t0) * 1000)
+
+    output = {
+        "command": "audit_factuality",
+        "file": str(manuscript_path),
+        "evidence_file": str(evidence_path),
+        "overlap_threshold": validator.overlap_threshold,
+        "findings_count": len(findings),
+        "elapsed_ms": elapsed,
+        "findings": findings,
+    }
+
+    if args.output == "json":
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+    else:
+        print(f"Claim-evidence factuality audit: {len(findings)} findings")
+        if findings:
+            for f in findings:
+                ov = f["evidence"]["overlap_ratio"]
+                print(f"  [{ov:.0%}] {f['evidence']['claim_snippet'][:80]}")
+
+    sys.exit(1 if findings else 0)
+
+
+def _cmd_audit_tables(args: argparse.Namespace) -> None:
+    """Validate draft sections for required tables and figures.
+
+    Checks for markdown tables and mermaid diagrams.
+    """
+    from validators.table_figure import validate_tables_figures
+
+    draft_dir = Path(args.draft_dir)
+    findings = validate_tables_figures(draft_dir)
+
+    output = {
+        "command": "audit_tables",
+        "draft_dir": str(draft_dir),
+        "findings_count": len(findings),
+        "findings": findings,
+    }
+
+    if args.output == "json":
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+    else:
+        if findings:
+            print(f"Table/figure validation: {len(findings)} issues")
+            for f in findings:
+                print(f"  [{f['severity']}] {f['rule_id']}: {f['message']}")
+        else:
+            print("Table/figure validation: all checks passed")
+
+    sys.exit(1 if findings else 0)
+
+
+def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
+    """Run quality appraisal on screened evidence.
+
+    Scores studies on 5 dimensions: venue, citations, methodology,
+    reproducibility, recency.
+    """
+    from validators.quality_appraisal import QualityAppraisalValidator
+
+    evidence_path = Path(args.evidence)
+    if not evidence_path.exists():
+        print(f"Error: evidence file not found: {evidence_path}", file=sys.stderr)
+        sys.exit(1)
+
+    validator = QualityAppraisalValidator()
+    evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
+    papers = evidence_data.get("evidence", [])
+
+    t0 = time.time()
+    findings = validator.validate(papers)
+    elapsed = int((time.time() - t0) * 1000)
+
+    output = {
+        "command": "audit_quality_appraisal",
+        "total_appraised": len(papers),
+        "findings_count": len(findings),
+        "elapsed_ms": elapsed,
+        "findings": [f if isinstance(f, dict) else str(f) for f in findings],
+    }
+
+    if args.output == "json":
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+    else:
+        print(f"Quality appraisal: {len(papers)} studies, {len(findings)} findings")
+        for f in findings:
+            if isinstance(f, dict):
+                print(f"  [{f.get('severity', '?')}] {f.get('rule_id', '?')}")
+
+    sys.exit(1 if findings else 0)

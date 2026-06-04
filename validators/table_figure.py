@@ -55,13 +55,13 @@ def generate_prisma_mermaid(screened_evidence_path: Path) -> str:
 
     lines = [
         "flowchart TD",
-        f"    A[\"Identification<br/>Database: {db}<br/>Other sources: {other}<br/>"
-        f"Seeds: {seeds}\"] --> B[\"Records after dedup<br/>{total_id}\"]",
-        f"    B --> C[\"Records screened<br/>{screened_n}\"]",
-        f"    C --> D[\"Records excluded<br/>{excluded_scr}\"]",
-        f"    C --> E[\"Records assessed<br/>{assessed_n}\"]",
-        f"    E --> F[\"Records excluded<br/>{excluded_elig}\"]",
-        f"    E --> G[\"Studies included<br/>{included_n}\"]",
+        f'    A["Identification<br/>Database: {db}<br/>Other sources: {other}<br/>'
+        f'Seeds: {seeds}"] --> B["Records after dedup<br/>{total_id}"]',
+        f'    B --> C["Records screened<br/>{screened_n}"]',
+        f'    C --> D["Records excluded<br/>{excluded_scr}"]',
+        f'    C --> E["Records assessed<br/>{assessed_n}"]',
+        f'    E --> F["Records excluded<br/>{excluded_elig}"]',
+        f'    E --> G["Studies included<br/>{included_n}"]',
     ]
 
     return "\n".join(lines)
@@ -138,12 +138,14 @@ def validate_tables_figures(
         required_tables = ["study_characteristics", "comparison"]
 
     if not draft_dir.exists():
-        return [{
-            "rule_id": "tables_figures.missing_draft_dir",
-            "severity": "P1",
-            "message": f"Draft directory not found: {draft_dir}",
-            "recommendation": "Run draft_all to generate section files.",
-        }]
+        return [
+            {
+                "rule_id": "tables_figures.missing_draft_dir",
+                "severity": "P1",
+                "message": f"Draft directory not found: {draft_dir}",
+                "recommendation": "Run draft_all to generate section files.",
+            }
+        ]
 
     md_files = list(draft_dir.glob("*.md"))
     all_content = ""
@@ -154,40 +156,45 @@ def validate_tables_figures(
             pass
 
     if not all_content.strip():
-        return [{
-            "rule_id": "tables_figures.empty_drafts",
-            "severity": "P1",
-            "message": "No content in draft files",
-            "recommendation": "Generate section content before validation.",
-        }]
+        return [
+            {
+                "rule_id": "tables_figures.empty_drafts",
+                "severity": "P1",
+                "message": "No content in draft files",
+                "recommendation": "Generate section content before validation.",
+            }
+        ]
 
     findings: list[dict[str, Any]] = []
 
     # Check for markdown tables
     tables = re.findall(r"\|.+\|.+\|", all_content)
     if not tables:
-        findings.append({
-            "rule_id": "tables_figures.no_tables",
-            "severity": "P1",
-            "message": "No markdown tables found in draft sections",
-            "recommendation": (
-                "Add at least a study characteristics table "
-                "and a comparison table to the results section."
-            ),
-        })
+        findings.append(
+            {
+                "rule_id": "tables_figures.no_tables",
+                "severity": "P1",
+                "message": "No markdown tables found in draft sections",
+                "recommendation": (
+                    "Add at least a study characteristics table "
+                    "and a comparison table to the results section."
+                ),
+            }
+        )
 
     # Check for mermaid diagrams
     mermaid_blocks = re.findall(r"```mermaid.*?```", all_content, re.DOTALL)
     if not mermaid_blocks:
-        findings.append({
-            "rule_id": "tables_figures.no_figures",
-            "severity": "P2",
-            "message": "No mermaid diagrams found in draft sections",
-            "recommendation": (
-                "Add a PRISMA flow diagram using mermaid syntax "
-                "to the methods section."
-            ),
-        })
+        findings.append(
+            {
+                "rule_id": "tables_figures.no_figures",
+                "severity": "P2",
+                "message": "No mermaid diagrams found in draft sections",
+                "recommendation": (
+                    "Add a PRISMA flow diagram using mermaid syntax to the methods section."
+                ),
+            }
+        )
 
     # Check for specific table types by keyword
     content_lower = all_content.lower()
@@ -198,14 +205,16 @@ def validate_tables_figures(
             and len(tables) > 0
         )
         if not has_study_table and not tables:
-            findings.append({
-                "rule_id": "tables_figures.no_study_table",
-                "severity": "P1",
-                "message": "Study characteristics table missing",
-                "recommendation": (
-                    "Include a markdown table summarizing study "
-                    "characteristics (year, venue, methodology, findings)."
-                ),
-            })
+            findings.append(
+                {
+                    "rule_id": "tables_figures.no_study_table",
+                    "severity": "P1",
+                    "message": "Study characteristics table missing",
+                    "recommendation": (
+                        "Include a markdown table summarizing study "
+                        "characteristics (year, venue, methodology, findings)."
+                    ),
+                }
+            )
 
     return findings

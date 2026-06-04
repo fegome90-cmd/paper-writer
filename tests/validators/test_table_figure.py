@@ -86,7 +86,14 @@ class TestStudyTable:
         assert "ICSE" in result
 
     def test_truncates_long_titles(self, tmp_path: Path) -> None:
-        papers = [{"title": "A" * 100, "year": 2023, "venue": "V", "scoring": {"tier": "T1", "final_score": 8.0}}]
+        papers = [
+            {
+                "title": "A" * 100,
+                "year": 2023,
+                "venue": "V",
+                "scoring": {"tier": "T1", "final_score": 8.0},
+            }
+        ]
         ev = tmp_path / "screened_evidence.json"
         _write_evidence(ev, papers)
         result = generate_study_table(ev)
@@ -128,11 +135,7 @@ class TestValidateTablesFigures:
     def test_both_present_no_findings(self, tmp_path: Path) -> None:
         draft = tmp_path / "drafts"
         draft.mkdir()
-        content = (
-            "# Results\n"
-            "| A | B |\n|---|---|\n| 1 | 2 |\n\n"
-            "```mermaid\nflowchart TD\n```"
-        )
+        content = "# Results\n| A | B |\n|---|---|\n| 1 | 2 |\n\n```mermaid\nflowchart TD\n```"
         (draft / "results.md").write_text(content)
         findings = validate_tables_figures(draft)
         assert len(findings) == 0

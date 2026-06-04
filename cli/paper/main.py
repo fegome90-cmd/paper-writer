@@ -9,7 +9,10 @@ from cli.paper.commands.audit import (
     _cmd_audit_claims,
     _cmd_audit_code_health,
     _cmd_audit_ethics,
+    _cmd_audit_factuality,
     _cmd_audit_prose,
+    _cmd_audit_quality_appraisal,
+    _cmd_audit_tables,
     _cmd_audit_writing_quality,
 )
 from cli.paper.commands.gate import _cmd_gate_method
@@ -144,6 +147,23 @@ def main() -> None:
     sec_parser.add_argument(
         "name", help="Section name (introduction, methods, results, discussion)"
     )
+    draft_all_parser = draft_sub.add_parser(
+        "all", help="Draft all sections in dependency order with cross-section context."
+    )
+
+    # paper protocol — generate reproducibility protocol
+    protocol_parser = subparsers.add_parser(
+        "protocol", help="Generate reproducibility protocol from pipeline metadata."
+    )
+    protocol_parser.add_argument(
+        "--search-dir", required=True, help="Path to search output directory"
+    )
+    protocol_parser.add_argument(
+        "--output", "-o", default=None, help="Output file path (default: stdout)"
+    )
+    protocol_parser.add_argument(
+        "--project-name", default="paper-writer", help="Project name for header"
+    )
 
     # paper lint
     lint_parser = subparsers.add_parser("lint", help="Lint bibliography or style.")
@@ -206,6 +226,38 @@ def main() -> None:
     audit_wq.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
     audit_wq.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
     audit_wq.set_defaults(func=_cmd_audit_writing_quality)
+
+    # paper audit factuality — claim-evidence overlap check
+    audit_fact = audit_sub.add_parser(
+        "factuality", help="Check claim-evidence factual accuracy via keyword overlap."
+    )
+    audit_fact.add_argument("file", help="Path to manuscript file")
+    audit_fact.add_argument(
+        "--evidence", required=True, help="Path to screened_evidence.json"
+    )
+    audit_fact.add_argument(
+        "--threshold", type=float, default=0.30, help="Overlap threshold (default: 0.30)"
+    )
+    audit_fact.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_fact.set_defaults(func=_cmd_audit_factuality)
+
+    # paper audit tables — validate required tables and figures
+    audit_tbl = audit_sub.add_parser(
+        "tables", help="Validate draft sections for required tables and figures."
+    )
+    audit_tbl.add_argument("draft_dir", help="Path to draft sections directory")
+    audit_tbl.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_tbl.set_defaults(func=_cmd_audit_tables)
+
+    # paper audit quality-appraisal — study quality scoring
+    audit_qa = audit_sub.add_parser(
+        "quality-appraisal", help="Score study quality on 5 dimensions."
+    )
+    audit_qa.add_argument(
+        "--evidence", required=True, help="Path to screened_evidence.json"
+    )
+    audit_qa.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_qa.set_defaults(func=_cmd_audit_quality_appraisal)
 
     # paper trace — code traceability via Trifecta graph
     trace_parser = subparsers.add_parser(
@@ -375,6 +427,13 @@ def main() -> None:
         elif sub_name == "section":
             orch_command = "draft_section"
             orch_args["name"] = args.name
+        elif sub_name == "all":
+            orch_command = "draft_all"
+    elif cmd_name == "protocol":
+        orch_command = "protocol"
+        orch_args["search_dir"] = args.search_dir
+        orch_args["output"] = args.output
+        orch_args["project_name"] = args.project_name
     elif cmd_name == "lint":
         failure_policy = "continue_on_error"
         if sub_name == "bib":

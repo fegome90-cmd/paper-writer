@@ -182,17 +182,16 @@ All citations verified against provided papers. No hallucinated references.
 | **Acceptance** | 3/3 hallucinated detected, 0/3 supported false-positive (0% FP rate). |
 | **Estado** | ✅ DONE — `validators/claim_evidence.py`, 16 tests |
 
-### GAP-010: No journal-specific LaTeX template
+### GAP-010: ~~No journal-specific LaTeX template~~ (Springer + Elsevier presets DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟡 Media — P2 |
-| **Componente** | `templates/journals/` (only Nature preset) |
-| **Problema** | For Q2 SE journals (Empirical SE, JSS, IST) need Springer/Elsevier templates. |
-| **Solución** | Add Springer (`sn-jnl.cls`) and Elsevier (`elsarticle.cls`) templates. |
-| **Acceptance** | `paper init --preset springer` scaffolds correct template. |
-| **Esfuerzo** | Medio día |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟡 Media~~ → ✅ RESOLVED |
+| **Componente** | `templates/journals/springer/`, `templates/journals/elsevier/` |
+| **Problema** | Only Nature preset existed. SE journals need Springer/Elsevier. |
+| **Solución** | Added Springer (sn-jnl) and Elsevier (elsarticle) presets with templates, YAML configs, and bib files. |
+| **Acceptance** | 3 presets available: Nature, Springer, Elsevier. All load correctly. |
+| **Estado** | ✅ DONE — 9 preset tests |
 
 ### GAP-011: ~~No PRISMA flow diagram~~ (4-stage PRISMA flow data DONE)
 
