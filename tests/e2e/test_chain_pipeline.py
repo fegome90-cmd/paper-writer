@@ -203,3 +203,126 @@ def test_cli_chain_command_help() -> None:
     assert "--max-papers" in result.stdout
     assert "--relevance-threshold" in result.stdout
     assert "--no-cache" in result.stdout
+
+
+def test_cli_chain_default_threshold_is_015() -> None:
+    """Verify default relevance-threshold is 0.15 (optimized sweet spot)."""
+    import subprocess
+
+    result = subprocess.run(
+        [".venv/bin/python", "-m", "cli.paper.main", "chain", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    # Check that 0.15 appears in the help text as default
+    assert "0.15" in result.stdout, "Default threshold should be 0.15"
+
+
+def test_cli_chain_with_custom_args(project_dir: Path) -> None:
+    """Chain command via CLI subprocess with custom flags, API unavailable."""
+    import subprocess
+    import sys
+
+    orch = _make_orchestrator(project_dir)
+
+    # Init + search to advance state to 'screen' (required for chain)
+    orch.execute(_request("init"))
+    search_result = orch.execute(
+        _request(
+            "search",
+            {
+                "query": "retrieval augmented code generation",
+                "raw_papers": str(project_dir / "seeds.json"),
+            },
+        )
+    )
+    assert search_result.success, f"Search failed: {search_result.blockers}"
+
+    # Invoke chain via CLI subprocess (no API cache → graceful degradation)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cli.paper.main",
+            "chain",
+            "--max-rounds",
+            "1",
+            "--max-papers",
+            "10",
+            "--relevance-threshold",
+            "0.15",
+            "--no-cache",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=str(project_dir),
+    )
+    # Chain should succeed even with no API cache (graceful degradation)
+    assert result.returncode == 0, f"chain failed: {result.stderr}"
+
+
+def test_chain_produces_provenance(project_dir: Path) -> None:
+    """Chain command writes chain_provenance.json with stats."""
+    orch = _make_orchestrator(project_dir)
+    orch.execute(_request("init"))
+
+    # Search advances to 'screen' stage (required for chain command)
+    orch.execute(
+        _request(
+            "search",
+            {
+                "query": "retrieval augmented code generation",
+                "raw_papers": str(project_dir / "seeds.json"),
+            },
+        )
+    )
+
+    # Chain with mock (like the working pipeline test)
+    raw_path = project_dir / "outputs" / "latest" / "search" / "raw_results.json"
+    raw_data = json.loads(raw_path.read_text())
+
+    mock_chain_result = {
+        "papers": raw_data["papers"],
+        "provenance": [
+            {
+                "paper_id": "seed_0",
+                "round": 0,
+                "source": "seed",
+                "chain_from": None,
+            },
+        ],
+        "stats": {
+            "rounds_completed": 1,
+            "total_api_calls": 2,
+            "papers_by_round": {0: 3, 1: 0},
+            "saturation": True,
+        },
+        "total_unique": 3,
+    }
+
+    with patch(
+        "skills.imported.literature_search.chaining.iterative_search",
+        return_value=mock_chain_result,
+    ):
+        result = orch.execute(
+            _request(
+                "chain",
+                {
+                    "query": "retrieval augmented code generation",
+                    "max_rounds": 1,
+                },
+            )
+        )
+    assert result.success, f"Chain failed: {result.blockers}"
+
+    provenance_path = project_dir / "outputs" / "latest" / "search" / "chain_provenance.json"
+    assert provenance_path.exists(), "chain_provenance.json should be written"
+
+    prov = json.loads(provenance_path.read_text())
+    assert "stats" in prov
+    assert "total_unique" in prov
+    assert "provenance" in prov
+    assert prov["stats"]["rounds_completed"] >= 1

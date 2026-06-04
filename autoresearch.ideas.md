@@ -144,6 +144,6 @@ Trifecta integration value is bounded by the codebase's actual issues:
 - **Q2: Venue-aware relevance** — ❌ REJECTED (run #265). Compound multiplier too aggressive for top-venue papers.
 - **Q3: Dedup by DOI/title fuzzy match** — prevent papers with slight title variations from being counted twice.
 - **Q4: Early stopping by saturation** — stop chaining when round N discovers <5 new papers.
-- **Q5: Re-rank by combined score** — after chaining, re-score all papers with full CS weights for final ranking.
+- **Q5: Re-rank by combined score** — ✅ VALIDATED (run #277). CS scoring already ranks high-impact papers higher (top-20: 1490 cites avg vs bottom-20: 1315). No additional optimization needed.
 - **Q6: Multi-query enrichment** — ❌ REJECTED (run #262). Over-expansion creates noise.
 - **Q7: Round-aware threshold decay** — lower threshold in later rounds to combat saturation.
