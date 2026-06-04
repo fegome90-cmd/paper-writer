@@ -384,6 +384,35 @@ class FilesystemActionRunner(ActionRunner):
                 )
                 artifacts.extend(result.artifacts)
 
+        elif command in (
+            "audit_prose",
+            "audit_claims",
+            "audit_citations",
+            "audit_writing_quality",
+        ):
+            # Manuscript-based audits: find manuscript, write log
+            log_dir = self._resolve_run("logs")
+            log_dir.mkdir(parents=True, exist_ok=True)
+            manuscript = args.get("file")
+            if not manuscript:
+                # Default: assembled manuscript from drafts
+                draft_dir = self._resolve_run("drafts")
+                manuscript_path = assemble_manuscript(draft_dir)
+                manuscript = str(manuscript_path)
+            log_file = self._resolve_run(f"logs/{command}.log")
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write(f"Audit {command} on {manuscript}\n")
+            artifacts.append(str(log_file))
+
+        elif command == "audit_code_health":
+            # Code health audit: no manuscript needed, writes log
+            log_dir = self._resolve_run("logs")
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_file = self._resolve_run("logs/audit_code_health.log")
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write("Code health audit via Trifecta\n")
+            artifacts.append(str(log_file))
+
         elif command == "render":
             render_dir = self._resolve_run("render")
             render_dir.mkdir(parents=True, exist_ok=True)

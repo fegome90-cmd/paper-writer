@@ -323,6 +323,11 @@ class Orchestrator:
             "audit_factuality": "screen",
             "audit_tables": "drafting",
             "audit_quality_appraisal": "screen",
+            "audit_prose": "drafting",
+            "audit_claims": "drafting",
+            "audit_citations": "drafting",
+            "audit_writing_quality": "drafting",
+            "audit_code_health": "outline",
             "protocol": "screen",
             "render": "rendering",
             "import_bib": "bootstrap",
@@ -429,6 +434,16 @@ class Orchestrator:
             return [validate_sections_completed(self.checker)]
         elif cmd == "audit_quality_appraisal":
             return [validate_screened_evidence(self.checker)]
+        elif cmd == "audit_prose":
+            return [self._run_wrapper_gate("audit_prose", gate_override="style_passed")]
+        elif cmd == "audit_claims":
+            return [self._run_wrapper_gate("audit_claims", gate_override="style_passed")]
+        elif cmd == "audit_citations":
+            return [self._run_wrapper_gate("audit_citations", gate_override="citations_resolved")]
+        elif cmd == "audit_writing_quality":
+            return [self._run_wrapper_gate("audit_writing_quality", gate_override="style_passed")]
+        elif cmd == "audit_code_health":
+            return [self._run_wrapper_gate("audit_code_health", gate_override="style_passed")]
 
         raise ValueError(f"Unknown gate verification for command: {cmd}")
 

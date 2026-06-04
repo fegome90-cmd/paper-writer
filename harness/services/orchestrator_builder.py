@@ -15,12 +15,17 @@ from harness.ports.tool_wrapper import ToolWrapper
 from harness.services.state_manager import StateManager
 from integrations.tools import (
     BibliographyNormalizer,
+    CitationsAuditor,
+    ClaimsAuditor,
+    CodeHealthAuditor,
     EthicsAuditor,
     PandocRenderer,
+    ProseAuditor,
     RefsMetadataValidator,
     RefsValidator,
     ReportingAuditor,
     StyleLinter,
+    WritingQualityAuditor,
     ZoteroImporter,
 )
 from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
@@ -97,6 +102,11 @@ def build_orchestrator_dependencies(
         "lint_style": StyleLinter(resolver=tool_resolver),
         "audit_reporting": ReportingAuditor(),
         "audit_ethics": EthicsAuditor(),
+        "audit_prose": ProseAuditor(),
+        "audit_claims": ClaimsAuditor(),
+        "audit_citations": CitationsAuditor(),
+        "audit_writing_quality": WritingQualityAuditor(),
+        "audit_code_health": CodeHealthAuditor(),
         "render": PandocRenderer(resolver=tool_resolver),
         "import_bib": ZoteroImporter(),
     }
