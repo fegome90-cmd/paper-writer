@@ -329,7 +329,14 @@ class FilesystemActionRunner(ActionRunner):
                     f.write(f"# {section_name.capitalize()}\n\nMock content for {section_name}.\n")
                 artifacts.append(str(section_file))
 
-        elif command in ["lint_bib", "check_refs", "lint_style", "audit_reporting", "audit_ethics", "import_bib"]:
+        elif command in [
+            "lint_bib",
+            "check_refs",
+            "lint_style",
+            "audit_reporting",
+            "audit_ethics",
+            "import_bib",
+        ]:
             log_dir = self._resolve_run("logs")
             log_dir.mkdir(parents=True, exist_ok=True)
             log_file = self._resolve_run(f"logs/{command}.log")
@@ -345,7 +352,8 @@ class FilesystemActionRunner(ActionRunner):
                 from validators.protocol_generator import generate_protocol
 
                 protocol_md = generate_protocol(
-                    search_dir, output_path=Path(output_path) if output_path else None,
+                    search_dir,
+                    output_path=Path(output_path) if output_path else None,
                     project_name=project_name,
                 )
                 if output_path:
