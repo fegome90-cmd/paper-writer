@@ -324,9 +324,7 @@ class FilesystemActionRunner(ActionRunner):
 
         elif command == "export_bib":
             search_dir = self._resolve_run("search")
-            bib_path = self._resolve(
-                args.get("bib_path", "templates/references.bib")
-            )
+            bib_path = self._resolve(args.get("bib_path", "templates/references.bib"))
 
             adapter = self._skill_adapters.get("literature_search")
             if adapter:

@@ -273,9 +273,7 @@ def s2_paper_to_dict(paper: dict[str, Any], source: str = "chaining") -> dict[st
     s2_authors = paper.get("authors", [])
     authors_str = ""
     if s2_authors and isinstance(s2_authors, list):
-        authors_str = " and ".join(
-            a.get("name", "") for a in s2_authors if a.get("name")
-        )
+        authors_str = " and ".join(a.get("name", "") for a in s2_authors if a.get("name"))
 
     return {
         "title": paper.get("title", ""),

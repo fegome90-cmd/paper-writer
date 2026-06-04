@@ -334,7 +334,19 @@ def papers_to_bibtex(papers: list[dict[str, Any]]) -> str:
         venue_tag = "journal"
         if venue and any(
             kw in venue.lower()
-            for kw in ["conf", "proc", "neurips", "icml", "iclr", "emnlp", "acl", "naacl", "fse", "ase", "icse"]
+            for kw in [
+                "conf",
+                "proc",
+                "neurips",
+                "icml",
+                "iclr",
+                "emnlp",
+                "acl",
+                "naacl",
+                "fse",
+                "ase",
+                "icse",
+            ]
         ):
             entry_type = "inproceedings"
             venue_tag = "booktitle"
