@@ -441,3 +441,89 @@ class TestManifestDrivenDrafting:
         assert "_SECTION_TEMPLATES" not in source, (
             "drafting.py must not contain hardcoded _SECTION_TEMPLATES"
         )
+
+
+class TestPapersToBibtex:
+    """Test papers_to_bibtex conversion."""
+
+    def test_basic_article(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [
+            {
+                "title": "Test Paper",
+                "year": 2023,
+                "doi": "10.1/test",
+                "authors": "Smith, J. and Doe, A.",
+                "venue": "Nature",
+            },
+        ]
+        result = papers_to_bibtex(papers)
+        assert "@article" in result
+        assert "Test Paper" in result
+        assert "Smith, J." in result
+        assert "10.1/test" in result
+        assert "2023" in result
+        assert "Nature" in result
+
+    def test_conference_detection(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [
+            {
+                "title": "Test NeurIPS Paper",
+                "year": 2023,
+                "authors": "Author, A.",
+                "venue": "NeurIPS",
+            },
+        ]
+        result = papers_to_bibtex(papers)
+        assert "@inproceedings" in result
+        assert "booktitle" in result
+
+    def test_key_dedup(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [
+            {"title": "Same Title", "year": 2023, "authors": "Author, A."},
+            {"title": "Same Title", "year": 2023, "authors": "Author, A."},
+        ]
+        result = papers_to_bibtex(papers)
+        import re
+
+        keys = re.findall(r"@\w+\{([^,]+),", result)
+        assert len(keys) == 2
+        assert keys[0] != keys[1]
+
+    def test_missing_fields_graceful(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [
+            {"title": "Minimal Paper", "year": 2023},
+        ]
+        result = papers_to_bibtex(papers)
+        assert "@article" in result
+        assert "Minimal Paper" in result
+        assert "author" not in result
+
+    def test_empty_papers(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        assert papers_to_bibtex([]) == ""
+
+    def test_skip_no_title(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [{"year": 2023}]
+        result = papers_to_bibtex(papers)
+        assert result == ""
+
+    def test_arxiv_id_included(self) -> None:
+        from skills.imported.literature_search.search import papers_to_bibtex
+
+        papers = [
+            {"title": "ArXiv Paper", "year": 2023, "arxiv_id": "2301.00001"},
+        ]
+        result = papers_to_bibtex(papers)
+        assert "2301.00001" in result
+        assert "eprint" in result

@@ -279,3 +279,79 @@ def _extract_metrics(paper: dict[str, Any]) -> Any:
         coi_penalty=float(m.get("coi_penalty", 0.0)),
         context_score=float(m.get("context_score", 0.0)),
     )
+
+
+def papers_to_bibtex(papers: list[dict[str, Any]]) -> str:
+    """Convert screened papers to BibTeX entries.
+
+    Generates a @article or @inproceedings entry for each paper.
+    BibTeX key format: firstauthorYYYY_firstword (e.g., vaswani2017_attention).
+
+    Args:
+        papers: List of paper dicts with title, year, doi, authors, venue fields.
+
+    Returns:
+        BibTeX string with one entry per paper.
+    """
+    import re
+
+    entries: list[str] = []
+
+    for paper in papers:
+        title = paper.get("title", "").strip()
+        year = paper.get("year")
+        doi = paper.get("doi", "").strip()
+        authors = paper.get("authors", "").strip()
+        venue = paper.get("venue", "").strip()
+        arxiv_id = paper.get("arxiv_id", "").strip()
+
+        if not title or not year:
+            continue
+
+        # Generate BibTeX key: firstauthor_year_firstword
+        first_author = "unknown"
+        if authors:
+            first_author = authors.split(" and ")[0].split(",")[0].strip()
+            # Normalize: lowercase, remove accents/spaces
+            first_author = re.sub(r"[^a-z]", "", first_author.lower()) or "unknown"
+
+        # First significant word from title
+        title_words = re.findall(r"[a-zA-Z]+", title)
+        first_word = title_words[0].lower() if title_words else "untitled"
+
+        key = f"{first_author}{year}_{first_word}"
+
+        # Deduplicate keys by appending letter suffix
+        existing_keys = {e.split("{")[1].split(",")[0] for e in entries}
+        if key in existing_keys:
+            suffix = "b"
+            while f"{key}{suffix}" in existing_keys:
+                suffix = chr(ord(suffix) + 1)
+            key = f"{key}{suffix}"
+
+        # Build entry
+        entry_type = "article"
+        venue_tag = "journal"
+        if venue and any(
+            kw in venue.lower()
+            for kw in ["conf", "proc", "neurips", "icml", "iclr", "emnlp", "acl", "naacl", "fse", "ase", "icse"]
+        ):
+            entry_type = "inproceedings"
+            venue_tag = "booktitle"
+
+        lines = [f"@{entry_type}{{{key},"]
+        lines.append(f"  title = {{{title}}},")
+        if authors:
+            lines.append(f"  author = {{{authors}}},")
+        lines.append(f"  year = {{{year}}},")
+        if venue:
+            lines.append(f"  {venue_tag} = {{{venue}}},")
+        if doi:
+            lines.append(f"  doi = {{{doi}}},")
+        if arxiv_id:
+            lines.append(f"  eprint = {{{arxiv_id}}},")
+        lines.append("}")
+
+        entries.append("\n".join(lines))
+
+    return "\n\n".join(entries)

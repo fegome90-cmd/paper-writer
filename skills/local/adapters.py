@@ -56,6 +56,8 @@ class LiteratureSearchAdapter(SkillAdapter):
                 return self._handle_screen(inputs)
             if command == "chain":
                 return self._handle_chain(inputs)
+            if command == "export_bib":
+                return self._handle_export_bib(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
         except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
             return SkillResult(
@@ -203,6 +205,53 @@ class LiteratureSearchAdapter(SkillAdapter):
             ),
             artifacts=artifacts,
             gate_changes={"search_completed": True, "chaining_completed": True},
+        )
+
+    def _handle_export_bib(self, inputs: dict[str, Any]) -> SkillResult:
+        """Export screened papers to BibTeX format.
+
+        Reads screened_evidence.json, converts each paper to a BibTeX entry,
+        and writes to references.bib.
+        """
+        search_dir = Path(inputs.get("search_dir", "outputs/search"))
+        bib_path = Path(inputs.get("bib_path", "templates/references.bib"))
+
+        evidence_path = search_dir / "screened_evidence.json"
+        if not evidence_path.exists():
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary="No screened_evidence.json found — run 'screen' first",
+                artifacts=[],
+                gate_changes={},
+                warnings=["screened_evidence.json not found"],
+            )
+
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        papers = evidence.get("evidence", [])
+        if not papers:
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary="No screened papers to export",
+                artifacts=[],
+                gate_changes={},
+                warnings=["empty evidence list"],
+            )
+
+        bibtex_str = search_module.papers_to_bibtex(papers)
+
+        # Ensure parent directory exists
+        bib_path.parent.mkdir(parents=True, exist_ok=True)
+        bib_path.write_text(bibtex_str, encoding="utf-8")
+
+        entry_count = bibtex_str.count("@")
+        return SkillResult(
+            adapter=self.name,
+            status="pass",
+            summary=f"Exported {entry_count} BibTeX entries to {bib_path}",
+            artifacts=[str(bib_path)],
+            gate_changes={"bib_exported": True},
         )
 
 

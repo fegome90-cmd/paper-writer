@@ -322,6 +322,24 @@ class FilesystemActionRunner(ActionRunner):
                 f.write(f"Log for {command} at {datetime.datetime.now().isoformat()}\n")
             artifacts.append(str(log_file))
 
+        elif command == "export_bib":
+            search_dir = self._resolve_run("search")
+            bib_path = self._resolve(
+                args.get("bib_path", "templates/references.bib")
+            )
+
+            adapter = self._skill_adapters.get("literature_search")
+            if adapter:
+                result = adapter.execute(
+                    command="export_bib",
+                    inputs={
+                        "search_dir": str(search_dir),
+                        "bib_path": str(bib_path),
+                    },
+                    context={"cwd": str(self.repo_path)},
+                )
+                artifacts.extend(result.artifacts)
+
         elif command == "render":
             render_dir = self._resolve_run("render")
             render_dir.mkdir(parents=True, exist_ok=True)

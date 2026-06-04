@@ -311,6 +311,7 @@ class Orchestrator:
             "search": "search",
             "chain": "screen",  # chain requires search results to exist
             "screen": "screen",
+            "export_bib": "screen",
             "draft_outline": "outline",
             "draft_section": "drafting",
             "lint_bib": "validating",
@@ -357,6 +358,8 @@ class Orchestrator:
         elif cmd == "chain":
             return [validate_search_completed(self.checker)]
         elif cmd == "screen":
+            return [validate_screened_evidence(self.checker)]
+        elif cmd == "export_bib":
             return [validate_screened_evidence(self.checker)]
         elif cmd == "draft_outline":
             return [validate_outline_drafted(self.checker)]
@@ -419,6 +422,8 @@ class Orchestrator:
             return "screen"
         elif command == "chain":
             return "screen"  # chain produces more search results, advances to screen-ready
+        elif command == "export_bib":
+            return None  # export doesn't advance pipeline stage
         elif command == "screen":
             return "outline"
         elif command == "draft_outline":

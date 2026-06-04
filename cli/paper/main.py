@@ -126,6 +126,16 @@ def main() -> None:
     # paper screen
     subparsers.add_parser("screen", help="Screen search results to evidence set.")
 
+    # paper export-bib
+    export_bib_parser = subparsers.add_parser(
+        "export-bib", help="Export screened papers to BibTeX."
+    )
+    export_bib_parser.add_argument(
+        "--bib-path",
+        default="templates/references.bib",
+        help="Output BibTeX file path.",
+    )
+
     # paper draft
     draft_parser = subparsers.add_parser("draft", help="Draft outline or sections.")
     draft_sub = draft_parser.add_subparsers(dest="subcommand", required=True)
@@ -356,6 +366,9 @@ def main() -> None:
         orch_args["relevance_threshold"] = args.relevance_threshold
         if not args.no_cache:
             orch_args["cache_dir"] = "outputs/.cache/s2_api"
+    elif cmd_name == "export-bib":
+        orch_command = "export_bib"
+        orch_args["bib_path"] = args.bib_path
     elif cmd_name == "draft":
         if sub_name == "outline":
             orch_command = "draft_outline"

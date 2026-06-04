@@ -269,6 +269,14 @@ def s2_paper_to_dict(paper: dict[str, Any], source: str = "chaining") -> dict[st
     """
     ext = paper.get("externalIds", {}) or {}
 
+    # Extract authors from S2 format: [{"name": "Author, A."}, ...]
+    s2_authors = paper.get("authors", [])
+    authors_str = ""
+    if s2_authors and isinstance(s2_authors, list):
+        authors_str = " and ".join(
+            a.get("name", "") for a in s2_authors if a.get("name")
+        )
+
     return {
         "title": paper.get("title", ""),
         "year": paper.get("year"),
@@ -278,6 +286,7 @@ def s2_paper_to_dict(paper: dict[str, Any], source: str = "chaining") -> dict[st
         "venue": paper.get("venue", ""),
         "citation_count": paper.get("citationCount"),
         "s2_id": paper.get("paperId", ""),
+        "authors": authors_str,
         "source": source,
     }
 
