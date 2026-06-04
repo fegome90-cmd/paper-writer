@@ -145,7 +145,8 @@ def main() -> None:
     draft_sub.add_parser("outline", help="Draft outline.")
     sec_parser = draft_sub.add_parser("section", help="Draft section.")
     sec_parser.add_argument(
-        "name", help="Section name (introduction, methods, results, discussion)"
+        "name",
+        help="Section name (abstract, introduction, literature_review, methods, results, discussion, conclusion)",
     )
     draft_all_parser = draft_sub.add_parser(
         "all", help="Draft all sections in dependency order with cross-section context."
