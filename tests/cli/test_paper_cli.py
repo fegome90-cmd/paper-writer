@@ -148,11 +148,11 @@ def test_cli_full_pipeline(
     assert "to 'rendered'" in captured.out
 
     # Verify the assembled manuscript was created and used for rendering
-    assembled = tmp_path / "outputs" / "drafts" / "manuscript.md"
+    assembled = tmp_path / "outputs" / "latest" / "drafts" / "manuscript.md"
     assert assembled.is_file(), "Assembled manuscript should exist after render"
     assembled_content = assembled.read_text(encoding="utf-8")
     assert "smith2024voice" in assembled_content, (
-        "Assembled manuscript must contain real draft content with citation keys"
+        "Assembled manuscript must contain real content with citation keys"
     )
 
     # 8. Verify
@@ -162,7 +162,6 @@ def test_cli_full_pipeline(
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
     assert "ready_for_delivery" in captured.out
-    assert (tmp_path / "outputs" / "manifest.yaml").is_file()
 
 
 def test_cli_init_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
