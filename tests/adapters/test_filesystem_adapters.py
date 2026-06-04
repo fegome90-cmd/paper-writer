@@ -174,6 +174,48 @@ def test_action_runner_render(tmp_path: Path) -> None:
     assert _run_path(tmp_path, "render").is_dir()
 
 
+def test_action_runner_chain(tmp_path: Path) -> None:
+    """chain handler delegates to adapter or writes search output."""
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+
+    # Without adapter — falls through (no artifacts, search dir created)
+    artifacts = runner.run_action("chain", {})
+    search_dir = _run_path(tmp_path, "search")
+    assert search_dir.is_dir()
+
+
+def test_action_runner_export_bib(tmp_path: Path) -> None:
+    """export_bib handler delegates to adapter for bib generation."""
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+
+    # Without adapter — no artifacts but doesn't crash
+    artifacts = runner.run_action("export_bib", {})
+    assert isinstance(artifacts, list)
+
+
+def test_action_runner_protocol(tmp_path: Path) -> None:
+    """protocol handler generates reproducibility protocol markdown."""
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+
+    artifacts = runner.run_action("protocol", {})
+    assert len(artifacts) == 1
+    protocol_path = Path(artifacts[0])
+    assert protocol_path.is_file()
+    content = protocol_path.read_text(encoding="utf-8")
+    assert "Reproducibility" in content or "Protocol" in content or "Search Strategy" in content
+
+
+def test_action_runner_audit_code_health(tmp_path: Path) -> None:
+    """audit_code_health handler writes a log file."""
+    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+
+    artifacts = runner.run_action("audit_code_health", {})
+    assert len(artifacts) == 1
+    log_path = Path(artifacts[0])
+    assert log_path.is_file()
+    assert "audit_code_health" in str(log_path)
+
+
 def test_action_runner_emit_manifest(tmp_path: Path) -> None:
     runner = FilesystemActionRunner(tmp_path)
     (tmp_path / "outputs").mkdir(parents=True, exist_ok=True)
