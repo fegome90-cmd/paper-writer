@@ -356,11 +356,16 @@ def iterative_search(
                 if len(corpus) >= max_papers:
                     break
 
-                # Quick relevance check
+                # Quick relevance check with adaptive threshold
                 title = ref.get("title", "")
                 abstract = ref.get("abstract", "") or ""
                 rel = score_relevance(query, title, abstract)
-                if rel / 2.0 < relevance_threshold:
+                # Highly-cited papers get lower threshold: citations signal importance
+                cites_count = ref.get("citationCount") or 0
+                adaptive_threshold = relevance_threshold * (
+                    0.5 if cites_count >= 1000 else 0.75 if cites_count >= 100 else 1.0
+                )
+                if rel / 2.0 < adaptive_threshold:
                     continue
 
                 paper_dict = s2_paper_to_dict(ref, source="backward_chaining")
@@ -387,10 +392,16 @@ def iterative_search(
                 if len(corpus) >= max_papers:
                     break
 
+                # Quick relevance check with adaptive threshold
                 title = cite.get("title", "")
                 abstract = cite.get("abstract", "") or ""
                 rel = score_relevance(query, title, abstract)
-                if rel / 2.0 < relevance_threshold:
+                # Highly-cited papers get lower threshold: citations signal importance
+                cites_count = cite.get("citationCount") or 0
+                adaptive_threshold = relevance_threshold * (
+                    0.5 if cites_count >= 1000 else 0.75 if cites_count >= 100 else 1.0
+                )
+                if rel / 2.0 < adaptive_threshold:
                     continue
 
                 paper_dict = s2_paper_to_dict(cite, source="forward_chaining")

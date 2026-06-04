@@ -98,3 +98,48 @@ Trifecta integration value is bounded by the codebase's actual issues:
 - **I3: Cycle detection alert** — flag when cycles appear (currently 0)
 - **I4: API boundary analysis** — find symbols used across package boundaries
 - **I5: Test coverage gap** — find source orphans that have no test caller
+
+---
+
+# GAP-007: Literature chaining quality (Session 5, 2026-06-03)
+
+## Applied (6 experiments, 4 kept, 2 discarded)
+
+### Baseline (#258)
+- 80 total papers, 75 Tier 3+ (93.8%). Uniform mock data, high quality.
+
+### Realistic diverse mock (#259)
+- 34 total papers, 28 Tier 3+ (82.4%). More realistic mix of high/medium/noise/edge.
+- 6 discards: 5 noise + 1 edge. 88% precision for chaining-discovered papers.
+- Round 2 saturated at 0 new papers with threshold=0.25.
+
+### Threshold 0.25→0.15 (#260) — KEEP
+- Unlocks round 2: 0→66 papers. Total: 100, 86 T3+ (86%).
+- Deeper chaining works when threshold allows marginal-relevance papers through.
+- API calls: 14 (2 rounds).
+
+### Hybrid keyword+chaining (#261) — KEEP (best: 101 T3+)
+- Single keyword search + chaining from enriched seeds.
+- 120 total, 101 T3+ (84.2%). Keyword adds 5 extra seeds.
+- Best approach: keyword search finds papers outside citation graph, chaining expands.
+
+### Multi-query enrichment (#262) — DISCARD
+- 5 sub-queries, 8 kw papers. 150 total, 74 T3+ (49.3%).
+- Over-expansion: bigger frontier → more noise. Precision loss > recall gain.
+
+### Extended cross-domain mock (#263) — DISCARD
+- ViT, DALL-E, Whisper papers. 87 total, 61 T3+ (70.1%).
+- Cross-domain papers increase noise proportionally.
+
+## Key insights
+1. **Threshold 0.15 is sweet spot**: enables round 2 chaining without excess noise.
+2. **Single-query hybrid is best**: keyword search + chaining > pure chaining.
+3. **Multi-query is counterproductive**: precision loss from over-expanded frontier.
+4. **Citation graph diversity helps but bounded**: cross-domain papers introduce noise.
+
+## Remaining ideas
+- **Q1: Adaptive threshold by citation count** — lower threshold for high-cited papers (likely relevant even with marginal keyword overlap).
+- **Q2: Venue-aware relevance** — boost relevance score for papers from top venues (ICSE, NeurIPS, etc).
+- **Q3: Dedup by DOI/title fuzzy match** — prevent papers with slight title variations from being counted twice.
+- **Q4: Early stopping by saturation** — stop chaining when round N discovers <5 new papers.
+- **Q5: Re-rank by combined score** — after chaining, re-score all papers with full CS weights for final ranking.
