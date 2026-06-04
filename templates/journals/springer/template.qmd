@@ -1,0 +1,63 @@
+# Springer Journal Manuscript Template (sn-jnl)
+
+## {title}
+
+{author_names_affiliations}
+
+{corresponding_author}
+
+---
+
+## Abstract
+
+{abstract_max_250_words}
+
+**Keywords:** {keywords}
+
+---
+
+## 1 Introduction
+
+{introduction_text}
+
+---
+
+## 2 Literature Review
+
+{literature_review_text}
+
+---
+
+## 3 Methods
+
+{methods_text}
+
+---
+
+## 4 Results
+
+{results_text}
+
+---
+
+## 5 Discussion
+
+{discussion_text}
+
+---
+
+## 6 Conclusion
+
+{conclusion_text}
+
+---
+
+## Declarations
+
+{declarations}
+
+---
+
+## References
+
+{references}

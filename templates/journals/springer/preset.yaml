@@ -1,0 +1,21 @@
+# Springer Journal Preset (sn-jnl class)
+name: Springer
+format: pdf
+max_words: 10000
+citation_style: author_year
+numbered_references: false
+required_sections:
+  - abstract
+  - introduction
+  - literature_review
+  - methods
+  - results
+  - discussion
+  - conclusion
+  - references
+abstract_max_words: 250
+figure_format: pdf
+figure_dpi: 300
+columns: single
+latex_class: sn-jnl
+bibliography_style: sn-basic

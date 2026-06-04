@@ -1,0 +1,20 @@
+# Elsevier Journal Preset (elsarticle class)
+name: Elsevier
+format: pdf
+max_words: 8000
+citation_style: author_year
+numbered_references: false
+required_sections:
+  - abstract
+  - introduction
+  - methods
+  - results
+  - discussion
+  - conclusion
+  - references
+abstract_max_words: 300
+figure_format: eps
+figure_dpi: 300
+columns: double
+latex_class: elsarticle
+bibliography_style: elsarticle-num

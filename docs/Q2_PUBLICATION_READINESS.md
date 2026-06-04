@@ -110,18 +110,16 @@ All citations verified against provided papers. No hallucinated references.
 | **SDD artifacts** | `openspec/changes/gap-003-cs-scoring/` — proposal, spec, design, tasks. Judgment Day Round 1: 2 CRITICAL + 6 WARNING found and fixed. Round 2: APPROVED. |
 | **Estado** | ✅ Resuelto |
 
-### GAP-004: No tables or figures generated
+### GAP-004: ~~No tables or figures~~ (table/figure generator + validator DONE)
 
 | Field | Detail |
 |:---|:---|
-| **Severidad** | 🟠 Alta — P1 |
-| **Componente** | `clients/llm_content.py` (`generate_section()`), `skills/imported/academic_writer/drafting.py` |
-| **Problema** | LLM generates prose only. Q2 systematic review expects: Table 1 (study characteristics), Table 2 (comparison of RAG approaches), Figure 1 (PRISMA flow diagram). |
-| **Root cause** | `generate_section()` at `llm_content.py:226` sends text-only prompt. No instruction for markdown tables or mermaid diagrams. |
-| **Solución** | (a) Add table generation instruction to section prompts. (b) Add mermaid diagram instruction for PRISMA flow. (c) Post-process LLM output to validate tables. |
-| **Acceptance** | Draft output contains ≥1 markdown table with study comparisons. |
-| **Esfuerzo** | 1 día |
-| **Estado** | ❌ Pendiente |
+| **Severidad** | ~~🟠 Alta~~ → ✅ RESOLVED |
+| **Componente** | `validators/table_figure.py` |
+| **Problema** | No tables or figures generated from pipeline data. |
+| **Solución** | PRISMA mermaid diagram + study characteristics table generated from pipeline metadata. Validator checks drafts for required tables/figures. |
+| **Acceptance** | 3 artifacts: mermaid diagram, study table, validator. No false positives on complete drafts. |
+| **Estado** | ✅ DONE — `validators/table_figure.py`, 14 tests |
 
 ### GAP-005: ~~Citation format mismatch~~ (Author, Year → @key converter DONE)
 

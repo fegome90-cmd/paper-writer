@@ -1,0 +1,63 @@
+# Elsevier Journal Manuscript Template (elsarticle)
+
+## {title}
+
+{author_names_affiliations}
+
+{corresponding_author}
+
+---
+
+## Abstract
+
+{abstract_max_300_words}
+
+**Keywords:** {keywords}
+
+---
+
+## 1. Introduction
+
+{introduction_text}
+
+---
+
+## 2. Methods
+
+{methods_text}
+
+---
+
+## 3. Results
+
+{results_text}
+
+---
+
+## 4. Discussion
+
+{discussion_text}
+
+---
+
+## 5. Conclusion
+
+{conclusion_text}
+
+---
+
+## CRediT Author Statement
+
+{credit_statement}
+
+---
+
+## Declaration of Competing Interest
+
+{declaration}
+
+---
+
+## References
+
+{references}
