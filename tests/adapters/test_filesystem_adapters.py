@@ -288,3 +288,38 @@ def test_emit_manifest_only_lists_existing_artifacts(tmp_path: Path) -> None:
     assert manifest["artifacts"] == {}, (
         "Manifest should not list artifacts that don't exist on disk"
     )
+
+
+def test_emit_manifest_includes_render_artifacts(tmp_path: Path) -> None:
+    """Manifest must list manuscript artifacts when DOCX exists at outputs/latest/render/."""
+    runner = FilesystemActionRunner(tmp_path)
+
+    # Create DOCX at the correct run-specific path
+    render_dir = tmpdir_path(tmp_path, "render")
+    render_dir.mkdir(parents=True, exist_ok=True)
+    (render_dir / "manuscript.docx").write_bytes(b"PK\x03\x04" + b"\x00" * 100)
+
+    # Create bib
+    (tmp_path / "templates").mkdir(exist_ok=True)
+    (tmp_path / "templates" / "references.bib").write_text("@article{a,author={A},title={T},year={2020}}\n")
+
+    all_passed = dict.fromkeys(ManuscriptState.REQUIRED_GATES, True)
+    manifest_path_str = runner.emit_manifest(all_passed)
+
+    with open(manifest_path_str, encoding="utf-8") as f:
+        manifest = yaml.safe_load(f)
+
+    assert "manuscript" in manifest["artifacts"], (
+        f"Manifest should include manuscript artifact. Got: {manifest['artifacts']}"
+    )
+    manuscript_paths = manifest["artifacts"]["manuscript"]
+    assert any("manuscript.docx" in p for p in manuscript_paths), (
+        f"Manuscript DOCX path not found in: {manuscript_paths}"
+    )
+    assert "bibliography" in manifest["artifacts"]
+
+
+def tmpdir_path(tmp_path: Path, *parts: str) -> Path:
+    """Resolve a path through the action runner's outputs/latest/ structure."""
+    runner = FilesystemActionRunner(tmp_path)
+    return runner._resolve_run(str(Path(*parts))) if parts else runner._resolve_run("")
