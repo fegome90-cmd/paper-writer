@@ -274,13 +274,19 @@ def draft_section(
     )
 
     if llm_content is not None:
-        # LLM succeeded — prepend header, append enrichment, use real content
-        _enrich_section(
-            lines, key, total, evidence_items, evidence_path, output_dir,
-        )
+        # LLM succeeded — prepend header, append LLM content, then enrich
         section_path = output_dir / f"{key}.md"
         header = "\n".join(lines) + "\n"
-        section_path.write_text(header + llm_content + "\n", encoding="utf-8")
+        # Build enrichment as separate block (goes AFTER LLM content)
+        enrich_lines: list[str] = []
+        _enrich_section(
+            enrich_lines, key, total, evidence_items, evidence_path, output_dir,
+        )
+        enrich_block = "\n".join(enrich_lines) + "\n" if enrich_lines else ""
+        section_path.write_text(
+            header + llm_content + "\n" + enrich_block,
+            encoding="utf-8",
+        )
         return {"artifacts": [str(section_path)]}
 
     # Fallback: structural placeholders (no LLM available)
