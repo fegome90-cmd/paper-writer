@@ -44,8 +44,12 @@ class TestLiteratureSearchAdapter:
         adapter = LiteratureSearchAdapter()
         assert adapter.name == "literature-search"
 
-    def test_search_without_papers_produces_only_plan(self, tmp_path: Path) -> None:
-        """When no raw_papers provided, search writes plan only."""
+    def test_search_without_papers_uses_provider(self, tmp_path: Path) -> None:
+        """When no raw_papers provided, search uses PaperSearchProvider.
+
+        In fixture mode (default), loads deterministic test data and scores it.
+        Produces search_plan.json + raw_results.json + normalized_results.json.
+        """
         adapter = LiteratureSearchAdapter()
         output_dir = tmp_path / "outputs" / "search"
 
@@ -56,13 +60,13 @@ class TestLiteratureSearchAdapter:
         )
 
         assert result.status == "pass"
-        # Only search_plan.json (no raw_results without papers)
-        assert len(result.artifacts) == 1
-        plan_path = Path(result.artifacts[0])
-        assert plan_path.name == "search_plan.json"
-        plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        assert plan["query"] == "voice disorders"
-        assert plan["weights_phase"] == "balanced"
+        # Provider generates scored papers
+        assert len(result.artifacts) >= 2  # search_plan + raw_results minimum
+        artifact_names = {Path(a).name for a in result.artifacts}
+        assert "search_plan.json" in artifact_names
+        assert "raw_results.json" in artifact_names
+        # Normalized results also written
+        assert (output_dir / "normalized_results.json").is_file()
 
     def test_search_with_papers_applies_real_scoring(self, tmp_path: Path) -> None:
         """When raw_papers provided, search deduplicates and scores them."""

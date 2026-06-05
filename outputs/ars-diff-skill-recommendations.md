@@ -135,3 +135,21 @@ OpenAlex client┘                              ├──→ claim_audit_finaliz
 
 Porting `arXiv` + `OpenAlex` clients unlocks both the contamination detection gap
 and the multi-resolver triangulation gap. They are the highest-ROI porting targets.
+
+## Critical Discovery (Run #311)
+
+**`compute_preprint_signal` is PURE LOGIC** — no API calls needed. It checks:
+- `year >= 2024` AND `venue` in 10-item preprint venue list
+- Falls back to `source_pointer` URL matching (arxiv.org → arXiv, etc.)
+
+This means contamination detection can be ported **IMMEDIATELY** with zero
+new dependencies. The full 4-resolver triangulation can wait.
+
+**Dependency chain revised:**
+```
+compute_preprint_signal (port NOW — pure logic, ~30 loc)
+    ↓
+contamination_signals (port with CrossrefClient only — FUNCTION INJECTION)
+    ↓
+full triangulation (port after arXiv + OpenAlex clients — ~10h effort)
+```
