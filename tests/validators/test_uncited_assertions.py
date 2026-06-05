@@ -1,4 +1,5 @@
 """Tests for uncited assertion detection in prose rules."""
+
 from __future__ import annotations
 
 from validators.prose import CITATION_MARKER_RE, ProseValidator
@@ -40,51 +41,39 @@ class TestUncitedAssertionDetection:
     def test_causal_verb_without_citation_flagged(self) -> None:
         """Causal verb without citation gets uncited_ prefix."""
         # Verify the rule exists and requires citation
-        rule = next(
-            r for r in self.validator.registry
-            if r["id"] == "prose.causal.strong_verb"
-        )
+        rule = next(r for r in self.validator.registry if r["id"] == "prose.causal.strong_verb")
         assert "citation" in rule.get("evidence_required", [])
 
     def test_causal_verb_with_citation_not_uncited(self) -> None:
         """Causal verb with citation marker doesn't get uncited_ prefix."""
-        rule = next(
-            r for r in self.validator.registry
-            if r["id"] == "prose.causal.strong_verb"
-        )
+        rule = next(r for r in self.validator.registry if r["id"] == "prose.causal.strong_verb")
         assert "citation" in rule.get("evidence_required", [])
 
     def test_nine_rules_require_citation(self) -> None:
         """Verify exactly 9 rules require citation evidence."""
         citation_rules = [
-            r for r in self.validator.registry
-            if "citation" in r.get("evidence_required", [])
+            r for r in self.validator.registry if "citation" in r.get("evidence_required", [])
         ]
         assert len(citation_rules) == 9
 
     def test_overclaim_definitive_requires_citation(self) -> None:
         """P0 overclaim rule requires citation."""
         rule = next(
-            r for r in self.validator.registry
-            if r["id"] == "prose.overclaim.definitive_causal"
+            r for r in self.validator.registry if r["id"] == "prose.overclaim.definitive_causal"
         )
         assert "citation" in rule.get("evidence_required", [])
         assert rule["severity"] == "P0"
 
     def test_hedging_rules_dont_require_citation(self) -> None:
         """Style rules (hedging, weasel) don't require citation."""
-        hedging_rules = [
-            r for r in self.validator.registry
-            if r["rule_group"] == "prose.hedging"
-        ]
+        hedging_rules = [r for r in self.validator.registry if r["rule_group"] == "prose.hedging"]
         for rule in hedging_rules:
             assert "citation" not in rule.get("evidence_required", [])
 
     def test_nominalization_rules_dont_require_citation(self) -> None:
         """Nominalization rules don't require citation."""
         nom_rules = [
-            r for r in self.validator.registry
-            if r["rule_group"] == "prose.nominalization"
+            r for r in self.validator.registry if r["rule_group"] == "prose.nominalization"
         ]
         for rule in nom_rules:
             assert "citation" not in rule.get("evidence_required", [])
