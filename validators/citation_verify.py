@@ -4,6 +4,7 @@ Orchestrates Crossref and Semantic Scholar clients to verify all citations
 in a manuscript. Classifies each citation as verified/partial/not_found/title_mismatch.
 Also detects preprint venue usage and flags informational warnings.
 """
+
 from __future__ import annotations
 
 import re
@@ -11,26 +12,29 @@ from typing import Any
 
 from clients._text_similarity import TITLE_SIMILARITY_THRESHOLD
 from clients.crossref import CrossrefClient, CrossrefResult
+from clients.openalex import OpenAlexClient
 from clients.semantic_scholar import S2Result, SemanticScholarClient
 from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
 
 DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
 
-PREPRINT_VENUES: frozenset[str] = frozenset({
-    "arxiv",
-    "biorxiv",
-    "medrxiv",
-    "ssrn",
-    "research square",
-    "preprints.org",
-    "chemrxiv",
-    "eartharxiv",
-    "osf preprints",
-    "techrxiv",
-    "psyarxiv",
-    "socarxiv",
-})
+PREPRINT_VENUES: frozenset[str] = frozenset(
+    {
+        "arxiv",
+        "biorxiv",
+        "medrxiv",
+        "ssrn",
+        "research square",
+        "preprints.org",
+        "chemrxiv",
+        "eartharxiv",
+        "osf preprints",
+        "techrxiv",
+        "psyarxiv",
+        "socarxiv",
+    }
+)
 
 
 class CitationVerifyValidator:
@@ -43,11 +47,13 @@ class CitationVerifyValidator:
         self,
         crossref_client: CrossrefClient | None = None,
         s2_client: SemanticScholarClient | None = None,
+        openalex_client: OpenAlexClient | None = None,
         offline: bool = False,
     ) -> None:
         self.offline = offline
         self.crossref_client = crossref_client or CrossrefClient(offline=offline)
         self.s2_client = s2_client or SemanticScholarClient(offline=offline)
+        self.openalex_client = openalex_client or OpenAlexClient(offline=offline)
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Verify all citations in the manuscript.
@@ -242,21 +248,25 @@ class CitationVerifyValidator:
             dois = DOI_PATTERN.findall(ref_text)
             if dois:
                 for doi in dois:
-                    citations.append({
-                        "doi": doi,
-                        "title": None,
+                    citations.append(
+                        {
+                            "doi": doi,
+                            "title": None,
+                            "line": start_line,
+                            "section": "references",
+                            "raw": ref_text,
+                        }
+                    )
+            else:
+                citations.append(
+                    {
+                        "doi": None,
+                        "title": ref_text,
                         "line": start_line,
                         "section": "references",
                         "raw": ref_text,
-                    })
-            else:
-                citations.append({
-                    "doi": None,
-                    "title": ref_text,
-                    "line": start_line,
-                    "section": "references",
-                    "raw": ref_text,
-                })
+                    }
+                )
 
         return citations
 

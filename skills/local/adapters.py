@@ -427,8 +427,7 @@ class CitationVerifyAdapter(SkillAdapter):
             findings = validator.validate(manuscript)
             # Exclude summary verdict from gate logic
             real_findings = [
-                f for f in findings
-                if f.get("rule_id") != "citation_verification_summary"
+                f for f in findings if f.get("rule_id") != "citation_verification_summary"
             ]
             return SkillResult(
                 adapter=self.name,
