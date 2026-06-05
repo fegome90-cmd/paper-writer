@@ -184,11 +184,22 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_title": crossref.title if crossref else None,
                     "s2_title": s2.title if s2 else None,
+                    "openalex_title": openalex.title if openalex else None,
+                    "arxiv_title": arxiv.title if arxiv else None,
                     **contamination.to_dict(),
                 },
             )
 
         if verdict == "partial":
+            resolved_by = []
+            if crossref and crossref.found:
+                resolved_by.append("crossref")
+            if s2 and s2.found:
+                resolved_by.append("semantic_scholar")
+            if openalex and openalex.found:
+                resolved_by.append("openalex")
+            if arxiv and arxiv.found:
+                resolved_by.append("arxiv")
             return self._make_finding(
                 rule_id="citation_verify.partial",
                 severity="P2",
@@ -197,6 +208,7 @@ class CitationVerifyValidator:
                 section=citation.get("section", "references"),
                 evidence={
                     "doi": citation.get("doi"),
+                    "resolved_by": resolved_by,
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
