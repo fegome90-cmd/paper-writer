@@ -27,6 +27,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from validators.gate_verdict import GateVerdict, tier_from_findings
+
 
 class MethodGateValidator:
     """Apply methodological gate based on EQUATOR-derived checklists.
@@ -89,6 +91,9 @@ class MethodGateValidator:
                     "rules_loaded": 0,
                     "execution_time_ms": elapsed,
                 },
+                "gate_verdict": GateVerdict(
+                    tier="none", message="No checklist resolved",
+                ).to_dict(),
             }
 
         na_set = set(na_items or [])
@@ -156,6 +161,10 @@ class MethodGateValidator:
             checklist.get("non_critical_items", [])
         )
 
+        # 5. Compute tiered gate verdict from all findings
+        all_findings = blockers + warnings
+        verdict = tier_from_findings(all_findings)
+
         return {
             "command": "gate_method",
             "file": manuscript.path,
@@ -166,6 +175,7 @@ class MethodGateValidator:
                 f"{checklist.get('guideline', '').lower()}/"
             ),
             "gate_passed": gate_passed,
+            "gate_verdict": verdict.to_dict(),
             "blockers": blockers,
             "warnings": warnings,
             "not_applicable": not_applicable,

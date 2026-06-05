@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/07/schema#",
+  "$id": "https://paper-writer.dev/skills/essay_crafter/evidence_passport.schema.json",
+  "title": "EvidencePassport",
+  "type": "object",
+  "required": ["meta", "sources", "notes", "claims", "claim_links"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["essay_id", "question", "style_guide", "created_at"],
+      "properties": {
+        "essay_id": { "type": "string" },
+        "question": { "type": "string" },
+        "style_guide": { "type": "string", "enum": ["apa7", "mla9", "chicago17", "custom"] },
+        "created_at": { "type": "string" },
+        "domain": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "ref_slug", "title", "type"],
+        "properties": {
+          "source_id": { "type": "string" },
+          "ref_slug": { "type": "string" },
+          "citation_key": { "type": "string" },
+          "title": { "type": "string" },
+          "authors": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "year": { "type": "integer" },
+          "doi": { "type": "string" },
+          "url": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["article", "book", "chapter", "report", "web", "thesis", "other"]
+          },
+          "lookup_verified": {
+            "type": "string",
+            "enum": ["true", "false", "unresolvable"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["note_id", "source_id", "kind", "my_note", "locator", "support_level"],
+        "properties": {
+          "note_id": { "type": "string" },
+          "source_id": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["quote", "paraphrase", "summary", "counterexample", "method"]
+          },
+          "my_note": { "type": "string" },
+          "verbatim_excerpt": { "type": "string" },
+          "locator": {
+            "type": "object",
+            "required": ["kind", "value"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["page", "section", "paragraph", "chapter", "quote", "none"]
+              },
+              "value": { "type": "string" },
+              "page_start": { "type": "integer" },
+              "page_end": { "type": "integer" },
+              "section": { "type": "string" },
+              "chapter": { "type": "string" },
+              "quote_fingerprint": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "support_level": {
+            "type": "string",
+            "enum": ["direct", "partial", "context"]
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "text", "section", "status"],
+        "properties": {
+          "claim_id": { "type": "string" },
+          "text": { "type": "string" },
+          "section": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "verified", "rework", "dropped"]
+          },
+          "claim_type": {
+            "type": "string",
+            "enum": ["causal", "comparative", "descriptive", "prescriptive", "unknown"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "claim_links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "note_id", "role"],
+        "properties": {
+          "claim_id": { "type": "string" },
+          "note_id": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": ["primary", "secondary", "counterargument", "background"]
+          },
+          "comment": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
