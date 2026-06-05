@@ -11,8 +11,10 @@ from __future__ import annotations
 # Import target
 # ---------------------------------------------------------------------------
 from validators.bibliography import (
+    PREPRINT_VENUES,
     VALID_ENTRY_TYPES,
     detect_duplicate_keys,
+    detect_preprint_venues,
     normalize_entry_fields,
     validate_bibliography,
     validate_doi_format,
@@ -342,3 +344,96 @@ class TestValidateBibliography:
         findings = validate_bibliography(entries)
         codes = [f["code"] for f in findings]
         assert "suspicious_year" in codes
+
+    def test_arxiv_article_flagged_as_preprint(self) -> None:
+        entries = {
+            "smith2024": {"author": "Smith", "title": "T", "journal": "arXiv", "year": "2024"}
+        }
+        findings = validate_bibliography(entries, {"smith2024": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+        assert preprint[0]["severity"] == "warning"
+        assert "arXiv" in preprint[0]["message"]
+        assert "peer review" in preprint[0]["message"]
+
+    def test_biorxiv_older_preprint_is_info(self) -> None:
+        entries = {"jones2020": {"author": "Jones", "title": "T", "journal": "bioRxiv", "year": "2020"}}
+        findings = validate_bibliography(entries, {"jones2020": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+        assert preprint[0]["severity"] == "info"
+
+    def test_nature_not_flagged(self) -> None:
+        entries = {"nature": {"author": "Doe", "title": "T", "journal": "Nature", "year": "2024"}}
+        findings = validate_bibliography(entries, {"nature": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 0
+
+    def test_all_10_preprint_venues_detected(self) -> None:
+        for venue in PREPRINT_VENUES:
+            entries = {f"test_{venue}": {"author": "A", "title": "T", "journal": venue, "year": "2025"}}
+            findings = validate_bibliography(entries, {f"test_{venue}": "article"})
+            preprint = [f for f in findings if f["code"] == "preprint_citation"]
+            assert len(preprint) == 1, f"Venue '{venue}' not detected"
+
+    def test_booktitle_field_checked(self) -> None:
+        entries = {"conf": {"author": "Lee", "title": "T", "booktitle": "SSRN", "year": "2024"}}
+        findings = validate_bibliography(entries, {"conf": "inproceedings"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+        assert "SSRN" in preprint[0]["message"]
+
+    def test_compound_venue_name_detected(self) -> None:
+        entries = {"e1": {"author": "X", "title": "T", "journal": "arXiv preprint arXiv:2301.00001", "year": "2024"}}
+        findings = validate_bibliography(entries, {"e1": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+
+    def test_case_insensitive_venue(self) -> None:
+        entries = {"e1": {"author": "X", "title": "T", "journal": "biorxiv", "year": "2024"}}
+        findings = validate_bibliography(entries, {"e1": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+
+    def test_no_year_still_detected_as_info(self) -> None:
+        entries = {"e1": {"author": "X", "title": "T", "journal": "medRxiv"}}
+        findings = validate_bibliography(entries, {"e1": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 1
+        assert preprint[0]["severity"] == "info"
+
+    def test_empty_venue_no_finding(self) -> None:
+        entries = {"e1": {"author": "X", "title": "T", "journal": "", "year": "2024"}}
+        findings = validate_bibliography(entries, {"e1": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 0
+
+    def test_no_journal_no_booktitle_no_finding(self) -> None:
+        entries = {"e1": {"author": "X", "title": "T", "year": "2024"}}
+        findings = validate_bibliography(entries, {"e1": "article"})
+        preprint = [f for f in findings if f["code"] == "preprint_citation"]
+        assert len(preprint) == 0
+
+
+# ===================================================================
+# detect_preprint_venues (unit tests)
+# ===================================================================
+class TestDetectPreprintVenues:
+    def test_returns_list(self) -> None:
+        result = detect_preprint_venues({"journal": "arXiv", "year": "2024"}, "key1")
+        assert isinstance(result, list)
+
+    def test_no_venue_empty(self) -> None:
+        result = detect_preprint_venues({"title": "Foo"}, "key1")
+        assert result == []
+
+    def test_venue_preferred_over_booktitle(self) -> None:
+        """When both journal and booktitle exist, journal is checked first."""
+        fields = {"journal": "Nature", "booktitle": "arXiv", "year": "2024"}
+        result = detect_preprint_venues(fields, "key1")
+        # Nature is not a preprint → no finding
+        assert result == []
+
+    def test_preprint_venues_count(self) -> None:
+        assert len(PREPRINT_VENUES) == 10
+

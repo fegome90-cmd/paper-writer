@@ -208,6 +208,94 @@ def validate_year_range(year: str, entry_key: str) -> list[dict[str, Any]]:
     return findings
 
 
+# Preprint servers — papers from these venues may not have undergone
+# peer review. Ported from ARS contamination_signals (v3.7.3 §3.2).
+PREPRINT_VENUES: frozenset[str] = frozenset(
+    {
+        "arXiv",
+        "bioRxiv",
+        "medRxiv",
+        "SSRN",
+        "Research Square",
+        "Preprints.org",
+        "ChemRxiv",
+        "EarthArXiv",
+        "OSF Preprints",
+        "TechRxiv",
+    }
+)
+
+
+def detect_preprint_venues(
+    fields: dict[str, str],
+    entry_key: str,
+) -> list[dict[str, Any]]:
+    """Detect entries published on preprint servers.
+
+    Checks journal/booktitle fields against a closed list of known
+    preprint venues. Recent preprints (year >= 2024) are flagged as
+    warnings since they may not have undergone peer review.
+
+    Args:
+        fields: Normalized field map for the entry.
+        entry_key: The entry key for error messages.
+
+    Returns:
+        List of findings for preprint venue entries.
+    """
+    findings: list[dict[str, Any]] = []
+
+    venue = fields.get("journal") or fields.get("booktitle") or ""
+    venue_stripped = venue.strip()
+
+    if not venue_stripped:
+        return findings
+
+    # Case-insensitive match against preprint venues
+    matched_venue = None
+    for pv in PREPRINT_VENUES:
+        if pv.lower() == venue_stripped.lower():
+            matched_venue = pv
+            break
+
+    if matched_venue is None:
+        # Also check substring match for compound venue names
+        # e.g. "arXiv preprint arXiv:2301.00001"
+        venue_lower = venue_stripped.lower()
+        for pv in PREPRINT_VENUES:
+            if pv.lower() in venue_lower:
+                matched_venue = pv
+                break
+
+    if matched_venue is None:
+        return findings
+
+    # Check year — only flag recent preprints
+    year_str = fields.get("year", "").strip()
+    try:
+        year_int = int(year_str)
+    except (ValueError, TypeError):
+        year_int = 0
+
+    severity = "warning" if year_int >= 2024 else "info"
+    message = (
+        f"Entry '{entry_key}' is published on {matched_venue}"
+        f" (preprint server)."
+    )
+    if year_int >= 2024:
+        message += " Recent preprint — may not have undergone peer review."
+
+    findings.append(
+        {
+            "code": "preprint_citation",
+            "severity": severity,
+            "message": message,
+            "location": entry_key,
+        }
+    )
+    return findings
+
+
 def validate_bibliography(
     entries: dict[str, dict[str, str]],
     entry_types: dict[str, str] | None = None,
@@ -253,5 +341,8 @@ def validate_bibliography(
         # Validate year if present
         if "year" in normalized:
             findings.extend(validate_year_range(normalized["year"], key))
+
+        # Detect preprint venues
+        findings.extend(detect_preprint_venues(normalized, key))
 
     return findings
