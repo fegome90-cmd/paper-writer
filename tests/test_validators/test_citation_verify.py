@@ -50,7 +50,7 @@ def _make_manuscript(text: str = "", references: str = "") -> Manuscript:
 
 
 class TestCitationVerifyValidatorOffline:
-    def test_offline_returns_skipped_findings(self):
+    def test_offline_returns_skipped_findings(self) -> None:
         manuscript = _make_manuscript(
             text="Some text.",
             references="Smith et al. (2023). Nature. 10.1038/fake",
@@ -68,7 +68,7 @@ class TestCitationVerifyValidatorOffline:
 
 
 class TestCitationVerifyValidatorDoiExtraction:
-    def test_extracts_dois_from_references(self):
+    def test_extracts_dois_from_references(self) -> None:
         manuscript = _make_manuscript(
             text="We cite a paper [1].",
             references="[1] Smith et al. Nature. 10.1038/s41586-020-2649-2",
@@ -80,10 +80,10 @@ class TestCitationVerifyValidatorDoiExtraction:
 
 
 class TestCitationVerifyValidatorClassify:
-    def _make_validator(self):
+    def _make_validator(self) -> CitationVerifyValidator:
         return CitationVerifyValidator(offline=True)
 
-    def test_verified_both_sources(self):
+    def test_verified_both_sources(self) -> None:
         v = self._make_validator()
         verdict, severity = v._classify_citation(
             crossref=CrossrefResult(found=True, title="Test Paper", score=0.95),
@@ -92,7 +92,7 @@ class TestCitationVerifyValidatorClassify:
         assert verdict == "verified"
         assert severity is None
 
-    def test_partial_crossref_only(self):
+    def test_partial_crossref_only(self) -> None:
         v = self._make_validator()
         verdict, severity = v._classify_citation(
             crossref=CrossrefResult(found=True, title="Test Paper", score=0.95),
@@ -101,7 +101,7 @@ class TestCitationVerifyValidatorClassify:
         assert verdict == "partial"
         assert severity == "P2"
 
-    def test_not_found_neither_source(self):
+    def test_not_found_neither_source(self) -> None:
         v = self._make_validator()
         verdict, severity = v._classify_citation(
             crossref=CrossrefResult(found=False),
@@ -110,7 +110,7 @@ class TestCitationVerifyValidatorClassify:
         assert verdict == "not_found"
         assert severity == "P0"
 
-    def test_title_mismatch(self):
+    def test_title_mismatch(self) -> None:
         v = self._make_validator()
         verdict, severity = v._classify_citation(
             crossref=CrossrefResult(found=True, title="Different Title", score=0.3),
@@ -122,7 +122,7 @@ class TestCitationVerifyValidatorClassify:
 
 class TestCitationVerifyValidatorValidate:
     @patch("validators.citation_verify.CrossrefClient")
-    def test_fabricated_doi_produces_p0_finding(self, mock_crossref):
+    def test_fabricated_doi_produces_p0_finding(self, mock_crossref: MagicMock) -> None:
         mock_client = MagicMock()
         mock_client.verify_doi.return_value = CrossrefResult(found=False)
         mock_crossref.return_value = mock_client
@@ -146,7 +146,7 @@ class TestCitationVerifyValidatorValidate:
         assert len(p0_findings) > 0
 
     @patch("validators.citation_verify.CrossrefClient")
-    def test_valid_doi_produces_no_p0(self, mock_crossref):
+    def test_valid_doi_produces_no_p0(self, mock_crossref: MagicMock) -> None:
         mock_client = MagicMock()
         mock_client.verify_doi.return_value = CrossrefResult(
             found=True, title="Nature Paper", score=0.95

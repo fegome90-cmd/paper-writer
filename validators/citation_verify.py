@@ -361,15 +361,35 @@ class CitationVerifyValidator:
         text = re.sub(r";.*$", "", text)
         return text.strip()
 
+    def _resolve_title(self, citation: dict[str, Any]) -> str | None:
+        """Get the best available title for title-based search.
+
+        Priority: explicit title field > extracted title from raw text.
+        Used by resolvers as fallback when DOI verification fails.
+        """
+        title = citation.get("title")
+        if title:
+            return title
+        raw = citation.get("raw", "") or ""
+        if raw:
+            extracted = self._extract_title(raw)
+            if extracted and len(extracted) > 5:
+                return extracted
+        return None
+
     def _query_crossref(self, citation: dict[str, Any]) -> CrossrefResult | None:
         """Query Crossref for a citation."""
         if self.offline:
             return None
         try:
             if citation.get("doi"):
-                return self.crossref_client.verify_doi(citation["doi"])
-            elif citation.get("title"):
-                results = self.crossref_client.search_by_title(citation["title"])
+                result = self.crossref_client.verify_doi(citation["doi"])
+                if result and result.found:
+                    return result
+            # Fallback to title search (from explicit field or extracted from raw)
+            title = self._resolve_title(citation)
+            if title:
+                results = self.crossref_client.search_by_title(title)
                 return results[0] if results else CrossrefResult(found=False)
         except Exception:
             return CrossrefResult(found=False)
@@ -381,9 +401,13 @@ class CitationVerifyValidator:
             return None
         try:
             if citation.get("doi"):
-                return self.s2_client.verify_doi(citation["doi"])
-            elif citation.get("title"):
-                results = self.s2_client.search_by_title(citation["title"])
+                result = self.s2_client.verify_doi(citation["doi"])
+                if result and result.found:
+                    return result
+            # Fallback to title search (from explicit field or extracted from raw)
+            title = self._resolve_title(citation)
+            if title:
+                results = self.s2_client.search_by_title(title)
                 return results[0] if results else S2Result(found=False)
         except Exception:
             return S2Result(found=False)
@@ -395,9 +419,13 @@ class CitationVerifyValidator:
             return None
         try:
             if citation.get("doi"):
-                return self.openalex_client.verify_doi(citation["doi"])
-            elif citation.get("title"):
-                results = self.openalex_client.search_by_title(citation["title"])
+                result = self.openalex_client.verify_doi(citation["doi"])
+                if result and result.found:
+                    return result
+            # Fallback to title search (from explicit field or extracted from raw)
+            title = self._resolve_title(citation)
+            if title:
+                results = self.openalex_client.search_by_title(title)
                 return results[0] if results else OpenAlexResult(found=False)
         except Exception:
             return OpenAlexResult(found=False)
