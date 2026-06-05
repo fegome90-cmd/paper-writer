@@ -46,8 +46,7 @@ DEFINITIONAL_SENTENCE_RE = re.compile(
     r"|for\s+the\s+purposes\s+of"
     r"|can\s+be\s+(?:defined|understood)\s+as"
     r"|is\s+a\s+(?:type|kind|form|class)\s+of"
-    r"|means?\s+(?:that|the)\b)"
-    ,
+    r"|means?\s+(?:that|the)\b)",
     re.IGNORECASE,
 )
 
@@ -125,9 +124,7 @@ class ProseValidator:
                         ev = rule.get("evidence_required", [])
                         if "citation" in ev:
                             has_cite = bool(CITATION_MARKER_RE.search(sent.text))
-                            is_definitional = bool(
-                                DEFINITIONAL_SENTENCE_RE.search(sent.text)
-                            )
+                            is_definitional = bool(DEFINITIONAL_SENTENCE_RE.search(sent.text))
                             finding["evidence"] = {
                                 "citation_present": has_cite,
                                 "definitional": is_definitional,
