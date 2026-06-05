@@ -133,7 +133,7 @@ Fix: (1) extend `assets.py` with project-local fallback, (2) route all asset rea
 | B1 | `cli/paper/main.py` | Add `--project/-C` flag; resolve project root via ascending search | CLI entry point | ✅ Done |
 | B2 | `harness/services/gates.py` | `validate_repo_initialized`: check `templates/`, `outputs/`, `outputs/state.yaml` only | Gate logic | ✅ Done |
 | B3 | `harness/adapters/filesystem_action_runner.py` | `init`: stop creating `cli/`, `harness/`, `validators/`, `tests/` stubs | Init behavior | ✅ Done |
-| B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (previously package-only) | Asset resolution | ✅ Done |
+| B4 | `harness/ports/assets.py` | Add project-local fallback to asset resolution (previously package-only) | Asset resolution | ❌ Not implemented |
 | B5 | `integrations/tools/bibtex_tidy.py` | Use `repo_path` from context, not `Path.cwd()` fallback | Tool wrapper | ✅ Done |
 | B6 | `harness/adapters/filesystem_action_runner.py` | `emit_manifest`: use relative paths (already correct) but document | Manifest | ✅ Done |
 | B7 | `harness/services/orchestrator.py` + `harness/services/doctor.py` | Route all direct `repo_path / "templates/..."` and `repo_path / "styles/..."` construction through asset resolver | Render + doctor | ✅ Done |

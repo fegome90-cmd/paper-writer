@@ -12,9 +12,10 @@ The Harness maintains the execution state in `outputs/state.yaml` and evaluates 
 
 To remain robust and lightweight, the Harness uses:
 - **Python 3.10+** (standard library only, except `PyYAML` for parsing/writing state).
-- **`harness/state_manager.py`**: Reads, validates, and serializes state transitions to `outputs/state.yaml`.
-- **`harness/gates.py`**: Executes filesystem checks, validator scripts, and wrapper tools to confirm if a gate is passed.
-- **`harness/orchestrator.py`**: Evaluates transition rules and coordinates execution.
+- **`harness/services/state_manager.py`**: Reads, validates, and serializes state transitions to `outputs/state.yaml`.
+- **`harness/services/gates.py`**: Executes filesystem checks, validator scripts, and wrapper tools to confirm if a gate is passed.
+- **`harness/services/orchestrator.py`**: Evaluates transition rules and coordinates execution.
+- **`harness/domain/state.py`**: Pure domain entity (`ManuscriptState`) with stage/gate business logic, no infrastructure dependencies.
 
 ---
 

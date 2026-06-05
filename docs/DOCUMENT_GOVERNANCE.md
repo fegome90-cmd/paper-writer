@@ -47,7 +47,8 @@
 | Document | Scope |
 |----------|-------|
 | `MULTI_PROJECT_SPEC.md` | Multi-project mode (partially implemented) |
-| `ARS-PORTING-OPPORTUNITIES.md` | Potential ARS integrations |
+| `ars/ARS_ANALYSIS.md` | ARS vs paper-writer technical comparison |
+| `ars/ARS-PORTING-OPPORTUNITIES.md` | Potential ARS integrations |
 | `AUDIT_CHECKLIST_001.md` | Audit checklist template |
 | `plans/plan-extract-cli-wiring-builder.prompt.md` | CLI extraction plan |
 | `plans/plan-phase-2-mcp-client.prompt.md` | Phase 2 MCP client plan |

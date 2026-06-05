@@ -30,19 +30,23 @@ The project CLI lives under:
 cli/paper/
 ```
 
-Recommended files:
+Actual structure:
 
 ```text
 cli/paper/
   __init__.py
   main.py
   commands/
-    init.py
-    verify.py
-    search.py
-    draft.py
-    render.py
+    audit.py       # audit prose|claims|ethics|writing-quality|code-health|citations
+    gate.py        # gate method (EQUATOR-derived checklist)
+    graph.py       # trace, overview (dependency graph visualization)
 ```
+
+Command organization:
+- **Base commands** (in `main.py`): `init`, `search`, `screen`, `draft`, `lint`, `check`, `render`, `verify`, `doctor`, `import`
+- **audit** (Phase 0 extensions): prose quality, claim detection, ethics compliance, writing quality, code health, citation verification
+- **gate**: method gate with EQUATOR-derived checklists
+- **graph**: dependency tracing and workflow overview
 
 Responsibility:
 
@@ -50,6 +54,44 @@ Responsibility:
 - route commands to harness actions
 - print user-facing status
 - never embed workflow rules directly
+
+### Base Pipeline Commands
+
+Core workflow commands (defined in `main.py`):
+
+```bash
+paper init                              # Initialize project and state
+paper search [--raw-papers FILE]        # Literature search
+paper screen                            # Screen to evidence set
+paper draft outline                     # Create manuscript outline
+paper draft section <name>              # Draft IMRAD section
+paper lint bib                          # Normalize bibliography
+paper lint style                        # Vale style linting
+paper check refs                        # Citation and reference validation
+paper audit reporting                   # Reporting checklist audit
+paper render                            # Compile manuscript (Pandoc)
+paper verify                            # Final delivery check
+paper doctor                            # Environment and tool status
+paper import bib <source>               # Import .bib from Zotero/Better BibTeX
+```
+
+### Phase 0 Extensions (Research Quality)
+
+Additional audit commands for research quality analysis:
+
+```bash
+paper audit prose                      # Scientific prose quality analysis
+paper audit claims                    # Claim candidate detection
+paper audit ethics                    # AI disclosure compliance
+paper audit writing-quality           # AI-typical writing patterns
+paper audit code-health               # Code quality gates
+paper audit citations                 # Citation verification
+paper gate method                     # EQUATOR-derived method checklist
+paper trace <artifact>                # Dependency graph for artifact
+paper overview                        # Workflow dependency overview
+```
+
+These commands use validators in `validators/` and rules in `rules/` to analyze manuscript quality without advancing the pipeline stage. They produce reports in `outputs/logs/` but do not modify `outputs/state.yaml` gates.
 
 ## 2. Harness
 
@@ -59,23 +101,43 @@ The harness lives under:
 harness/
 ```
 
-Recommended files:
+Recommended structure (hexagonal architecture):
 
 ```text
 harness/
   __init__.py
-  state_manager.py
-  gates.py
-  orchestrator.py
+  services/
+    state_manager.py
+    gates.py
+    orchestrator.py
+    orchestrator_builder.py
+    assembler.py
+    doctor.py
+  domain/
+    state.py
+  ports/
+    action_runner.py
+    artifact_checker.py
+    assets.py
+    skill_adapter.py
+    state_repository.py
+    tool_resolver.py
+    tool_wrapper.py
+  adapters/
+    filesystem_action_runner.py
+    filesystem_artifact_checker.py
+    local_tool_resolver.py
+    yaml_repository.py
 ```
 
 Responsibility:
 
-- load and update `outputs/state.yaml`
-- validate and serialize stage/gate transitions
-- decide whether a command is allowed to run
-- aggregate results from validators, tools, and skills
-- produce pass/fail delivery decisions and final manifest artifacts
+- **services/**: workflow control, state management, gate enforcement, orchestration
+- **domain/**: pure business logic (ManuscriptState entity, stage transitions)
+- **ports/**: interfaces for external dependencies (tools, skills, filesystem)
+- **adapters/**: concrete implementations of ports (filesystem, YAML, local tools)
+
+The harness loads and updates `outputs/state.yaml`, validates and serializes stage/gate transitions, decides whether a command is allowed to run, aggregates results from validators, tools, and skills, and produces pass/fail delivery decisions and final manifest artifacts.
 
 ## 3. External Tool Wrappers
 
@@ -251,29 +313,7 @@ cli/ ← imports from skills/local/ and harness/
 
 Verified by: `grep -rn "^from skills" harness/` → empty, `grep -rn "^from harness" skills/imported/` → empty.
 
-## 6. Vendored External Repositories
-
-If an external repository truly needs to be cloned for reference or assets, place it under:
-
-```text
-vendor/
-```
-
-Example:
-
-```text
-vendor/
-  scientific-agent-skills/
-  medsci-skills/
-```
-
-Rules:
-
-- vendor repos are read-only reference surfaces
-- runtime code must not depend on the full vendor tree unless explicitly justified
-- prefer extracting only what is needed into `skills/local/` or docs
-
-## 7. Validators
+## 6. Validators
 
 Custom validators live under:
 
@@ -281,24 +321,34 @@ Custom validators live under:
 validators/
 ```
 
-Recommended files:
+Actual structure (15 validators):
 
 ```text
 validators/
-  refs.py
-  citations.py
-  structure.py
-  reporting.py
-  style.py
+  # Core pipeline validators
+  refs.py                # Reference metadata validation (DOI, PMID, URLs)
+  citations.py           # Citation key consistency (text ↔ bib)
+  bibliography.py        # Bibliography normalization checks
+  citation_verify.py     # Citation verification orchestration
+  structure.py           # Section presence and structure
+  reporting.py           # Reporting checklist completeness
+  style.py               # Vale style linting integration
+  preset.py              # Journal preset validation
+
+  # Phase 0 extensions (research quality)
+  prose.py               # Scientific prose quality analysis
+  claims.py              # Claim candidate detection
+  claim_alignment.py     # Claim-evidence alignment
+  ethics.py              # AI disclosure compliance
+  writing_quality.py     # AI-typical writing pattern detection
+  code_health.py         # Code quality gates
+  method_gate.py         # EQUATOR-derived method checklist
 ```
 
 Responsibility:
 
-- citation key consistency
-- `.bib` minimum metadata requirements
-- section presence and structure
-- reporting checklist completeness
-- strong-claim and language policy checks
+- **Core validators**: citation key consistency, `.bib` minimum metadata requirements, section presence and structure, reporting checklist completeness, strong-claim and language policy checks
+- **Phase 0 validators**: prose quality, claim detection, ethics compliance, writing quality, code health, method gate with EQUATOR-derived checklists
 
 ## 8. Templates and Styles
 
@@ -381,7 +431,7 @@ flowchart TD
     H --> S[outputs/state.yaml]
     H --> V[Validators]
     H --> T[Tool Wrappers]
-    H --> K[Skill Wrappers]
+    H --> K[Skill Adapters]
     H --> CL[Clients]
 
     T --> P[pandoc]
@@ -393,10 +443,9 @@ flowchart TD
     CL --> SS[semantic_scholar]
     CL --> TF[trifecta]
 
-    K --> LS[skills/imported/literature_search]
-    K --> AW[skills/imported/academic_writer]
-    K --> LA[skills/local/reporting-audit]
-    K --> CP[skills/local/citation-pipeline]
+    K --> AD[skills/local/adapters.py]
+    AD --> LS[skills/imported/literature_search]
+    AD --> AW[skills/imported/academic_writer]
 
     V --> O[outputs]
     P --> O
@@ -408,8 +457,6 @@ flowchart TD
     TF --> O
     LS --> O
     AW --> O
-    LA --> O
-    CP --> O
 
     H --> G{All gates pass?}
     G -->|Yes| D[Deliverable Ready]
@@ -433,7 +480,6 @@ paper-writer/
   skills/
     imported/
     local/
-  vendor/
   templates/
   styles/
     vale/
@@ -451,7 +497,6 @@ paper-writer/
 | `pandoc`, `vale`, `bibtex-tidy`, validators | install | system / venv / package manager |
 | imported project skills | copy or subtree-import | `skills/imported/` |
 | new repo-native skills | create locally | `skills/local/` |
-| external reference repos | clone only if needed | `vendor/` |
 
 ## Initial Base Build Order
 

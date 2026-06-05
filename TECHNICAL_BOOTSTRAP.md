@@ -185,25 +185,46 @@ make verify
 
 ```text
 paper-writer/
+  cli/
+    paper/
+      main.py
+      commands/
+        audit.py           # Phase 0 audit commands
+        gate.py            # Method gate commands
+        graph.py           # Dependency graph commands
+  harness/
+    services/              # Workflow control layer
+      state_manager.py
+      gates.py
+      orchestrator.py
+      orchestrator_builder.py
+      assembler.py
+      doctor.py
+    domain/                # Pure business logic
+      state.py
+    ports/                 # Interfaces for external dependencies
+    adapters/              # Concrete implementations
+  integrations/
+    tools/                 # External tool wrappers
+      pandoc.py
+      vale.py
+      bibtex_tidy.py
+      refs_validator.py
+      refs_metadata_validator.py
+      reporting_auditor.py
+      zotero_import.py
+  validators/              # 15 validators (core + Phase 0)
   skills/
     imported/
-      literature-search/
-      academic-writer/
-      research-skill-bank/
+      literature_search/
+      academic_writer/
     local/
-      reporting-audit/
-      citation-pipeline/
-  cli/
-    paper
-  harness/
-    state_manager.py
-    gates.py
-    orchestrator.py
-  validators/
-    refs.py
-    style.py
-    structure.py
-    reporting.py
+      adapters.py          # Skill adapter bridge
+  clients/                 # API clients (CrossRef, Semantic Scholar, etc.)
+  parsers/                 # Manuscript and source map parsing
+  engine/                  # Deduplication and formatting engine
+  rules/                   # Validator rule definitions
+  schemas/                 # JSON schemas for validation
   templates/
     manuscript.qmd
     references.bib
@@ -211,6 +232,9 @@ paper-writer/
   styles/
     vale/
     csl/
+  outputs/
+    state.yaml
+  verification/            # Real material validation (Phase 6)
   tests/
   docs/
   Makefile

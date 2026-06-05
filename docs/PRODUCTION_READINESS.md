@@ -35,7 +35,7 @@ make verify   # or: uv run ruff check . && uv run mypy ... && uv run pytest
 
 Current code behavior uses stages from `ManuscriptState.STAGE_ORDER`:
 
-`bootstrap -> search -> screen -> outline -> drafting -> validating -> rendering -> verified`
+`bootstrap -> search -> screen -> outline -> drafting -> validating -> rendering -> rendered`
 
 The gate and stage flow implemented by `harness/domain/state.py`, `harness/services/gates.py`, and `harness/services/orchestrator.py` is:
 
@@ -51,8 +51,8 @@ The gate and stage flow implemented by `harness/domain/state.py`, `harness/servi
 | `refs_validated` | `paper check refs` | contributes to rendering preconditions |
 | `style_passed` | `paper lint style` | contributes to rendering preconditions |
 | `reporting_passed` | `paper audit reporting` | when all rendering preconditions are true, advances `validating -> rendering` |
-| `render_passed` | `paper render` | advances `rendering -> verified` |
-| `ready_for_delivery` | `paper verify` | stays in `verified`; also emits `outputs/manifest.yaml` on success |
+| `render_passed` | `paper render` | advances `rendering -> rendered` |
+| `ready_for_delivery` | `paper verify` | stays in `rendered`; also emits `outputs/manifest.yaml` on success |
 
 The domain model also declares `citation_verified` and `ethics_passed` as soft gates. In `validate_ready_for_delivery()`, missing soft gates produce warnings rather than blockers.
 
