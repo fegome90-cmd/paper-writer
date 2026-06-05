@@ -996,7 +996,7 @@ Los gaps de ARS se integran como **ToolWrappers en el stage validating**, sin to
 
 ## 9. Hallazgos Verificados contra Código (F-01 a F-04)
 
-### F-04: run_real_validation.py y state.yaml [VERIFICADO: FALSO]
+### F-04: run_real_validation.py y state.yaml [VERIFICADO: FALSO POSITIVO]
 
 **Claim original**: `verification/run_real_validation.py` escribe `state.yaml` directamente, bypassing StateManager.
 
@@ -1034,24 +1034,13 @@ Line 92:  gate_method    → func=gate_method
 
 ---
 
-### F-03: Adaptadores definidos pero no wired [VERIFICADO: VERDADERO]
+### F-03: Adaptadores definidos pero no wired [REMOVED in cleanup-dead-code-orphans]
 
 **Claim original**: `CitationVerifyAdapter`, `EthicsAdapter`, `WritingQualityAdapter` están definidos pero nunca conectados.
 
-**Evidencia verificada**:
-```python
-# skills/local/adapters.py
-class CitationVerifyAdapter(SkillAdapter):  # línea 366
-class EthicsAdapter(SkillAdapter):          # línea 406  
-class WritingQualityAdapter(SkillAdapter):  # línea 445
+**Estado**: RESUELTO. Los 3 adaptadores huérfanos (`CitationVerifyAdapter`, `EthicsAdapter`, `WritingQualityAdapter`) fueron removidos de `skills/local/adapters.py` en el change `cleanup-dead-code-orphans` (ver `openspec/changes/cleanup-dead-code-orphans/proposal.md`, `design.md`, `tasks.md`). Sus tests asociados también fueron removidos. ToolWrappers equivalentes (`CitationsAuditor`, `EthicsAuditor`, `WritingQualityAuditor`) ya proveen la funcionalidad runtime.
 
-# harness/services/orchestrator_builder.py — NO contiene estos adaptadores
-# Solo están: literature_search, academic_writer
-```
-
-**Conclusión**: VERDADERO. Los 3 adaptadores están definidos y testeados (`tests/test_validators/test_adapters.py`), pero nunca se instancian en `OrchestratorBuilder`. Son dead code que podría causar confusión.
-
-**Estado**: Podría eliminarse o integrarse en futuras fases (FASE 1-3).
+No requiere acción adicional.
 
 ---
 
@@ -1084,8 +1073,8 @@ if adapter:
 | Categoría | Hallazgos | Prioridad |
 |-----------|-----------|-----------|
 | F-02 confirmado con dual-path | 12 bypass + 5 validadores con doble vía | Media |
-| F-03 confirmado | 3 adapters huérfanos | Baja |
-| F-04 CONFIRMADO | run_real_validation.py escribe state.yaml sin StateManager | **CRÍTICO** |
+| F-03 RESUELTO | 3 adapters removidos en cleanup-dead-code-orphans | Cerrado |
+| F-04 FALSO POSITIVO | run_real_validation.py NO escribe state.yaml directamente (re-verificado) | Cerrado |
 | C-01/C-02/C-03: Validadores sin ToolWrapper | 3 validadores inaccesibles via Orchestrator | **CRÍTICO** |
 | C-04: Código muerto | ClaimAlignmentValidator solo en tests | Baja |
 | C-05: Consumidores únicos | CrossrefClient y S2Client solo por CitationVerifyValidator | Info |
@@ -1093,22 +1082,15 @@ if adapter:
 
 ---
 
-### F-04 CONFIRMADO: run_real_validation.py escribe state.yaml [CRÍTICO]
+### F-04: Re-verificación (cartographer) [FALSO POSITIVO]
 
-**Corrección a verificación anterior**: El cartographer confirmó que `run_real_validation.py` SÍ escribe state.yaml directamente, bypassing StateManager.
+**Re-verificación (2026-06-05)**: El cartographer original marcó este finding como confirmado, pero al revisar el código actual de `verification/run_real_validation.py`, NO se encontró ningún write directo a `state.yaml`. Los únicos `write_text()` en el archivo son para `bib_content`, `report_md`, y `json_data` (outputs de reportes, no state). El script usa subprocess para ejecutar el CLI, que internamente usa `StateManager`.
 
-**Evidencia**:
-```python
-# verification/run_real_validation.py
-# Árbol 2 no importa nada de harness/domain/
-# Escribe state.yaml sin StateManager
-```
+**Conclusión**: FALSO POSITIVO. No hay race condition ni bypass de StateManager. El cartographer probablemente revisó una versión anterior del código.
 
-**Riesgo**: Race condition, state corruption, gates no se actualizan correctamente.
+**Estado**: No requiere fix. Resuelto por re-verificación.
 
-**Fix requerido**: Usar StateManager o subprocess con `paper init` (verificación previa indicaba subprocess, pero cartographer encontró path directo).
-
-**Tiempo**: 30 min
+**Nota**: Este hallazgo aparece dos veces en este documento (sección 9 y aquí). Ambas verificaciones concluyen FALSO POSITIVO. La sección 10 original marcaba F-04 como CRÍTICO por error; este bloque es la versión correcta.
 
 ---
 
@@ -1180,7 +1162,7 @@ if adapter:
 
 | # | Tarea | Tiempo | Hallazgos |
 |---|-------|--------|-----------|
-| 1 | Fix F-04 (run_real_validation.py) | 30 min | CRÍTICO - único conflicto de autoridad real |
+| 1 | (F-04 ya cerrado como falso positivo) | — | Re-verificado, no requiere acción |
 | 2 | Resolver C-01/C-02/C-03 | 3-4h | CRÍTICO - crear ToolWrappers para MethodGate, ClaimEvidence, QualityAppraisal |
 | 3 | Limpiar F-03 + C-04 | 1-2h | Eliminar adapters huérfanos y ClaimAlignmentValidator o cablearlos |
 | 4 | Portar arXiv client | 4-8h | Nuevo clients/arxiv.py |
