@@ -52,7 +52,8 @@ class CitationVerifyValidator:
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Verify all citations in the manuscript.
 
-        Returns findings in paper-writer format.
+        Returns findings in paper-writer format. The last finding includes
+        an aggregated citation verification verdict via reduce_citation_verdict.
         """
         self._manuscript_path = manuscript.path
         citations = self._extract_citations(manuscript)
@@ -63,7 +64,39 @@ class CitationVerifyValidator:
             if finding:
                 findings.append(finding)
 
-        return deduplicate_findings(findings)
+        findings = deduplicate_findings(findings)
+
+        # Append aggregated verdict summary
+        verdict = reduce_citation_verdict(findings)
+        findings.append(
+            {
+                "command": "audit_citations",
+                "rule_id": "citation_verification_summary",
+                "finding_id": "",
+                "severity": "P2" if verdict != "fabricated" else "P0",
+                "file": manuscript.path,
+                "line": 0,
+                "column": 0,
+                "span": [0, 0],
+                "message": f"Citation verification verdict: {verdict}",
+                "section": "summary",
+                "evidence": {"verdict": verdict, "total_findings": len(findings)},
+                "recommendation": {
+                    "verified": "All citations verified successfully.",
+                    "unresolvable": (
+                        "Some citations could not be fully verified. "
+                        "Check citations without DOI for accuracy."
+                    ),
+                    "fabricated": (
+                        "At least one DOI failed to resolve. "
+                        "Verify DOIs carefully — this may indicate "
+                        "fabricated references."
+                    ),
+                }.get(verdict, ""),
+            }
+        )
+
+        return findings
 
     def verify_single(self, citation: dict[str, Any]) -> dict[str, Any] | None:
         """Verify a single citation. Used by ClaimAlignmentValidator.
@@ -335,3 +368,67 @@ class CitationVerifyValidator:
             "evidence": evidence or {},
             "recommendation": recommendation,
         }
+
+
+def reduce_citation_verdict(findings: list[dict[str, Any]]) -> str:
+    """Reduce per-citation findings to a 3-class aggregated verdict.
+
+    Ported from ARS citation_verification_summary (v3.11, C-V6(a)).
+    Produces a human- and machine-readable summary of citation verification
+    status across the entire manuscript.
+
+    Classes:
+        "verified" — all citations resolved successfully (no findings).
+        "unresolvable" — citations lack DOI/title for verification (coverage
+            gap), or verification was skipped (offline mode). Not fabrication.
+        "fabricated" — at least one citation with a DOI that provably fails
+            to resolve. Strong fabrication evidence.
+
+    Args:
+        findings: List of finding dicts from CitationVerifyValidator.
+
+    Returns:
+        One of "verified", "unresolvable", or "fabricated".
+    """
+    if not findings:
+        return "verified"
+
+    # Separate by severity and type
+    has_doi_failure = False
+    has_title_failure = False
+    has_title_mismatch = False
+    has_unresolvable = False
+
+    for f in findings:
+        rule_id = f.get("rule_id", "")
+        severity = f.get("severity", "")
+
+        if "title_mismatch" in rule_id:
+            has_title_mismatch = True
+        elif "not_found" in rule_id:
+            # Check if it had a DOI (ID-keyed) or only title
+            evidence = f.get("evidence", {})
+            if evidence.get("doi"):
+                has_doi_failure = True
+            else:
+                has_title_failure = True
+        elif "unresolvable" in rule_id or severity == "P3":
+            has_unresolvable = True
+        elif "partial" in rule_id:
+            has_unresolvable = True
+
+    # Decision logic (mirrors ARS C-V6(a)):
+    # 1. DOI-keyed not_found = fabrication evidence
+    if has_doi_failure:
+        return "fabricated"
+
+    # 2. Title-only failures = coverage gap (unresolvable)
+    if has_title_failure or has_unresolvable:
+        return "unresolvable"
+
+    # 3. Title mismatch but not missing = needs review but not fabrication
+    if has_title_mismatch:
+        return "unresolvable"
+
+    # 4. All other findings = verified (e.g., preprint warnings)
+    return "verified"

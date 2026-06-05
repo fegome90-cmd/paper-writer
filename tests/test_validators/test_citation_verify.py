@@ -56,8 +56,13 @@ class TestCitationVerifyValidatorOffline:
         validator = CitationVerifyValidator(offline=True)
         findings = validator.validate(manuscript)
         assert len(findings) > 0
-        assert all(f["severity"] == "P2" for f in findings)
-        assert all("skipped" in f["rule_id"] for f in findings)
+        # Separate citation findings from summary verdict
+        citation_findings = [
+            f for f in findings if f.get("rule_id") != "citation_verification_summary"
+        ]
+        assert len(citation_findings) > 0
+        assert all(f["severity"] == "P2" for f in citation_findings)
+        assert all("skipped" in f["rule_id"] for f in citation_findings)
 
 
 class TestCitationVerifyValidatorDoiExtraction:

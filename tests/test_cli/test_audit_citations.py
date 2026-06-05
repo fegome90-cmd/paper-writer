@@ -6,8 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "manuscript_with_fabricated_citations.md"
 
 
@@ -27,8 +25,9 @@ class TestAuditCitationsCLI:
         assert data["metadata"]["offline"] is True
         assert len(data["findings"]) > 0
         for f in data["findings"]:
-            assert f["rule_id"] == "citation_verify.skipped"
-            assert f["severity"] == "2" or f["severity"] == "P2"
+            if f["rule_id"] != "citation_verification_summary":
+                assert f["rule_id"] == "citation_verify.skipped"
+                assert f["severity"] == "2" or f["severity"] == "P2"
 
     def test_json_output_structure(self):
         """JSON output should have required keys."""

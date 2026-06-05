@@ -425,12 +425,17 @@ class CitationVerifyAdapter(SkillAdapter):
             validator = CitationVerifyValidator(offline=offline)
             manuscript = ManuscriptParser().parse(Path(manuscript_path))
             findings = validator.validate(manuscript)
+            # Exclude summary verdict from gate logic
+            real_findings = [
+                f for f in findings
+                if f.get("rule_id") != "citation_verification_summary"
+            ]
             return SkillResult(
                 adapter=self.name,
-                status="pass" if not findings else "warn",
-                summary=f"Citation verification: {len(findings)} findings",
+                status="pass" if not real_findings else "warn",
+                summary=f"Citation verification: {len(real_findings)} findings",
                 artifacts=[manuscript_path],
-                gate_changes={"citation_verified": len(findings) == 0},
+                gate_changes={"citation_verified": len(real_findings) == 0},
             )
         except Exception as exc:
             return SkillResult(
