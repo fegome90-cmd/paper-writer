@@ -87,10 +87,10 @@ class QualityAppraisalValidator:
 
     def score_venue_reputation(self, paper: dict[str, Any]) -> int:
         """Score venue reputation (1-5)."""
-        venue = (paper.get("venue") or "").strip()
-        if venue in self.TOP_TIER_VENUES:
+        venue = (paper.get("venue") or "").strip().lower()
+        if venue in (v.lower() for v in self.TOP_TIER_VENUES):
             return 5
-        if venue in self.GOOD_VENUES:
+        if venue in (v.lower() for v in self.GOOD_VENUES):
             return 3
         if venue and len(venue) > 2:
             return 2
@@ -100,7 +100,10 @@ class QualityAppraisalValidator:
         """Score citation impact (1-5)."""
         cites = paper.get("citation_count") or 0
         if not isinstance(cites, int):
-            cites = 0
+            try:
+                cites = int(cites)
+            except (ValueError, TypeError):
+                cites = 0
         if cites >= 1000:
             return 5
         if cites >= 100:
@@ -214,7 +217,10 @@ class QualityAppraisalValidator:
         """Score recency (1-5). Recent papers reflect current state of art."""
         year = paper.get("year")
         if not isinstance(year, int):
-            return 1
+            try:
+                year = int(year)
+            except (ValueError, TypeError):
+                return 1
         if year >= 2024:
             return 5
         if year >= 2022:

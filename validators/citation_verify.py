@@ -26,10 +26,12 @@ DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
 #           https://arxiv.org/abs/2301.00001, http://arxiv.org/abs/2301.00001v2
 # Bare numeric IDs (NNNN.NNNNN) are ONLY matched when NOT inside a DOI string,
 # to avoid false positives on journal DOIs like 10.1038/nature.2023.12345.
-# Use extract_arxiv_id_from_doi() for arXiv DOIs (10.48550/arXiv.*).
+# Matches both new-style (NNNN.NNNNN) and legacy (archive/YYMMNNN) ArXiv IDs.
+# Legacy archive prefixes: hep-th, math.GT, cond-mat, astro-ph, cs.AI, etc.
 ARXIV_ID_PATTERN = re.compile(
     r"(?:arXiv[:\s]*|arxiv\.org/abs/|10\.48550/arXiv\.)"
-    r"(\d{4}\.\d{4,5}(?:v\d+)?)",
+    r"(\d{4}\.\d{4,5}(?:v\d+)?"
+    r"|[a-z]{2,}(?:-[a-z]{2,})?(?:\.[A-Z]{2})?/\d{7}(?:v\d+)?)",
     re.IGNORECASE,
 )
 
@@ -296,12 +298,13 @@ class CitationVerifyValidator:
         for ref_text, start_line in merged_refs:
             dois = DOI_PATTERN.findall(ref_text)
             if dois:
-                # Use first DOI only — multiple DOIs in one reference
-                # typically point to the same paper (arXiv + publisher).
-                # Dedup avoids wasted API calls and duplicate findings.
+                # Use first DOI only — strip trailing sentence punctuation
+                # (periods, commas, parens) that are part of the surrounding
+                # text, not the DOI itself.
+                clean_doi = dois[0].rstrip(".,;:)\"'")
                 citations.append(
                     {
-                        "doi": dois[0],
+                        "doi": clean_doi,
                         "title": None,
                         "line": start_line,
                         "section": "references",
@@ -348,7 +351,8 @@ class CitationVerifyValidator:
         # Most common in Pandoc-rendered bibliographies
         apa_match = re.search(
             r"\(\d{4}\)\.\s+(.+?)(?:\.\s*$|\.\s+(?:In\s|Retrieved|Available))",
-            text, re.DOTALL,
+            text,
+            re.DOTALL,
         )
         if apa_match:
             return CitationVerifyValidator._clean_title_segment(apa_match.group(1))
@@ -564,7 +568,8 @@ class CitationVerifyValidator:
             if result and result.found and getattr(result, "venue", None):
                 venues.append(result.venue.lower())  # type: ignore[union-attr]
             if result and result.found and getattr(result, "year", None) is not None:
-                year = result.year
+                if year is None:
+                    year = result.year
 
         for venue in venues:
             for known in PREPRINT_VENUES:
