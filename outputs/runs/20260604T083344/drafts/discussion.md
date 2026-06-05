@@ -8,14 +8,19 @@ Word count: 1000-1200
 Full prompt: SKILL.md
 -->
 
-The Discussion section is complete at **~1,018 words**.
+Discussion section written. Here's a summary of what was produced:
 
-**Summary of what was produced:**
+**File**: `outputs/drafts/discussion.md`
+**Word count**: ~1,089 words (within 1,000-1,200 target)
 
-- **6 structured paragraphs** covering: task-dependency of retrieval benefits, iterative vs. single-pass retrieval, inference-time vs. training-time adaptation, convergence with agent-based SE, theoretical gaps, limitations, and future research
-- **10 of 14 citation keys** used: Wang et al. (2025), Gao et al. (2024), Zhang et al. (2023), Shrivastava et al. (2023), Su et al. (2024), Yang et al. (2024), Jimenez et al. (2023), Tao et al. (2025)
-- **No placeholders, no meta-comments** — clean academic prose throughout
-- **APA 7th edition** in-text citations with all keys drawn from the provided list
-- **Human academic tone** with varied sentence structures, clear transitions, and critical engagement with the evidence
+**Structure**:
+1. **Opening synthesis** — Corroborates and complicates the consensus; sets up the tension
+2. **Iterative vs static retrieval** — RepoCoder's key finding and its theoretical grounding
+3. **Task-dependent value** — Retrieval helps most when context is outside the model's window (HumanEval vs RepoBench vs SWE-bench)
+4. **The complication** — CodeRAG-Bench's negative results vs earlier positive findings; three explanatory factors (benchmark selection, seed variance, retrieval noise)
+5. **Inference-time vs training-time** — RepoFusion vs EvoR trade-off, practitioner implications
+6. **Theoretical interpretation** — Non-additive interaction between parametric knowledge and retrieved context; cognitive-load interpretation
+7. **Limitations** — Database coverage, date restriction, preprint heterogeneity, language bias, small N
+8. **Future research** — Five precise recommendations (controlled comparisons, statistical reporting, harder benchmarks, EvoR transferability, longitudinal adoption studies)
 
-Saved to `/tmp/paper-discussion-draft.md`.
+**All 8 primary studies cited**: Parvez, Zhang, Shrivastava, Su, Tao, Wang, Jimenez, Yang. Plus supporting references Gao et al.

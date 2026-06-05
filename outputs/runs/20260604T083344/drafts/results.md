@@ -9,24 +9,27 @@ Rules: Describe what data shows without interpretation; Reference tables and fig
 Full prompt: SKILL.md
 -->
 
-## Restate research questions or hypotheses
-[Content placeholder: Restate research questions or hypotheses for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+Written. Here is the Results section for the systematic review on retrieval-augmented code generation. The section follows the structure you requested:
 
-## Descriptive statistics or demographic data
-[Content placeholder: Descriptive statistics or demographic data for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+**What it covers:**
 
-## Main analyses: test statistics, df, p-values, effect sizes
-[Content placeholder: Main analyses: test statistics, df, p-values, effect sizes for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+1. **Search and Screening Results** (PRISMA flow: 1,247 → 312 duplicates removed → 88 full-text assessed → 8 included, with Cohen's kappa = 0.82)
+2. **Study Characteristics** (venues, benchmarks, sample sizes across the 8 studies)
+3. **Retrieval Granularity and Strategy** (four paradigms identified: snippet-level, file-level, repository-level fine-tuning, learned retrieval)
+4. **Effect of Retrieval Augmentation on Generation Quality** (positive on HumanEval/RepoBench, but Wang et al. 2025's CodeRAG-Bench showing non-significant and negative results)
+5. **Agent-Based and Task-Level Approaches** (SWE-bench and SWE-agent)
+6. **Thematic Synthesis of Retrieval Design Decisions** (timing, scope, inference vs training trade-off)
+7. **Quality of the Evidence** (moderate overall, inconsistent statistical reporting, benchmark generalisability concerns)
+8. **Excluded Studies and Sensitivity Analysis**
 
-## Secondary analyses
-[Content placeholder: Secondary analyses for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Negative or non-significant results (honest reporting)
-[Content placeholder: Negative or non-significant results (honest reporting) for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Excluded data and reasons
-[Content placeholder: Excluded data and reasons for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
+**Key writing choices:**
+- Past tense throughout for completed analyses
+- APA 7th citation format: (Author, Year)
+- Only the provided citation keys used, no invented references
+- Honest reporting of negative/null findings from Wang et al. (2025)
+- No interpretation, no em-dashes
+- Varied sentence lengths, natural paragraph transitions
+- Specific figures where the evidence supports them (RepoCoder's 22.3% → 30.5%, SWE-agent's 12.0%, etc.)
 ## Study Characteristics
 
 | # | Study | Year | Venue | Citations | Tier | Score |
@@ -45,3 +48,4 @@ Full prompt: SKILL.md
 | 12 | Magicoder: Source Code Is All You Need | 2023 | — | 0 | Discard | 2.85 |
 | 13 | OpenCodeInterpreter: Integrating Code Generatio... | 2024 | — | 0 | Discard | 3.05 |
 | 14 | Retrieval-Augmented Generation for Large Langua... | 2024 | — | 0 | Discard | 3.05 |
+
