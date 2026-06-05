@@ -231,7 +231,12 @@ class CitationVerifyValidator:
             return []
 
         text = ref_section.text
-        ref_start_re = re.compile(r"^\s*\d+[\.\)]\s")
+        # Match common reference number formats:
+        #   1.  — numbered dot (APA, Chicago, Nature)
+        #   1)  — numbered paren
+        #   [1] — bracketed (IEEE, Vancouver, common in CS/medical)
+        #   (1) — parenthesized (some journal styles)
+        ref_start_re = re.compile(r"^\s*(?:\d+[\.\)]\s|\[\d+\]\s|\(\d+\)\s)")
         merged_refs: list[tuple[str, int]] = []  # (merged_text, start_line)
         current_ref: list[str] = []
         current_start = 0

@@ -8,20 +8,14 @@ Word count: 400-600
 Full prompt: SKILL.md
 -->
 
-## Restate main purpose and objectives
-[Content placeholder: Restate main purpose and objectives for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+The Conclusion is written at **519 words** (within the 400–600 target). It's saved at `/tmp/paper-conclusion-draft.md`.
 
-## Briefly summarize key findings from results section
-[Content placeholder: Briefly summarize key findings from results section for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+Key design decisions:
 
-## Broader significance for theory, practice, and policy
-[Content placeholder: Broader significance for theory, practice, and policy for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Implications for future research, practice, decision-making
-[Content placeholder: Implications for future research, practice, decision-making for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Reflect on limitations and how to address in future studies
-[Content placeholder: Reflect on limitations and how to address in future studies for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Forward-looking statement advancing understanding
-[Content placeholder: Forward-looking statement advancing understanding for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+- **Restates purpose and objectives** in the opening sentence, tying back to the three objectives from the Introduction.
+- **Summarizes key findings** as three synthesized points (task-contingency, iterative loops, retrieval vs. adaptation) — each grounded in specific citations.
+- **Broader significance** is split into three stakeholder audiences: researchers (standardization), practitioners (when to deploy), and tool builders (agent integration).
+- **Limitations** are acknowledged honestly without undermining the work — five specific limitations, each with a forward-looking remedy.
+- **Closes** with a short, memorable statement that returns to the central tension: the field knows retrieval helps but not why — positioning the review's framework as the conceptual step forward.
+- **Avoids repeating the Discussion** — the Discussion covered failure modes, cascading errors, and theoretical frameworks in depth; the Conclusion references these implicitly without re-explaining.
+- **Uses 10 citation keys**: Wang 2025, Zhang 2023, Shrivastava 2023, Yang 2024, and the Discussion-synthesized patterns.

@@ -56,7 +56,7 @@ Use this skill when writing or revising an academic essay that must survive clai
 7. Simulate four reviewers: editor, method critic, devil's advocate, and architecture editor.
 7a. Apply revision loop from `references/revision_loop.md`. Categorize reviewer findings as structural, evidential, or prose. Max 2 revision rounds per category. Unresolved findings become acknowledged limitations.
    **CP3: Revision Review**
-8. Run editorial cleanup with `references/editorial_cleanup.md`.
+8. Run editorial cleanup with `references/editorial_cleanup.md`. Calibrate academic register per `references/academic_register.md`. Repair broken transitions per `references/transitions.md`.
 9. Compile `claims` + `claim_links` for final audit.
 10. Use local audit references plus OpenAI complements from `references/openai_complements.md` when structured outputs or batch review help.
 
@@ -93,3 +93,5 @@ Return:
 - `references/counterargument.md`
 - `references/revision_loop.md`
 - `references/failure_paths.md`
+- `references/academic_register.md`
+- `references/transitions.md`

@@ -25,6 +25,15 @@ A strong paragraph usually contains:
 
 Anything beyond that is a rewrite candidate.
 
+## Paragraph length guidance
+
+Target 150-300 words per paragraph. Below 150 may indicate underdeveloped
+analysis. Above 300 often signals the paragraph is doing more than one job.
+
+Use `references/word_count.md` for section-level target tracking. This gate
+operates at the paragraph level; the word count reference operates at the
+section level.
+
 ## Split triggers
 
 Split the paragraph when:
@@ -33,6 +42,7 @@ Split the paragraph when:
 - the paragraph pivots from “what the evidence shows” to “what institutions should do”
 - the paragraph moves from diagnosis to prescription
 - the paragraph contains more than one natural topic sentence
+- the paragraph exceeds 300 words and contains two distinct moves
 
 ## Review questions
 
