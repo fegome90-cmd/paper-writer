@@ -291,6 +291,89 @@ class TestRefsMetadataValidator:
         assert RefsMetadataValidator().name == "refs-metadata-validator"
 
 
+class TestParseEntries:
+    """Edge-case tests for RefsMetadataValidator._parse_entries.
+
+    The parser was rewritten to use brace-depth tracking instead of naive
+    regex. These tests cover the 6 patterns that the old parser broke on.
+    """
+
+    def setup_method(self) -> None:
+        self.validator = RefsMetadataValidator()
+
+    def test_single_line_entry(self) -> None:
+        bib = "@article{key1, author = {A}, title = {T}}"
+        entries = self.validator._parse_entries(bib)
+        assert "key1" in entries
+        assert entries["key1"]["author"] == "A"
+        assert entries["key1"]["title"] == "T"
+
+    def test_multiline_entry(self) -> None:
+        bib = "@article{key2,\n  author = {A},\n  title = {T}\n}"
+        entries = self.validator._parse_entries(bib)
+        assert "key2" in entries
+        assert entries["key2"]["author"] == "A"
+
+    def test_multiple_entries(self) -> None:
+        bib = "@article{k1, author = {A}}\n@book{k2, title = {T}}"
+        entries = self.validator._parse_entries(bib)
+        assert len(entries) == 2
+        assert "k1" in entries
+        assert "k2" in entries
+
+    def test_nested_braces_in_field_value(self) -> None:
+        bib = "@article{k3, title = {A {Bold} Title}}"
+        entries = self.validator._parse_entries(bib)
+        assert "k3" in entries
+        assert entries["k3"]["title"] == "A {Bold} Title"
+
+    def test_comment_before_entry(self) -> None:
+        bib = "% This is a comment\n@article{k4, author = {A}}"
+        entries = self.validator._parse_entries(bib)
+        assert "k4" in entries
+        assert entries["k4"]["author"] == "A"
+
+    def test_empty_string(self) -> None:
+        entries = self.validator._parse_entries("")
+        assert entries == {}
+
+    def test_entry_with_no_fields(self) -> None:
+        bib = "@article{k5,\n}"
+        entries = self.validator._parse_entries(bib)
+        assert "k5" in entries
+        assert entries["k5"] == {}
+
+    def test_whitespace_around_key(self) -> None:
+        bib = "@article{ k6 , author = {A}}"
+        entries = self.validator._parse_entries(bib)
+        assert "k6" in entries
+        assert entries["k6"]["author"] == "A"
+
+    def test_unbraced_field_value(self) -> None:
+        bib = "@article{k7, year = 2024}"
+        entries = self.validator._parse_entries(bib)
+        assert "k7" in entries
+        assert entries["k7"]["year"] == "2024"
+
+    def test_trailing_comma_in_fields(self) -> None:
+        bib = "@article{k8,\n  author = {A},\n}"
+        entries = self.validator._parse_entries(bib)
+        assert "k8" in entries
+        assert entries["k8"]["author"] == "A"
+
+    def test_mixed_braced_and_unbraced_values(self) -> None:
+        bib = "@article{k9, title = {A Title}, year = 2024, author = {B}}"
+        entries = self.validator._parse_entries(bib)
+        assert entries["k9"]["title"] == "A Title"
+        assert entries["k9"]["year"] == "2024"
+        assert entries["k9"]["author"] == "B"
+
+    def test_quoted_field_value(self) -> None:
+        bib = '@article{k10, journal = "Nature"}'
+        entries = self.validator._parse_entries(bib)
+        assert entries["k10"]["journal"] == "Nature"
+
+
 # --- Tests for audit command wrappers added in experiment #310 ---
 
 

@@ -131,27 +131,73 @@ class RefsMetadataValidator(ToolWrapper):
     def _parse_entries(self, content: str) -> dict[str, dict[str, str]]:
         """Parse BibTeX entries into {key: {field: value}} map.
 
-        Uses simple regex parsing — sufficient for validation purposes.
-        Does NOT need to be a full BibTeX parser.
+        Uses brace-depth-aware parsing to handle single-line entries,
+        nested braces in field values, unbraced values, and comments.
         """
         entries: dict[str, dict[str, str]] = {}
 
-        # Match @type{key, ... }
-        entry_pattern = re.compile(
-            r"@\w+\s*\{\s*([^,\s]+)\s*,\s*(.*?)\n\s*\}",
-            re.DOTALL | re.IGNORECASE,
-        )
+        # Find entry starts: @type{
+        for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+            start = m.end()  # position after opening {
 
-        for match in entry_pattern.finditer(content):
-            key = match.group(1).strip()
-            body = match.group(2)
+            # Find the matching closing } by tracking brace depth
+            depth = 1
+            pos = start
+            while pos < len(content) and depth > 0:
+                ch = content[pos]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                pos += 1
+
+            if depth != 0:
+                continue  # unmatched brace — skip
+
+            entry_body = content[start : pos - 1]  # exclude closing }
+
+            # First token (before comma) is the key
+            comma_pos = entry_body.find(",")
+            if comma_pos == -1:
+                key = entry_body.strip()
+                if key:
+                    entries[key] = {}
+                continue
+
+            key = entry_body[:comma_pos].strip()
+            body = entry_body[comma_pos + 1 :]
             fields: dict[str, str] = {}
 
-            # Parse field = value pairs
-            for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body, re.IGNORECASE):
-                field_name = field_match.group(1).lower()
-                field_value = field_match.group(2).strip()
-                fields[field_name] = field_value
+            # Parse field = value pairs with brace depth tracking
+            for fm in re.finditer(
+                r"(\w+)\s*=\s*", body, re.IGNORECASE
+            ):
+                field_name = fm.group(1).lower()
+                val_start = fm.end()
+
+                if val_start >= len(body):
+                    continue
+
+                if body[val_start] == "{":
+                    # Braced value — find matching }
+                    vd = 1
+                    vp = val_start + 1
+                    while vp < len(body) and vd > 0:
+                        if body[vp] == "{":
+                            vd += 1
+                        elif body[vp] == "}":
+                            vd -= 1
+                        vp += 1
+                    field_value = body[val_start + 1 : vp - 1].strip()
+                else:
+                    # Unbraced value — read until comma or end
+                    end = body.find(",", val_start)
+                    if end == -1:
+                        end = len(body)
+                    field_value = body[val_start:end].strip().strip('"').strip("'")
+
+                if field_value:
+                    fields[field_name] = field_value
 
             entries[key] = fields
 
