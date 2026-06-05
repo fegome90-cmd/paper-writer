@@ -325,16 +325,16 @@ class CitationVerifyValidator:
 
         arXiv is best for preprints and CS/Physics/Math papers.
         Strategy:
-        1. Extract arXiv ID from raw reference text (most reliable)
+        1. Extract arXiv ID from raw text OR arXiv DOI (10.48550/arXiv.NNNN.NNNNN)
         2. Fall back to title search (only if title field exists)
-        Note: DOIs are NOT arXiv IDs — don't pass DOIs to verify_arxiv_id.
         """
         if self.offline:
             return None
         try:
-            # Strategy 1: Extract arXiv ID from raw reference text
+            # Strategy 1: Extract arXiv ID from raw text or DOI field
             raw_text = citation.get("raw", "") or ""
-            arxiv_id = self._extract_arxiv_id(raw_text)
+            doi = citation.get("doi", "") or ""
+            arxiv_id = self._extract_arxiv_id(raw_text) or self._extract_arxiv_id(doi)
             if arxiv_id:
                 return self.arxiv_client.verify_arxiv_id(arxiv_id)
 
@@ -366,23 +366,6 @@ class CitationVerifyValidator:
         return None
 
     @staticmethod
-    def _extract_title_from_raw(raw_text: str) -> str | None:
-        """Extract a plausible title from raw reference text.
-
-        Used as fallback when citation has no explicit title field.
-        Heuristic: take the longest sentence-like segment before the DOI/URL.
-        """
-        # Remove DOI, URL, and arXiv ID artifacts
-        cleaned = DOI_PATTERN.sub("", raw_text)
-        cleaned = re.sub(r"https?://\S+", "", cleaned)
-        cleaned = re.sub(r"arXiv[:\s]*\d{4}\.\d{4,5}(?:v\d+)?", "", cleaned, flags=re.IGNORECASE)
-        # Take first meaningful chunk (typically title before authors/venue)
-        parts = re.split(r"\.\s+", cleaned.strip(), maxsplit=1)
-        title = parts[0].strip() if parts else None
-        if title and len(title) > 10:
-            return title
-        return None
-
     def _extract_venue_year(
         self,
         crossref: CrossrefResult | None,

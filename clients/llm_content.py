@@ -6,6 +6,7 @@ as clients/trifecta.py — if no LLM CLI is available, returns empty
 content with a clear error message.
 
 Supported CLIs (auto-detected in PATH):
+  - pi      (Pi CLI)        — pi --mode json -nc -p @/tmp/prompt.txt
   - claude  (Claude Code)   — claude -p "prompt" --output-format text
   - codex   (Codex CLI)     — codex exec "prompt"
   - gemini  (Gemini CLI)    — gemini -p "prompt" --approval-mode yolo
@@ -21,10 +22,14 @@ Usage:
 
 Configuration via environment:
     PAPER_LLM_CLI=auto   - Auto-detect (default)
+    PAPER_LLM_CLI=pi     - Force Pi CLI (uses PAPER_LLM_PROVIDER/MODEL env vars)
     PAPER_LLM_CLI=claude - Force Claude Code
     PAPER_LLM_CLI=codex  - Force Codex CLI
     PAPER_LLM_CLI=gemini - Force Gemini CLI
     PAPER_LLM_CLI=off    - Disabled
+
+    PAPER_LLM_PROVIDER   - Provider for pi CLI (default: zai)
+    PAPER_LLM_MODEL      - Model for pi CLI (default: glm-5-turbo)
 
 Why subprocess and not SDK:
     - No new dependencies (same pattern as clients/trifecta.py)
@@ -149,6 +154,9 @@ class LLMClient:
         max_tokens: int | None,
     ) -> list[str]:
         """Build the subprocess command for the specific CLI."""
+        if self.cli_command == "pi":
+            return self._build_pi_command(prompt, system_prompt)
+
         if self.cli_command == "claude":
             cmd = ["claude", "-p", prompt, "--output-format", "text"]
             if system_prompt:
@@ -179,6 +187,27 @@ class LLMClient:
             return cmd
 
         return [self.cli_command, prompt]
+
+    def _build_pi_command(
+        self,
+        prompt: str,
+        system_prompt: str | None,
+    ) -> list[str]:
+        """Build pi CLI command using @file pattern from tmux-fork-orchestrator.
+
+        Pi requires prompt via @file for multi-line content (inline has ~40%
+        failure rate). The prompt is written to a temp file by generate().
+        """
+        provider = os.environ.get("PAPER_LLM_PROVIDER", "zai")
+        model = os.environ.get("PAPER_LLM_MODEL", "glm-5-turbo")
+        return [
+            "pi",
+            "--provider", provider,
+            "--model", model,
+            "--mode", "json",
+            "-nc",
+            "-p", f"@{self._prompt_file}",
+        ]
 
     def _uses_stdin(self) -> bool:
         """Whether this CLI reads prompt from stdin."""
