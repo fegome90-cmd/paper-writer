@@ -123,6 +123,19 @@ class LiteratureSearchAdapter(SkillAdapter):
 
             # Convert normalized papers to raw_papers for scoring pipeline
             raw_papers = [p.to_dict() for p in provider_result.papers]
+        else:
+            # CLI-provided papers — write raw_results.json for traceability
+            raw_path = output_dir / "raw_results.json"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_payload = {
+                "query": query,
+                "papers": raw_papers,
+                "provenance": {"provider": "cli", "source": "raw_papers_input"},
+            }
+            raw_path.write_text(
+                json.dumps(raw_payload, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
 
         result = search_module.search(
             query=query,

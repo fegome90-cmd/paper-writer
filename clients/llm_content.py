@@ -240,12 +240,13 @@ class LLMClient:
     def _extract_pi_text(raw_stdout: str) -> str:
         """Extract assistant text from pi --mode json JSONL output.
 
-        Pi returns one JSON object per line. We look for 'assistant' role
-        messages and concatenate their text content.
+        Pi returns one JSON object per line. The full text is in the
+        final ``message_end`` event with ``role: "assistant"`` and
+        ``content[type: "text"]``.
         """
         import json
 
-        parts: list[str] = []
+        last_assistant_text = ""
         for line in raw_stdout.splitlines():
             line = line.strip()
             if not line:
@@ -253,26 +254,19 @@ class LLMClient:
             try:
                 obj = json.loads(line)
             except (json.JSONDecodeError, ValueError):
-                # Not JSON — might be plain text (fallback)
-                parts.append(line)
                 continue
 
-            # pi JSONL format: {"role": "assistant", "content": "..."}
-            # or {"type": "response", "text": "..."}
-            role = obj.get("role", "")
-            if role == "assistant":
-                content = obj.get("content", "")
-                if isinstance(content, str):
-                    parts.append(content)
-                elif isinstance(content, list):
-                    # content may be a list of content blocks
-                    for block in content:
-                        if isinstance(block, dict) and block.get("type") == "text":
-                            parts.append(block.get("text", ""))
-            elif "text" in obj and role != "user":
-                parts.append(obj["text"])
+            msg_type = obj.get("type", "")
 
-        return "\n\n".join(parts).strip()
+            # Pi message_end contains the complete assembled message
+            if msg_type == "message_end":
+                msg = obj.get("message", {})
+                if msg.get("role") == "assistant":
+                    for block in msg.get("content", []):
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            last_assistant_text = block.get("text", "")
+
+        return last_assistant_text.strip()
 
     def _uses_stdin(self) -> bool:
         """Whether this CLI reads prompt from stdin."""
