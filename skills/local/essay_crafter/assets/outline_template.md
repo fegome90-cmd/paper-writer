@@ -29,6 +29,10 @@ Use this scaffold before drafting.
    - What institutional controls or obligations shape legitimate use?
 5. **Section 4 — Normative Synthesis**
    - What criteria, recommendations, or conditions follow from the analysis?
-6. **Conclusion**
+6. **Counterargument**
+   - Present the strongest opposing position (steel-man)
+   - Concede valid points
+   - Explain why the thesis still holds (distinction + reaffirmation)
+7. **Conclusion**
    - Answer the question directly
    - Re-state why the proposed conditions matter

@@ -2,6 +2,8 @@
 
 This skill is designed to sit on top of the repository's existing audit surfaces.
 
+Gate order mirrors SKILL.md Execution Steps. SKILL.md is the authoritative pipeline definition. This file adds repo-anchor context only.
+
 ## Local repo anchors
 
 - `schemas/claim_audit.schema.json` defines the current claim-audit output shape.
@@ -14,14 +16,19 @@ This skill is designed to sit on top of the repository's existing audit surfaces
 
 1. **Question gate** — reject descriptive prompts with no arguable thesis.
 2. **Roadmap gate** — require thesis plus explicit navigation at the end of the introduction.
+   // CP1: Thesis + Roadmap Approval
 3. **Passport gate** — reject notes without locator anchors.
 4. **Structure gate** — reject sections that mix empirical, ethical, regulatory, and normative dimensions in one block.
 5. **Paragraph density gate** — reject paragraphs that perform more than one rhetorical job.
 6. **Drafting gate** — allow verbosity, but preserve `claim_id` traceability.
-7. **Prose gate** — run style and writing-quality review before formatting.
-8. **Reviewer gate** — simulate editor, method critic, devil’s advocate, and architecture editor.
-9. **Editorial cleanup gate** — remove orphan tokens, truncation artifacts, and placeholders.
-10. **Claim audit gate** — verify claims against linked evidence before final delivery.
+6a. **Counterargument gate** — verify at least one opposing position is addressed (argumentative and problem-solution types).
+   // CP2: Structure + Counterargument Approval
+7. **Reviewer gate** — simulate editor, method critic, devil's advocate, and architecture editor.
+7a. **Revision loop gate** — route reviewer findings back through relevant gates per `references/revision_loop.md`.
+   // CP3: Revision Review
+8. **Editorial cleanup gate** — remove orphan tokens, truncation artifacts, and placeholders.
+9. **Claim audit gate** — verify claims against linked evidence before final delivery.
+10. **Provider audit gate** — verify structured output matches `assets/evidence_passport.schema.json`.
 
 ## Important limitation
 

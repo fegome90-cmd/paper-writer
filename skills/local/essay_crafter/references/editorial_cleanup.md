@@ -1,6 +1,6 @@
 # Editorial Cleanup Gate
 
-Run this immediately before final audit.
+Run this immediately before final audit. Includes academic register calibration.
 
 ## Blockers
 
@@ -20,6 +20,7 @@ The final audit must stop if the draft contains:
 3. Search for placeholder patterns such as `{...}`, `TODO`, `TBD`, `XXX`, or duplicated labels.
 4. Verify citation spacing and punctuation are consistent.
 5. Re-check transitions after any late-stage cut or paste.
+6. Run academic register calibration per `references/academic_register.md` — check hedging, tone, and formality consistency.
 
 ## Output
 
