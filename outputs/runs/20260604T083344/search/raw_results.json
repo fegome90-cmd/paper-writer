@@ -1,1 +1,295 @@
-{"query":"fallback","papers":[{"title":"Fallback Paper","doi":"10.1000/fallback","year":2024,"authors":"Demo et al.","metrics":{"population_score":7,"intervention_score":6,"outcome_score":5,"evidence_score":4,"sample_score":0.5,"journal_score":1.5,"citations_score":0.1,"coi_penalty":0,"context_score":5}}]}
+{
+  "query": "systematic literature review",
+  "date": "2026-06-05",
+  "total_input": 14,
+  "total_after_dedup": 14,
+  "dedup_log": [],
+  "papers": [
+    {
+      "author": "Hongjin Su and Shuyang Jiang and Yuhang Lai and Haoyuan Wu and Boao Shi and Che Liu and Qian Liu and Tao Yu",
+      "title": "EvoR: Evolving Retrieval for Code Generation",
+      "booktitle": "Findings of the Association for Computational Linguistics: EMNLP 2024",
+      "pages": "2538--2554",
+      "year": "2024",
+      "publisher": "Association for Computational Linguistics",
+      "address": "Miami, Florida, USA",
+      "doi": "10.18653/v1/2024.findings-emnlp.143",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.05,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Yicheng Tao and Yuante Li and Yao Qin and Yepang Liu",
+      "title": "Retrieval-Augmented Code Generation: A Survey with Focus on Repository-Level Approaches",
+      "journal": "arXiv preprint arXiv:2510.04905",
+      "year": "2025",
+      "doi": "10.48550/arXiv.2510.04905",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.25,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.9,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Fengji Zhang and Bei Chen and Yue Zhang and Jacky Keung and Jin Liu and Daoguang Zan and Yi Mao and Jian-Guang Lou and Weizhu Chen",
+      "title": "RepoCoder: Repository-Level Code Completion through Iterative Retrieval and Generation",
+      "booktitle": "Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing",
+      "pages": "2471--2484",
+      "year": "2023",
+      "publisher": "Association for Computational Linguistics",
+      "address": "Singapore",
+      "doi": "10.18653/v1/2023.emnlp-main.151",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.85,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.7,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Zora Zhiruo Wang and Akari Asai and Xinyan Velocity Yu and Frank F. Xu and Yiqing Xie and Graham Neubig and Jianfeng Gao",
+      "title": "CodeRAG-Bench: Can Retrieval Augment Code Generation?",
+      "journal": "arXiv preprint arXiv:2406.14497",
+      "year": "2025",
+      "doi": "10.48550/arXiv.2406.14497",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.25,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.9,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Disha Shrivastava and Denis Kocetkov and Harm de Vries and Dzmitry Bahdanau and Torsten Scholak",
+      "title": "RepoFusion: Training Code Models to Understand Your Repository",
+      "booktitle": "arXiv preprint arXiv:2306.10998",
+      "year": "2023",
+      "doi": "10.48550/arXiv.2306.10998",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.85,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.7,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Md Rizwan Parvez and Wasi Ahmad and Saikat Chakraborty and Baishakhi Ray and Kai-Wei Chang",
+      "title": "Retrieval Augmented Code Generation and Summarization",
+      "booktitle": "Findings of the Association for Computational Linguistics: EMNLP 2021",
+      "pages": "2719--2734",
+      "year": "2021",
+      "publisher": "Association for Computational Linguistics",
+      "address": "Punta Cana, Dominican Republic",
+      "doi": "10.18653/v1/2021.findings-emnlp.229",
+      "%": "===========================================================",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.45,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.5,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Carlos E. Jimenez and John Yang and Alexander Wettig and Shunyu Yao and Kexin Pei and Ofir Press and Karthik Narasimhan",
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "journal": "arXiv preprint arXiv:2310.06770",
+      "year": "2023",
+      "doi": "10.48550/arXiv.2310.06770",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.45,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.7,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.8
+      }
+    },
+    {
+      "author": "John Yang and Carlos E. Jimenez and Alexander Wettig and Kilian Lieret and Shunyu Yao and Karthik Narasimhan and Ofir Press",
+      "title": "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering",
+      "journal": "arXiv preprint arXiv:2405.15793",
+      "year": "2024",
+      "doi": "10.48550/arXiv.2405.15793",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.05,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Noah Shinn and Federico Cassano and Ashwin Gopinath and Karthik Narasimhan and Shunyu Yao",
+      "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+      "journal": "Advances in Neural Information Processing Systems",
+      "volume": "36",
+      "year": "2024",
+      "doi": "10.48550/arXiv.2303.11366",
+      "%": "===========================================================",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.05,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Mark Chen and Jerry Tworek and Heewoo Jun and Qiming Yuan and Henrique Ponde de Oliveira Pinto and Jared Kaplan and Harri Edwards and Yuri Burda and Nicholas Joseph and Greg Brockman and others",
+      "title": "Evaluating Large Language Models Trained on Code",
+      "journal": "arXiv preprint arXiv:2107.03374",
+      "year": "2021",
+      "doi": "10.48550/arXiv.2107.03374",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.45,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.5,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Shuyan Zhou and Uri Alon and Frank F. Xu and Zhengbao Jiang and Graham Neubig",
+      "title": "DocPrompting: Generating Code by Retrieving the Docs",
+      "booktitle": "The Eleventh International Conference on Learning Representations",
+      "year": "2022",
+      "doi": "10.48550/arXiv.2207.05987",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.65,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.6,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Yuxiang Wei and Zhe Wang and Jiawei Liu and Yifeng Ding and Lingming Zhang",
+      "title": "Magicoder: Source Code Is All You Need",
+      "journal": "arXiv preprint arXiv:2312.02120",
+      "year": "2023",
+      "doi": "10.48550/arXiv.2312.02120",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 2.85,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.7,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Tianyu Zheng and Ge Zhang and Tianhao Shen and Xueling Liu and Bill Yuchen Lin and Jie Fu and Wenhu Chen and Xiang Yue",
+      "title": "OpenCodeInterpreter: Integrating Code Generation with Execution and Refinement",
+      "journal": "arXiv preprint arXiv:2402.14658",
+      "year": "2024",
+      "doi": "10.48550/arXiv.2402.14658",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.05,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "author": "Yunfan Gao and Yun Xiong and Xinyu Gao and Kangzhuo Jia and Jinzhou Pan and Yandong Bi and Yi Dai and Jiawei Sun and Meng Wang and Haoyu Wang",
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "year": "2024",
+      "doi": "10.48550/arXiv.2312.10997",
+      "_search_query": "systematic literature review",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 3.05,
+        "tier": "Discard",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 0.0,
+        "rigor_score": 0.4
+      }
+    }
+  ],
+  "weights": {
+    "phase": "balanced",
+    "A": 0.25,
+    "B": 0.25,
+    "C": 0.2,
+    "D": 0.2,
+    "E": 0.1
+  }
+}

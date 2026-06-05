@@ -281,7 +281,7 @@ class CitationVerifyValidator:
                 citations.append(
                     {
                         "doi": None,
-                        "title": ref_text,
+                        "title": self._extract_title(ref_text),
                         "line": start_line,
                         "section": "references",
                         "raw": ref_text,
@@ -289,6 +289,64 @@ class CitationVerifyValidator:
                 )
 
         return citations
+
+    @staticmethod
+    def _extract_title(ref_text: str) -> str:
+        """Extract a clean paper title from a raw reference string.
+
+        Reference formats vary, but common patterns:
+        - "1. Authors. Title. Venue Year."
+        - "Authors, Title, Conference, Year."
+        - "Authors (Year) Title."
+
+        Heuristics (in priority order):
+        1. Strip leading reference number (e.g. "1. ", "[1] ")
+        2. Split on sentence boundaries after author-like content
+        3. The title is typically the SECOND segment (after authors)
+        4. Strip trailing venue/year noise
+        """
+        # Strip reference number prefix
+        text = re.sub(r"^[\d\[\(]+[\.\]\)]*\s*", "", ref_text.strip())
+
+        # Split into segments on ". " boundaries
+        segments = re.split(r"\.\s+", text)
+
+        if len(segments) < 2:
+            # Single segment — return as-is (probably just a title)
+            return CitationVerifyValidator._clean_title_segment(text)
+
+        # First segment is usually authors (contains names, "et al.", commas)
+        # Second segment is usually the title
+        # Heuristics: authors contain patterns like "et al", "J.", "A.B."
+        first = segments[0].strip()
+
+        # Check if first segment looks like authors
+        looks_like_authors = bool(
+            re.search(r"et\s+al|,\s*[A-Z]\.|[A-Z][a-z]+\s+[A-Z]\b|\d{4}", first)
+        )
+
+        if looks_like_authors and len(segments) >= 2:
+            candidate = segments[1].strip()
+        else:
+            # First segment might BE the title
+            candidate = first
+
+        return CitationVerifyValidator._clean_title_segment(candidate)
+
+    @staticmethod
+    def _clean_title_segment(text: str) -> str:
+        """Remove trailing venue/year noise from a title candidate."""
+        # Remove trailing year: " 2023", " (2023)"
+        text = re.sub(r"\s*\(\d{4}\)\s*$", "", text)
+        text = re.sub(r"\s*\d{4}\s*$", "", text)
+        # Remove trailing venue-like words: "Nature", "NeurIPS", "IEEE Trans"
+        text = re.sub(
+            r"\s*(?:Nature|Science|NeurIPS|ICML|ICLR|ACL|EMNLP|AAAI|CVPR|IEEE\s+\w+|arXiv.*)\s*$",
+            "", text, flags=re.IGNORECASE,
+        )
+        # Remove trailing semicolon+page noise: ";15(2):45-67"
+        text = re.sub(r";.*$", "", text)
+        return text.strip()
 
     def _query_crossref(self, citation: dict[str, Any]) -> CrossrefResult | None:
         """Query Crossref for a citation."""
