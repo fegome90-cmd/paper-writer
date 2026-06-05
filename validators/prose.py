@@ -37,6 +37,20 @@ CITATION_MARKER_RE = re.compile(
     r"|\(\w+\s+et\s+al\.\s*,\s*\d{4}\)"  # (Author et al., Year)
 )
 
+# Definitional sentence patterns — excluded from uncited assertion detection.
+# Ported from ARS uncited_assertion_detector condition 3 (v3.8 §"D4-c").
+# These sentences state definitions rather than empirical claims,
+# so flagging them as "uncited" produces false positives.
+DEFINITIONAL_SENTENCE_RE = re.compile(
+    r"\b(refers?\s+to|is\s+defined\s+as|we\s+define"
+    r"|for\s+the\s+purposes\s+of"
+    r"|can\s+be\s+(?:defined|understood)\s+as"
+    r"|is\s+a\s+(?:type|kind|form|class)\s+of"
+    r"|means?\s+(?:that|the)\b)"
+    ,
+    re.IGNORECASE,
+)
+
 
 class ProseValidator:
     """Analyze scientific prose for overclaim, hedging, weasel words.
@@ -111,11 +125,15 @@ class ProseValidator:
                         ev = rule.get("evidence_required", [])
                         if "citation" in ev:
                             has_cite = bool(CITATION_MARKER_RE.search(sent.text))
+                            is_definitional = bool(
+                                DEFINITIONAL_SENTENCE_RE.search(sent.text)
+                            )
                             finding["evidence"] = {
                                 "citation_present": has_cite,
+                                "definitional": is_definitional,
                                 "sentence_text": sent.text[:120],
                             }
-                            if not has_cite:
+                            if not has_cite and not is_definitional:
                                 finding["rule_id"] = finding["rule_id"].replace(
                                     "prose.", "prose.uncited_"
                                 )
