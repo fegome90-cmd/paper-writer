@@ -12,7 +12,7 @@ from typing import Any
 
 from clients._text_similarity import TITLE_SIMILARITY_THRESHOLD
 from clients.crossref import CrossrefClient, CrossrefResult
-from clients.openalex import OpenAlexClient
+from clients.openalex import OpenAlexClient, OpenAlexResult
 from clients.semantic_scholar import S2Result, SemanticScholarClient
 from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
@@ -122,11 +122,12 @@ class CitationVerifyValidator:
 
         crossref = self._query_crossref(citation)
         s2 = self._query_s2(citation)
+        openalex = self._query_openalex(citation)
 
-        verdict, _sev = self._classify_citation(crossref, s2)
+        verdict, _sev = self._classify_citation(crossref, s2, openalex)
 
         # Preprint venue detection using API-returned venue+year
-        preprint_info = self._detect_preprint(crossref, s2)
+        preprint_info = self._detect_preprint(crossref, s2, openalex)
 
         if verdict == "verified":
             # Even verified citations get flagged if from preprint venue
@@ -163,6 +164,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
+                    "openalex_found": openalex.found if openalex else False,
                     **preprint_info,
                 },
             )
@@ -193,6 +195,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
+                    "openalex_found": openalex.found if openalex else False,
                     **preprint_info,
                 },
             )
@@ -298,20 +301,35 @@ class CitationVerifyValidator:
             return S2Result(found=False)
         return S2Result(found=False)
 
+    def _query_openalex(self, citation: dict[str, Any]) -> OpenAlexResult | None:
+        """Query OpenAlex for a citation (third resolver)."""
+        if self.offline:
+            return None
+        try:
+            if citation.get("doi"):
+                return self.openalex_client.verify_doi(citation["doi"])
+            elif citation.get("title"):
+                results = self.openalex_client.search_by_title(citation["title"])
+                return results[0] if results else OpenAlexResult(found=False)
+        except Exception:
+            return OpenAlexResult(found=False)
+        return OpenAlexResult(found=False)
+
     def _detect_preprint(
         self,
         crossref: CrossrefResult | None,
         s2: S2Result | None,
+        openalex: OpenAlexResult | None = None,
     ) -> dict[str, Any]:
         """Detect if a citation is from a known preprint venue.
 
-        Uses venue and year from Crossref/S2 API results.
+        Uses venue and year from Crossref/S2/OpenAlex API results.
         Returns empty dict if not a preprint, or preprint metadata.
         """
         venues: list[str] = []
         year: int | None = None
 
-        for result in (crossref, s2):
+        for result in (crossref, s2, openalex):
             if result and result.found and result.venue:
                 venues.append(result.venue.lower())
             if result and result.found and result.year is not None:
@@ -332,15 +350,19 @@ class CitationVerifyValidator:
         self,
         crossref: CrossrefResult | None,
         s2: S2Result | None,
+        openalex: OpenAlexResult | None = None,
     ) -> tuple[str, str | None]:
-        """Classify citation based on dual-source voting.
+        """Classify citation based on multi-source voting.
 
-        Returns (verdict, severity).
+        Returns (verdict, severity). Uses all available resolvers
+        (Crossref, S2, OpenAlex) for triangulation.
         """
         cr_found = crossref.found if crossref else False
         s2_found = s2.found if s2 else False
+        oa_found = openalex.found if openalex else False
+        sources_found = sum([cr_found, s2_found, oa_found])
 
-        if cr_found and s2_found:
+        if sources_found >= 2:
             cr_score = crossref.score if crossref else 0
             s2_score = s2.score if s2 else 0
 
@@ -348,7 +370,7 @@ class CitationVerifyValidator:
                 return "title_mismatch", "P1"
             return "verified", None
 
-        if cr_found or s2_found:
+        if sources_found == 1:
             return "partial", "P2"
 
         return "not_found", "P0"

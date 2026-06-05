@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from clients.crossref import CrossrefResult
+from clients.openalex import OpenAlexResult
 from clients.semantic_scholar import S2Result
 from parsers.manuscript import Manuscript, Section, Sentence
 from parsers.source_map import SourceMap
@@ -188,7 +189,13 @@ class TestCitationVerifyVerifySingle:
         )
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=False)
-        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
+        mock_openalex = MagicMock()
+        mock_openalex.verify_doi.return_value = OpenAlexResult(found=False)
+        validator = CitationVerifyValidator(
+            crossref_client=mock_crossref,
+            s2_client=mock_s2,
+            openalex_client=mock_openalex,
+        )
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
@@ -201,7 +208,13 @@ class TestCitationVerifyVerifySingle:
         mock_crossref.verify_doi.return_value = CrossrefResult(found=False)
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=False)
-        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
+        mock_openalex = MagicMock()
+        mock_openalex.verify_doi.return_value = OpenAlexResult(found=False)
+        validator = CitationVerifyValidator(
+            crossref_client=mock_crossref,
+            s2_client=mock_s2,
+            openalex_client=mock_openalex,
+        )
         citation = {"doi": "10.99999/fake", "line": 3, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
