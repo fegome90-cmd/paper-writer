@@ -41,10 +41,28 @@ def parse_bib_keys(bib_text: str) -> dict[str, dict[str, str]]:
         key = match.group(1).strip()
         body = match.group(2)
 
-        # Extract fields
+        # Extract fields with brace-depth tracking for nested braces
         fields: dict[str, str] = {}
-        for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body):
-            fields[field_match.group(1).lower()] = field_match.group(2).strip()
+        for field_match in re.finditer(r"(\w+)\s*=\s*", body):
+            field_name = field_match.group(1).lower()
+            val_start = field_match.end()
+            if val_start >= len(body):
+                continue
+            if body[val_start] == "{":
+                depth = 1
+                pos = val_start + 1
+                while pos < len(body) and depth > 0:
+                    if body[pos] == "{":
+                        depth += 1
+                    elif body[pos] == "}":
+                        depth -= 1
+                    pos += 1
+                fields[field_name] = body[val_start + 1 : pos - 1].strip()
+            else:
+                end = body.find(",", val_start)
+                if end == -1:
+                    end = len(body)
+                fields[field_name] = body[val_start:end].strip().strip('"').strip("'")
 
         entries[key] = {
             "authors": fields.get("author", ""),
