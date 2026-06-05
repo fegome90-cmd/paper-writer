@@ -130,7 +130,7 @@ class TestVerifySinglePreprint:
         assert finding is not None
         assert finding["rule_id"] == "citation_verify.preprint_source"
         assert finding["severity"] == "P2"
-        assert finding["evidence"]["preprint_flag"] is True
+        assert finding["evidence"]["is_preprint"] is True
 
     def test_verified_journal_produces_no_finding(self) -> None:
         """Verified citation from Nature produces no finding."""

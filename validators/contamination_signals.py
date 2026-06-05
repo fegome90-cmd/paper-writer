@@ -15,7 +15,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from validators.citation_verify import PREPRINT_VENUES
+# Known preprint venues — shared constant.
+# Used by both contamination_signals and citation_verify.
+PREPRINT_VENUES: frozenset[str] = frozenset(
+    {
+        "arxiv",
+        "biorxiv",
+        "medrxiv",
+        "ssrn",
+        "research square",
+        "preprints.org",
+        "chemrxiv",
+        "eartharxiv",
+        "osf preprints",
+        "techrxiv",
+        "psyarxiv",
+        "socarxiv",
+    }
+)
 
 
 @dataclass(frozen=True)

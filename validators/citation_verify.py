@@ -17,25 +17,13 @@ from clients.openalex import OpenAlexClient, OpenAlexResult
 from clients.semantic_scholar import S2Result, SemanticScholarClient
 from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
+from validators.contamination_signals import compute_contamination_signal
 
 DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
 
-PREPRINT_VENUES: frozenset[str] = frozenset(
-    {
-        "arxiv",
-        "biorxiv",
-        "medrxiv",
-        "ssrn",
-        "research square",
-        "preprints.org",
-        "chemrxiv",
-        "eartharxiv",
-        "osf preprints",
-        "techrxiv",
-        "psyarxiv",
-        "socarxiv",
-    }
-)
+# Import PREPRINT_VENUES from contamination_signals to avoid circular import
+# Re-exported for backward compatibility
+from validators.contamination_signals import PREPRINT_VENUES  # noqa: E402
 
 
 class CitationVerifyValidator:
@@ -130,12 +118,13 @@ class CitationVerifyValidator:
 
         verdict, _sev = self._classify_citation(crossref, s2, openalex, arxiv)
 
-        # Preprint venue detection using API-returned venue+year
-        preprint_info = self._detect_preprint(crossref, s2, openalex, arxiv)
+        # Extract venue + year from first available resolver result
+        venue, year = self._extract_venue_year(crossref, s2, openalex, arxiv)
+        contamination = compute_contamination_signal(venue, year)
 
         if verdict == "verified":
-            # Even verified citations get flagged if from preprint venue
-            if preprint_info:
+            # Even verified citations get flagged if contamination detected
+            if contamination.is_preprint:
                 ref = citation.get("doi") or citation.get("title", "unknown")
                 return self._make_finding(
                     rule_id="citation_verify.preprint_source",
@@ -146,7 +135,7 @@ class CitationVerifyValidator:
                     evidence={
                         "doi": citation.get("doi"),
                         "title": citation.get("title"),
-                        **preprint_info,
+                        **contamination.to_dict(),
                     },
                     recommendation=(
                         "Consider citing the peer-reviewed version if available. "
@@ -170,7 +159,7 @@ class CitationVerifyValidator:
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
                     "arxiv_found": arxiv.found if arxiv else False,
-                    **preprint_info,
+                    **contamination.to_dict(),
                 },
             )
 
@@ -185,7 +174,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_title": crossref.title if crossref else None,
                     "s2_title": s2.title if s2 else None,
-                    **preprint_info,
+                    **contamination.to_dict(),
                 },
             )
 
@@ -202,7 +191,7 @@ class CitationVerifyValidator:
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
                     "arxiv_found": arxiv.found if arxiv else False,
-                    **preprint_info,
+                    **contamination.to_dict(),
                 },
             )
 
@@ -338,6 +327,28 @@ class CitationVerifyValidator:
         except Exception:
             return ArxivResult(found=False)
         return ArxivResult(found=False)
+
+    def _extract_venue_year(
+        self,
+        crossref: CrossrefResult | None,
+        s2: S2Result | None,
+        openalex: OpenAlexResult | None = None,
+        arxiv: ArxivResult | None = None,
+    ) -> tuple[str | None, int | None]:
+        """Extract venue and year from first available resolver result."""
+        venue: str | None = None
+        year: int | None = None
+
+        for result in (crossref, s2, openalex, arxiv):
+            if result and result.found:
+                if not venue and getattr(result, "venue", None):
+                    venue = result.venue  # type: ignore[union-attr]
+                if year is None and getattr(result, "year", None) is not None:
+                    year = result.year
+                if venue and year is not None:
+                    break
+
+        return venue, year
 
     def _detect_preprint(
         self,
