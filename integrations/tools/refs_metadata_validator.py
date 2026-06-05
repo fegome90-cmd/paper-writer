@@ -134,11 +134,16 @@ class RefsMetadataValidator(ToolWrapper):
 
         Uses brace-depth-aware parsing to handle single-line entries,
         nested braces in field values, unbraced values, and comments.
+        Skips non-entry types (@string, @comment, @preamble).
         """
+        _META_TYPES = frozenset({"string", "comment", "preamble"})
         entries: dict[str, dict[str, str]] = {}
 
         # Find entry starts: @type{
         for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+            entry_type = m.group(1).lower()
+            if entry_type in _META_TYPES:
+                continue
             start = m.end()  # position after opening {
 
             # Find the matching closing } by tracking brace depth

@@ -22,24 +22,45 @@ from __future__ import annotations
 import re
 from typing import Any
 
+_BIBTEX_META_TYPES = frozenset({"string", "comment", "preamble"})
+
 
 def parse_bib_keys(bib_text: str) -> dict[str, dict[str, str]]:
     """Parse a BibTeX file to extract keys and author/year metadata.
+
+    Uses brace-depth-aware parsing. Skips non-entry types
+    (@string, @comment, @preamble).
 
     Returns:
         Dict mapping bib_key → {"authors": str, "year": str, "title": str}.
     """
     entries: dict[str, dict[str, str]] = {}
 
-    # Match BibTeX entries: @type{key, ... }
-    entry_pattern = re.compile(
-        r"@\w+\{([^,]+),\s*(.*?)(?=\n@\w+\{|\Z)",
-        re.DOTALL,
-    )
+    for m in re.finditer(r"@(\w+)\s*\{", bib_text, re.IGNORECASE):
+        entry_type = m.group(1).lower()
+        if entry_type in _BIBTEX_META_TYPES:
+            continue
 
-    for match in entry_pattern.finditer(bib_text):
-        key = match.group(1).strip()
-        body = match.group(2)
+        # Find matching closing brace via depth tracking
+        start = m.end()
+        depth = 1
+        pos = start
+        while pos < len(bib_text) and depth > 0:
+            if bib_text[pos] == "{":
+                depth += 1
+            elif bib_text[pos] == "}":
+                depth -= 1
+            pos += 1
+        if depth != 0:
+            continue
+
+        entry_body = bib_text[start : pos - 1]
+        comma_pos = entry_body.find(",")
+        if comma_pos == -1:
+            continue
+
+        key = entry_body[:comma_pos].strip()
+        body = entry_body[comma_pos + 1 :]
 
         # Extract fields with brace-depth tracking for nested braces
         fields: dict[str, str] = {}

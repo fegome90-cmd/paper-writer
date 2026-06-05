@@ -230,10 +230,14 @@ class BibliographyNormalizer(ToolWrapper):
 
         # Parse entries and entry types for domain validation
         # Brace-depth-aware parser handles single-line and multiline entries
+        _META_TYPES = frozenset({"string", "comment", "preamble"})
         entries: dict[str, dict[str, str]] = {}
         entry_types: dict[str, str] = {}
 
         for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+            entry_type_raw = m.group(1).lower()
+            if entry_type_raw in _META_TYPES:
+                continue
             start = m.end()
             depth = 1
             pos = start

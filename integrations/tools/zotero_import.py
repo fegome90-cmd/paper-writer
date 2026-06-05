@@ -157,7 +157,10 @@ class ZoteroImporter(ToolWrapper):
         entry_types: dict[str, str] = {}
 
         # Brace-depth-aware parser handles single-line and multiline entries
+        _META_TYPES = frozenset({"string", "comment", "preamble"})
         for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+            if m.group(1).lower() in _META_TYPES:
+                continue
             start = m.end()
             depth = 1
             pos = start
