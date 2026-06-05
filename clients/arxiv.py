@@ -15,6 +15,7 @@ Key differences from Crossref/OpenAlex clients:
 Ported from ARS arxiv_client.py (Delta 1) adapted to our
 data model (ArxivResult dataclass, outage latch, retry_with_backoff).
 """
+
 from __future__ import annotations
 
 import logging
@@ -156,7 +157,9 @@ class ArxivClient:
             return ArxivResult(found=False)
 
     def search_by_title(
-        self, title: str, year: int | None = None,
+        self,
+        title: str,
+        year: int | None = None,
     ) -> list[ArxivResult]:
         """Search arXiv by title, return results ranked by similarity.
 
@@ -193,7 +196,9 @@ class ArxivClient:
             return []
 
     def _parse_entry(
-        self, entry: ET.Element, score: float = 0.0,
+        self,
+        entry: ET.Element,
+        score: float = 0.0,
     ) -> ArxivResult:
         """Parse an Atom <entry> element into ArxivResult."""
         return ArxivResult(
@@ -238,7 +243,9 @@ class ArxivClient:
             res = retry_with_backoff(
                 _do_request,
                 on_retry=lambda: setattr(
-                    self, "_last_request_at", self._clock(),
+                    self,
+                    "_last_request_at",
+                    self._clock(),
                 ),
                 sleep_fn=self._sleep,
             )

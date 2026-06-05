@@ -1,4 +1,5 @@
 """Tests for ArxivClient — arXiv API client for citation verification."""
+
 from __future__ import annotations
 
 import urllib.error
@@ -16,6 +17,7 @@ from clients.arxiv import (
 )
 
 # ── Helpers ──────────────────────────────────────────────────────────
+
 
 def _make_entry(
     title: str = "Attention Is All You Need",
