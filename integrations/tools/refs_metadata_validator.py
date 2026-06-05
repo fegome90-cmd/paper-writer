@@ -103,9 +103,10 @@ class RefsMetadataValidator(ToolWrapper):
 
         # Parse entry types for type-aware validation
         entry_types: dict[str, str] = {}
-        type_pattern = re.compile(r"@(\w+)\s*\{\s*([^,\s]+)\s*,", re.IGNORECASE)
+        type_pattern = re.compile(r"@(\w+)\s*\{\s*([^,\s]+)", re.IGNORECASE)
         for match in type_pattern.finditer(content):
-            entry_types[match.group(2).strip()] = match.group(1)
+            key = match.group(2).strip()
+            entry_types[key] = match.group(1)
 
         findings.extend(validate_bibliography(entries, entry_types))
 
