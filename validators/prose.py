@@ -28,7 +28,9 @@ from engine.deduplicator import deduplicate_findings
 
 # Citation marker patterns in academic text
 CITATION_MARKER_RE = re.compile(
-    r"\\cite\{[^}]+\}"          # LaTeX \cite{key}
+    r"\[@[^]]+\]"                # Pandoc [@key] or [@key, p. 15]
+    r"|@\w+[\w:-]*"              # Bare Pandoc @key (narrative)
+    r"|\\cite\{[^}]+\}"          # LaTeX \cite{key}
     r"|\[\d+\]"                  # Numeric [1]
     r"|\[[\d,\s-]+\]"           # Numeric ranges [1-3, 5]
     r"|\(\w+\s*,\s*\d{4}\)"     # (Author, Year)
