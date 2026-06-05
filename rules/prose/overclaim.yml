@@ -17,6 +17,7 @@ rules:
     severity: P0
     recommendation: "Use proportionate language (e.g., 'suggests', 'indicates') unless the study design and effect size support definitive causal inference."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.overclaim.absolute
     patterns:
@@ -29,6 +30,7 @@ rules:
     severity: P1
     recommendation: "Qualify with limits (e.g., 'most', 'the majority of', 'in our sample')."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.overclaim.first_superlative
     patterns:
@@ -38,6 +40,7 @@ rules:
     severity: P1
     recommendation: "Verify that no prior work has reported this finding. Consider 'to our knowledge' qualification."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.overclaim.significance_drift
     patterns:
@@ -48,3 +51,4 @@ rules:
     severity: P2
     recommendation: "Report exact p-values rather than boosting significance language. Statistical significance is binary per threshold."
     scope: sentence
+    evidence_required: [citation]

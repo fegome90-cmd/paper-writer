@@ -17,6 +17,7 @@ rules:
     severity: P1
     recommendation: "Use weaker causal language unless the study design supports causal attribution (RCT, natural experiment, etc.)."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.causal.mediating
     patterns:
@@ -25,6 +26,7 @@ rules:
     severity: P1
     recommendation: "Specify the mediation analysis method (e.g., Sobel test, bootstrapping, structural equation model)."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.causal.driven_by
     patterns:
@@ -35,6 +37,7 @@ rules:
     severity: P2
     recommendation: "Verify that the mechanism evidence supports the attribution."
     scope: sentence
+    evidence_required: [citation]
 
   - id: prose.causal.directional
     patterns:
@@ -43,3 +46,4 @@ rules:
     severity: P2
     recommendation: "Consider whether reverse causality or confounding could explain the direction."
     scope: sentence
+    evidence_required: [citation]

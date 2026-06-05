@@ -278,10 +278,7 @@ def detect_preprint_venues(
         year_int = 0
 
     severity = "warning" if year_int >= 2024 else "info"
-    message = (
-        f"Entry '{entry_key}' is published on {matched_venue}"
-        f" (preprint server)."
-    )
+    message = f"Entry '{entry_key}' is published on {matched_venue} (preprint server)."
     if year_int >= 2024:
         message += " Recent preprint — may not have undergone peer review."
 

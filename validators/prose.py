@@ -26,6 +26,15 @@ from typing import Any
 
 from engine.deduplicator import deduplicate_findings
 
+# Citation marker patterns in academic text
+CITATION_MARKER_RE = re.compile(
+    r"\\cite\{[^}]+\}"          # LaTeX \cite{key}
+    r"|\[\d+\]"                  # Numeric [1]
+    r"|\[[\d,\s-]+\]"           # Numeric ranges [1-3, 5]
+    r"|\(\w+\s*,\s*\d{4}\)"     # (Author, Year)
+    r"|\(\w+\s+et\s+al\.\s*,\s*\d{4}\)"  # (Author et al., Year)
+)
+
 
 class ProseValidator:
     """Analyze scientific prose for overclaim, hedging, weasel words.
@@ -95,6 +104,24 @@ class ProseValidator:
                             sent.char_start + m.start(),
                             sent.char_start + m.end(),
                         ]
+
+                        # Check citation requirement
+                        ev = rule.get("evidence_required", [])
+                        if "citation" in ev:
+                            has_cite = bool(CITATION_MARKER_RE.search(sent.text))
+                            finding["evidence"] = {
+                                "citation_present": has_cite,
+                                "sentence_text": sent.text[:120],
+                            }
+                            if not has_cite:
+                                finding["rule_id"] = finding["rule_id"].replace(
+                                    "prose.", "prose.uncited_"
+                                )
+                                finding["message"] = (
+                                    f"Uncited empirical claim: {rule.get('message', '')} "
+                                    f"— no citation marker found in sentence."
+                                )
+
                         findings.append(finding)
             elif scope == "section":
                 # Apply to specific sections.

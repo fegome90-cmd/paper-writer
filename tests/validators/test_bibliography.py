@@ -374,9 +374,7 @@ class TestValidateBibliography:
     def test_all_10_preprint_venues_detected(self) -> None:
         for venue in PREPRINT_VENUES:
             entries = {
-                f"test_{venue}": {
-                    "author": "A", "title": "T", "journal": venue, "year": "2025"
-                }
+                f"test_{venue}": {"author": "A", "title": "T", "journal": venue, "year": "2025"}
             }
             findings = validate_bibliography(entries, {f"test_{venue}": "article"})
             preprint = [f for f in findings if f["code"] == "preprint_citation"]
@@ -449,4 +447,3 @@ class TestDetectPreprintVenues:
 
     def test_preprint_venues_count(self) -> None:
         assert len(PREPRINT_VENUES) == 10
-

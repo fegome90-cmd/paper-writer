@@ -39,3 +39,4 @@ rules:
     severity: P1
     recommendation: "Provide the exact proportion. 'Vast majority' should be >90% — is it?"
     scope: sentence
+    evidence_required: [citation]
