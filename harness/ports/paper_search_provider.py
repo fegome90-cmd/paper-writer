@@ -263,8 +263,18 @@ def _normalize_paper(raw: dict[str, Any]) -> NormalizedPaper:
 
     # Capture unexpected extra fields
     known_keys = {
-        "id", "title", "authors", "abstract", "published", "source",
-        "doi", "pdfUrl", "url", "categories", "fullTextAvailable", "citations",
+        "id",
+        "title",
+        "authors",
+        "abstract",
+        "published",
+        "source",
+        "doi",
+        "pdfUrl",
+        "url",
+        "categories",
+        "fullTextAvailable",
+        "citations",
     }
     extra_fields = {k: v for k, v in raw.items() if k not in known_keys}
 
@@ -324,7 +334,13 @@ def deduplicate_papers(papers: list[NormalizedPaper]) -> list[NormalizedPaper]:
 
 # ── Fixture Provider ──────────────────────────────────────────────────
 
-_DEFAULT_FIXTURE_PATH = Path(__file__).parent.parent.parent / "tests" / "fixtures" / "paper_mcp" / "search_papers_response.v1.json"
+_DEFAULT_FIXTURE_PATH = (
+    Path(__file__).parent.parent.parent
+    / "tests"
+    / "fixtures"
+    / "paper_mcp"
+    / "search_papers_response.v1.json"
+)
 
 _DEFAULT_SOURCES = ["openalex", "pubmed", "arxiv"]
 
@@ -345,9 +361,7 @@ class FixturePaperSearchProvider(PaperSearchProvider):
         _validate_query_and_limit(query, limit)
 
         if not self._fixture_path.exists():
-            raise RuntimeError(
-                f"Fixture file not found: {self._fixture_path}"
-            )
+            raise RuntimeError(f"Fixture file not found: {self._fixture_path}")
 
         raw = json.loads(self._fixture_path.read_text(encoding="utf-8"))
 
@@ -404,7 +418,4 @@ def create_search_provider(
 
         return McpPaperSearchProvider()
 
-    raise ValueError(
-        f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. "
-        f"Must be 'fixture' or 'mcp'."
-    )
+    raise ValueError(f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. Must be 'fixture' or 'mcp'.")

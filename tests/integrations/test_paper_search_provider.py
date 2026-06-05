@@ -29,7 +29,9 @@ from harness.ports.paper_search_provider import (
     deduplicate_papers,
 )
 
-FIXTURE_PATH = Path(__file__).parent.parent / "fixtures" / "paper_mcp" / "search_papers_response.v1.json"
+FIXTURE_PATH = (
+    Path(__file__).parent.parent / "fixtures" / "paper_mcp" / "search_papers_response.v1.json"
+)
 
 
 # ── 1. Mapping of valid MCP payload ──────────────────────────────────
@@ -149,43 +151,77 @@ class TestNullableFields:
     """Handle missing/null MCP fields gracefully with tracking."""
 
     def test_empty_abstract_tracked(self) -> None:
-        raw = {"id": "x", "title": "T", "authors": ["A"], "abstract": "",
-               "published": "2024-01-01T00:00:00Z", "source": "pubmed"}
+        raw = {
+            "id": "x",
+            "title": "T",
+            "authors": ["A"],
+            "abstract": "",
+            "published": "2024-01-01T00:00:00Z",
+            "source": "pubmed",
+        }
         paper = _normalize_paper(raw)
         assert paper.abstract == ""
         assert "abstract" in paper.defaulted_fields
 
     def test_null_abstract_tracked(self) -> None:
-        raw = {"id": "x", "title": "T", "authors": ["A"], "abstract": None,
-               "published": "2024-01-01T00:00:00Z", "source": "pubmed"}
+        raw = {
+            "id": "x",
+            "title": "T",
+            "authors": ["A"],
+            "abstract": None,
+            "published": "2024-01-01T00:00:00Z",
+            "source": "pubmed",
+        }
         paper = _normalize_paper(raw)
         assert paper.abstract == ""
         assert "abstract" in paper.defaulted_fields
 
     def test_absent_abstract_tracked(self) -> None:
-        raw = {"id": "x", "title": "T", "authors": ["A"],
-               "published": "2024-01-01T00:00:00Z", "source": "pubmed"}
+        raw = {
+            "id": "x",
+            "title": "T",
+            "authors": ["A"],
+            "published": "2024-01-01T00:00:00Z",
+            "source": "pubmed",
+        }
         paper = _normalize_paper(raw)
         assert paper.abstract == ""
         assert "abstract" in paper.defaulted_fields
 
     def test_no_doi_tracked(self) -> None:
-        raw = {"id": "x", "title": "T", "authors": ["A"], "abstract": "Abs",
-               "published": "2024-01-01T00:00:00Z", "source": "arxiv"}
+        raw = {
+            "id": "x",
+            "title": "T",
+            "authors": ["A"],
+            "abstract": "Abs",
+            "published": "2024-01-01T00:00:00Z",
+            "source": "arxiv",
+        }
         paper = _normalize_paper(raw)
         assert paper.doi is None
         assert "doi" in paper.defaulted_fields
 
     def test_no_pdf_url_tracked(self) -> None:
-        raw = {"id": "x", "title": "T", "authors": ["A"], "abstract": "Abs",
-               "published": "2024-01-01T00:00:00Z", "source": "pubmed"}
+        raw = {
+            "id": "x",
+            "title": "T",
+            "authors": ["A"],
+            "abstract": "Abs",
+            "published": "2024-01-01T00:00:00Z",
+            "source": "pubmed",
+        }
         paper = _normalize_paper(raw)
         assert paper.pdf_url is None
         assert "pdf_url" in paper.defaulted_fields
 
     def test_no_title_gets_placeholder(self) -> None:
-        raw = {"id": "x", "authors": ["A"], "abstract": "Abs",
-               "published": "2024-01-01T00:00:00Z", "source": "arxiv"}
+        raw = {
+            "id": "x",
+            "authors": ["A"],
+            "abstract": "Abs",
+            "published": "2024-01-01T00:00:00Z",
+            "source": "arxiv",
+        }
         paper = _normalize_paper(raw)
         assert paper.title == "(untitled)"
         assert "title" in paper.defaulted_fields
@@ -201,16 +237,34 @@ class TestDeduplication:
     def test_doi_dedup_keeps_richer(self) -> None:
         """Two papers with same DOI from different sources — keep richer."""
         p1 = NormalizedPaper(
-            title="T", doi="10.1234/x", pmid=None, year=2024,
-            authors="A", abstract="", url=None, pdf_url=None,
-            source_platform="arxiv", source_id="1", categories=[],
-            citations_count=0, defaulted_fields=["abstract", "pdf_url"],
+            title="T",
+            doi="10.1234/x",
+            pmid=None,
+            year=2024,
+            authors="A",
+            abstract="",
+            url=None,
+            pdf_url=None,
+            source_platform="arxiv",
+            source_id="1",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=["abstract", "pdf_url"],
         )
         p2 = NormalizedPaper(
-            title="T", doi="10.1234/x", pmid=None, year=2024,
-            authors="A", abstract="Full abstract", url="u", pdf_url="p",
-            source_platform="openalex", source_id="2", categories=["cs"],
-            citations_count=5, defaulted_fields=[],
+            title="T",
+            doi="10.1234/x",
+            pmid=None,
+            year=2024,
+            authors="A",
+            abstract="Full abstract",
+            url="u",
+            pdf_url="p",
+            source_platform="openalex",
+            source_id="2",
+            categories=["cs"],
+            citations_count=5,
+            defaulted_fields=[],
         )
         result = deduplicate_papers([p1, p2])
         assert len(result) == 1
@@ -220,16 +274,34 @@ class TestDeduplication:
     def test_title_dedup(self) -> None:
         """Papers with same title but no DOI get title-deduped."""
         p1 = NormalizedPaper(
-            title="Same Title", doi=None, pmid=None, year=2024,
-            authors="A", abstract="a1", url=None, pdf_url=None,
-            source_platform="arxiv", source_id="1", categories=[],
-            citations_count=0, defaulted_fields=[],
+            title="Same Title",
+            doi=None,
+            pmid=None,
+            year=2024,
+            authors="A",
+            abstract="a1",
+            url=None,
+            pdf_url=None,
+            source_platform="arxiv",
+            source_id="1",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=[],
         )
         p2 = NormalizedPaper(
-            title="Same Title", doi=None, pmid=None, year=2024,
-            authors="B", abstract="a2", url=None, pdf_url=None,
-            source_platform="pubmed", source_id="2", categories=[],
-            citations_count=0, defaulted_fields=[],
+            title="Same Title",
+            doi=None,
+            pmid=None,
+            year=2024,
+            authors="B",
+            abstract="a2",
+            url=None,
+            pdf_url=None,
+            source_platform="pubmed",
+            source_id="2",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=[],
         )
         result = deduplicate_papers([p1, p2])
         assert len(result) == 1
@@ -238,16 +310,34 @@ class TestDeduplication:
     def test_doi_normalization(self) -> None:
         """DOI comparison is case-insensitive and strips trailing slash."""
         p1 = NormalizedPaper(
-            title="T", doi="10.1234/X/", pmid=None, year=2024,
-            authors="A", abstract="", url=None, pdf_url=None,
-            source_platform="arxiv", source_id="1", categories=[],
-            citations_count=0, defaulted_fields=[],
+            title="T",
+            doi="10.1234/X/",
+            pmid=None,
+            year=2024,
+            authors="A",
+            abstract="",
+            url=None,
+            pdf_url=None,
+            source_platform="arxiv",
+            source_id="1",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=[],
         )
         p2 = NormalizedPaper(
-            title="T", doi="10.1234/x", pmid=None, year=2024,
-            authors="B", abstract="", url=None, pdf_url=None,
-            source_platform="openalex", source_id="2", categories=[],
-            citations_count=0, defaulted_fields=[],
+            title="T",
+            doi="10.1234/x",
+            pmid=None,
+            year=2024,
+            authors="B",
+            abstract="",
+            url=None,
+            pdf_url=None,
+            source_platform="openalex",
+            source_id="2",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=[],
         )
         result = deduplicate_papers([p1, p2])
         assert len(result) == 1
@@ -321,19 +411,18 @@ class TestMcpErrors:
     def test_missing_server_path_raises(self) -> None:
         with pytest.raises(RuntimeError, match="MCP server not found"):
             from integrations.tools.mcp_paper_client import McpPaperSearchProvider
+
             McpPaperSearchProvider(server_path="/nonexistent/server.js")
 
     def test_missing_fixture_raises(self) -> None:
         with pytest.raises(RuntimeError, match="Fixture file not found"):
-            FixturePaperSearchProvider(
-                fixture_path=Path("/nonexistent/fixture.json")
-            ).search("test")
+            FixturePaperSearchProvider(fixture_path=Path("/nonexistent/fixture.json")).search(
+                "test"
+            )
 
     def test_missing_fixture_path_object(self) -> None:
         """Missing fixture is a clear RuntimeError, not silent."""
-        provider = FixturePaperSearchProvider(
-            fixture_path=Path("/tmp/nonexistent_12345.json")
-        )
+        provider = FixturePaperSearchProvider(fixture_path=Path("/tmp/nonexistent_12345.json"))
         with pytest.raises(RuntimeError, match="Fixture file not found"):
             provider.search("test")
 

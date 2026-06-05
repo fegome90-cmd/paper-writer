@@ -29,9 +29,7 @@ from harness.ports.paper_search_provider import (
 
 # ── Defaults ──────────────────────────────────────────────────────────
 
-_DEFAULT_SERVER_PATH = (
-    "/Users/felipe_gonzalez/.openclaw/mcp-servers/paper-mcp/dist/server.js"
-)
+_DEFAULT_SERVER_PATH = "/Users/felipe_gonzalez/.openclaw/mcp-servers/paper-mcp/dist/server.js"
 _INIT_TIMEOUT = timedelta(seconds=10)
 _TOOL_TIMEOUT = timedelta(seconds=30)
 
@@ -85,6 +83,7 @@ class McpPaperSearchProvider(PaperSearchProvider):
         if loop and loop.is_running():
             # We're inside an existing event loop — use nest-free approach
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 future = pool.submit(
                     asyncio.run,
@@ -92,9 +91,7 @@ class McpPaperSearchProvider(PaperSearchProvider):
                 )
                 return future.result(timeout=self._tool_timeout.seconds + 5)
         else:
-            return asyncio.run(
-                self._search_async(query, sources=sources, limit=limit)
-            )
+            return asyncio.run(self._search_async(query, sources=sources, limit=limit))
 
     async def _search_async(
         self,
@@ -145,17 +142,15 @@ class McpPaperSearchProvider(PaperSearchProvider):
                         )
                     except asyncio.TimeoutError as exc:
                         raise TimeoutError(
-                            f"MCP search_papers timed out "
-                            f"after {self._tool_timeout.seconds}s"
+                            f"MCP search_papers timed out after {self._tool_timeout.seconds}s"
                         ) from exc
 
                     # 3. Parse response
                     if not tool_result.content:
-                        raise RuntimeError(
-                            "MCP search_papers returned empty content"
-                        )
+                        raise RuntimeError("MCP search_papers returned empty content")
 
                     from mcp.types import TextContent
+
                     first_content = tool_result.content[0]
                     if not isinstance(first_content, TextContent):
                         raise RuntimeError(
@@ -165,15 +160,11 @@ class McpPaperSearchProvider(PaperSearchProvider):
                     try:
                         raw = json.loads(text)
                     except (json.JSONDecodeError, ValueError) as exc:
-                        raise RuntimeError(
-                            f"MCP returned invalid JSON: {exc}"
-                        ) from exc
+                        raise RuntimeError(f"MCP returned invalid JSON: {exc}") from exc
 
                     # 4. Check for MCP-level errors
                     if "error" in raw:
-                        raise RuntimeError(
-                            f"MCP tool error: {raw['error']}"
-                        )
+                        raise RuntimeError(f"MCP tool error: {raw['error']}")
 
                     results = raw.get("results", [])
                     if not isinstance(results, list):
@@ -203,11 +194,10 @@ class McpPaperSearchProvider(PaperSearchProvider):
         except RuntimeError:
             raise  # Already wrapped
         except Exception as exc:
-            raise RuntimeError(
-                f"MCP search failed: {type(exc).__name__}: {exc}"
-            ) from exc
+            raise RuntimeError(f"MCP search failed: {type(exc).__name__}: {exc}") from exc
 
     @staticmethod
     def _now_iso() -> str:
         from datetime import datetime, timezone
+
         return datetime.now(tz=timezone.utc).isoformat()

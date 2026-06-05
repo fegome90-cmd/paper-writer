@@ -123,7 +123,10 @@ def test_pipeline_fixture_mode_generates_outputs(tmp_path) -> None:
     norm_path = output_dir / "normalized_results.json"
     norm_path.write_text(
         json.dumps(
-            {"provenance": provider_result.provenance.to_dict(), "papers": [p.to_dict() for p in provider_result.papers]},
+            {
+                "provenance": provider_result.provenance.to_dict(),
+                "papers": [p.to_dict() for p in provider_result.papers],
+            },
             indent=2,
         )
     )
