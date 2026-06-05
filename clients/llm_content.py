@@ -117,6 +117,18 @@ class LLMClient:
                     elapsed_ms=elapsed,
                 )
 
+            # Pi --mode json returns JSONL — extract assistant text
+            if self.cli_command == "pi":
+                text = self._extract_pi_text(text)
+
+            if not text:
+                return LLMResult(
+                    success=False,
+                    error="No usable text in CLI output",
+                    cli_tool=self.cli_command,
+                    elapsed_ms=elapsed,
+                )
+
             return LLMResult(
                 success=True,
                 text=text,
@@ -196,18 +208,71 @@ class LLMClient:
         """Build pi CLI command using @file pattern from tmux-fork-orchestrator.
 
         Pi requires prompt via @file for multi-line content (inline has ~40%
-        failure rate). The prompt is written to a temp file by generate().
+        failure rate). Writes combined prompt+system to a temp file.
         """
+        import tempfile
+
         provider = os.environ.get("PAPER_LLM_PROVIDER", "zai")
         model = os.environ.get("PAPER_LLM_MODEL", "glm-5-turbo")
+
+        # Combine system + user prompt for pi @file
+        full_prompt = prompt
+        if system_prompt:
+            full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
+
+        # Write to temp file — pi reads @file
+        fd, prompt_path = tempfile.mkstemp(
+            prefix="paper-llm-", suffix=".txt", dir="/tmp"
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(full_prompt)
+
         return [
             "pi",
             "--provider", provider,
             "--model", model,
             "--mode", "json",
             "-nc",
-            "-p", f"@{self._prompt_file}",
+            "-p", f"@{prompt_path}",
         ]
+
+    @staticmethod
+    def _extract_pi_text(raw_stdout: str) -> str:
+        """Extract assistant text from pi --mode json JSONL output.
+
+        Pi returns one JSON object per line. We look for 'assistant' role
+        messages and concatenate their text content.
+        """
+        import json
+
+        parts: list[str] = []
+        for line in raw_stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                # Not JSON — might be plain text (fallback)
+                parts.append(line)
+                continue
+
+            # pi JSONL format: {"role": "assistant", "content": "..."}
+            # or {"type": "response", "text": "..."}
+            role = obj.get("role", "")
+            if role == "assistant":
+                content = obj.get("content", "")
+                if isinstance(content, str):
+                    parts.append(content)
+                elif isinstance(content, list):
+                    # content may be a list of content blocks
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            parts.append(block.get("text", ""))
+            elif "text" in obj and role != "user":
+                parts.append(obj["text"])
+
+        return "\n\n".join(parts).strip()
 
     def _uses_stdin(self) -> bool:
         """Whether this CLI reads prompt from stdin."""
