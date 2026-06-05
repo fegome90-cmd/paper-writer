@@ -86,7 +86,29 @@ class CitationVerifyValidator:
 
         verdict, _sev = self._classify_citation(crossref, s2)
 
+        # Preprint venue detection using API-returned venue+year
+        preprint_info = self._detect_preprint(crossref, s2)
+
         if verdict == "verified":
+            # Even verified citations get flagged if from preprint venue
+            if preprint_info:
+                ref = citation.get("doi") or citation.get("title", "unknown")
+                return self._make_finding(
+                    rule_id="citation_verify.preprint_source",
+                    severity="P2",
+                    message=f"Citation is a preprint: {ref}",
+                    line=citation.get("line", 0),
+                    section=citation.get("section", "references"),
+                    evidence={
+                        "doi": citation.get("doi"),
+                        "title": citation.get("title"),
+                        **preprint_info,
+                    },
+                    recommendation=(
+                        "Consider citing the peer-reviewed version if available. "
+                        "Preprints have not undergone formal peer review."
+                    ),
+                )
             return None
 
         ref = citation.get("doi") or citation.get("title", "unknown")
@@ -102,6 +124,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
+                    **preprint_info,
                 },
             )
 
@@ -116,6 +139,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_title": crossref.title if crossref else None,
                     "s2_title": s2.title if s2 else None,
+                    **preprint_info,
                 },
             )
 
@@ -130,6 +154,7 @@ class CitationVerifyValidator:
                     "doi": citation.get("doi"),
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
+                    **preprint_info,
                 },
             )
 
@@ -230,6 +255,36 @@ class CitationVerifyValidator:
             return S2Result(found=False)
         return S2Result(found=False)
 
+    def _detect_preprint(
+        self,
+        crossref: CrossrefResult | None,
+        s2: S2Result | None,
+    ) -> dict[str, Any]:
+        """Detect if a citation is from a known preprint venue.
+
+        Uses venue and year from Crossref/S2 API results.
+        Returns empty dict if not a preprint, or preprint metadata.
+        """
+        venues: list[str] = []
+        year: int | None = None
+
+        for result in (crossref, s2):
+            if result and result.found and result.venue:
+                venues.append(result.venue.lower())
+            if result and result.found and result.year is not None:
+                year = result.year
+
+        for venue in venues:
+            for known in PREPRINT_VENUES:
+                if known in venue:
+                    return {
+                        "preprint_venue": venue,
+                        "preprint_year": year,
+                        "preprint_flag": True,
+                    }
+
+        return {}
+
     def _classify_citation(
         self,
         crossref: CrossrefResult | None,
@@ -263,6 +318,7 @@ class CitationVerifyValidator:
         line: int = 0,
         section: str = "references",
         evidence: dict[str, Any] | None = None,
+        recommendation: str = "Verify DOI is correct. If fabricated, remove citation.",
     ) -> dict[str, Any]:
         """Build a finding dict in paper-writer format."""
         return {
@@ -277,5 +333,5 @@ class CitationVerifyValidator:
             "message": message,
             "section": section,
             "evidence": evidence or {},
-            "recommendation": "Verify DOI is correct. If fabricated, remove citation.",
+            "recommendation": recommendation,
         }
