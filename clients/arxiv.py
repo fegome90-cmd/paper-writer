@@ -118,7 +118,7 @@ class ArxivClient:
     Returns ArxivResult(found=False) on any error — never raises.
     """
 
-    BASE_URL = "http://export.arxiv.org/api/query"
+    BASE_URL = "https://export.arxiv.org/api/query"
 
     def __init__(
         self,

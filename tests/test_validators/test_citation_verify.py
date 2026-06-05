@@ -10,7 +10,11 @@ from clients.openalex import OpenAlexResult
 from clients.semantic_scholar import S2Result
 from parsers.manuscript import Manuscript, Section, Sentence
 from parsers.source_map import SourceMap
-from validators.citation_verify import CitationVerifyValidator
+from validators.citation_verify import (
+    ARXIV_ID_PATTERN,
+    CitationVerifyValidator,
+    extract_arxiv_id_from_doi,
+)
 
 
 def _make_manuscript(text: str = "", references: str = "") -> Manuscript:
@@ -345,3 +349,90 @@ class TestCitationVerifyQueryClients:
         result = validator._query_s2({"title": "Test Paper"})
         assert result is not None
         assert result.found is True
+
+
+class TestExtractArxivIdFalsePositives:
+    """Regression tests for CRITICAL #1: ARXIV_ID_PATTERN must not match
+    non-arXiv DOIs that happen to contain NNNN.NNNNN patterns."""
+
+    def test_arxiv_id_pattern_rejects_nature_doi(self) -> None:
+        """Nature DOI with dot pattern must NOT match as arXiv ID."""
+        doi = "10.1038/nature.2023.12345"
+        match = ARXIV_ID_PATTERN.search(doi)
+        assert match is None, f"Nature DOI incorrectly matched: {match.group(0) if match else None}"
+
+    def test_arxiv_id_pattern_rejects_journal_doi(self) -> None:
+        """Generic journal DOI with NNNN.NNNNN must NOT match."""
+        doi = "10.1234/journal.5678.12345"
+        match = ARXIV_ID_PATTERN.search(doi)
+        assert match is None
+
+    def test_arxiv_id_pattern_rejects_ieee_doi(self) -> None:
+        """IEEE DOI must NOT match."""
+        doi = "10.1109/MC.2018.1234567"
+        match = ARXIV_ID_PATTERN.search(doi)
+        assert match is None
+
+    def test_arxiv_id_pattern_accepts_prefixed(self) -> None:
+        """arXiv:NNNN.NNNNN must match."""
+        match = ARXIV_ID_PATTERN.search("arXiv:2301.00001")
+        assert match is not None
+        assert match.group(1) == "2301.00001"
+
+    def test_arxiv_id_pattern_accepts_url(self) -> None:
+        """https://arxiv.org/abs/NNNN.NNNNN must match."""
+        match = ARXIV_ID_PATTERN.search("https://arxiv.org/abs/2301.00001v2")
+        assert match is not None
+        assert match.group(1) == "2301.00001v2"
+
+    def test_arxiv_id_pattern_accepts_arxiv_doi(self) -> None:
+        """10.48550/arXiv.NNNN.NNNNN must match."""
+        match = ARXIV_ID_PATTERN.search("10.48550/arXiv.2301.00001")
+        assert match is not None
+        assert match.group(1) == "2301.00001"
+
+    def test_extract_arxiv_id_from_real_doi(self) -> None:
+        """Helper correctly extracts from arXiv DOI."""
+        assert extract_arxiv_id_from_doi("10.48550/arXiv.2301.00001") == "2301.00001"
+        assert extract_arxiv_id_from_doi("10.48550/arXiv.2301.00001v2") == "2301.00001v2"
+
+    def test_extract_arxiv_id_rejects_non_arxiv_doi(self) -> None:
+        """Helper rejects DOIs without the arXiv prefix."""
+        assert extract_arxiv_id_from_doi("10.1038/nature.2023.12345") is None
+        assert extract_arxiv_id_from_doi("10.1109/MC.2018.1234567") is None
+        assert extract_arxiv_id_from_doi("") is None
+        assert extract_arxiv_id_from_doi(None) is None  # type: ignore[arg-type]
+
+    def test_extract_arxiv_id_validates_format(self) -> None:
+        """Helper validates the extracted ID format."""
+        # Valid formats
+        assert extract_arxiv_id_from_doi("10.48550/arXiv.2301.00001") == "2301.00001"
+        # Invalid format after prefix
+        assert extract_arxiv_id_from_doi("10.48550/arXiv.notanid") is None
+
+
+class TestCleanTitleSegmentPreservesArxivWord:
+    """Regression tests for CRITICAL #3: _clean_title_segment must not strip
+    'arXiv' when it appears as a word in a title (not as an ID prefix)."""
+
+    def test_clean_title_preserves_arxiv_word(self) -> None:
+        """Title with 'arXiv' as a word must be preserved."""
+        title = "Survey of arXiv submissions"
+        cleaned = CitationVerifyValidator._clean_title_segment(title)
+        assert cleaned == "Survey of arXiv submissions"
+
+    def test_clean_title_strips_arxiv_id_suffix(self) -> None:
+        """Title with trailing 'arXiv:NNNN.NNNNN' must have it stripped."""
+        title = "My Paper Title arXiv:2301.00001"
+        cleaned = CitationVerifyValidator._clean_title_segment(title)
+        assert cleaned == "My Paper Title"
+
+    def test_clean_title_strips_year(self) -> None:
+        """Trailing year must be stripped."""
+        assert CitationVerifyValidator._clean_title_segment("My Title 2023") == "My Title"
+        assert CitationVerifyValidator._clean_title_segment("My Title (2023)") == "My Title"
+
+    def test_clean_title_strips_venue(self) -> None:
+        """Trailing venue names must be stripped."""
+        assert CitationVerifyValidator._clean_title_segment("My Paper Nature") == "My Paper"
+        assert CitationVerifyValidator._clean_title_segment("My Paper NeurIPS") == "My Paper"

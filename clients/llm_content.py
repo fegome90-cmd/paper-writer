@@ -108,8 +108,8 @@ class LLMClient:
                     elapsed_ms=elapsed,
                 )
 
-            text = (result.stdout or "").strip()
-            if not text:
+            output = (result.stdout or "").strip()
+            if not output:
                 return LLMResult(
                     success=False,
                     error="CLI returned empty output",
@@ -117,21 +117,9 @@ class LLMClient:
                     elapsed_ms=elapsed,
                 )
 
-            # Pi --mode json returns JSONL — extract assistant text
-            if self.cli_command == "pi":
-                text = self._extract_pi_text(text)
-
-            if not text:
-                return LLMResult(
-                    success=False,
-                    error="No usable text in CLI output",
-                    cli_tool=self.cli_command,
-                    elapsed_ms=elapsed,
-                )
-
             return LLMResult(
                 success=True,
-                text=text,
+                text=output,
                 cli_tool=self.cli_command,
                 elapsed_ms=elapsed,
             )
@@ -231,7 +219,7 @@ class LLMClient:
             "pi",
             "--provider", provider,
             "--model", model,
-            "--mode", "json",
+            "--mode", "text",
             "-nc",
             "-p", f"@{prompt_path}",
         ]

@@ -24,12 +24,35 @@ DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
 # arXiv ID patterns in reference text.
 # Matches: arXiv:2301.00001, arXiv:2301.00001v2, 2301.00001,
 #           https://arxiv.org/abs/2301.00001, http://arxiv.org/abs/2301.00001v2
+# Bare numeric IDs (NNNN.NNNNN) are ONLY matched when NOT inside a DOI string,
+# to avoid false positives on journal DOIs like 10.1038/nature.2023.12345.
+# Use extract_arxiv_id_from_doi() for arXiv DOIs (10.48550/arXiv.*).
 ARXIV_ID_PATTERN = re.compile(
-    r"(?:arXiv[:\s]*|arxiv\.org/abs/)"
-    r"(\d{4}\.\d{4,5}(?:v\d+)?)"
-    r"|(\d{4}\.\d{4,5}(?:v\d+)?)",  # bare ID without prefix
+    r"(?:arXiv[:\s]*|arxiv\.org/abs/|10\.48550/arXiv\.)"
+    r"(\d{4}\.\d{4,5}(?:v\d+)?)",
     re.IGNORECASE,
 )
+
+# arXiv DOI prefix per DataCite (https://arxiv.org/help/bulk_data)
+ARXIV_DOI_PREFIX = "10.48550/arXiv."
+
+
+def extract_arxiv_id_from_doi(doi: str) -> str | None:
+    """Extract arXiv ID from a DataCite arXiv DOI (10.48550/arXiv.NNNN.NNNNN).
+
+    Returns the arXiv ID, or None if the DOI is not an arXiv DOI.
+    This is the ONLY safe way to extract arXiv IDs from DOI strings —
+    other DOI registrants (Nature, IEEE, etc.) can have NNNN.NNNNN patterns
+    that are NOT arXiv IDs.
+    """
+    if not doi or not doi.startswith(ARXIV_DOI_PREFIX):
+        return None
+    # Strip the prefix and validate the remaining ID format
+    arxiv_id = doi[len(ARXIV_DOI_PREFIX) :].rstrip("/")
+    if re.match(r"^\d{4}\.\d{4,5}(?:v\d+)?$", arxiv_id, re.IGNORECASE):
+        return arxiv_id
+    return None
+
 
 # Import PREPRINT_VENUES from contamination_signals to avoid circular import
 # Re-exported for backward compatibility
@@ -352,12 +375,23 @@ class CitationVerifyValidator:
     @staticmethod
     def _clean_title_segment(text: str) -> str:
         """Remove trailing venue/year noise from a title candidate."""
+        # Strip arXiv ID suffix FIRST (before year strip, which would eat
+        # the trailing digits of an ID like "arXiv:2301.00001").
+        # NOTE: "arXiv" is only stripped when followed by an arXiv ID
+        # (e.g., "arXiv:2301.00001"), NOT when used as a standalone word
+        # in a title (e.g., "Survey of arXiv submissions").
+        text = re.sub(
+            r"\s*arXiv:\s*\d{4}\.\d{4,5}(?:v\d+)?\s*$",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
         # Remove trailing year: " 2023", " (2023)"
         text = re.sub(r"\s*\(\d{4}\)\s*$", "", text)
         text = re.sub(r"\s*\d{4}\s*$", "", text)
         # Remove trailing venue-like words: "Nature", "NeurIPS", "IEEE Trans"
         text = re.sub(
-            r"\s*(?:Nature|Science|NeurIPS|ICML|ICLR|ACL|EMNLP|AAAI|CVPR|IEEE\s+\w+|arXiv.*)\s*$",
+            r"\s*(?:Nature|Science|NeurIPS|ICML|ICLR|ACL|EMNLP|AAAI|CVPR|IEEE\s+\w+)\s*$",
             "",
             text,
             flags=re.IGNORECASE,
@@ -441,20 +475,26 @@ class CitationVerifyValidator:
 
         arXiv is best for preprints and CS/Physics/Math papers.
         Strategy:
-        1. Extract arXiv ID from raw text OR arXiv DOI (10.48550/arXiv.NNNN.NNNNN)
-        2. Fall back to title search via _resolve_title
+        1. Extract arXiv ID from raw text (arXiv:NNN, arxiv.org/abs/NNN)
+        2. Extract arXiv ID from arXiv DOI (10.48550/arXiv.NNNN.NNNNN)
+        3. Fall back to title search via _resolve_title
         """
         if self.offline:
             return None
         try:
-            # Strategy 1: Extract arXiv ID from raw text or DOI field
+            # Strategy 1: Extract arXiv ID from raw text
             raw_text = citation.get("raw", "") or ""
-            doi = citation.get("doi", "") or ""
-            arxiv_id = self._extract_arxiv_id(raw_text) or self._extract_arxiv_id(doi)
+            arxiv_id = self._extract_arxiv_id(raw_text)
             if arxiv_id:
                 return self.arxiv_client.verify_arxiv_id(arxiv_id)
 
-            # Strategy 2: Title search (from explicit field or extracted from raw)
+            # Strategy 2: Extract arXiv ID from arXiv DOI (10.48550/arXiv.*)
+            doi = citation.get("doi", "") or ""
+            arxiv_id = extract_arxiv_id_from_doi(doi)
+            if arxiv_id:
+                return self.arxiv_client.verify_arxiv_id(arxiv_id)
+
+            # Strategy 3: Title search (from explicit field or extracted from raw)
             title = self._resolve_title(citation)
             if title:
                 results = self.arxiv_client.search_by_title(title)
@@ -470,15 +510,17 @@ class CitationVerifyValidator:
         Matches patterns like:
         - arXiv:2301.00001, arXiv:2301.00001v2
         - https://arxiv.org/abs/2301.00001
-        - Bare 2301.00001 (only if prefixed context suggests arXiv)
+        - 10.48550/arXiv.2301.00001 (arXiv DOI)
+
+        Bare numeric IDs (NNNN.NNNNN) are NOT matched to avoid false positives
+        on journal DOIs like 10.1038/nature.2023.12345.
+        For DOI-based extraction, use extract_arxiv_id_from_doi() instead.
         """
+        if not raw_text:
+            return None
         match = ARXIV_ID_PATTERN.search(raw_text)
         if match:
-            # Group 1: prefixed (arXiv:..., arxiv.org/abs/...)
-            # Group 2: bare ID (only trust if there's arXiv context)
-            arxiv_id = match.group(1) or match.group(2)
-            if arxiv_id:
-                return arxiv_id
+            return match.group(1)
         return None
 
     def _extract_venue_year(

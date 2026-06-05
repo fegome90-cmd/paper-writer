@@ -21,7 +21,7 @@ Use this skill when writing or revising an academic essay that must survive clai
 - Each paragraph should do one rhetorical job only. Split paragraphs that change function midstream.
 - Reject any claim that lacks mapped evidence or only has weak contextual support.
 - Address at least one significant counterargument or opposing position in every essay.
-- Make the warrant connecting each claim to its evidence explicit. Do not leave reasoning assumed.
+- Make the warrant connecting each claim to its evidence explicit. Every claim-evidence pair MUST include an explicit warrant (see `references/warrants.md`). Do not leave reasoning assumed.
 - Run prose calibration before final formatting: remove AI-typical phrasing, inflated certainty, and broken paragraph flow.
 - Block final audit if orphan tokens, truncated fragments, or leftover placeholders remain.
 
@@ -37,6 +37,7 @@ Use this skill when writing or revising an academic essay that must survive clai
 | A paragraph performs more than one rhetorical job | Rewrite or split it |
 | Evidence only provides context | Use it for framing, not as primary support |
 | No counterargument addressed | Require one before proceeding |
+| Claim-evidence pair lacks explicit warrant | Flag as unsupported inference; add warrant before proceeding |
 | Essay type not selected | Default to argumentative |
 | Word count exceeds +/-10% tolerance | Flag for adjustment |
 | Orphan token or truncated fragment appears | Block final audit until cleaned |
@@ -58,7 +59,7 @@ Use this skill when writing or revising an academic essay that must survive clai
    **CP3: Revision Review**
 8. Run editorial cleanup with `references/editorial_cleanup.md`. Calibrate academic register per `references/academic_register.md`. Repair broken transitions per `references/transitions.md`.
 9. Compile `claims` + `claim_links` for final audit.
-10. Use local audit references plus OpenAI complements from `references/openai_complements.md` when structured outputs or batch review help.
+10. Use local audit references plus structured output complements from `references/structured_output_complements.md` when structured outputs or batch review help.
 
 ## Checkpoint Protocol
 
@@ -89,9 +90,12 @@ Return:
 - `references/paragraph_density.md`
 - `references/editorial_cleanup.md`
 - `references/integrity_pipeline.md`
-- `references/openai_complements.md`
+- `references/structured_output_complements.md`
 - `references/counterargument.md`
 - `references/revision_loop.md`
 - `references/failure_paths.md`
+- `references/warrants.md`
+- `references/word_count.md`
 - `references/academic_register.md`
 - `references/transitions.md`
+- `references/paraphrasing.md`
