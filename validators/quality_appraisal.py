@@ -240,10 +240,9 @@ class QualityAppraisalValidator:
         }
 
         # Weighted total (0-5 scale)
-        weighted = sum(
-            scores[dim] * float(info["weight"])  # type: ignore[arg-type]
-            for dim, info in self.DIMENSIONS.items()
-        )
+        weighted = 0.0
+        for dim, info in self.DIMENSIONS.items():
+            weighted += float(scores[dim]) * float(info["weight"])  # type: ignore[arg-type]
 
         # Quality rating
         if weighted >= 4.0:

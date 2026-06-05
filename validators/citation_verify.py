@@ -368,7 +368,7 @@ class CitationVerifyValidator:
         Used by resolvers as fallback when DOI verification fails.
         """
         title = citation.get("title")
-        if title:
+        if isinstance(title, str):
             return title
         raw = citation.get("raw", "") or ""
         if raw:
@@ -437,7 +437,7 @@ class CitationVerifyValidator:
         arXiv is best for preprints and CS/Physics/Math papers.
         Strategy:
         1. Extract arXiv ID from raw text OR arXiv DOI (10.48550/arXiv.NNNN.NNNNN)
-        2. Fall back to title search (only if title field exists)
+        2. Fall back to title search via _resolve_title
         """
         if self.offline:
             return None
@@ -449,8 +449,8 @@ class CitationVerifyValidator:
             if arxiv_id:
                 return self.arxiv_client.verify_arxiv_id(arxiv_id)
 
-            # Strategy 2: Title search (only if explicit title available)
-            title = citation.get("title")
+            # Strategy 2: Title search (from explicit field or extracted from raw)
+            title = self._resolve_title(citation)
             if title:
                 results = self.arxiv_client.search_by_title(title)
                 return results[0] if results else ArxivResult(found=False)
