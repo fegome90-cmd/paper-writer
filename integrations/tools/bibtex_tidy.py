@@ -5,7 +5,6 @@ and validate the references.bib file. Returns structured findings
 consumed by the gate system.
 """
 
-import os
 import re
 import shutil
 import subprocess
@@ -230,22 +229,53 @@ class BibliographyNormalizer(ToolWrapper):
             )
 
         # Parse entries and entry types for domain validation
-        entry_pattern = re.compile(
-            r"@(\w+)\s*\{\s*([^,\s]+)\s*,\s*(.*?)\n\s*\}",
-            re.DOTALL | re.IGNORECASE,
-        )
+        # Brace-depth-aware parser handles single-line and multiline entries
         entries: dict[str, dict[str, str]] = {}
         entry_types: dict[str, str] = {}
 
-        for match in entry_pattern.finditer(content):
-            entry_type = match.group(1)
-            key = match.group(2).strip()
-            body = match.group(3)
+        for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+            start = m.end()
+            depth = 1
+            pos = start
+            while pos < len(content) and depth > 0:
+                if content[pos] == "{":
+                    depth += 1
+                elif content[pos] == "}":
+                    depth -= 1
+                pos += 1
+            if depth != 0:
+                continue
+            entry_body = content[start : pos - 1]
+            comma_pos = entry_body.find(",")
+            if comma_pos == -1:
+                key = entry_body.strip()
+                if key:
+                    entries[key] = {}
+                    entry_types[key] = m.group(1)
+                continue
+            key = entry_body[:comma_pos].strip()
+            body = entry_body[comma_pos + 1 :]
             fields: dict[str, str] = {}
-            for field_match in re.finditer(r"(\w+)\s*=\s*\{([^}]*)\}", body, re.IGNORECASE):
-                fields[field_match.group(1).lower().strip()] = field_match.group(2).strip()
+            for field_match in re.finditer(r"(\w+)\s*=\s*", body, re.IGNORECASE):
+                field_name = field_match.group(1).lower().strip()
+                val_start = field_match.end()
+                if val_start < len(body) and body[val_start] == "{":
+                    vd = 1
+                    vp = val_start + 1
+                    while vp < len(body) and vd > 0:
+                        if body[vp] == "{":
+                            vd += 1
+                        elif body[vp] == "}":
+                            vd -= 1
+                        vp += 1
+                    fields[field_name] = body[val_start + 1 : vp - 1].strip()
+                elif val_start < len(body):
+                    end = body.find(",", val_start)
+                    if end == -1:
+                        end = len(body)
+                    fields[field_name] = body[val_start:end].strip().strip('"').strip("'")
             entries[key] = fields
-            entry_types[key] = entry_type
+            entry_types[key] = m.group(1)
 
         if not entries:
             findings.append(
