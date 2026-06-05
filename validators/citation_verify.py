@@ -2,6 +2,7 @@
 
 Orchestrates Crossref and Semantic Scholar clients to verify all citations
 in a manuscript. Classifies each citation as verified/partial/not_found/title_mismatch.
+Also detects preprint venue usage and flags informational warnings.
 """
 from __future__ import annotations
 
@@ -15,6 +16,21 @@ from engine.deduplicator import deduplicate_findings
 from parsers.manuscript import Manuscript
 
 DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
+
+PREPRINT_VENUES: frozenset[str] = frozenset({
+    "arxiv",
+    "biorxiv",
+    "medrxiv",
+    "ssrn",
+    "research square",
+    "preprints.org",
+    "chemrxiv",
+    "eartharxiv",
+    "osf preprints",
+    "techrxiv",
+    "psyarxiv",
+    "socarxiv",
+})
 
 
 class CitationVerifyValidator:
