@@ -8,13 +8,29 @@ Word count: not specified
 Full prompt: SKILL.md
 -->
 
-The Introduction is complete at `/tmp/paper-introduction-draft.md`.
+## Introduce topic and explain real-world or theoretical issue
+[Content placeholder: Introduce topic and explain real-world or theoretical issue for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
 
-**Summary of what was produced:**
+## Problem statement: ideal situation vs current shortfall
+[Content placeholder: Problem statement: ideal situation vs current shortfall for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
 
-- **~1,350 words** of introduction prose following the CARS model structure
-- **10 of 14 available citation keys** used (Chen, Zheng, Jimenez, Yang, Gao, Parvez, Zhang, Shrivastava, Su, Tao, Wang)
-- **Structure**: topic → problem statement (ideal vs. shortfall) → prior work inventory → fragmentation critique → consequences → knowledge gap → objectives → paper organization
-- **Tone**: varied sentence lengths, rhetorical questions, critical stance — avoids AI-sounding filler
+## Previous attempts and why they don't solve the problem
+[Content placeholder: Previous attempts and why they don't solve the problem for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
 
-**Unused citation keys** (available but not naturally needed for the introduction): `shinn2024reflexion`, `zhou2022docprompting`, `wei2023magicoder`. These would fit better in a literature review or methods section.
+## Direct and indirect results of the problem and consequences
+[Content placeholder: Direct and indirect results of the problem and consequences for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+
+## Knowledge gap this study fills and why this approach is necessary
+[Content placeholder: Knowledge gap this study fills and why this approach is necessary for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+
+## Key studies: how work builds on or differs from them
+[Content placeholder: Key studies: how work builds on or differs from them for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+
+## Theory or conceptual model guiding the study
+[Content placeholder: Theory or conceptual model guiding the study for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+
+## Objectives of the study
+[Content placeholder: Objectives of the study for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+
+## CARS model paragraph: establish territory, identify niche, occupy niche
+[Content placeholder: CARS model paragraph: establish territory, identify niche, occupy niche for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]

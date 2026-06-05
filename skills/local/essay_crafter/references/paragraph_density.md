@@ -34,6 +34,10 @@ Use `references/word_count.md` for section-level target tracking. This gate
 operates at the paragraph level; the word count reference operates at the
 section level.
 
+## Transition strategies
+
+For paragraph-level transition techniques (signposting, backward/forward reference, conceptual bridging), see `references/transitions.md`.
+
 ## Split triggers
 
 Split the paragraph when:

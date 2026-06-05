@@ -290,21 +290,24 @@ class CitationVerifyValidator:
         if current_ref:
             merged_refs.append(("\n".join(current_ref), current_start))
 
-        # Now extract DOIs and titles from merged references
+        # Now extract DOIs and titles from merged references.
+        # One citation per reference — use first DOI if multiple found.
         citations: list[dict[str, Any]] = []
         for ref_text, start_line in merged_refs:
             dois = DOI_PATTERN.findall(ref_text)
             if dois:
-                for doi in dois:
-                    citations.append(
-                        {
-                            "doi": doi,
-                            "title": None,
-                            "line": start_line,
-                            "section": "references",
-                            "raw": ref_text,
-                        }
-                    )
+                # Use first DOI only — multiple DOIs in one reference
+                # typically point to the same paper (arXiv + publisher).
+                # Dedup avoids wasted API calls and duplicate findings.
+                citations.append(
+                    {
+                        "doi": dois[0],
+                        "title": None,
+                        "line": start_line,
+                        "section": "references",
+                        "raw": ref_text,
+                    }
+                )
             else:
                 citations.append(
                     {

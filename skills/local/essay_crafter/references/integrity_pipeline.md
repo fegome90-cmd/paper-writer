@@ -15,7 +15,7 @@ Gate order mirrors SKILL.md Execution Steps. SKILL.md is the authoritative pipel
 ## Recommended gate order
 
 1. **Question gate** — reject descriptive prompts with no arguable thesis.
-2. **Roadmap gate** — require thesis plus explicit navigation at the end of the introduction.
+2. **Roadmap gate** — require thesis plus explicit navigation at the end of the introduction. (Roadmap requirement -> see SKILL.md Hard Rule #2.)
    // CP1: Thesis + Roadmap Approval
 3. **Passport gate** — reject notes without locator anchors.
 4. **Structure gate** — reject sections that mix empirical, ethical, regulatory, and normative dimensions in one block.
