@@ -11,6 +11,7 @@ Uses cached API responses for determinism.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,6 +19,9 @@ import pytest
 
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
 
 
 @pytest.fixture
@@ -259,6 +263,7 @@ def test_cli_chain_with_custom_args(project_dir: Path) -> None:
         text=True,
         timeout=30,
         cwd=str(project_dir),
+        env=ENV,
     )
     # Chain should succeed even with no API cache (graceful degradation)
     assert result.returncode == 0, f"chain failed: {result.stderr}"

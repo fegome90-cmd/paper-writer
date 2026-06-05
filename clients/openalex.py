@@ -8,6 +8,7 @@ OpenAlex provides open metadata for academic works, including
 citation counts, open access status, and venue information.
 Useful as a third verification source alongside Crossref and S2.
 """
+
 from __future__ import annotations
 
 import json

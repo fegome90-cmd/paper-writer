@@ -1,4 +1,5 @@
 """Tests for contamination signal detection."""
+
 from __future__ import annotations
 
 import pytest

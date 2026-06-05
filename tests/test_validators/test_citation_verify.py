@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from clients.arxiv import ArxivResult
 from clients.crossref import CrossrefResult
 from clients.openalex import OpenAlexResult
 from clients.semantic_scholar import S2Result
@@ -133,6 +134,8 @@ class TestCitationVerifyValidatorValidate:
         validator = CitationVerifyValidator(
             crossref_client=mock_client,
             s2_client=MagicMock(verify_doi=MagicMock(return_value=S2Result(found=False))),
+            openalex_client=MagicMock(verify_doi=MagicMock(return_value=OpenAlexResult(found=False))),
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
         )
         findings = validator.validate(manuscript)
         p0_findings = [f for f in findings if f["severity"] == "P0"]
@@ -157,6 +160,8 @@ class TestCitationVerifyValidatorValidate:
                     return_value=S2Result(found=True, title="Nature Paper", score=0.95)
                 )
             ),
+            openalex_client=MagicMock(verify_doi=MagicMock(return_value=OpenAlexResult(found=False))),
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
         )
         findings = validator.validate(manuscript)
         p0_findings = [f for f in findings if f["severity"] == "P0"]
@@ -174,7 +179,11 @@ class TestCitationVerifyVerifySingle:
         )
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=True, title="Wrong Title", score=0.3)
-        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
+        validator = CitationVerifyValidator(
+            crossref_client=mock_crossref, s2_client=mock_s2,
+            openalex_client=MagicMock(verify_doi=MagicMock(return_value=OpenAlexResult(found=False))),
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
+        )
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is not None
@@ -195,6 +204,7 @@ class TestCitationVerifyVerifySingle:
             crossref_client=mock_crossref,
             s2_client=mock_s2,
             openalex_client=mock_openalex,
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
         )
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
@@ -214,6 +224,7 @@ class TestCitationVerifyVerifySingle:
             crossref_client=mock_crossref,
             s2_client=mock_s2,
             openalex_client=mock_openalex,
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
         )
         citation = {"doi": "10.99999/fake", "line": 3, "section": "references"}
         finding = validator.verify_single(citation)
@@ -229,7 +240,11 @@ class TestCitationVerifyVerifySingle:
         )
         mock_s2 = MagicMock()
         mock_s2.verify_doi.return_value = S2Result(found=True, title="Test Paper", score=0.95)
-        validator = CitationVerifyValidator(crossref_client=mock_crossref, s2_client=mock_s2)
+        validator = CitationVerifyValidator(
+            crossref_client=mock_crossref, s2_client=mock_s2,
+            openalex_client=MagicMock(verify_doi=MagicMock(return_value=OpenAlexResult(found=False))),
+            arxiv_client=MagicMock(verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))),
+        )
         citation = {"doi": "10.1234/test", "line": 5, "section": "references"}
         finding = validator.verify_single(citation)
         assert finding is None

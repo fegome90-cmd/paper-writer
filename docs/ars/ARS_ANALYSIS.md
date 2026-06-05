@@ -1000,19 +1000,11 @@ Los gaps de ARS se integran como **ToolWrappers en el stage validating**, sin to
 
 **Claim original**: `verification/run_real_validation.py` escribe `state.yaml` directamente, bypassing StateManager.
 
-**Evidencia verificada**:
-```python
-# verification/run_real_validation.py:544-551
-# Delega inicialización al CLI oficial
-cmd = [*_build_paper_cmd(ws), "init"]
-if preset:
-    cmd.extend(["--preset", preset])
-subprocess.run(cmd, cwd=str(ws), check=True, capture_output=True)
-```
+**Re-verificación (2026-06-05)**: El cartographer original marcó este finding como confirmado, pero al revisar el código actual, no se encontró ningún write directo a `state.yaml`. Los únicos `write_text()` en el archivo son para `bib_content`, `report_md`, y `json_data` (líneas 473, 1033, 1063). El script usa subprocess para ejecutar el CLI, que internamente usa StateManager.
 
-**Conclusión**: FALSO. El script NO escribe state.yaml directamente. Usa subprocess para ejecutar `paper init` (línea 547-551), que internamente llama a `FilesystemActionRunner.init()` → `StateManager.initialize()`. No hay riesgo de race condition ni bypass de StateManager.
+**Conclusión**: FALSO POSITIVO. El cartographer probablemente revisó una versión anterior del código. No hay riesgo de race condition ni bypass de StateManager.
 
-**Estado**: No requiere fix.
+**Estado**: No requiere fix. Resuelto por re-verificación.
 
 ---
 

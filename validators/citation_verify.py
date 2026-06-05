@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from clients._text_similarity import TITLE_SIMILARITY_THRESHOLD
+from clients.arxiv import ArxivClient, ArxivResult
 from clients.crossref import CrossrefClient, CrossrefResult
 from clients.openalex import OpenAlexClient, OpenAlexResult
 from clients.semantic_scholar import S2Result, SemanticScholarClient
@@ -48,12 +49,14 @@ class CitationVerifyValidator:
         crossref_client: CrossrefClient | None = None,
         s2_client: SemanticScholarClient | None = None,
         openalex_client: OpenAlexClient | None = None,
+        arxiv_client: ArxivClient | None = None,
         offline: bool = False,
     ) -> None:
         self.offline = offline
         self.crossref_client = crossref_client or CrossrefClient(offline=offline)
         self.s2_client = s2_client or SemanticScholarClient(offline=offline)
         self.openalex_client = openalex_client or OpenAlexClient(offline=offline)
+        self.arxiv_client = arxiv_client or ArxivClient(offline=offline)
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Verify all citations in the manuscript.
@@ -105,7 +108,7 @@ class CitationVerifyValidator:
         return findings
 
     def verify_single(self, citation: dict[str, Any]) -> dict[str, Any] | None:
-        """Verify a single citation. Used by ClaimAlignmentValidator.
+        """Verify a single citation. Public API for single-citation verification.
 
         Returns a finding dict or None if citation is verified.
         """
@@ -123,11 +126,12 @@ class CitationVerifyValidator:
         crossref = self._query_crossref(citation)
         s2 = self._query_s2(citation)
         openalex = self._query_openalex(citation)
+        arxiv = self._query_arxiv(citation)
 
-        verdict, _sev = self._classify_citation(crossref, s2, openalex)
+        verdict, _sev = self._classify_citation(crossref, s2, openalex, arxiv)
 
         # Preprint venue detection using API-returned venue+year
-        preprint_info = self._detect_preprint(crossref, s2, openalex)
+        preprint_info = self._detect_preprint(crossref, s2, openalex, arxiv)
 
         if verdict == "verified":
             # Even verified citations get flagged if from preprint venue
@@ -165,6 +169,7 @@ class CitationVerifyValidator:
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
+                    "arxiv_found": arxiv.found if arxiv else False,
                     **preprint_info,
                 },
             )
@@ -196,6 +201,7 @@ class CitationVerifyValidator:
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
+                    "arxiv_found": arxiv.found if arxiv else False,
                     **preprint_info,
                 },
             )
@@ -315,24 +321,43 @@ class CitationVerifyValidator:
             return OpenAlexResult(found=False)
         return OpenAlexResult(found=False)
 
+    def _query_arxiv(self, citation: dict[str, Any]) -> ArxivResult | None:
+        """Query arXiv for a citation (fourth resolver).
+
+        arXiv is best for preprints and CS/Physics/Math papers.
+        Uses DOI lookup first, then title search fallback.
+        """
+        if self.offline:
+            return None
+        try:
+            if citation.get("doi"):
+                return self.arxiv_client.verify_arxiv_id(citation["doi"])
+            elif citation.get("title"):
+                results = self.arxiv_client.search_by_title(citation["title"])
+                return results[0] if results else ArxivResult(found=False)
+        except Exception:
+            return ArxivResult(found=False)
+        return ArxivResult(found=False)
+
     def _detect_preprint(
         self,
         crossref: CrossrefResult | None,
         s2: S2Result | None,
         openalex: OpenAlexResult | None = None,
+        arxiv: ArxivResult | None = None,
     ) -> dict[str, Any]:
         """Detect if a citation is from a known preprint venue.
 
-        Uses venue and year from Crossref/S2/OpenAlex API results.
+        Uses venue and year from Crossref/S2/OpenAlex/arXiv API results.
         Returns empty dict if not a preprint, or preprint metadata.
         """
         venues: list[str] = []
         year: int | None = None
 
-        for result in (crossref, s2, openalex):
-            if result and result.found and result.venue:
-                venues.append(result.venue.lower())
-            if result and result.found and result.year is not None:
+        for result in (crossref, s2, openalex, arxiv):
+            if result and result.found and getattr(result, "venue", None):
+                venues.append(result.venue.lower())  # type: ignore[union-attr]
+            if result and result.found and getattr(result, "year", None) is not None:
                 year = result.year
 
         for venue in venues:
@@ -351,16 +376,18 @@ class CitationVerifyValidator:
         crossref: CrossrefResult | None,
         s2: S2Result | None,
         openalex: OpenAlexResult | None = None,
+        arxiv: ArxivResult | None = None,
     ) -> tuple[str, str | None]:
         """Classify citation based on multi-source voting.
 
         Returns (verdict, severity). Uses all available resolvers
-        (Crossref, S2, OpenAlex) for triangulation.
+        (Crossref, S2, OpenAlex, arXiv) for triangulation.
         """
         cr_found = crossref.found if crossref else False
         s2_found = s2.found if s2 else False
         oa_found = openalex.found if openalex else False
-        sources_found = sum([cr_found, s2_found, oa_found])
+        ar_found = arxiv.found if arxiv else False
+        sources_found = sum([cr_found, s2_found, oa_found, ar_found])
 
         if sources_found >= 2:
             cr_score = crossref.score if crossref else 0

@@ -30,6 +30,7 @@ def _get_version() -> str:
 
 
 MAX_ASCENDING_DEPTH = 20
+DEFAULT_SEARCH_QUERY = "systematic literature review"
 
 
 def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
@@ -92,6 +93,11 @@ def main() -> None:
 
     # paper search
     search_parser = subparsers.add_parser("search", help="Execute scientific literature search.")
+    search_parser.add_argument(
+        "--query",
+        default=None,
+        help="Research query to use for provider-backed search.",
+    )
     search_parser.add_argument(
         "--raw-papers",
         help="Path to JSON file containing raw paper candidates.",
@@ -406,6 +412,7 @@ def main() -> None:
     if cmd_name == "init":
         orch_args["preset"] = args.preset
     elif cmd_name == "search":
+        orch_args["query"] = args.query or DEFAULT_SEARCH_QUERY
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
     elif cmd_name == "chain":

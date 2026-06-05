@@ -52,6 +52,18 @@ def _capture_request(
             {"preset": "nature"},
         ),
         (
+            ["paper", "search"],
+            "search",
+            "stop_on_error",
+            {"query": "systematic literature review"},
+        ),
+        (
+            ["paper", "search", "--query", "voice disorders"],
+            "search",
+            "stop_on_error",
+            {"query": "voice disorders"},
+        ),
+        (
             ["paper", "draft", "outline"],
             "draft_outline",
             "stop_on_error",

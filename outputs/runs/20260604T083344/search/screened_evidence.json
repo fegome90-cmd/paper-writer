@@ -1,0 +1,205 @@
+{
+  "query": "",
+  "date": "2026-06-05",
+  "total_raw": 14,
+  "total_screened": 8,
+  "min_tier": "Tier 3",
+  "inclusion_criteria": [
+    "tier <= Tier 3",
+    "has title",
+    "has DOI"
+  ],
+  "prisma_flow": {
+    "identification": {
+      "database_results": 0,
+      "other_sources": 0,
+      "seed_papers": 0,
+      "total_identified": 14,
+      "duplicates_removed": 0
+    },
+    "screening": {
+      "records_screened": 14,
+      "records_excluded": 6,
+      "exclusion_reasons": {
+        "tier_discard": 6
+      }
+    },
+    "eligibility": {
+      "records_assessed": 8,
+      "records_excluded": 0
+    },
+    "included": {
+      "studies_in_synthesis": 8
+    }
+  },
+  "evidence": [
+    {
+      "title": "EvoR: Evolving Retrieval for Code Generation",
+      "doi": "10.18653/v1/2024.findings-emnlp.143",
+      "year": 2024,
+      "authors": "Hongjin Su and Shuyang Jiang and Yuhang Lai and Haoyuan Wu and Boao Shi and Che Liu and Qian Liu and Tao Yu",
+      "journal": "",
+      "booktitle": "Findings of the Association for Computational Linguistics: EMNLP 2024",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.05,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "Retrieval-Augmented Code Generation: A Survey with Focus on Repository-Level Approaches",
+      "doi": "10.48550/arXiv.2510.04905",
+      "year": 2025,
+      "authors": "Yicheng Tao and Yuante Li and Yao Qin and Yepang Liu",
+      "journal": "arXiv preprint arXiv:2510.04905",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.25,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.9,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "CodeRAG-Bench: Can Retrieval Augment Code Generation?",
+      "doi": "10.48550/arXiv.2406.14497",
+      "year": 2025,
+      "authors": "Zora Zhiruo Wang and Akari Asai and Xinyan Velocity Yu and Frank F. Xu and Yiqing Xie and Graham Neubig and Jianfeng Gao",
+      "journal": "arXiv preprint arXiv:2406.14497",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.25,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.9,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "doi": "10.48550/arXiv.2310.06770",
+      "year": 2023,
+      "authors": "Carlos E. Jimenez and John Yang and Alexander Wettig and Shunyu Yao and Kexin Pei and Ofir Press and Karthik Narasimhan",
+      "journal": "arXiv preprint arXiv:2310.06770",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.45,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.7,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.8
+      }
+    },
+    {
+      "title": "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering",
+      "doi": "10.48550/arXiv.2405.15793",
+      "year": 2024,
+      "authors": "John Yang and Carlos E. Jimenez and Alexander Wettig and Kilian Lieret and Shunyu Yao and Karthik Narasimhan and Ofir Press",
+      "journal": "arXiv preprint arXiv:2405.15793",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.05,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+      "doi": "10.48550/arXiv.2303.11366",
+      "year": 2024,
+      "authors": "Noah Shinn and Federico Cassano and Ashwin Gopinath and Karthik Narasimhan and Shunyu Yao",
+      "journal": "Advances in Neural Information Processing Systems",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.05,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "OpenCodeInterpreter: Integrating Code Generation with Execution and Refinement",
+      "doi": "10.48550/arXiv.2402.14658",
+      "year": 2024,
+      "authors": "Tianyu Zheng and Ge Zhang and Tianhao Shen and Xueling Liu and Bill Yuchen Lin and Jie Fu and Wenhu Chen and Xiang Yue",
+      "journal": "arXiv preprint arXiv:2402.14658",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.05,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    },
+    {
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "doi": "10.48550/arXiv.2312.10997",
+      "year": 2024,
+      "authors": "Yunfan Gao and Yun Xiong and Xinyu Gao and Kangzhuo Jia and Jinzhou Pan and Yandong Bi and Yi Dai and Jiawei Sun and Meng Wang and Haoyu Wang",
+      "journal": "arXiv preprint arXiv:2312.10997",
+      "booktitle": "",
+      "abstract": "",
+      "_search_query": "",
+      "_domain": "cs",
+      "scoring": {
+        "domain": "cs",
+        "final_score": 5.05,
+        "tier": "Tier 3",
+        "venue_tier": 2.0,
+        "recency_score": 0.8,
+        "citation_score": 0.5,
+        "relevance_score": 1.0,
+        "rigor_score": 0.4
+      }
+    }
+  ]
+}

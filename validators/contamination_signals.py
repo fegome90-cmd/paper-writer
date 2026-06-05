@@ -9,6 +9,7 @@ Ported from ARS contamination_signals.py (445 loc).
 This is a simplified version focusing on the pure-logic components
 that require zero API dependencies.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

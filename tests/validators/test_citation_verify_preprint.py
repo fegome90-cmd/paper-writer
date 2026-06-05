@@ -1,7 +1,12 @@
 """Tests for citation_verify preprint venue detection."""
+
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
+from clients.arxiv import ArxivResult
 from clients.crossref import CrossrefResult
+from clients.openalex import OpenAlexResult
 from clients.semantic_scholar import S2Result
 from validators.citation_verify import PREPRINT_VENUES, CitationVerifyValidator
 
@@ -87,15 +92,31 @@ class TestVerifySinglePreprint:
     """Test verify_single with preprint detection."""
 
     def setup_method(self) -> None:
-        self.validator = CitationVerifyValidator(offline=False)
+        self.validator = CitationVerifyValidator(
+            offline=False,
+            arxiv_client=MagicMock(
+                verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False)),
+            ),
+            openalex_client=MagicMock(
+                verify_doi=MagicMock(return_value=OpenAlexResult(found=False)),
+            ),
+        )
         # Mock the query methods to return preprint results
         self._arxiv_cr = CrossrefResult(
-            found=True, doi="10.1234/arxiv", title="ArXiv Paper",
-            venue="arXiv", year=2024, score=0.95,
+            found=True,
+            doi="10.1234/arxiv",
+            title="ArXiv Paper",
+            venue="arXiv",
+            year=2024,
+            score=0.95,
         )
         self._arxiv_s2 = S2Result(
-            found=True, paper_id="ArXivId", title="ArXiv Paper",
-            venue="arXiv", year=2024, score=0.95,
+            found=True,
+            paper_id="ArXivId",
+            title="ArXiv Paper",
+            venue="arXiv",
+            year=2024,
+            score=0.95,
         )
 
     def test_verified_preprint_produces_finding(self) -> None:
@@ -114,12 +135,20 @@ class TestVerifySinglePreprint:
     def test_verified_journal_produces_no_finding(self) -> None:
         """Verified citation from Nature produces no finding."""
         cr = CrossrefResult(
-            found=True, doi="10.1234/nature", title="Nature Paper",
-            venue="Nature", year=2023, score=0.98,
+            found=True,
+            doi="10.1234/nature",
+            title="Nature Paper",
+            venue="Nature",
+            year=2023,
+            score=0.98,
         )
         s2 = S2Result(
-            found=True, paper_id="NatureId", title="Nature Paper",
-            venue="Nature", year=2023, score=0.98,
+            found=True,
+            paper_id="NatureId",
+            title="Nature Paper",
+            venue="Nature",
+            year=2023,
+            score=0.98,
         )
         self.validator._query_crossref = lambda _: cr  # type: ignore[assignment]
         self.validator._query_s2 = lambda _: s2  # type: ignore[assignment]

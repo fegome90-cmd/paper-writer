@@ -1,0 +1,28 @@
+schema_version: '1.1'
+project: paper-writer
+status: ready_for_delivery
+generated_at: '2026-06-05T08:16:34.963063'
+stage: rendered
+gate_snapshot:
+  bib_normalized: true
+  reporting_passed: true
+  ready_for_delivery: true
+  search_completed: true
+  refs_validated: true
+  screened_evidence: true
+  outline_drafted: true
+  citations_resolved: true
+  sections_completed: true
+  render_passed: true
+  style_passed: true
+  repo_initialized: true
+  citation_verified: true
+  ethics_passed: true
+artifacts:
+  manuscript:
+  - outputs/latest/render/manuscript.docx
+  - outputs/render/manuscript.docx
+  - outputs/render/manuscript.pdf
+  bibliography: templates/references.bib
+verdict: pass
+notes: []
