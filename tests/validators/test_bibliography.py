@@ -357,7 +357,9 @@ class TestValidateBibliography:
         assert "peer review" in preprint[0]["message"]
 
     def test_biorxiv_older_preprint_is_info(self) -> None:
-        entries = {"jones2020": {"author": "Jones", "title": "T", "journal": "bioRxiv", "year": "2020"}}
+        entries = {
+            "jones2020": {"author": "Jones", "title": "T", "journal": "bioRxiv", "year": "2020"}
+        }
         findings = validate_bibliography(entries, {"jones2020": "article"})
         preprint = [f for f in findings if f["code"] == "preprint_citation"]
         assert len(preprint) == 1
@@ -371,7 +373,11 @@ class TestValidateBibliography:
 
     def test_all_10_preprint_venues_detected(self) -> None:
         for venue in PREPRINT_VENUES:
-            entries = {f"test_{venue}": {"author": "A", "title": "T", "journal": venue, "year": "2025"}}
+            entries = {
+                f"test_{venue}": {
+                    "author": "A", "title": "T", "journal": venue, "year": "2025"
+                }
+            }
             findings = validate_bibliography(entries, {f"test_{venue}": "article"})
             preprint = [f for f in findings if f["code"] == "preprint_citation"]
             assert len(preprint) == 1, f"Venue '{venue}' not detected"
@@ -384,7 +390,14 @@ class TestValidateBibliography:
         assert "SSRN" in preprint[0]["message"]
 
     def test_compound_venue_name_detected(self) -> None:
-        entries = {"e1": {"author": "X", "title": "T", "journal": "arXiv preprint arXiv:2301.00001", "year": "2024"}}
+        entries = {
+            "e1": {
+                "author": "X",
+                "title": "T",
+                "journal": "arXiv preprint arXiv:2301.00001",
+                "year": "2024",
+            }
+        }
         findings = validate_bibliography(entries, {"e1": "article"})
         preprint = [f for f in findings if f["code"] == "preprint_citation"]
         assert len(preprint) == 1
