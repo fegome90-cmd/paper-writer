@@ -26,10 +26,9 @@ class TestCitationMarkerRegex:
         assert not CITATION_MARKER_RE.search("This shows the effect clearly.")
 
     def test_pandoc_at_key(self) -> None:
-        # Pandoc [@key] — not in current regex, but could be added
+        # Pandoc [@key] — now detected (added Pandoc citation support)
         text = "This shows [@smith2024] the effect"
-        # Current regex doesn't match [@key] — documenting behavior
-        assert not CITATION_MARKER_RE.search(text)
+        assert CITATION_MARKER_RE.search(text)
 
 
 class TestUncitedAssertionDetection:

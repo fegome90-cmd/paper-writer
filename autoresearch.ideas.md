@@ -147,3 +147,39 @@ Trifecta integration value is bounded by the codebase's actual issues:
 - **Q5: Re-rank by combined score** — ✅ VALIDATED (run #277). CS scoring already ranks high-impact papers higher (top-20: 1490 cites avg vs bottom-20: 1315). No additional optimization needed.
 - **Q6: Multi-query enrichment** — ❌ REJECTED (run #262). Over-expansion creates noise.
 - **Q7: Round-aware threshold decay** — ❌ REJECTED (run #280). Saturation is structural (citation graph exhausted), not threshold-driven. Decay adds noise without solving the limitation.
+
+---
+
+# Session 6 (2026-06-05): ARS Diff Integration + Preprint Detection
+
+## Applied (4 experiments, 4 kept)
+
+1. **MCP Provider Wiring** — PaperSearchProvider integrated into LiteratureSearchAdapter. Fixture mode for tests, MCP mode for real. 4 smoke tests pass against real MCP server.
+
+2. **Preprint Venue Detection** — _detect_preprint() in citation_verify uses venue+year from Crossref/S2 API results. 12 known preprint venues. P2 informational findings. missing_data_fields: 3 → 0.
+
+3. **Uncited Assertion Detection** — 9 empirical prose rules now check citation presence (CITATION_MARKER_RE). Uncited claims get 'uncited_' prefix. Covers causal, overclaim, quantifier groups.
+
+4. **Bibliography Preprint Check** — bibliography.py already has detect_preprint_venues() from prior session. Verified working with 69 tests.
+
+## Key Insights
+
+- **source_pointer was a red herring**: API results (Crossref/S2) provide venue directly. No need to parse BibTeX for preprint detection.
+- **Prose rules detect WORDS but not CITED STATUS**: The critical gap was citation-presence checking, not more patterns.
+- **Pre-existing test failures**: 13 E2E tests in tests/cli/ were already broken before any changes. Not related to integration work.
+- **Test count**: 1189 → 1203 (+14 uncited assertion + other tests)
+
+## Remaining ARS Diff Gaps (from runs #302-#312)
+
+### High Priority
+- **Claim audit finalizer (tiered gates)**: Our boolean gate system (pass/fail) blocks minor warnings the same as fabricated references. ARS uses 4 severity levels + annotation strings + selective gate refusal. Affects ALL validators. ~400 loc.
+- **Contamination signals**: compute_preprint_signal is pure logic (zero API deps), but multi-resolver triangulation needs OpenAlex + arXiv clients. ~200 loc + client porting.
+- **Uncited assertion detector (full)**: Current implementation covers citation presence but not the definitional exception (mathematical/definitional statements shouldn't require citations). ARS has 3-condition check.
+
+### Medium Priority
+- **OpenAlex client porting**: Same JSON pattern as CrossrefClient. ~120-150 loc. Enables better citation verification + contamination detection.
+- **arXiv client porting**: XML parsing (ElementTree + Atom namespace). ~160-200 loc. Harder but enables preprint-specific workflows.
+
+### Low Priority
+- **Claim audit calibration**: FNR/FPR benchmarking. ~400 loc. Nice-to-have for production.
+- **Module-level coupling analysis**: Count imports per module, flag high fan-out.
