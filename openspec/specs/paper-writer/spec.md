@@ -176,3 +176,49 @@ The CLI SHALL accept an optional `--project/-C` global flag before any subcomman
 - THEN Vale styles SHALL be resolved from installed package via `get_project_asset()`
 - AND CSL styles SHALL be resolved from installed package
 - AND journal presets SHALL be resolved from installed package
+
+---
+
+## MODIFIED: cli-search-provider-compatibility
+
+### Requirement: CLI search query forwarding
+
+The CLI MUST accept an optional `--query` flag for `paper search`. When the user omits `--query`, the CLI MUST still preserve the existing no-argument workflow by forwarding a deterministic non-empty default query to the orchestrator.
+
+(Previously: `paper search` forwarded no query, causing provider-backed search to fail on empty-query validation.)
+
+#### Scenario: Explicit query is forwarded
+- GIVEN the user runs `paper search --query "voice disorders"`
+- WHEN the CLI builds the orchestrator request
+- THEN `request.args["query"]` MUST equal `"voice disorders"`
+
+#### Scenario: No query still produces a non-empty request
+- GIVEN the user runs `paper search`
+- WHEN the CLI builds the orchestrator request
+- THEN `request.args["query"]` MUST be present
+- AND it MUST be non-empty
+
+### Requirement: CLI search backward-compatible execution
+
+The system MUST keep `paper search` operational in fixture/provider mode when the user does not supply `--raw-papers`.
+
+(Previously: provider-backed search received `""`, failed validation, and never wrote `search_plan.json`.)
+
+#### Scenario: No-arg search creates required artifacts
+- GIVEN an initialized project
+- WHEN the user runs `paper search`
+- THEN the command MUST exit with code `0`
+- AND `outputs/latest/search/search_plan.json` MUST exist
+- AND `outputs/latest/search/raw_results.json` MUST exist
+
+### Requirement: Chain CLI subprocess test environment
+
+CLI E2E subprocess tests MUST pass the repository `PYTHONPATH` when invoking `python -m cli.paper.main` from a temporary project directory.
+
+(Previously: `test_cli_chain_with_custom_args` invoked the module without `PYTHONPATH`, producing `ModuleNotFoundError`.)
+
+#### Scenario: Chain subprocess inherits module path
+- GIVEN a temp project outside the repo root
+- WHEN the E2E test invokes `python -m cli.paper.main chain`
+- THEN the subprocess MUST receive `PYTHONPATH=<repo_root>`
+- AND the command MUST be able to import `cli.paper.main`

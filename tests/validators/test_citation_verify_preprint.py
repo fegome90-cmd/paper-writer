@@ -123,6 +123,8 @@ class TestVerifySinglePreprint:
         """Verified citation from arXiv gets preprint_source finding."""
         self.validator._query_crossref = lambda _: self._arxiv_cr  # type: ignore[assignment]
         self.validator._query_s2 = lambda _: self._arxiv_s2  # type: ignore[assignment]
+        self.validator._query_openalex = lambda _: OpenAlexResult(found=False)  # type: ignore[assignment]
+        self.validator._query_arxiv = lambda _: ArxivResult(found=False)  # type: ignore[assignment]
 
         citation = {"doi": "10.1234/arxiv", "title": "ArXiv Paper", "line": 1}
         finding = self.validator.verify_single(citation)
@@ -152,6 +154,8 @@ class TestVerifySinglePreprint:
         )
         self.validator._query_crossref = lambda _: cr  # type: ignore[assignment]
         self.validator._query_s2 = lambda _: s2  # type: ignore[assignment]
+        self.validator._query_openalex = lambda _: OpenAlexResult(found=False)  # type: ignore[assignment]
+        self.validator._query_arxiv = lambda _: ArxivResult(found=False)  # type: ignore[assignment]
 
         citation = {"doi": "10.1234/nature", "title": "Nature Paper", "line": 1}
         finding = self.validator.verify_single(citation)

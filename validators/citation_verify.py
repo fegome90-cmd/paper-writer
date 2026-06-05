@@ -21,6 +21,16 @@ from validators.contamination_signals import compute_contamination_signal
 
 DOI_PATTERN = re.compile(r"10\.\d{4,}/[^\s]+")
 
+# arXiv ID patterns in reference text.
+# Matches: arXiv:2301.00001, arXiv:2301.00001v2, 2301.00001,
+#           https://arxiv.org/abs/2301.00001, http://arxiv.org/abs/2301.00001v2
+ARXIV_ID_PATTERN = re.compile(
+    r"(?:arXiv[:\s]*|arxiv\.org/abs/)"
+    r"(\d{4}\.\d{4,5}(?:v\d+)?)"
+    r"|(\d{4}\.\d{4,5}(?:v\d+)?)",  # bare ID without prefix
+    re.IGNORECASE,
+)
+
 # Import PREPRINT_VENUES from contamination_signals to avoid circular import
 # Re-exported for backward compatibility
 from validators.contamination_signals import PREPRINT_VENUES  # noqa: E402
@@ -314,19 +324,64 @@ class CitationVerifyValidator:
         """Query arXiv for a citation (fourth resolver).
 
         arXiv is best for preprints and CS/Physics/Math papers.
-        Uses DOI lookup first, then title search fallback.
+        Strategy:
+        1. Extract arXiv ID from raw reference text (most reliable)
+        2. Fall back to title search (only if title field exists)
+        Note: DOIs are NOT arXiv IDs — don't pass DOIs to verify_arxiv_id.
         """
         if self.offline:
             return None
         try:
-            if citation.get("doi"):
-                return self.arxiv_client.verify_arxiv_id(citation["doi"])
-            elif citation.get("title"):
-                results = self.arxiv_client.search_by_title(citation["title"])
+            # Strategy 1: Extract arXiv ID from raw reference text
+            raw_text = citation.get("raw", "") or ""
+            arxiv_id = self._extract_arxiv_id(raw_text)
+            if arxiv_id:
+                return self.arxiv_client.verify_arxiv_id(arxiv_id)
+
+            # Strategy 2: Title search (only if explicit title available)
+            title = citation.get("title")
+            if title:
+                results = self.arxiv_client.search_by_title(title)
                 return results[0] if results else ArxivResult(found=False)
         except Exception:
             return ArxivResult(found=False)
         return ArxivResult(found=False)
+
+    @staticmethod
+    def _extract_arxiv_id(raw_text: str) -> str | None:
+        """Extract arXiv ID from reference text.
+
+        Matches patterns like:
+        - arXiv:2301.00001, arXiv:2301.00001v2
+        - https://arxiv.org/abs/2301.00001
+        - Bare 2301.00001 (only if prefixed context suggests arXiv)
+        """
+        match = ARXIV_ID_PATTERN.search(raw_text)
+        if match:
+            # Group 1: prefixed (arXiv:..., arxiv.org/abs/...)
+            # Group 2: bare ID (only trust if there's arXiv context)
+            arxiv_id = match.group(1) or match.group(2)
+            if arxiv_id:
+                return arxiv_id
+        return None
+
+    @staticmethod
+    def _extract_title_from_raw(raw_text: str) -> str | None:
+        """Extract a plausible title from raw reference text.
+
+        Used as fallback when citation has no explicit title field.
+        Heuristic: take the longest sentence-like segment before the DOI/URL.
+        """
+        # Remove DOI, URL, and arXiv ID artifacts
+        cleaned = DOI_PATTERN.sub("", raw_text)
+        cleaned = re.sub(r"https?://\S+", "", cleaned)
+        cleaned = re.sub(r"arXiv[:\s]*\d{4}\.\d{4,5}(?:v\d+)?", "", cleaned, flags=re.IGNORECASE)
+        # Take first meaningful chunk (typically title before authors/venue)
+        parts = re.split(r"\.\s+", cleaned.strip(), maxsplit=1)
+        title = parts[0].strip() if parts else None
+        if title and len(title) > 10:
+            return title
+        return None
 
     def _extract_venue_year(
         self,
