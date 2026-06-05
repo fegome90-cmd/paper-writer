@@ -255,8 +255,9 @@ def _normalize_paper(raw: dict[str, Any]) -> NormalizedPaper:
     categories = raw.get("categories") or []
 
     # Citations count — may be absent (OpenAlex-only)
-    citations_count = raw.get("citations", 0)
-    if citations_count is None:
+    if "citations" in raw:
+        citations_count = raw["citations"] or 0
+    else:
         citations_count = 0
         defaulted.append("citations_count")
 

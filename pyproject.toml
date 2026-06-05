@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "Scientific search, drafting, validation, and rendering pipeline."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0.1"]
+dependencies = [
+    "mcp[cli]>=1,<2",
+    "pyyaml>=6.0.1",
+]
 
 # Trifecta is an OPTIONAL external tool for code traceability.
 # It is NOT bundled with paper-writer.

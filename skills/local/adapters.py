@@ -70,7 +70,12 @@ class LiteratureSearchAdapter(SkillAdapter):
             )
 
     def _handle_search(self, inputs: dict[str, Any]) -> SkillResult:
-        """Handle the 'search' command using real scoring engine."""
+        """Handle the 'search' command using real scoring engine.
+
+        When raw_papers is provided, score them directly (backward compat).
+        When raw_papers is None, use PaperSearchProvider to fetch papers
+        from fixture or MCP based on PAPER_SEARCH_PROVIDER env var.
+        """
         query = str(inputs.get("query", ""))
         output_dir = Path(inputs.get("output_dir", "outputs/search"))
         raw_papers = inputs.get("raw_papers")
@@ -82,7 +87,42 @@ class LiteratureSearchAdapter(SkillAdapter):
                 raw_papers = json.loads(raw_papers)
             except (json.JSONDecodeError, ValueError):
                 raw_papers = json.loads(Path(raw_papers).read_text(encoding="utf-8"))
-        # If raw_papers is a list of dicts from a previous agent run, use directly
+
+        # If no raw_papers provided, fetch from provider
+        if raw_papers is None:
+            from harness.ports.paper_search_provider import create_search_provider
+
+            provider = create_search_provider()
+            provider_result = provider.search(
+                query=query,
+                limit=int(inputs.get("limit", 20)),
+            )
+
+            # Write raw_results.json (provider output as-is)
+            raw_payload = {
+                **provider_result.raw_payload,
+                "provenance": provider_result.provenance.to_dict(),
+            }
+            raw_path = output_dir / "raw_results.json"
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(
+                json.dumps(raw_payload, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            # Write normalized_results.json (paper-writer format)
+            normalized_payload = {
+                "provenance": provider_result.provenance.to_dict(),
+                "papers": [p.to_dict() for p in provider_result.papers],
+            }
+            norm_path = output_dir / "normalized_results.json"
+            norm_path.write_text(
+                json.dumps(normalized_payload, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            # Convert normalized papers to raw_papers for scoring pipeline
+            raw_papers = [p.to_dict() for p in provider_result.papers]
 
         result = search_module.search(
             query=query,
