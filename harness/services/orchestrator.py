@@ -385,15 +385,30 @@ class Orchestrator:
             ]
             # Soft gate: if refs are resolved, citations are verified
             all_ok = all(r.status in ("pass", "warn") for r in results)
+            status = "pass" if all_ok else "warn"
+
+            # Compute tiered gate verdict
+            from validators.gate_verdict import tier_from_findings
+
+            # Collect findings from upstream gate results
+            citation_findings = []
+            for r in results:
+                for b in r.blockers:
+                    citation_findings.append({"severity": "P0", "message": b})
+                for w in r.warnings:
+                    citation_findings.append({"severity": "P2", "message": w})
+            verdict = tier_from_findings(citation_findings)
+
             results.append(
                 GateResult(
                     gate="citation_verified",
-                    status="pass" if all_ok else "warn",
+                    status=status,
                     blockers=[],
                     warnings=(
                         [] if all_ok else ["Citations not fully verified — check refs output"]
                     ),
                     artifacts=[],
+                    gate_verdict=verdict.to_dict(),
                 )
             )
             return results

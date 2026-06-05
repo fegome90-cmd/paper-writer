@@ -109,6 +109,9 @@ def severity_to_tier(severity: str) -> str:
         "P3": TIER_NONE,
         "info": TIER_NONE,
         "none": TIER_NONE,
+        # ValidatorResult uses "error" / "warning" severity labels
+        "error": TIER_HIGH_WARN,
+        "warning": TIER_LOW_WARN,
     }
     return mapping.get(severity, TIER_LOW_WARN)
 

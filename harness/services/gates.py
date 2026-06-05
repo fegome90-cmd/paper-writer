@@ -25,6 +25,7 @@ class GateResult:
     blockers: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     artifacts: list[str] = field(default_factory=list)
+    gate_verdict: dict[str, Any] | None = None  # Tiered verdict from GateVerdict (optional)
 
 
 def run_gate(gate_name: str, checks: list[Check], artifacts: list[str]) -> GateResult:
@@ -269,12 +270,18 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
     elif status == "pass" and warnings:
         status = "warn"
 
+    # Compute tiered gate verdict from findings
+    from validators.gate_verdict import tier_from_findings
+
+    verdict = tier_from_findings(findings)
+
     return GateResult(
         gate=gate_name,
         status=status,
         blockers=blockers,
         warnings=warnings,
         artifacts=artifacts_checked,
+        gate_verdict=verdict.to_dict(),
     )
 
 
