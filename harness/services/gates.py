@@ -275,6 +275,11 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
 
     verdict = tier_from_findings(findings)
 
+    # Extract citation verification verdict from summary finding if present
+    citation_verdict = _extract_citation_verdict(findings)
+    if citation_verdict:
+        verdict = citation_verdict
+
     return GateResult(
         gate=gate_name,
         status=status,
@@ -283,6 +288,57 @@ def validate_validator_gate(gate_name: str, validator_result: dict[str, Any] | N
         artifacts=artifacts_checked,
         gate_verdict=verdict.to_dict(),
     )
+
+
+def _extract_citation_verdict(
+    findings: list[dict[str, Any]],
+) -> "GateVerdict | None":
+    """Extract citation verification verdict from summary finding.
+
+    The citation_verify validator appends a summary finding with
+    rule_id='citation_verification_summary' containing the 3-class
+    verdict (verified/unresolvable/fabricated). This converts it to
+    a proper GateVerdict with correct tier mapping.
+
+    Returns None if no citation summary finding is present.
+    """
+    from validators.gate_verdict import (
+        ANNOT_FABRICATED_REFERENCE,
+        ANNOT_NOT_FOUND,
+        TIER_HIGH_WARN,
+        TIER_LOW_WARN,
+        TIER_NONE,
+        GateVerdict,
+    )
+
+    for f in findings:
+        if f.get("rule_id", f.get("code", "")) != "citation_verification_summary":
+            continue
+
+        evidence = f.get("evidence", {})
+        cv_verdict = evidence.get("verdict", "")
+
+        if cv_verdict == "verified":
+            return GateVerdict(
+                tier=TIER_NONE,
+                annotation="",
+                message="All citations verified",
+            )
+        elif cv_verdict == "unresolvable":
+            return GateVerdict(
+                tier=TIER_LOW_WARN,
+                annotation=ANNOT_NOT_FOUND,
+                message="Some citations could not be fully verified (coverage gap)",
+            )
+        elif cv_verdict == "fabricated":
+            return GateVerdict(
+                tier=TIER_HIGH_WARN,
+                annotation=ANNOT_FABRICATED_REFERENCE,
+                message="At least one DOI failed to resolve (fabrication evidence)",
+            )
+        break
+
+    return None
 
 
 def validate_render_passed(checker: ArtifactChecker) -> GateResult:
