@@ -439,10 +439,19 @@ class CitationVerifyValidator:
         sources_found = sum([cr_found, s2_found, oa_found, ar_found])
 
         if sources_found >= 2:
-            cr_score = crossref.score if crossref else 0
-            s2_score = s2.score if s2 else 0
+            # Collect scores only from sources that found the citation
+            found_scores = []
+            if cr_found and crossref:
+                found_scores.append(crossref.score)
+            if s2_found and s2:
+                found_scores.append(s2.score)
+            if oa_found and openalex:
+                found_scores.append(openalex.score)
+            if ar_found and arxiv:
+                found_scores.append(arxiv.score)
 
-            if cr_score < TITLE_SIMILARITY_THRESHOLD or s2_score < TITLE_SIMILARITY_THRESHOLD:
+            max_score = max(found_scores) if found_scores else 0
+            if max_score < TITLE_SIMILARITY_THRESHOLD:
                 return "title_mismatch", "P1"
             return "verified", None
 

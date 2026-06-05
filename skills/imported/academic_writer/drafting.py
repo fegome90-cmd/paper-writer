@@ -474,7 +474,7 @@ def _try_llm_generation(
 
     # Explicit opt-in required: only generate when user explicitly enables
     mode = os.environ.get("PAPER_LLM_CLI", "").lower()
-    if mode not in ("claude", "codex", "gemini"):
+    if mode not in ("pi", "claude", "codex", "gemini", "auto"):
         return None
 
     try:

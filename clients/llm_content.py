@@ -282,9 +282,9 @@ class LLMClient:
 def _detect_available_cli() -> str | None:
     """Auto-detect which LLM CLI is available in PATH.
 
-    Priority: claude > codex > gemini (Claude has best academic writing).
+    Priority: pi > claude > codex > gemini (Pi is the preferred executor).
     """
-    for cli in ("claude", "codex", "gemini"):
+    for cli in ("pi", "claude", "codex", "gemini"):
         if shutil.which(cli):
             return cli
     return None
@@ -307,7 +307,7 @@ def get_llm_client(
         cli = _detect_available_cli()
         if cli is None:
             return None
-    elif mode in ("claude", "codex", "gemini"):
+    elif mode in ("pi", "claude", "codex", "gemini"):
         if not shutil.which(mode):
             return None
         cli = mode
