@@ -1,4 +1,4 @@
-# Outline — 
+# Outline — systematic literature review
 
 <!--
 Structure derived from sections_manifest.json

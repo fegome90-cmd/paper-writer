@@ -301,15 +301,26 @@ class CitationVerifyValidator:
 
         Heuristics (in priority order):
         1. Strip leading reference number (e.g. "1. ", "[1] ")
-        2. Split on sentence boundaries after author-like content
-        3. The title is typically the SECOND segment (after authors)
-        4. Strip trailing venue/year noise
+        2. Strip arXiv IDs and URLs
+        3. Split on sentence boundaries after author-like content
+        4. The title is typically the SECOND segment (after authors)
+        5. Strip trailing venue/year noise
         """
         # Strip reference number prefix
         text = re.sub(r"^[\d\[\(]+[\.\]\)]*\s*", "", ref_text.strip())
 
+        # Strip arXiv IDs and URLs before splitting
+        text = ARXIV_ID_PATTERN.sub("", text)
+        text = re.sub(r"https?://\S+", "", text)
+        text = text.strip()
+        if not text:
+            return ref_text.strip()
+
         # Split into segments on ". " boundaries
         segments = re.split(r"\.\s+", text)
+
+        # Filter empty segments (from stripped arXiv IDs)
+        segments = [s.strip() for s in segments if s.strip()]
 
         if len(segments) < 2:
             # Single segment — return as-is (probably just a title)
@@ -318,7 +329,7 @@ class CitationVerifyValidator:
         # First segment is usually authors (contains names, "et al.", commas)
         # Second segment is usually the title
         # Heuristics: authors contain patterns like "et al", "J.", "A.B."
-        first = segments[0].strip()
+        first = segments[0]
 
         # Check if first segment looks like authors
         looks_like_authors = bool(
@@ -326,7 +337,7 @@ class CitationVerifyValidator:
         )
 
         if looks_like_authors and len(segments) >= 2:
-            candidate = segments[1].strip()
+            candidate = segments[1]
         else:
             # First segment might BE the title
             candidate = first

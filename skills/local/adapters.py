@@ -14,6 +14,7 @@ between the orchestrator's request format and the skill's internal API.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -155,7 +156,7 @@ class LiteratureSearchAdapter(SkillAdapter):
         """Handle the 'screen' command using real tier classification."""
         search_dir = Path(inputs.get("search_dir", "outputs/search"))
         output_dir = Path(inputs.get("output_dir", "outputs/search"))
-        min_tier = str(inputs.get("min_tier", "Tier 3"))
+        min_tier = str(inputs.get("min_tier", os.environ.get("PAPER_SCREEN_MIN_TIER", "Tier 3")))
 
         result = search_module.screen(
             search_dir=search_dir,

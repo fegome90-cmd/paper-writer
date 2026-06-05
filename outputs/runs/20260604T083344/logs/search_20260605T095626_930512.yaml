@@ -1,0 +1,32 @@
+command: search
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  query: systematic literature review
+  raw_papers: /tmp/raw_papers_enriched.json
+success: true
+exit_code: 0
+stage_before: search
+stage_after: screen
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_search_completed
+  status: succeeded
+  error: null
+- step_id: persist_state
+  status: succeeded
+blockers: []
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/search/search_plan.json
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/search/raw_results.json
+gate_changes:
+  search_completed: true
+state_changes:
+  stage_before: search
+  stage_after: screen

@@ -1,0 +1,32 @@
+command: init
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  preset: null
+success: true
+exit_code: 0
+stage_before: bootstrap
+stage_after: search
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_repo_initialized
+  status: succeeded
+  error: null
+- step_id: persist_state
+  status: succeeded
+blockers: []
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/state.yaml
+- /Users/felipe_gonzalez/Developer/paper-writer/templates/manuscript.qmd
+- /Users/felipe_gonzalez/Developer/paper-writer/templates/references.bib
+gate_changes:
+  repo_initialized: true
+state_changes:
+  stage_before: bootstrap
+  stage_after: search
