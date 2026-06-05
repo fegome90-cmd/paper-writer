@@ -33,7 +33,7 @@ ARXIV_ID_PATTERN = re.compile(
 
 # Import PREPRINT_VENUES from contamination_signals to avoid circular import
 # Re-exported for backward compatibility
-from validators.contamination_signals import PREPRINT_VENUES  # noqa: E402
+from validators.contamination_signals import PREPRINT_VENUES as PREPRINT_VENUES  # noqa: E402
 
 
 class CitationVerifyValidator:
@@ -353,7 +353,9 @@ class CitationVerifyValidator:
         # Remove trailing venue-like words: "Nature", "NeurIPS", "IEEE Trans"
         text = re.sub(
             r"\s*(?:Nature|Science|NeurIPS|ICML|ICLR|ACL|EMNLP|AAAI|CVPR|IEEE\s+\w+|arXiv.*)\s*$",
-            "", text, flags=re.IGNORECASE,
+            "",
+            text,
+            flags=re.IGNORECASE,
         )
         # Remove trailing semicolon+page noise: ";15(2):45-67"
         text = re.sub(r";.*$", "", text)
@@ -446,7 +448,6 @@ class CitationVerifyValidator:
                 return arxiv_id
         return None
 
-    @staticmethod
     def _extract_venue_year(
         self,
         crossref: CrossrefResult | None,
