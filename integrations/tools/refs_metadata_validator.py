@@ -170,9 +170,7 @@ class RefsMetadataValidator(ToolWrapper):
             fields: dict[str, str] = {}
 
             # Parse field = value pairs with brace depth tracking
-            for fm in re.finditer(
-                r"(\w+)\s*=\s*", body, re.IGNORECASE
-            ):
+            for fm in re.finditer(r"(\w+)\s*=\s*", body, re.IGNORECASE):
                 field_name = fm.group(1).lower()
                 val_start = fm.end()
 
