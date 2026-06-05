@@ -183,7 +183,7 @@ The CLI SHALL accept an optional `--project/-C` global flag before any subcomman
 
 ### Requirement: CLI search query forwarding
 
-The CLI MUST accept an optional `--query` flag for `paper search`. When the user omits `--query`, the CLI MUST still preserve the existing no-argument workflow by forwarding a deterministic non-empty default query to the orchestrator.
+The CLI MUST accept an optional `--query` flag for `paper search`. When the user omits `--query`, the CLI MUST still preserve the existing no-argument workflow by forwarding a deterministic non-empty compatibility fallback query to the orchestrator, and it MUST make that fallback visible in console output.
 
 (Previously: `paper search` forwarded no query, causing provider-backed search to fail on empty-query validation.)
 
@@ -197,6 +197,7 @@ The CLI MUST accept an optional `--query` flag for `paper search`. When the user
 - WHEN the CLI builds the orchestrator request
 - THEN `request.args["query"]` MUST be present
 - AND it MUST be non-empty
+- AND the CLI MUST emit a visible compatibility-fallback notice
 
 ### Requirement: CLI search backward-compatible execution
 

@@ -31,6 +31,9 @@ def _get_version() -> str:
 
 MAX_ASCENDING_DEPTH = 20
 DEFAULT_SEARCH_QUERY = "systematic literature review"
+DEFAULT_SEARCH_QUERY_NOTICE = (
+    "[--] No --query supplied; using compatibility fallback query for provider-backed search."
+)
 
 
 def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
@@ -412,6 +415,8 @@ def main() -> None:
     if cmd_name == "init":
         orch_args["preset"] = args.preset
     elif cmd_name == "search":
+        if args.query is None:
+            print(DEFAULT_SEARCH_QUERY_NOTICE)
         orch_args["query"] = args.query or DEFAULT_SEARCH_QUERY
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers

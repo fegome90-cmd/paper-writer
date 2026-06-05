@@ -52,12 +52,6 @@ def _capture_request(
             {"preset": "nature"},
         ),
         (
-            ["paper", "search"],
-            "search",
-            "stop_on_error",
-            {"query": "systematic literature review"},
-        ),
-        (
             ["paper", "search", "--query", "voice disorders"],
             "search",
             "stop_on_error",
@@ -156,6 +150,19 @@ def test_cli_maps_commands_to_orchestrator_request(
     assert request.requested_stage == "unknown"
     assert request.context["actor"] == "cli"
     assert request.context["cwd"] == str(tmp_path)
+
+
+def test_cli_search_without_query_forwards_non_empty_compatibility_query(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _capture_request(tmp_path, monkeypatch, ["paper", "search"])
+
+    assert request.command == "search"
+    assert request.failure_policy == "stop_on_error"
+    assert "query" in request.args
+    assert isinstance(request.args["query"], str)
+    assert request.args["query"].strip()
 
 
 def test_cli_exits_with_orchestrator_exit_code(

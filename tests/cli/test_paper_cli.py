@@ -173,6 +173,28 @@ def test_cli_full_pipeline(
     assert "ready_for_delivery" in captured.out
 
 
+def test_cli_search_without_query_uses_visible_compatibility_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.setattr(sys, "argv", ["paper", "init"])
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+    capsys.readouterr()
+
+    monkeypatch.setattr(sys, "argv", ["paper", "search"])
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+
+    captured = capsys.readouterr()
+    assert "compatibility fallback query" in captured.out
+    assert (tmp_path / "outputs" / "latest" / "search" / "search_plan.json").is_file()
+    assert (tmp_path / "outputs" / "latest" / "search" / "raw_results.json").is_file()
+
+
 def test_cli_init_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Init must not set any gate True if the scaffold action fails.
 

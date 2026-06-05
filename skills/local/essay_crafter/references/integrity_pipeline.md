@@ -13,12 +13,15 @@ This skill is designed to sit on top of the repository's existing audit surfaces
 ## Recommended gate order
 
 1. **Question gate** — reject descriptive prompts with no arguable thesis.
-2. **Passport gate** — reject notes without locator anchors.
-3. **Outline gate** — reject branches not tied to the essay question.
-4. **Drafting gate** — allow verbosity, but preserve `claim_id` traceability.
-5. **Prose gate** — run style and writing-quality review before formatting.
-6. **Reviewer gate** — simulate editor, method critic, and devil’s advocate.
-7. **Claim audit gate** — verify claims against linked evidence before final delivery.
+2. **Roadmap gate** — require thesis plus explicit navigation at the end of the introduction.
+3. **Passport gate** — reject notes without locator anchors.
+4. **Structure gate** — reject sections that mix empirical, ethical, regulatory, and normative dimensions in one block.
+5. **Paragraph density gate** — reject paragraphs that perform more than one rhetorical job.
+6. **Drafting gate** — allow verbosity, but preserve `claim_id` traceability.
+7. **Prose gate** — run style and writing-quality review before formatting.
+8. **Reviewer gate** — simulate editor, method critic, devil’s advocate, and architecture editor.
+9. **Editorial cleanup gate** — remove orphan tokens, truncation artifacts, and placeholders.
+10. **Claim audit gate** — verify claims against linked evidence before final delivery.
 
 ## Important limitation
 
