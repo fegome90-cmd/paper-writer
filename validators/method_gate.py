@@ -92,7 +92,8 @@ class MethodGateValidator:
                     "execution_time_ms": elapsed,
                 },
                 "gate_verdict": GateVerdict(
-                    tier="none", message="No checklist resolved",
+                    tier="none",
+                    message="No checklist resolved",
                 ).to_dict(),
             }
 

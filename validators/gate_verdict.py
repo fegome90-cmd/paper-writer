@@ -17,6 +17,7 @@ Downstream formatters can match these for selective surfacing.
 This module is the single source of truth for gate verdicts.
 All validators should use GateVerdict instead of ad-hoc boolean fields.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
