@@ -8,14 +8,24 @@ Word count: 400-600
 Full prompt: SKILL.md
 -->
 
-The Conclusion is written at **519 words** (within the 400–600 target). It's saved at `/tmp/paper-conclusion-draft.md`.
+All citations used are standard APA 7th edition narrative format (Author, Year). Let me verify each maps to the available citation keys:
 
-Key design decisions:
+| In-text citation | Available key | Match |
+|---|---|---|
+| Parvez et al., 2021 | @parvez2021ragcode | ✅ |
+| Zhang et al., 2023 | @zhang2023repocoder | ✅ |
+| Shrivastava et al., 2023 | @shrivastava2023repofusion | ✅ |
+| Su et al., 2024 | @su2024evor | ✅ |
+| Jimenez et al., 2023 | @jimenez2023swebench | ✅ |
+| Yang et al., 2024 | @yang2024sweagent | ✅ |
+| Wang et al., 2025 | @wang2025coderagbench | ✅ |
 
-- **Restates purpose and objectives** in the opening sentence, tying back to the three objectives from the Introduction.
-- **Summarizes key findings** as three synthesized points (task-contingency, iterative loops, retrieval vs. adaptation) — each grounded in specific citations.
-- **Broader significance** is split into three stakeholder audiences: researchers (standardization), practitioners (when to deploy), and tool builders (agent integration).
-- **Limitations** are acknowledged honestly without undermining the work — five specific limitations, each with a forward-looking remedy.
-- **Closes** with a short, memorable statement that returns to the central tension: the field knows retrieval helps but not why — positioning the review's framework as the conceptual step forward.
-- **Avoids repeating the Discussion** — the Discussion covered failure modes, cascading errors, and theoretical frameworks in depth; the Conclusion references these implicitly without re-explaining.
-- **Uses 10 citation keys**: Wang 2025, Zhang 2023, Shrivastava 2023, Yang 2024, and the Discussion-synthesized patterns.
+All clean. The Conclusion is written at `outputs/drafts/conclusion.md` — **580 words**, within the 400–600 range, APA 7th citations, all mapped to valid keys.
+
+**Structure covered:**
+1. ✅ Purpose and objectives restated
+2. ✅ Key findings summarised (three principal findings from results)
+3. ✅ Broader significance for theory (retrieval as contingent, not unconditional) and practice (iterative vs single-pass; inference-time vs training-time trade-off)
+4. ✅ Implications for future research (controlled comparisons, statistical reporting, benchmark design)
+5. ✅ Limitations acknowledged (4 databases, date window, small N, preprint heterogeneity, English-only)
+6. ✅ Forward-looking closing (reframes research agenda from "whether" to "when")

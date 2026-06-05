@@ -326,51 +326,52 @@ class CitationVerifyValidator:
         """Extract a clean paper title from a raw reference string.
 
         Reference formats vary, but common patterns:
-        - "1. Authors. Title. Venue Year."
-        - "Authors, Title, Conference, Year."
-        - "Authors (Year) Title."
+        - "1. Authors. Title. Venue Year."  (numbered)
+        - "[1] Authors. Title. Venue Year."  (IEEE)
+        - "Authors (Year). Title."           (APA — most common in Pandoc output)
 
-        Heuristics (in priority order):
-        1. Strip leading reference number (e.g. "1. ", "[1] ")
-        2. Strip arXiv IDs and URLs
-        3. Split on sentence boundaries after author-like content
-        4. The title is typically the SECOND segment (after authors)
-        5. Strip trailing venue/year noise
+        Strategy:
+        1. Try APA pattern: extract text after "(YEAR). " — most reliable
+        2. Fall back to segment-based extraction for numbered formats
         """
         # Strip reference number prefix
         text = re.sub(r"^[\d\[\(]+[\.\]\)]*\s*", "", ref_text.strip())
 
-        # Strip arXiv IDs and URLs before splitting
+        # Strip arXiv IDs and URLs
         text = ARXIV_ID_PATTERN.sub("", text)
         text = re.sub(r"https?://\S+", "", text)
         text = text.strip()
         if not text:
             return ref_text.strip()
 
-        # Split into segments on ". " boundaries
-        segments = re.split(r"\.\s+", text)
+        # Strategy 1: APA pattern — "Authors (YEAR). Title."
+        # Most common in Pandoc-rendered bibliographies
+        apa_match = re.search(
+            r"\(\d{4}\)\.\s+(.+?)(?:\.\s*$|\.\s+(?:In\s|Retrieved|Available))",
+            text, re.DOTALL,
+        )
+        if apa_match:
+            return CitationVerifyValidator._clean_title_segment(apa_match.group(1))
 
-        # Filter empty segments (from stripped arXiv IDs)
+        # Strategy 2: Collapse author initials, then segment-based
+        # "Brown, T. B." → "Brown, TB" to avoid false splits
+        collapsed = re.sub(r"\b([A-Z])\.\s*(?=[A-Z]\.|,\s|\s\()", r"\1", text)
+
+        segments = re.split(r"\.\s+", collapsed)
         segments = [s.strip() for s in segments if s.strip()]
 
         if len(segments) < 2:
-            # Single segment — return as-is (probably just a title)
             return CitationVerifyValidator._clean_title_segment(text)
 
-        # First segment is usually authors (contains names, "et al.", commas)
-        # Second segment is usually the title
-        # Heuristics: authors contain patterns like "et al", "J.", "A.B."
+        # First segment is usually authors (contains commas, et al., &, year)
         first = segments[0]
-
-        # Check if first segment looks like authors
         looks_like_authors = bool(
-            re.search(r"et\s+al|,\s*[A-Z]\.|[A-Z][a-z]+\s+[A-Z]\b|\d{4}", first)
+            re.search(r"et\s*al|,\s*[A-Z]\b|[A-Z][a-z]+,|\d{4}|&|[A-Z][a-z]+\s+[A-Z]$", first)
         )
 
         if looks_like_authors and len(segments) >= 2:
             candidate = segments[1]
         else:
-            # First segment might BE the title
             candidate = first
 
         return CitationVerifyValidator._clean_title_segment(candidate)
@@ -384,7 +385,7 @@ class CitationVerifyValidator:
         # (e.g., "arXiv:2301.00001"), NOT when used as a standalone word
         # in a title (e.g., "Survey of arXiv submissions").
         text = re.sub(
-            r"\s*arXiv:\s*\d{4}\.\d{4,5}(?:v\d+)?\s*$",
+            r"\s*\[?arXiv:\s*\d{4}\.\d{4,5}(?:v\d+)?\]?\s*$",
             "",
             text,
             flags=re.IGNORECASE,
@@ -514,10 +515,6 @@ class CitationVerifyValidator:
         - arXiv:2301.00001, arXiv:2301.00001v2
         - https://arxiv.org/abs/2301.00001
         - 10.48550/arXiv.2301.00001 (arXiv DOI)
-
-        Bare numeric IDs (NNNN.NNNNN) are NOT matched to avoid false positives
-        on journal DOIs like 10.1038/nature.2023.12345.
-        For DOI-based extraction, use extract_arxiv_id_from_doi() instead.
         """
         if not raw_text:
             return None

@@ -4,13 +4,13 @@ Run this after the first full draft and before prose polishing.
 
 ## Introduction check
 
-The introduction must:
+Verify against the four required components in `references/introduction_microstructure.md`:
 
-1. open with a hook (provocative claim, anecdote, contrast, statistic, or question)
-2. frame the problem and define the argumentative question
-3. delimit scope (what the essay covers and excludes)
-4. state the thesis (contestable, last sentence of introduction)
-5. close with a roadmap sentence
+1. opens with a hook
+2. frames the problem and defines the argumentative question
+3. delimits scope
+4. states the thesis (contestable, last sentence of introduction)
+5. closes with a roadmap sentence
 
 If the roadmap or thesis is missing, the structure gate fails.
 
@@ -26,12 +26,12 @@ Apply the rules matching the selected essay type. Default: argumentative.
 
 ## Conclusion check
 
-The conclusion must:
+Verify against the required components in `references/conclusion_microstructure.md`:
 
-1. restate the thesis in new language (not copy-pasted from introduction)
-2. synthesize how body sections converge to support the thesis
-3. acknowledge at least one limitation
-4. state broader implications beyond the essay's scope
+1. restates the thesis in new language (not copy-pasted from introduction)
+2. synthesizes how body sections converge to support the thesis
+3. acknowledges at least one limitation
+4. states broader implications beyond the essay's scope
 
 If the conclusion introduces new analytical dimensions, the structure gate fails.
 

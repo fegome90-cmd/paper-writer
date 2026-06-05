@@ -1,17 +1,17 @@
 # Schema version: 1.0
 stage: drafting
 gates:
-  search_completed: true
-  citations_resolved: false
-  bib_normalized: false
-  refs_validated: false
+  outline_drafted: true
   repo_initialized: true
+  screened_evidence: true
+  search_completed: true
+  style_passed: false
+  refs_validated: false
+  render_passed: false
+  bib_normalized: false
+  citations_resolved: false
   reporting_passed: false
   sections_completed: false
-  screened_evidence: true
-  render_passed: false
-  style_passed: false
   ready_for_delivery: false
-  outline_drafted: true
   citation_verified: false
   ethics_passed: false

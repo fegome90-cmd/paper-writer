@@ -67,7 +67,7 @@ class LLMClient:
     """
 
     cli_command: str
-    timeout: float = 120.0
+    timeout: float = 300.0
 
     def generate(
         self,
@@ -109,6 +109,11 @@ class LLMClient:
                 )
 
             output = (result.stdout or "").strip()
+
+            # Strip chain-of-thought prefix that some models emit before --- delimiter
+            if "---" in output and output.index("---") < 500:
+                output = output.rsplit("---", 1)[1].strip()
+
             if not output:
                 return LLMResult(
                     success=False,
@@ -273,7 +278,7 @@ def _detect_available_cli() -> str | None:
 
 
 def get_llm_client(
-    timeout: float = 120.0,
+    timeout: float = 300.0,
 ) -> LLMClient | None:
     """Factory: return an LLMClient based on PAPER_LLM_CLI env var.
 
@@ -372,7 +377,9 @@ You are writing the **{section_name.title()}** section for a systematic review p
     system_prompt = (
         "You are an expert academic writer publishing in Q1 journals. "
         "Write clear, precise, human-like academic prose. "
-        "Never use AI-sounding phrases. Always verify claims against evidence."
+        "Never use AI-sounding phrases. Always verify claims against evidence. "
+        "CRITICAL: Output ONLY the section text. No file paths, no meta-commentary, "
+        "no summaries of what you wrote, no markdown code blocks. Just the section content."
     )
 
     return client.generate(

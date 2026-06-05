@@ -4,9 +4,7 @@ Use this scaffold before drafting.
 
 ## Essay Type
 
-Select one: `argumentative` | `comparative` | `chronological` | `thematic` | `problem-solution`
-
-Default: `argumentative`
+Select one: `argumentative` | `comparative` | `chronological` | `thematic` | `problem-solution`. Default: `argumentative`
 
 ## Question
 
@@ -22,27 +20,7 @@ Default: `argumentative`
 
 ## Introduction Micro-Structure
 
-Every introduction must include these four components in order:
-
-### 1. Hook (choose one)
-
-- **Provocative claim** — state a surprising or contested fact.
-- **Anecdote** — open with a brief relevant scene or episode.
-- **Contrast** — juxtapose two opposing positions or expectations.
-- **Statistic** — lead with a striking data point.
-- **Question** — pose the research question directly.
-
-### 2. Context-building scope
-
-What field, debate, or phenomenon does the essay enter? What background does the reader need?
-
-### 3. Scope delimitation
-
-What the essay covers and what it deliberately excludes. One sentence is sufficient.
-
-### 4. Thesis placement
-
-The thesis is the last sentence of the introduction. It must be contestable, not a fact or a plan.
+See `references/introduction_microstructure.md` for hook strategies, context-building, scope delimitation, and thesis placement.
 
 ## Section Map
 
@@ -98,23 +76,4 @@ The thesis is the last sentence of the introduction. It must be contestable, not
 
 ## Conclusion Micro-Structure
 
-Every conclusion must include these components:
-
-### 1. Thesis restatement
-
-Restate the thesis in new language. Do not copy-paste the introduction's thesis sentence.
-
-### 2. Synthesis of main arguments
-
-Show how body sections converge to support the thesis. Not a summary list — a synthesis.
-
-### 3. Acknowledgment of limitations
-Name at least one limitation of the evidence or analysis. Honesty strengthens credibility.
-
-### 4. Broader implications
-
-Why does this argument matter beyond the essay's immediate scope?
-
-### 5. Forward-looking statement (optional)
-
-A closing line pointing to future research or open questions. Omit if it feels forced.
+See `references/conclusion_microstructure.md` for restatement, synthesis, limitations, and implications.

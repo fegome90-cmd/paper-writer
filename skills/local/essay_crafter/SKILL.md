@@ -9,7 +9,7 @@ metadata:
 
 ## Activation Contract
 
-Use this skill when writing or revising an academic essay that must survive claim, citation, and prose scrutiny. Prefer it for deterministic essay pipelines, not freeform brainstorming.
+Use when writing or revising an academic essay that must survive claim, citation, and prose scrutiny. Prefer for deterministic pipelines, not freeform brainstorming.
 
 ## Hard Rules
 
@@ -24,6 +24,7 @@ Use this skill when writing or revising an academic essay that must survive clai
 - Make the warrant connecting each claim to its evidence explicit. Every claim-evidence pair MUST include an explicit warrant (see `references/warrants.md`). Do not leave reasoning assumed.
 - Run prose calibration before final formatting: remove AI-typical phrasing, inflated certainty, and broken paragraph flow.
 - Block final audit if orphan tokens, truncated fragments, or leftover placeholders remain.
+- Paraphrase rather than quote; follow `references/paraphrasing.md`. Flag any direct quote exceeding 40 words.
 
 ## Decision Gates
 
@@ -83,19 +84,12 @@ Return:
 
 ## References
 
-- `assets/evidence_passport.schema.json`
-- `assets/outline_template.md`
-- `references/evidence_passport.md`
-- `references/structure_gate.md`
-- `references/paragraph_density.md`
-- `references/editorial_cleanup.md`
-- `references/integrity_pipeline.md`
-- `references/structured_output_complements.md`
-- `references/counterargument.md`
-- `references/revision_loop.md`
-- `references/failure_paths.md`
-- `references/warrants.md`
-- `references/word_count.md`
-- `references/academic_register.md`
-- `references/transitions.md`
-- `references/paraphrasing.md`
+- `assets/evidence_passport.schema.json` · `assets/outline_template.md`
+- `references/evidence_passport.md` · `references/structure_gate.md`
+- `references/paragraph_density.md` · `references/editorial_cleanup.md`
+- `references/integrity_pipeline.md` · `references/structured_output_complements.md`
+- `references/counterargument.md` · `references/revision_loop.md`
+- `references/failure_paths.md` · `references/warrants.md`
+- `references/word_count.md` · `references/academic_register.md`
+- `references/transitions.md` · `references/paraphrasing.md`
+- `references/introduction_microstructure.md` · `references/conclusion_microstructure.md`

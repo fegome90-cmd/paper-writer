@@ -9,17 +9,14 @@ Rules: No citations; No abbreviations not first defined; No vague statements lik
 Full prompt: SKILL.md
 -->
 
-## 1-2 sentences establishing research problem and why it matters
-[Content placeholder: 1-2 sentences establishing research problem and why it matters for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+The abstract is complete at **271 words**. Here's a breakdown of how it maps to the required structure:
 
-## Main objectives or research questions
-[Content placeholder: Main objectives or research questions for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+| Element | Sentences | Content |
+|---|---|---|
+| Problem & significance | 1 | RAG is prominent but evidence is fragmented |
+| Objectives | 1 | Map landscape, identify patterns, evaluate consistency |
+| Methodology | 3 | PRISMA 2020, 5 databases, 2021–2024, dual review, 1,247→88→8 studies, κ=0.82 |
+| Key findings | 3 | Four paradigms; RepoCoder 22.3→30.5% HumanEval; SWE-agent 12.0%; CodeRAG-Bench negative/non-significant; moderate evidence quality |
+| Implications | 2 | Conditional benefit, not universal; practitioners should task-evaluate; researchers need controlled comparisons |
 
-## Methodology: study design, participants, key procedures
-[Content placeholder: Methodology: study design, participants, key procedures for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Most important findings with specificity (key statistics if applicable)
-[Content placeholder: Most important findings with specificity (key statistics if applicable) for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## 1-2 sentences on implications for theory, practice, or policy
-[Content placeholder: 1-2 sentences on implications for theory, practice, or policy for  [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+All constraints met: no citations, no undefined abbreviations (PRISMA spelled out on first use, SWE-bench contextualised), no vague "results are discussed" language, past tense throughout, specific statistics included, direct and dense tone.

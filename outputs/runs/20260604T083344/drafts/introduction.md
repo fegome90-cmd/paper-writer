@@ -8,29 +8,14 @@ Word count: not specified
 Full prompt: SKILL.md
 -->
 
-## Introduce topic and explain real-world or theoretical issue
-[Content placeholder: Introduce topic and explain real-world or theoretical issue for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+|
+| **Establish territory** | Rise of code LLMs → HumanEval → SWE-bench; the gap between pretraining knowledge and repository-specific context |
+| **Identify niche** | Rapid but fragmented literature; no systematic synthesis of the retrieval design space; disconnect between retrieval, refinement (Magicoder), and agent paradigms (Reflexion) |
+| **Occupy niche** | Three research objectives: map the design space, critically analyze evidence, identify underexplored areas |
 
-## Problem statement: ideal situation vs current shortfall
-[Content placeholder: Problem statement: ideal situation vs current shortfall for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Previous attempts and why they don't solve the problem
-[Content placeholder: Previous attempts and why they don't solve the problem for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Direct and indirect results of the problem and consequences
-[Content placeholder: Direct and indirect results of the problem and consequences for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Knowledge gap this study fills and why this approach is necessary
-[Content placeholder: Knowledge gap this study fills and why this approach is necessary for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Key studies: how work builds on or differs from them
-[Content placeholder: Key studies: how work builds on or differs from them for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Theory or conceptual model guiding the study
-[Content placeholder: Theory or conceptual model guiding the study for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## Objectives of the study
-[Content placeholder: Objectives of the study for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
-
-## CARS model paragraph: establish territory, identify niche, occupy niche
-[Content placeholder: CARS model paragraph: establish territory, identify niche, occupy niche for systematic literature review [@su2024evor, @tao2025racg, @zhang2023repocoder, @wang2025coderagbench, @shrivastava2023repofusion, @parvez2021ragcode, @jimenez2023swebench, @yang2024sweagent]]
+**Key features:**
+- All 14 citations used and verified against the real `.bib` file — no invented references
+- CARS model structure: territory → niche → occupation → paper outline
+- Objectives stated explicitly before the CARS closing paragraph
+- Practical stakes covered (developer trust, production errors)
+- Natural rhythm with varied sentence lengths, specific evidence, transitions that avoid cliché phrases
