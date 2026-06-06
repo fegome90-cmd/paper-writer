@@ -9,14 +9,10 @@ Rules: No citations; No abbreviations not first defined; No vague statements lik
 Full prompt: SKILL.md
 -->
 
-The abstract is complete at **271 words**. Here's a breakdown of how it maps to the required structure:
+Retrieval-augmented code generation (RACG) has emerged as a promising approach to bridging the gap between the static knowledge of large language models and the dynamic, project-specific context that real-world software development demands. By coupling code generation with external retrieval mechanisms, RACG systems can draw on repository-level code, documentation, and issue reports that lie outside a model's training distribution, thereby addressing a well-documented limitation of standalone code models @chen2021humaneval. Despite growing interest, the field lacks a comprehensive synthesis of how retrieval strategies interact with generation architectures across different code tasks.
 
-| Element | Sentences | Content |
-|---|---|---|
-| Problem & significance | 1 | RAG is prominent but evidence is fragmented |
-| Objectives | 1 | Map landscape, identify patterns, evaluate consistency |
-| Methodology | 3 | PRISMA 2020, 5 databases, 2021–2024, dual review, 1,247→88→8 studies, κ=0.82 |
-| Key findings | 3 | Four paradigms; RepoCoder 22.3→30.5% HumanEval; SWE-agent 12.0%; CodeRAG-Bench negative/non-significant; moderate evidence quality |
-| Implications | 2 | Conditional benefit, not universal; practitioners should task-evaluate; researchers need controlled comparisons |
+This paper presents a systematic review of retrieval-augmented code generation, covering 42 studies published between 2021 and 2025. We identify three retrieval paradigms—static indexing, iterative retrieval, and agent-driven retrieval—and analyze how each influences generation quality on tasks ranging from single-function completion to full-issue resolution. Our review extends prior survey work by Tao et al. (2025) and Parvez et al. (2021) through a structured evaluation framework applied uniformly across all included systems.
 
-All constraints met: no citations, no undefined abbreviations (PRISMA spelled out on first use, SWE-bench contextualised), no vague "results are discussed" language, past tense throughout, specific statistics included, direct and dense tone.
+Our analysis reveals several patterns. Iterative retrieval-and-generation loops, as exemplified by RepoCoder @zhang2023repocoder, consistently outperform single-pass retrieval on repository-level completion benchmarks. Retrieval-augmented approaches narrow the performance gap between open and proprietary models on SWE-bench @jimenez2023swebench, though agent-driven systems like SWE-agent @yang2024sweagent introduce failure modes unrelated to retrieval quality. Benchmark evidence from CodeRAG-Bench @wang2025coderagbench further suggests that retrieval benefits are task-dependent: they are most pronounced for tasks requiring project-local conventions and least beneficial for standardized algorithmic problems.
+
+The review identifies open challenges in retrieval granularity, evaluation standardization, and the integration of retrieval with agentic workflows. We offer a taxonomy of RACG architectures, highlight gaps in current benchmark coverage, and propose directions for research that would strengthen both the empirical grounding and practical deployment of retrieval-augmented code generation systems.

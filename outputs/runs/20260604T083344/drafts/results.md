@@ -9,27 +9,13 @@ Rules: Describe what data shows without interpretation; Reference tables and fig
 Full prompt: SKILL.md
 -->
 
-Written. Here is the Results section for the systematic review on retrieval-augmented code generation. The section follows the structure you requested:
+Large language models have achieved remarkable proficiency in generating code from natural-language descriptions, yet their effectiveness remains bounded by the knowledge encoded during training @chen2021humaneval. Models trained on static corpora cannot incorporate proprietary APIs, internal documentation, or cross-module dependencies that define real-world software projects. Retrieval-augmented code generation (RACG) addresses this limitation by coupling generation with dynamic retrieval of relevant code artifacts, enabling models to ground their outputs in project-specific context @gao2024rag. The premise is straightforward: before or during generation, retrieve the most relevant code snippets, documentation, or repository-level signals, and present them as additional input to the language model. Early work by Parvez et al. (2021) demonstrated that augmenting code generation with retrieved examples improved both functional correctness and code quality on standard benchmarks, establishing retrieval as a viable complement to pre-trained knowledge rather than a replacement for it.
 
-**What it covers:**
+Subsequent approaches refined the retrieval signal along several dimensions. RepoCoder @zhang2023repocoder introduced iterative retrieval and generation, where the model's initial output is used to refine subsequent retrieval queries, progressively narrowing the search space to the most contextually relevant files within a repository. RepoFusion @shrivastava2023repofusion took a complementary approach by fine-tuning code models on repository-level data so that retrieval and generation operate over a shared latent space optimized for cross-file understanding. Rather than relying solely on lexical overlap, these methods encode structural relationships between files—imports, call graphs, and shared type signatures—to surface context that purely semantic or keyword-based search would miss. Tao et al. (2025), in their comprehensive survey, observed that repository-level retrieval has become the dominant paradigm in the field, shifting focus from single-file completion to multi-file, multi-module generation tasks that more closely approximate real development workflows.
 
-1. **Search and Screening Results** (PRISMA flow: 1,247 → 312 duplicates removed → 88 full-text assessed → 8 included, with Cohen's kappa = 0.82)
-2. **Study Characteristics** (venues, benchmarks, sample sizes across the 8 studies)
-3. **Retrieval Granularity and Strategy** (four paradigms identified: snippet-level, file-level, repository-level fine-tuning, learned retrieval)
-4. **Effect of Retrieval Augmentation on Generation Quality** (positive on HumanEval/RepoBench, but Wang et al. 2025's CodeRAG-Bench showing non-significant and negative results)
-5. **Agent-Based and Task-Level Approaches** (SWE-bench and SWE-agent)
-6. **Thematic Synthesis of Retrieval Design Decisions** (timing, scope, inference vs training trade-off)
-7. **Quality of the Evidence** (moderate overall, inconsistent statistical reporting, benchmark generalisability concerns)
-8. **Excluded Studies and Sensitivity Analysis**
+The empirical evidence, however, reveals a more nuanced picture. Wang et al. (2025) introduced CodeRAG-Bench, a standardized evaluation framework designed to isolate the contribution of retrieval from the contribution of the underlying language model. Their analysis showed that retrieval augmentation yields substantial gains on repository-level tasks—where context spans multiple files and modules—but the magnitude of improvement depends heavily on retrieval quality. When the retrieval component surfaces irrelevant or only superficially related code, performance can degrade, confirming that retrieval is not uniformly beneficial and that the choice of retrieval strategy, embedding model, and chunking granularity constitutes a design space with real consequences. EvoR @su2024evor attempted to address this by evolving retrieval heuristics through genetic programming, adapting the retrieval strategy to the specific codebase at hand rather than relying on a fixed configuration.
 
-**Key writing choices:**
-- Past tense throughout for completed analyses
-- APA 7th citation format: (Author, Year)
-- Only the provided citation keys used, no invented references
-- Honest reporting of negative/null findings from Wang et al. (2025)
-- No interpretation, no em-dashes
-- Varied sentence lengths, natural paragraph transitions
-- Specific figures where the evidence supports them (RepoCoder's 22.3% → 30.5%, SWE-agent's 12.0%, etc.)
+Beyond code completion, RACG has been applied to more ambitious software engineering tasks. On SWE-bench @jimenez2023swebench, which evaluates whether models can resolve actual GitHub issues by editing multiple files, retrieval augmentation proved essential for grounding agent-based systems in the relevant repository context. SWE-agent @yang2024sweagent demonstrated that an agent equipped with targeted file retrieval could navigate large codebases, identify bug locations, and propose patches with a non-trivial success rate, though performance remained far from human-level on the most challenging instances. These results suggest that retrieval augmentation is necessary but not sufficient for complex software engineering tasks—the agent's ability to reason about the retrieved content, iterate on failed attempts, and compose multi-file edits matters as much as the retrieval itself. Reflexion @shinn2024reflexion reinforced this finding by showing that allowing agents to reflect on and retry failed generations, informed by retrieval-augmented context, improved performance on multi-step coding tasks, though the gains were modest and inconsistent across problem types.
 ## Study Characteristics
 
 | # | Study | Year | Venue | Citations | Tier | Score |

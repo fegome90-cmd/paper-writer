@@ -6,7 +6,7 @@ as clients/trifecta.py — if no LLM CLI is available, returns empty
 content with a clear error message.
 
 Supported CLIs (auto-detected in PATH):
-  - pi      (Pi CLI)        — pi --mode json -nc -p @/tmp/prompt.txt
+  - pi      (Pi CLI)        — pi --mode text -nc -p @/tmp/prompt.txt
   - claude  (Claude Code)   — claude -p "prompt" --output-format text
   - codex   (Codex CLI)     — codex exec "prompt"
   - gemini  (Gemini CLI)    — gemini -p "prompt" --approval-mode yolo
@@ -45,6 +45,49 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from typing import Any
+
+
+def _strip_cot_prefix(text: str) -> str:
+    """Strip chain-of-thought planning text that models emit before real content.
+
+    Models sometimes produce sentences like "I can see that...", "Good. I now
+    have full context...", or "Here is the section:" before the actual prose.
+    This function finds the first line that looks like academic content and
+    discards everything before it.
+
+    A line is considered "real content" if:
+    - It is >60 characters long (substantial text)
+    - Starts with an uppercase letter or a citation marker
+    - Does NOT contain CoT markers ("I can see", "Let me", "Here is", etc.)
+    """
+    import re
+
+    cot_markers = re.compile(
+        r"(?:I can see|I now have|Let me|Here is the \w+ section"
+        r"|BEGIN SECTION:|Good\. I now have|I have written|The section is"
+        r"|Let me produce|Let me now)",
+        re.IGNORECASE,
+    )
+
+    lines = text.split("\n")
+    content_start = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Skip empty lines, markdown headers, HTML comments
+        if not stripped or stripped.startswith("#") or stripped.startswith("<!--"):
+            continue
+        # Skip lines that contain CoT markers
+        if cot_markers.search(stripped):
+            continue
+        # First surviving line that is substantial enough is real content
+        if len(stripped) >= 60:
+            content_start = i
+            break
+
+    if content_start > 0:
+        return "\n".join(lines[content_start:]).strip()
+    return text
 
 
 @dataclass
@@ -87,9 +130,13 @@ class LLMClient:
         """
         import time
 
+        prompt_path: str | None = None
         t0 = time.monotonic()
         try:
             cmd = self._build_command(prompt, system_prompt, max_tokens)
+            # For pi: extract the temp file path so we can clean it up
+            if self.cli_command == "pi" and cmd[-1].startswith("@"):
+                prompt_path = cmd[-1][1:]
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -110,9 +157,17 @@ class LLMClient:
 
             output = (result.stdout or "").strip()
 
-            # Strip chain-of-thought prefix that some models emit before --- delimiter
-            if "---" in output and output.index("---") < 500:
-                output = output.rsplit("---", 1)[1].strip()
+            # Strip ANSI escape sequences and tmux OSC notifications from pi output
+            import re
+
+            output = re.sub(r"\x1b\][^\x07]*\x07", "", output)
+            output = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", output)
+
+            # Strip chain-of-thought prefix: models sometimes emit planning text
+            # before the actual content. Strategy: find the first line that looks
+            # like real academic prose (>80 chars, starts with capital, no CoT markers)
+            # and discard everything before it.
+            output = _strip_cot_prefix(output)
 
             if not output:
                 return LLMResult(
@@ -151,6 +206,13 @@ class LLMClient:
                 cli_tool=self.cli_command,
                 elapsed_ms=elapsed,
             )
+        finally:
+            # Clean up pi temp file to prevent /tmp leak
+            if prompt_path is not None:
+                try:
+                    os.unlink(prompt_path)
+                except OSError:
+                    pass
 
     def _build_command(
         self,
@@ -214,52 +276,22 @@ class LLMClient:
             full_prompt = f"{system_prompt}\n\n---\n\n{prompt}"
 
         # Write to temp file — pi reads @file
-        fd, prompt_path = tempfile.mkstemp(
-            prefix="paper-llm-", suffix=".txt", dir="/tmp"
-        )
+        fd, prompt_path = tempfile.mkstemp(prefix="paper-llm-", suffix=".txt", dir="/tmp")
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(full_prompt)
 
         return [
             "pi",
-            "--provider", provider,
-            "--model", model,
-            "--mode", "text",
+            "--provider",
+            provider,
+            "--model",
+            model,
+            "--mode",
+            "text",
             "-nc",
-            "-p", f"@{prompt_path}",
+            "-p",
+            f"@{prompt_path}",
         ]
-
-    @staticmethod
-    def _extract_pi_text(raw_stdout: str) -> str:
-        """Extract assistant text from pi --mode json JSONL output.
-
-        Pi returns one JSON object per line. The full text is in the
-        final ``message_end`` event with ``role: "assistant"`` and
-        ``content[type: "text"]``.
-        """
-        import json
-
-        last_assistant_text = ""
-        for line in raw_stdout.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except (json.JSONDecodeError, ValueError):
-                continue
-
-            msg_type = obj.get("type", "")
-
-            # Pi message_end contains the complete assembled message
-            if msg_type == "message_end":
-                msg = obj.get("message", {})
-                if msg.get("role") == "assistant":
-                    for block in msg.get("content", []):
-                        if isinstance(block, dict) and block.get("type") == "text":
-                            last_assistant_text = block.get("text", "")
-
-        return last_assistant_text.strip()
 
     def _uses_stdin(self) -> bool:
         """Whether this CLI reads prompt from stdin."""
@@ -306,19 +338,16 @@ def get_llm_client(
 
 def generate_section(
     section_name: str,
-    prompt_template: str,
     evidence: list[dict[str, Any]],
     bib_keys: list[str],
     outline_context: str = "",
 ) -> LLMResult:
     """Generate a complete academic section using an LLM CLI.
 
-    Assembles the full prompt from the SKILL.md template, evidence,
-    and bib keys, then calls the LLM.
+    Assembles the prompt from evidence and bib keys, then calls the LLM.
 
     Args:
         section_name: Section being generated (e.g., 'introduction').
-        prompt_template: The SKILL.md prompt for this section.
         evidence: List of evidence dicts with title, abstract, doi.
         bib_keys: Available citation keys from references.bib.
         outline_context: Text from the outline for structural guidance.
@@ -333,7 +362,7 @@ def generate_section(
             error="No LLM CLI available (set PAPER_LLM_CLI=claude|codex|gemini)",
         )
 
-    # Build context block with real evidence
+    # Build context block with real evidence — keep it SHORT
     evidence_block = ""
     if evidence:
         evidence_block = "## Available Evidence\n\n"
@@ -341,38 +370,36 @@ def generate_section(
             title = paper.get("title", "Untitled")
             authors = paper.get("authors", "Unknown")
             year = paper.get("year", "N/A")
-            abstract = (paper.get("abstract", "") or "")[:300]
-            evidence_block += f"{i}. **{title}** ({authors}, {year})\n   {abstract}\n\n"
+            evidence_block += f"{i}. {title} ({authors}, {year})\n"
 
-    # Build citation reference
+    # Build citation reference — keys only
     cite_block = ""
     if bib_keys:
-        cite_block = f"## Available Citation Keys\n\n{', '.join(f'@{k}' for k in bib_keys[:15])}\n"
+        cite_block = f"## Citation Keys\n\n{', '.join(f'@{k}' for k in bib_keys[:15])}\n"
 
-    # Assemble full prompt
-    full_prompt = f"""{prompt_template}
+    # Keep outline context short — just the section structure
+    outline_snippet = ""
+    if outline_context:
+        outline_snippet = f"## Section Structure\n\n{outline_context[:500]}\n"
 
----
-
-## Context
-
-You are writing the **{section_name.title()}** section for a systematic review paper.
+    # CONCISE prompt — no verbose SKILL.md template
+    topic = os.environ.get("PAPER_TOPIC", "retrieval-augmented code generation (RACG)")
+    full_prompt = f"""Write the {section_name.title()} section for a systematic review on {topic}.
 
 {evidence_block}
 
 {cite_block}
 
-{f"## Outline Context\\n\\n{outline_context[:2000]}" if outline_context else ""}
+{outline_snippet}
 
----
+Rules:
+- Write ONLY the section text. No markdown headers with #, no meta-commentary, no planning.
+- Use APA 7th in-text citations: (Author, Year) or (Su et al., 2024).
+- Cite ONLY from the keys above. Do NOT invent references.
+- Academic tone, Q1 journal standard.
+- Write 3-5 substantial paragraphs.
 
-**INSTRUCTIONS**:
-1. Write ONLY the section content, no meta-comments or placeholders
-2. Use APA 7th edition in-text citations: (Author, Year)
-3. Use the citation keys provided above — do NOT invent references
-4. Follow the structure and tone specified in the prompt
-5. Write as a human academic researcher, not an AI
-6. Be specific with evidence — cite actual findings, not vague claims"""
+BEGIN SECTION:"""
 
     system_prompt = (
         "You are an expert academic writer publishing in Q1 journals. "

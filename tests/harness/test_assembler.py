@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from harness.services.assembler import assemble_manuscript
+from harness.services.assembler import _sanitize_section, assemble_manuscript
 
 
 class TestAssembleManuscript:
@@ -201,3 +201,34 @@ def test_stale_manuscript_removed_when_no_sections(tmp_path: Path) -> None:
     # Second: no sections → stale file should be REMOVED
     manuscript = assemble_manuscript(draft_dir)
     assert not manuscript.is_file(), "Stale manuscript should be removed when no sections found"
+
+
+def test_sanitize_removes_ansi_escapes() -> None:
+    """ANSI escape sequences from terminal captures are stripped."""
+    dirty = "Normal text\x1b[32m green\x1b[0m and\x07bell"
+    clean = _sanitize_section(dirty)
+    assert clean == "Normal text green andbell"
+
+
+def test_sanitize_removes_osc_sequences() -> None:
+    """OSC sequences (tmux notifications) are stripped."""
+    dirty = "Before\x1b]777;notify;π;I can see\x07After"
+    clean = _sanitize_section(dirty)
+    assert clean == "BeforeAfter"
+
+
+def test_sanitize_preserves_unicode() -> None:
+    """Unicode characters (em-dash, pi, ellipsis) are preserved."""
+    text = "RAG paradigms—static indexing π…"
+    assert _sanitize_section(text) == text
+
+
+def test_assemble_sanitizes_sections(tmp_path: Path) -> None:
+    """Assembled manuscript is free of ANSI escapes."""
+    draft = tmp_path / "drafts"
+    draft.mkdir()
+    (draft / "introduction.md").write_text("Intro\x1b[32m colored\x1b[0m text\n")
+    result = assemble_manuscript(draft)
+    content = result.read_text()
+    assert "\x1b[" not in content
+    assert "colored" in content

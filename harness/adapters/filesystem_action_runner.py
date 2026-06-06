@@ -238,6 +238,7 @@ class FilesystemActionRunner(ActionRunner):
                     inputs={
                         "search_dir": str(search_dir),
                         "output_dir": str(search_dir),
+                        "min_tier": args.get("min_tier", "Tier 3"),
                     },
                     context={"cwd": str(self.repo_path)},
                 )

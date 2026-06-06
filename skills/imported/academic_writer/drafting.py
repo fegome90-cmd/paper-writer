@@ -466,13 +466,12 @@ def _try_llm_generation(
     Never raises. If LLM is unavailable or fails, returns None
     and the caller falls back to structural placeholders.
 
-    Only attempts LLM generation when PAPER_LLM_CLI is explicitly set.
-    Default (auto) does NOT trigger LLM calls — prevents accidental
-    CLI invocations during testing or non-interactive use.
+    Requires PAPER_LLM_CLI to be set to one of: pi, claude, codex, gemini, auto.
+    Empty string (default) returns None — no LLM generation, uses placeholders.
     """
     import os
 
-    # Explicit opt-in required: only generate when user explicitly enables
+    # Gate: PAPER_LLM_CLI must be explicitly set (pi|claude|codex|gemini|auto)
     mode = os.environ.get("PAPER_LLM_CLI", "").lower()
     if mode not in ("pi", "claude", "codex", "gemini", "auto"):
         return None
@@ -489,7 +488,6 @@ def _try_llm_generation(
 
     result = generate_section(
         section_name=key,
-        prompt_template=prompt_template,
         evidence=evidence_items,
         bib_keys=cite_keys,
         outline_context=outline_context,

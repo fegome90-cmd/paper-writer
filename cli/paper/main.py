@@ -1,5 +1,6 @@
 import argparse
 import importlib.metadata
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -136,7 +137,13 @@ def main() -> None:
     )
 
     # paper screen
-    subparsers.add_parser("screen", help="Screen search results to evidence set.")
+    screen_parser = subparsers.add_parser("screen", help="Screen search results to evidence set.")
+    screen_parser.add_argument(
+        "--min-tier",
+        default=os.environ.get("PAPER_SCREEN_MIN_TIER", "Tier 3"),
+        help="Minimum tier to include (Tier 1, Tier 2, Tier 3, Discard). "
+        "Default: Tier 3. Env: PAPER_SCREEN_MIN_TIER.",
+    )
 
     # paper export-bib
     export_bib_parser = subparsers.add_parser(
@@ -430,6 +437,8 @@ def main() -> None:
     elif cmd_name == "export-bib":
         orch_command = "export_bib"
         orch_args["bib_path"] = args.bib_path
+    elif cmd_name == "screen":
+        orch_args["min_tier"] = args.min_tier
     elif cmd_name == "draft":
         if sub_name == "outline":
             orch_command = "draft_outline"

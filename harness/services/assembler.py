@@ -7,9 +7,21 @@ the assembled manuscript is NOT written (to avoid overwriting with empty content
 """
 
 import logging
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# ANSI escape sequences and terminal control characters that leak into
+# section content when LLM output is captured from terminal sessions.
+# Covers: CSI sequences (ESC [ ...), OSC sequences (ESC ] ... BEL/ST),
+# BEL characters, and other C0 controls except newline/tab.
+_ANSI_CONTROL_RE = re.compile(
+    r"\x1b\[[0-9;]*[A-Za-z]"  # CSI: ESC [ params letter
+    r"|\x1b\][^\x07\x1b]*?(?:\x07|\x1b\\)"  # OSC: ESC ] ... BEL or ST
+    r"|\x07"  # BEL
+    r"|[\x00-\x08\x0b\x0c\x0e-\x1a]"  # C0 controls except \t \n \r
+)
 
 CANONICAL_ORDER = (
     "abstract",
@@ -20,6 +32,15 @@ CANONICAL_ORDER = (
     "discussion",
     "conclusion",
 )
+
+
+def _sanitize_section(text: str) -> str:
+    """Remove ANSI escapes and terminal control characters from section text.
+
+    These characters come from LLM output captured in terminal sessions
+    (e.g. pi's tmux integration) and cause PDF rendering failures.
+    """
+    return _ANSI_CONTROL_RE.sub("", text)
 
 
 def assemble_manuscript(draft_dir: Path) -> Path:
@@ -49,7 +70,7 @@ def assemble_manuscript(draft_dir: Path) -> Path:
             logger.warning("Missing section: %s — skipping", section_file.name)
             continue
         try:
-            content = section_file.read_text(encoding="utf-8").strip()
+            content = _sanitize_section(section_file.read_text(encoding="utf-8")).strip()
         except (UnicodeDecodeError, OSError) as exc:
             logger.warning("Unreadable section: %s — skipping (%s)", section_file.name, exc)
             continue

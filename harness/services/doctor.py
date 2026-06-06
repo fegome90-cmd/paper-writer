@@ -53,7 +53,7 @@ def check_all_tools() -> list[ToolStatus]:
     """Check all external tools used by the pipeline."""
     tools = [
         _make("pandoc", ["--version"], "Render (docx/pdf)", "brew install pandoc"),
-        _make("pdflatex", [], "PDF render", "brew install --cask mactex-no-gui (or basictex)"),
+        _make("tectonic", ["--version"], "PDF render", "brew install tectonic"),
         _make("vale", ["--version"], "Style linting (vale rules)", "brew install vale"),
         _make(
             "bibtex-tidy",
@@ -217,7 +217,7 @@ def _install_hint(name: str) -> str:
     """Provide install hints for known tools."""
     hints = {
         "pandoc": "brew install pandoc",
-        "pdflatex": "brew install --cask mactex-no-gui (or basictex)",
+        "tectonic": "brew install tectonic",
         "vale": "brew install vale",
         "bibtex-tidy": "npm install -g bibtex-tidy",
     }

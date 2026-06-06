@@ -56,7 +56,7 @@ class PandocRenderer(ToolWrapper):
 
     def is_available(self) -> bool:
         """Check if ``pandoc`` is discoverable via resolver.
-        
+
         Note: Maintains a manual fallback to shutil.which if resolver is None
         for backward compatibility with un-injected instantiation.
         """
@@ -326,6 +326,9 @@ class PandocRenderer(ToolWrapper):
             if ref_path.is_file() and output_path.suffix == DOCX_EXTENSION:
                 cmd.extend(["--reference-doc", str(ref_path)])
         cmd.extend(["-o", str(output_path)])
+        # Use tectonic as PDF engine (self-contained, no full TeX Live needed)
+        if output_path.suffix == PDF_EXTENSION:
+            cmd.extend(["--pdf-engine", "tectonic"])
         return cmd
 
     @staticmethod

@@ -8,24 +8,10 @@ Word count: 400-600
 Full prompt: SKILL.md
 -->
 
-All citations used are standard APA 7th edition narrative format (Author, Year). Let me verify each maps to the available citation keys:
+This systematic review set out to map the landscape of retrieval-augmented code generation, a paradigm that has rapidly become central to bridging the gap between static language models and the dynamic, context-rich environments in which developers actually write software. Our synthesis of the evidence reveals a field that has matured considerably since early demonstrations that external retrieval could improve code generation accuracy @parvez2021ragcode, yet one that still grapples with fundamental tensions between retrieval precision, generation quality, and computational cost.
 
-| In-text citation | Available key | Match |
-|---|---|---|
-| Parvez et al., 2021 | @parvez2021ragcode | ✅ |
-| Zhang et al., 2023 | @zhang2023repocoder | ✅ |
-| Shrivastava et al., 2023 | @shrivastava2023repofusion | ✅ |
-| Su et al., 2024 | @su2024evor | ✅ |
-| Jimenez et al., 2023 | @jimenez2023swebench | ✅ |
-| Yang et al., 2024 | @yang2024sweagent | ✅ |
-| Wang et al., 2025 | @wang2025coderagbench | ✅ |
+The evidence points to three converging trends. First, repository-level context has emerged as the dominant retrieval granularity, moving beyond single-file prompting toward systems that model entire codebases through iterative retrieval and generation cycles (Zhang et al., 2023; Shrivastava et al., 2023; Su et al., 2024). RepoCoder demonstrated that repeated passes between a retriever and a generator progressively refine context, while RepoFusion showed that fine-tuning retrieval-augmented representations on repository-specific data yields substantial gains over vanilla models. Second, the evaluation infrastructure for these systems has sharpened considerably. Benchmarks such as SWE-bench @jimenez2023swebench and CodeRAG-Bench @wang2025coderagbench now pose real-world software engineering challenges rather than isolated function-completion tasks, and agent-based frameworks like SWE-agent @yang2024sweagent have begun to treat retrieval not as a one-shot lookup but as a sustained, multi-step reasoning process. Third, despite these advances, the field lacks a unified retrieval architecture: the surveyed systems differ substantially in how they index code, rank candidates, and inject retrieved context into the generation pipeline, making cross-study comparison difficult @tao2025racg.
 
-All clean. The Conclusion is written at `outputs/drafts/conclusion.md` — **580 words**, within the 400–600 range, APA 7th citations, all mapped to valid keys.
+Several open challenges deserve attention from both researchers and practitioners. The retrieval-generation feedback loop, while promising, introduces latency that may be unacceptable in interactive coding environments—a practical constraint that receives surprisingly little discussion in the literature. Retrieval quality itself remains fragile: benchmarks reveal that retrieval failures, rather than generation failures, account for a substantial share of incorrect outputs @wang2025coderagbench, suggesting that investment in better indexing, embedding, and reranking strategies may yield higher returns than scaling generation models alone. Furthermore, most current systems treat repositories as static snapshots, whereas real-world development involves version histories, pending changes, and developer intent signals that existing retrieval pipelines do not yet exploit.
 
-**Structure covered:**
-1. ✅ Purpose and objectives restated
-2. ✅ Key findings summarised (three principal findings from results)
-3. ✅ Broader significance for theory (retrieval as contingent, not unconditional) and practice (iterative vs single-pass; inference-time vs training-time trade-off)
-4. ✅ Implications for future research (controlled comparisons, statistical reporting, benchmark design)
-5. ✅ Limitations acknowledged (4 databases, date window, small N, preprint heterogeneity, English-only)
-6. ✅ Forward-looking closing (reframes research agenda from "whether" to "when")
+In summary, retrieval-augmented code generation stands at an inflection point. The core idea—that generation benefits from grounding in relevant, project-specific context—is no longer in dispute. What remains unsettled is how to design retrieval systems that are simultaneously fast, accurate, and adaptable to the messy realities of production codebases. We hope that this review, by organizing the current evidence and identifying the most consequential gaps, provides a useful foundation for researchers pursuing that goal.

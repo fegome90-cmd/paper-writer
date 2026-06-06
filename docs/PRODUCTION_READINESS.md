@@ -13,11 +13,11 @@
 | Tool | Required for | Install | Degraded Mode |
 |------|-------------|---------|---------------|
 | Pandoc | Render (docx) | `brew install pandoc` | ❌ No fallback — render fails |
-| pdflatex | Render (pdf) | `brew install --cask mactex-no-gui` | ✅ PDF skipped, docx only |
+| tectonic | Render (pdf) | `brew install tectonic` | ✅ PDF skipped, docx only |
 | Vale | Style linting (vale rules) | `brew install vale` | ✅ Built-in style checks only |
 | bibtex-tidy | Bibliography normalization | `npm install -g bibtex-tidy` | ✅ Built-in BibTeX validation |
 
-`paper doctor` currently checks for `pandoc`, `pdflatex`, `vale`, `bibtex-tidy`, `pdftotext`, and `pdfinfo`, plus internal capabilities for Vale styles, CSL styles, and journal presets (`harness/services/doctor.py`).
+`paper doctor` currently checks for `pandoc`, `tectonic`, `vale`, `bibtex-tidy`, `pdftotext`, and `pdfinfo`, plus internal capabilities for Vale styles, CSL styles, and journal presets (`harness/services/doctor.py`).
 
 The previous version-specific `bibtex-tidy` claim is not restated here because that behavior was not part of the evidence set used in this audit pass.
 
@@ -84,7 +84,7 @@ Current code behavior in `harness/services/doctor.py` and tested wrapper behavio
   - `paper doctor` reports the tool as missing and degraded mode active.
   - Wrapper tests confirm a `degraded_mode` finding is emitted instead of hard-crashing.
 
-- **`pdflatex` missing**:
+- **`tectonic` missing**:
   - `paper doctor` reports degraded mode.
   - Render tests cover mixed outcomes where DOCX can succeed while PDF fails, yielding warnings rather than an all-or-nothing crash.
 
