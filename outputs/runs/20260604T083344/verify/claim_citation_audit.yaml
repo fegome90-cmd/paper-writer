@@ -1,0 +1,56 @@
+schema: claim_citation_audit_v1
+total_unique_citations: 8
+citations_in_bib: 8
+citations_missing_from_bib: 0
+bib_total_entries: 14
+entries:
+- cite_key: jimenez2023swebench
+  in_bibliography: true
+  bib_title: 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: parvez2021ragcode
+  in_bibliography: true
+  bib_title: Retrieval Augmented Code Generation and Summarization
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: shrivastava2023repofusion
+  in_bibliography: true
+  bib_title: 'RepoFusion: Training Code Models to Understand Your Repository'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: su2024evor
+  in_bibliography: true
+  bib_title: 'EvoR: Evolving Retrieval for Code Generation'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: tao2025racg
+  in_bibliography: true
+  bib_title: 'Retrieval-Augmented Code Generation: A Survey with Focus on Repository-Level
+    Approaches'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: wang2025coderagbench
+  in_bibliography: true
+  bib_title: 'CodeRAG-Bench: Can Retrieval Augment Code Generation?'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: yang2024sweagent
+  in_bibliography: true
+  bib_title: 'SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering'
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: zhang2023repocoder
+  in_bibliography: true
+  bib_title: 'RepoCoder: Repository-Level Code Completion through Iterative Retrieval
+    and Generation'
+  occurrences: 45
+  sections:
+  - outline

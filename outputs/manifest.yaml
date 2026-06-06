@@ -1,26 +1,27 @@
 schema_version: '1.1'
 project: paper-writer
 status: ready_for_delivery
-generated_at: '2026-06-05T08:16:34.963063'
+generated_at: '2026-06-06T11:29:03.152280'
 stage: rendered
 gate_snapshot:
   bib_normalized: true
-  reporting_passed: true
-  ready_for_delivery: true
-  search_completed: true
-  refs_validated: true
-  screened_evidence: true
-  outline_drafted: true
   citations_resolved: true
-  sections_completed: true
+  outline_drafted: true
+  ready_for_delivery: true
+  refs_validated: true
   render_passed: true
-  style_passed: true
   repo_initialized: true
+  reporting_passed: true
+  screened_evidence: true
+  search_completed: true
+  sections_completed: true
+  style_passed: true
   citation_verified: true
   ethics_passed: true
 artifacts:
   manuscript:
   - outputs/latest/render/manuscript.docx
+  - outputs/latest/render/manuscript.pdf
   - outputs/render/manuscript.docx
   - outputs/render/manuscript.pdf
   bibliography: templates/references.bib

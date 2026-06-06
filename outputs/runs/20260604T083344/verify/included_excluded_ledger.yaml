@@ -1,0 +1,120 @@
+schema: included_excluded_ledger_v1
+total_identified: 14
+included: []
+excluded:
+- cite_key: hongjinsu2024evor
+  title: 'EvoR: Evolving Retrieval for Code Generation'
+  author: Hongjin Su and Shuyang Jiang and Yuhang Lai and Haoyuan Wu and Boao Shi
+    and Che Liu and Qian Liu and Tao Yu
+  year: '2024'
+  tier: Discard
+  final_score: 3.05
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: yichengtao2025retrievalaugmented
+  title: 'Retrieval-Augmented Code Generation: A Survey with Focus on Repository-Level
+    Approaches'
+  author: Yicheng Tao and Yuante Li and Yao Qin and Yepang Liu
+  year: '2025'
+  tier: Discard
+  final_score: 3.25
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: fengjizhang2023repocoder
+  title: 'RepoCoder: Repository-Level Code Completion through Iterative Retrieval
+    and Generation'
+  author: Fengji Zhang and Bei Chen and Yue Zhang and Jacky Keung and Jin Liu and
+    Daoguang Zan and Yi Mao and Jian-Guang Lou and Weizhu Chen
+  year: '2023'
+  tier: Discard
+  final_score: 2.85
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: zorazhiruowang2025coderagbench
+  title: 'CodeRAG-Bench: Can Retrieval Augment Code Generation?'
+  author: Zora Zhiruo Wang and Akari Asai and Xinyan Velocity Yu and Frank F. Xu and
+    Yiqing Xie and Graham Neubig and Jianfeng Gao
+  year: '2025'
+  tier: Discard
+  final_score: 3.25
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: dishashrivastava2023repofusion
+  title: 'RepoFusion: Training Code Models to Understand Your Repository'
+  author: Disha Shrivastava and Denis Kocetkov and Harm de Vries and Dzmitry Bahdanau
+    and Torsten Scholak
+  year: '2023'
+  tier: Discard
+  final_score: 2.85
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: mdrizwanparvez2021retrieval
+  title: Retrieval Augmented Code Generation and Summarization
+  author: Md Rizwan Parvez and Wasi Ahmad and Saikat Chakraborty and Baishakhi Ray
+    and Kai-Wei Chang
+  year: '2021'
+  tier: Discard
+  final_score: 2.45
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: carlose.jimenez2023swebench
+  title: 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?'
+  author: Carlos E. Jimenez and John Yang and Alexander Wettig and Shunyu Yao and
+    Kexin Pei and Ofir Press and Karthik Narasimhan
+  year: '2023'
+  tier: Discard
+  final_score: 3.45
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: johnyang2024sweagent
+  title: 'SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering'
+  author: John Yang and Carlos E. Jimenez and Alexander Wettig and Kilian Lieret and
+    Shunyu Yao and Karthik Narasimhan and Ofir Press
+  year: '2024'
+  tier: Discard
+  final_score: 3.05
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: noahshinn2024reflexion
+  title: 'Reflexion: Language Agents with Verbal Reinforcement Learning'
+  author: Noah Shinn and Federico Cassano and Ashwin Gopinath and Karthik Narasimhan
+    and Shunyu Yao
+  year: '2024'
+  tier: Discard
+  final_score: 3.05
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: markchen2021evaluating
+  title: Evaluating Large Language Models Trained on Code
+  author: Mark Chen and Jerry Tworek and Heewoo Jun and Qiming Yuan and Henrique Ponde
+    de Oliveira Pinto and Jared Kaplan and Harri Edwards and Yuri Burda and Nicholas
+    Joseph and Greg Brockman and others
+  year: '2021'
+  tier: Discard
+  final_score: 2.45
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: shuyanzhou2022docprompting
+  title: 'DocPrompting: Generating Code by Retrieving the Docs'
+  author: Shuyan Zhou and Uri Alon and Frank F. Xu and Zhengbao Jiang and Graham Neubig
+  year: '2022'
+  tier: Discard
+  final_score: 2.65
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: yuxiangwei2023magicoder
+  title: 'Magicoder: Source Code Is All You Need'
+  author: Yuxiang Wei and Zhe Wang and Jiawei Liu and Yifeng Ding and Lingming Zhang
+  year: '2023'
+  tier: Discard
+  final_score: 2.85
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: tianyuzheng2024opencodeinterpreter
+  title: 'OpenCodeInterpreter: Integrating Code Generation with Execution and Refinement'
+  author: Tianyu Zheng and Ge Zhang and Tianhao Shen and Xueling Liu and Bill Yuchen
+    Lin and Jie Fu and Wenhu Chen and Xiang Yue
+  year: '2024'
+  tier: Discard
+  final_score: 3.05
+  exclusion_reason: 'Tier below threshold: Discard'
+- cite_key: yunfangao2024retrievalaugmented
+  title: 'Retrieval-Augmented Generation for Large Language Models: A Survey'
+  author: Yunfan Gao and Yun Xiong and Xinyu Gao and Kangzhuo Jia and Jinzhou Pan
+    and Yandong Bi and Yi Dai and Jiawei Sun and Meng Wang and Haoyu Wang
+  year: '2024'
+  tier: Discard
+  final_score: 3.05
+  exclusion_reason: 'Tier below threshold: Discard'
+summary:
+  total_included: 0
+  total_excluded: 14
+  inclusion_rate: 0.0%

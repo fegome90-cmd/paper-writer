@@ -1,0 +1,45 @@
+schema: search_manifest_v1
+query: systematic literature review
+strategy: systematic_keyword_search
+date: '2026-06-05'
+databases:
+- PubMed
+- Embase
+- CINAHL
+- Semantic Scholar
+inclusion_criteria:
+- Published between 2019 and 2024
+- Peer-reviewed
+- English language
+- 'Related to: systematic literature review'
+filters:
+  year_range: ''
+  language: English
+results:
+  total_raw: 14
+  total_screened: 14
+  min_tier: Discard
+  raw_by_source:
+    query: 1
+    date: 1
+    total_input: 1
+    total_after_dedup: 1
+    dedup_log: 0
+    papers: 14
+    weights: 1
+prisma_flow:
+  identification:
+    database_results: 0
+    other_sources: 0
+    seed_papers: 0
+    total_identified: 14
+    duplicates_removed: 0
+  screening:
+    records_screened: 14
+    records_excluded: 0
+    exclusion_reasons: {}
+  eligibility:
+    records_assessed: 14
+    records_excluded: 0
+  included:
+    studies_in_synthesis: 14

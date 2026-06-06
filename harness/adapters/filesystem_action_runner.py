@@ -9,6 +9,7 @@ import yaml
 from harness.ports.action_runner import ActionRunner
 from harness.ports.skill_adapter import SkillAdapter
 from harness.services.assembler import assemble_manuscript
+from harness.services.verify_artifacts import generate_verify_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -466,6 +467,20 @@ class FilesystemActionRunner(ActionRunner):
             if manuscript_path.is_file():
                 artifacts.append(str(manuscript_path))
             artifacts.append(str(render_dir))
+
+        elif command == "verify":
+            verify_dir = self._resolve_run("verify")
+            verify_dir.mkdir(parents=True, exist_ok=True)
+            search_dir = self._resolve_run("search")
+            draft_dir = self._resolve_run("drafts")
+            bib_path = self._resolve("templates/references.bib")
+            artifact_paths = generate_verify_artifacts(
+                search_dir=search_dir,
+                draft_dir=draft_dir,
+                bib_path=bib_path,
+                output_dir=verify_dir,
+            )
+            artifacts.extend(artifact_paths)
 
         return artifacts
 
