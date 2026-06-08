@@ -1,12 +1,13 @@
 """Consensus search provider — academic paper search via Consensus API.
 
 Searches 200M+ peer-reviewed papers via the Consensus REST API.
-Returns study_type, takeaway, and journal_name as extra_fields.
+OpenAPI spec: https://docs.consensus.app/reference/v1_quick_search
 
-Requires CONSENSUS_API_KEY env var for authenticated access (20 results/search).
+Supports filter parameters: year_min/max, study_types, human,
+sample_size_min, sjr_max, exclude_preprints, medical_mode.
+
+Requires CONSENSUS_API_KEY env var for authenticated access.
 Falls back to unauthenticated mode (3 results/search) if no key is set.
-
-API docs: https://docs.consensus.app/reference/v1_quick_search
 """
 
 from __future__ import annotations
@@ -147,11 +148,34 @@ class ConsensusSearchProvider(PaperSearchProvider):
     # API call
     # ------------------------------------------------------------------
 
-    def _call_api(self, query: str, limit: int) -> dict[str, Any]:
-        """Make the HTTP GET request to Consensus quick_search."""
+    def _call_api(self, query: str, limit: int, **filters: Any) -> dict[str, Any]:
+        """Make the HTTP GET request to Consensus quick_search.
 
-        params = urllib.parse.urlencode({"query": query, "limit": limit})
-        url = f"{_BASE_URL}{_SEARCH_PATH}?{params}"
+        Per OpenAPI spec: only `query` is required. No `limit` param —
+        result count is determined by plan tier (3/10/20).
+        """
+        params: dict[str, str | list[str]] = {"query": query}
+
+        # Apply OpenAPI spec filter parameters
+        if filters.get("year_min"):
+            params["year_min"] = str(filters["year_min"])
+        if filters.get("year_max"):
+            params["year_max"] = str(filters["year_max"])
+        if filters.get("study_types"):
+            params["study_types"] = filters["study_types"]
+        if filters.get("human"):
+            params["human"] = "true"
+        if filters.get("sample_size_min"):
+            params["sample_size_min"] = str(filters["sample_size_min"])
+        if filters.get("sjr_max"):
+            params["sjr_max"] = str(filters["sjr_max"])
+        if filters.get("exclude_preprints"):
+            params["exclude_preprints"] = "true"
+        if filters.get("medical_mode"):
+            params["medical_mode"] = "true"
+
+        encoded = urllib.parse.urlencode(params, doseq=True)
+        url = f"{_BASE_URL}{_SEARCH_PATH}?{encoded}"
 
         headers: dict[str, str] = {
             "Accept": "application/json",
@@ -225,7 +249,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
 
         citations_count = raw.get("citation_count", 0) or 0
 
-        # Extract extra Consensus-specific fields
+        # Extract extra Consensus-specific fields (per OpenAPI spec)
         extra_fields: dict[str, Any] = {}
         if raw.get("study_type"):
             if raw["study_type"] in VALID_STUDY_TYPES:
@@ -237,6 +261,10 @@ class ConsensusSearchProvider(PaperSearchProvider):
             extra_fields["takeaway"] = raw["takeaway"]
         if raw.get("journal_name"):
             extra_fields["journal_name"] = raw["journal_name"]
+        if raw.get("volume"):
+            extra_fields["volume"] = raw["volume"]
+        if raw.get("pages"):
+            extra_fields["pages"] = raw["pages"]
 
         return NormalizedPaper(
             title=title,
