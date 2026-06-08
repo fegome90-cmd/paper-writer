@@ -278,6 +278,32 @@ class TestConsensusProviderSearch:
         result = provider.search("obscure query with no results")
         assert len(result.papers) == 0
 
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_passes_filters_to_api(self, mock_urlopen: MagicMock) -> None:
+        """search() forwards **filters to _call_api — filters are not dead code."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider.search(
+            "retrieval augmented generation",
+            limit=5,
+            year_min=2020,
+            year_max=2025,
+            study_types=["systematic review"],
+            exclude_preprints=True,
+        )
+
+        req = mock_urlopen.call_args[0][0]
+        url = req.full_url
+        assert "year_min=2020" in url
+        assert "year_max=2025" in url
+        assert "exclude_preprints=true" in url
+        assert "query=" in url
+
 
 class TestConsensusFilterParams:
     """Test OpenAPI spec filter parameters — G4/G5 compliance."""

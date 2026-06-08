@@ -91,6 +91,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
         *,
         sources: list[str] | None = None,
         limit: int = 20,
+        **filters: Any,
     ) -> SearchProviderResult:
         """Search Consensus for peer-reviewed papers.
 
@@ -98,6 +99,11 @@ class ConsensusSearchProvider(PaperSearchProvider):
             query: Natural language research question or keywords.
             sources: Ignored — Consensus searches its own index.
             limit: Max results (1-20). API limit is 20 per page.
+            **filters: OpenAPI spec filter parameters forwarded to the API.
+                Supported: year_min, year_max, study_types, human,
+                sample_size_min, sjr_max (1-4), duration_min, duration_max,
+                exclude_preprints, publisher_name, clinical_guideline,
+                medical_mode.
 
         Returns:
             SearchProviderResult with normalized papers.
@@ -115,7 +121,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
                 "The Consensus API returns at most 20 results per page."
             )
 
-        raw_payload = self._call_api(query, limit)
+        raw_payload = self._call_api(query, limit, **filters)
         results = raw_payload.get("results", [])
 
         papers: list[NormalizedPaper] = []
