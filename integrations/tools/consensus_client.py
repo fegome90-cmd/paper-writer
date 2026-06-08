@@ -1,10 +1,9 @@
 """Consensus search provider — academic paper search via Consensus API.
 
 Searches 200M+ peer-reviewed papers via the Consensus REST API.
-Supports study type filtering (RCT, meta-analysis, systematic review),
-year ranges, journal quality (SJR), human-only, and sample size filters.
+Returns study_type, takeaway, and journal_name as extra_fields.
 
-Requires CONSENSUS_API_KEY env var for authenticated access.
+Requires CONSENSUS_API_KEY env var for authenticated access (20 results/search).
 Falls back to unauthenticated mode (3 results/search) if no key is set.
 
 API docs: https://docs.consensus.app/reference/v1_quick_search
@@ -12,13 +11,17 @@ API docs: https://docs.consensus.app/reference/v1_quick_search
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import os
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from harness.ports.paper_search_provider import (
     NormalizedPaper,
@@ -34,18 +37,26 @@ _SEARCH_PATH = "/v1/quick_search"
 _REQUEST_TIMEOUT = 15  # seconds
 _USER_AGENT = "paper-writer/1.0"
 
+
+def _stable_hash(text: str) -> str:
+    """Deterministic hash for source_id fallback. Not cryptographically secure."""
+    return hashlib.sha256(text.encode()).hexdigest()[:12]
+
+
 # Valid study types from Consensus API spec
-VALID_STUDY_TYPES = frozenset({
-    "rct",
-    "meta-analysis",
-    "systematic review",
-    "literature review",
-    "case report",
-    "non-rct experimental",
-    "non-rct observational study",
-    "non-rct in vitro",
-    "animal",
-})
+VALID_STUDY_TYPES = frozenset(
+    {
+        "rct",
+        "meta-analysis",
+        "systematic review",
+        "literature review",
+        "case report",
+        "non-rct experimental",
+        "non-rct observational study",
+        "non-rct in vitro",
+        "animal",
+    }
+)
 
 
 class ConsensusSearchProvider(PaperSearchProvider):
@@ -70,6 +81,8 @@ class ConsensusSearchProvider(PaperSearchProvider):
         """Whether an API key is configured."""
         return bool(self._api_key)
 
+    _MAX_RESULTS_PER_PAGE = 20
+
     def search(
         self,
         query: str,
@@ -82,17 +95,23 @@ class ConsensusSearchProvider(PaperSearchProvider):
         Args:
             query: Natural language research question or keywords.
             sources: Ignored — Consensus searches its own index.
-            limit: Max results. Capped at 20 (API limit).
+            limit: Max results (1-20). API limit is 20 per page.
 
         Returns:
             SearchProviderResult with normalized papers.
 
         Raises:
             RuntimeError: Network or API errors.
-            ValueError: Invalid query/limit.
+            TimeoutError: If the request times out.
+            ValueError: Invalid query or limit > 20.
         """
+        # Shared baseline validation first, then provider-specific constraint
         _validate_query_and_limit(query, limit)
-        limit = min(limit, 20)
+        if limit > self._MAX_RESULTS_PER_PAGE:
+            raise ValueError(
+                f"Consensus limit must be 1-{self._MAX_RESULTS_PER_PAGE}, got {limit}. "
+                "The Consensus API returns at most 20 results per page."
+            )
 
         raw_payload = self._call_api(query, limit)
         results = raw_payload.get("results", [])
@@ -101,8 +120,9 @@ class ConsensusSearchProvider(PaperSearchProvider):
         for raw in results:
             try:
                 papers.append(self._normalize(raw))
-            except (KeyError, TypeError, ValueError):
-                # Skip malformed results — keep good ones
+            except (KeyError, TypeError, ValueError) as exc:
+                # Skip malformed results — log for debugging
+                logger.warning("Skipping malformed Consensus paper: %s", exc)
                 continue
 
         papers = deduplicate_papers(papers)[:limit]
@@ -130,7 +150,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
     def _call_api(self, query: str, limit: int) -> dict[str, Any]:
         """Make the HTTP GET request to Consensus quick_search."""
 
-        params = urllib.parse.urlencode({"query": query})
+        params = urllib.parse.urlencode({"query": query, "limit": limit})
         url = f"{_BASE_URL}{_SEARCH_PATH}?{params}"
 
         headers: dict[str, str] = {
@@ -148,10 +168,12 @@ class ConsensusSearchProvider(PaperSearchProvider):
                 return json.loads(body)  # type: ignore[no-any-return]
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", errors="replace")[:500]
-            raise RuntimeError(
-                f"Consensus API HTTP {e.code}: {detail}"
-            ) from e
+            raise RuntimeError(f"Consensus API HTTP {e.code}: {detail}") from e
+        except TimeoutError as e:
+            raise TimeoutError(f"Consensus API request timed out after {self._timeout}s") from e
         except urllib.error.URLError as e:
+            if "timed out" in str(e.reason):
+                raise TimeoutError(f"Consensus API request timed out after {self._timeout}s") from e
             raise RuntimeError(f"Consensus API network error: {e.reason}") from e
         except json.JSONDecodeError as e:
             raise RuntimeError(f"Consensus API returned invalid JSON: {e}") from e
@@ -203,7 +225,11 @@ class ConsensusSearchProvider(PaperSearchProvider):
         # Extract extra Consensus-specific fields
         extra_fields: dict[str, Any] = {}
         if raw.get("study_type"):
-            extra_fields["study_type"] = raw["study_type"]
+            if raw["study_type"] in VALID_STUDY_TYPES:
+                extra_fields["study_type"] = raw["study_type"]
+            else:
+                extra_fields["study_type"] = raw["study_type"]
+                warnings.append(f"Unknown study_type: {raw['study_type']}")
         if raw.get("takeaway"):
             extra_fields["takeaway"] = raw["takeaway"]
         if raw.get("journal_name"):
@@ -219,7 +245,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
             url=url,
             pdf_url=None,
             source_platform="consensus",
-            source_id=doi or "",
+            source_id=doi or raw.get("url", "") or f"consensus:{_stable_hash(title)}",
             categories=[],
             citations_count=citations_count,
             extra_fields=extra_fields or None,

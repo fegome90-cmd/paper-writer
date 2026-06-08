@@ -163,23 +163,41 @@ class TestConsensusProviderSearch:
 
     def test_search_invalid_limit_raises(self) -> None:
         provider = ConsensusSearchProvider()
-        with pytest.raises(ValueError, match="Limit"):
+        with pytest.raises(ValueError, match="Limit must be between 1 and 100"):
             provider.search("test", limit=0)
+
+    def test_search_limit_over_20_raises(self) -> None:
+        """Consensus API max is 20 — requesting more should raise ValueError."""
+        provider = ConsensusSearchProvider()
+        with pytest.raises(ValueError, match="Consensus limit must be 1-20"):
+            provider.search("test", limit=21)
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_timeout_raises_timeout_error(self, mock_urlopen: MagicMock) -> None:
+        """Socket timeout should raise TimeoutError per ABC contract."""
+
+        mock_urlopen.side_effect = TimeoutError("timed out")
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(TimeoutError, match="timed out"):
+            provider.search("test query")
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_url_error_timeout_raises_timeout_error(self, mock_urlopen: MagicMock) -> None:
+        """URLError with 'timed out' reason should also raise TimeoutError."""
+        import urllib.error
+
+        mock_urlopen.side_effect = urllib.error.URLError("timed out")
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(TimeoutError, match="timed out"):
+            provider.search("test query")
 
 
 class TestConsensusProviderFactory:
     """Test provider creation via factory."""
 
-    def test_create_consensus_provider(self) -> None:
-        import os
-
-        old = os.environ.get("PAPER_SEARCH_PROVIDER")
-        try:
-            os.environ["PAPER_SEARCH_PROVIDER"] = "consensus"
-            provider = create_search_provider()
-            assert isinstance(provider, ConsensusSearchProvider)
-        finally:
-            if old is None:
-                os.environ.pop("PAPER_SEARCH_PROVIDER", None)
-            else:
-                os.environ["PAPER_SEARCH_PROVIDER"] = old
+    def test_create_consensus_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("PAPER_SEARCH_PROVIDER", "consensus")
+        provider = create_search_provider()
+        assert isinstance(provider, ConsensusSearchProvider)
