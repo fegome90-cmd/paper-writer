@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "authors": ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus", "Fabio Petroni", "Vladimir Karpukhin", "Naman Goyal", "Heinrich Küttler", "Mike Lewis", "Wen-tau Yih", "Tim Rocktäschel", "Sebastian Riedel", "Douwe Kiela"],
+      "abstract": "Large pre-trained language models have been shown to store factual knowledge in their parameters. However, their ability to access and precisely manipulate knowledge is limited. We explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG) — models which combine pre-trained parametric and non-parametric memory for language generation.",
+      "journal_name": "NeurIPS",
+      "publish_year": 2020,
+      "doi": "10.5555/3495724.3496524",
+      "url": "https://consensus.app/papers/retrieval-augmented-generation-knowledge-intensive-nlp/abc123/",
+      "citation_count": 3420,
+      "study_type": "non-rct experimental",
+      "takeaway": "RAG models achieve state-of-the-art results on open-domain QA benchmarks by combining parametric knowledge with retrieved evidence."
+    },
+    {
+      "title": "Real-Time Retrieval-Augmented Generation for Agent-Based AI Systems",
+      "authors": ["Author A", "Author B"],
+      "abstract": "We propose a real-time RAG architecture for agent-based AI systems that reduces latency by 40% compared to naive retrieval-augmented approaches.",
+      "journal_name": "arXiv",
+      "publish_year": 2025,
+      "doi": null,
+      "url": "https://consensus.app/papers/real-time-rag-agent-based-ai/def456/",
+      "citation_count": 15,
+      "study_type": "non-rct experimental"
+    },
+    {
+      "title": "A Survey on Retrieval-Augmented Text Generation",
+      "authors": ["Yizheng Huang", "Jimmy Huang"],
+      "abstract": "This survey provides a comprehensive overview of retrieval-augmented text generation methods, covering retrieval models, generation architectures, and training strategies.",
+      "journal_name": "arXiv",
+      "publish_year": 2024,
+      "doi": "10.48550/arXiv.2402.19473",
+      "url": "https://consensus.app/papers/survey-retrieval-augmented-text-generation/ghi789/",
+      "citation_count": 89,
+      "study_type": "literature review"
+    }
+  ]
+}

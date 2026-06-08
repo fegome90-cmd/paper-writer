@@ -366,6 +366,14 @@ class TestProviderSelection:
             with pytest.raises(ValueError, match="Unknown PAPER_SEARCH_PROVIDER"):
                 create_search_provider()
 
+    def test_consensus_mode(self) -> None:
+        """Consensus factory path returns ConsensusSearchProvider."""
+        with patch.dict("os.environ", {"PAPER_SEARCH_PROVIDER": "consensus"}):
+            from integrations.tools.consensus_client import ConsensusSearchProvider
+
+            provider = create_search_provider()
+            assert isinstance(provider, ConsensusSearchProvider)
+
 
 import os
 
