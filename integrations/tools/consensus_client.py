@@ -3,8 +3,9 @@
 Searches 200M+ peer-reviewed papers via the Consensus REST API.
 OpenAPI spec: https://docs.consensus.app/reference/v1_quick_search
 
-Supports filter parameters: year_min/max, study_types, human,
-sample_size_min, sjr_max, exclude_preprints, medical_mode.
+Supports all 12 OpenAPI spec filter parameters: year_min/max, study_types,
+human, sample_size_min, sjr_max (validated 1-4), duration_min/max,
+exclude_preprints, publisher_name, clinical_guideline, medical_mode.
 
 Requires CONSENSUS_API_KEY env var for authenticated access.
 Falls back to unauthenticated mode (3 results/search) if no key is set.
