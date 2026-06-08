@@ -473,6 +473,160 @@ class TestPrismaFlow:
         assert len(state_files) == 0, "Skills must not write state.yaml"
 
 
+class TestBugHuntFixes:
+    """Tests for bugs found by real-world bug hunt (BH-1 through BH-4)."""
+
+    def test_bh1_warning_on_filters_with_non_consensus_provider(self, tmp_path: Path) -> None:
+        """BH-1: Adapter warns when filter params are passed but provider is not Consensus."""
+        from unittest.mock import patch
+
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        from harness.ports.paper_search_provider import (
+            FixturePaperSearchProvider,
+        )
+
+        captured_warnings: list[str] = []
+
+        import logging
+        logger = logging.getLogger("skills.local.adapters")
+
+        class WarningHandler(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                captured_warnings.append(record.getMessage())
+
+        handler = WarningHandler()
+        logger.addHandler(handler)
+
+        try:
+            with patch("harness.ports.paper_search_provider.create_search_provider", return_value=FixturePaperSearchProvider()):
+                adapter.execute(
+                    command="search",
+                    inputs={
+                        "query": "test",
+                        "output_dir": str(output_dir),
+                        "year_min": 2020,
+                        "exclude_preprints": True,
+                    },
+                    context={},
+                )
+
+            assert len(captured_warnings) == 1
+            assert "ignored by FixturePaperSearchProvider" in captured_warnings[0]
+            assert "year_min" in captured_warnings[0]
+        finally:
+            logger.removeHandler(handler)
+
+    def test_bh2_year_min_gt_max_fails(self, tmp_path: Path) -> None:
+        """BH-2: year_min > year_max returns failure."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "test",
+                "output_dir": str(output_dir),
+                "year_min": 2025,
+                "year_max": 2020,
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "year_min" in result.summary
+
+    def test_bh2_sjr_max_out_of_range_fails(self, tmp_path: Path) -> None:
+        """BH-2: sjr_max outside 1-4 returns failure."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "test",
+                "output_dir": str(output_dir),
+                "sjr_max": 5,
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "sjr_max" in result.summary
+
+    def test_bh2_duration_min_gt_max_fails(self, tmp_path: Path) -> None:
+        """BH-2: duration_min > duration_max returns failure."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "test",
+                "output_dir": str(output_dir),
+                "duration_min": 365,
+                "duration_max": 30,
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "duration_min" in result.summary
+
+    def test_bh3_empty_query_fails(self, tmp_path: Path) -> None:
+        """BH-3: Empty query string returns failure."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "",
+                "output_dir": str(output_dir),
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "Empty query" in result.summary
+
+    def test_bh3_whitespace_query_fails(self, tmp_path: Path) -> None:
+        """BH-3: Whitespace-only query returns failure."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "   ",
+                "output_dir": str(output_dir),
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "Empty query" in result.summary
+
+    def test_bh4_nonexistent_raw_papers_fails(self, tmp_path: Path) -> None:
+        """BH-4: Non-existent raw_papers file returns clear error."""
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "test",
+                "output_dir": str(output_dir),
+                "raw_papers": "/tmp/doesnotexist12345.json",
+            },
+            context={},
+        )
+
+        assert result.status == "fail"
+        assert "not found" in result.summary.lower()
+
+
 class TestAcademicWriterAdapter:
     """Tests for AcademicWriterAdapter using SKILL.md structures."""
 

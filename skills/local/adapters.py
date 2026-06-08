@@ -14,9 +14,12 @@ between the orchestrator's request format and the skill's internal API.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from harness.ports.skill_adapter import SkillAdapter, SkillResult
 from skills.imported.academic_writer import drafting as writer_module
@@ -82,8 +85,28 @@ class LiteratureSearchAdapter(SkillAdapter):
         raw_papers = inputs.get("raw_papers")
         weights_phase = str(inputs.get("weights_phase", "balanced"))
 
+        # BH-3: Reject empty queries early
+        if not query.strip():
+            return SkillResult(
+                adapter=self.name,
+                status="fail",
+                summary="Empty query — provide a non-empty --query argument.",
+                artifacts=[],
+                gate_changes={},
+            )
+
         # If raw_papers is a string, try JSON parse first, then file path
         if isinstance(raw_papers, str):
+            # BH-4: Validate file exists before attempting to parse
+            raw_path = Path(raw_papers)
+            if raw_path.suffix == ".json" and not raw_path.exists():
+                return SkillResult(
+                    adapter=self.name,
+                    status="fail",
+                    summary=f"File not found: {raw_papers}",
+                    artifacts=[],
+                    gate_changes={},
+                )
             try:
                 raw_papers = json.loads(raw_papers)
             except (json.JSONDecodeError, ValueError):
@@ -113,7 +136,37 @@ class LiteratureSearchAdapter(SkillAdapter):
                 if key in inputs and inputs[key] is not None:
                     filters[key] = inputs[key]
 
+            # BH-2: CLI-level range validation for filter constraints
+            _range_errors: list[str] = []
+            year_min_val = filters.get("year_min")
+            year_max_val = filters.get("year_max")
+            if year_min_val and year_max_val and int(year_min_val) > int(year_max_val):
+                _range_errors.append(f"year_min ({year_min_val}) > year_max ({year_max_val})")
+            duration_min_val = filters.get("duration_min")
+            duration_max_val = filters.get("duration_max")
+            if duration_min_val and duration_max_val and int(duration_min_val) > int(duration_max_val):
+                _range_errors.append(f"duration_min ({duration_min_val}) > duration_max ({duration_max_val})")
+            sjr_val = filters.get("sjr_max")
+            if sjr_val is not None and not (1 <= int(sjr_val) <= 4):
+                _range_errors.append(f"sjr_max ({sjr_val}) must be 1-4")
+            if _range_errors:
+                return SkillResult(
+                    adapter=self.name,
+                    status="fail",
+                    summary="Filter validation error: " + "; ".join(_range_errors),
+                    artifacts=[],
+                    gate_changes={},
+                )
+
+            # BH-1: Warn when filters are passed but provider doesn't support them
             provider = create_search_provider()
+            provider_name = type(provider).__name__
+            if filters and provider_name != "ConsensusSearchProvider":
+                logger.warning(
+                    "Filter params %s ignored by %s — only ConsensusSearchProvider supports API filters",
+                    list(filters.keys()),
+                    provider_name,
+                )
             provider_result = provider.search(
                 query=query,
                 limit=int(inputs.get("limit", 20)),
