@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).parents[2]
 SKILL_DIR = REPO_ROOT / "skills" / "local" / "essay_crafter"
 SKILL_MD = SKILL_DIR / "SKILL.md"
@@ -17,7 +16,7 @@ def test_essay_crafter_references_all_local_resources() -> None:
         "references/paragraph_density.md",
         "references/editorial_cleanup.md",
         "references/integrity_pipeline.md",
-        "references/openai_complements.md",
+        "references/structured_output_complements.md",
     ]
 
     for rel_path in expected_paths:
