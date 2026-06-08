@@ -193,6 +193,91 @@ class TestConsensusProviderSearch:
         with pytest.raises(TimeoutError, match="timed out"):
             provider.search("test query")
 
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_http_500_raises_runtime_error(self, mock_urlopen: MagicMock) -> None:
+        """HTTP 500 should raise RuntimeError with status code."""
+        import email.message
+        import io
+        import urllib.error
+
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://api.consensus.app/v1/quick_search",
+            code=500,
+            msg="Internal Server Error",
+            hdrs=email.message.Message(),
+            fp=io.BytesIO(b"Internal Server Error"),
+        )
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(RuntimeError, match="HTTP 500"):
+            provider.search("test query")
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_http_429_raises_runtime_error(self, mock_urlopen: MagicMock) -> None:
+        """HTTP 429 rate limit should raise RuntimeError."""
+        import email.message
+        import io
+        import urllib.error
+
+        hdrs = email.message.Message()
+        hdrs["Retry-After"] = "30"
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            url="https://api.consensus.app/v1/quick_search",
+            code=429,
+            msg="Too Many Requests",
+            hdrs=hdrs,
+            fp=io.BytesIO(b'{"error": "rate limit exceeded"}'),
+        )
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(RuntimeError, match="HTTP 429"):
+            provider.search("test query")
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_http_error_no_body(self, mock_urlopen: MagicMock) -> None:
+        """HTTPError with unreadable body should not crash (W1 fix)."""
+        import email.message
+        import urllib.error
+
+        error = urllib.error.HTTPError(
+            url="https://api.consensus.app/v1/quick_search",
+            code=502,
+            msg="Bad Gateway",
+            hdrs=email.message.Message(),
+            fp=None,
+        )
+        mock_urlopen.side_effect = error
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(RuntimeError, match="HTTP 502"):
+            provider.search("test query")
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_malformed_json_raises_runtime_error(self, mock_urlopen: MagicMock) -> None:
+        """Non-JSON response body should raise RuntimeError (W3)."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b"<html>503 Service Unavailable</html>"
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(RuntimeError, match="invalid JSON"):
+            provider.search("test query")
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_empty_results(self, mock_urlopen: MagicMock) -> None:
+        """Empty results array should return empty papers list."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        result = provider.search("obscure query with no results")
+        assert len(result.papers) == 0
+
 
 class TestConsensusProviderFactory:
     """Test provider creation via factory."""

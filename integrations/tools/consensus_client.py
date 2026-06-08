@@ -167,7 +167,10 @@ class ConsensusSearchProvider(PaperSearchProvider):
                 body = resp.read().decode("utf-8")
                 return json.loads(body)  # type: ignore[no-any-return]
         except urllib.error.HTTPError as e:
-            detail = e.read().decode("utf-8", errors="replace")[:500]
+            try:
+                detail = e.read().decode("utf-8", errors="replace")[:500]
+            except (OSError, ConnectionError):
+                detail = "(no response body)"
             raise RuntimeError(f"Consensus API HTTP {e.code}: {detail}") from e
         except TimeoutError as e:
             raise TimeoutError(f"Consensus API request timed out after {self._timeout}s") from e
@@ -248,7 +251,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
             source_id=doi or raw.get("url", "") or f"consensus:{_stable_hash(title)}",
             categories=[],
             citations_count=citations_count,
-            extra_fields=extra_fields or None,
+            extra_fields=extra_fields if extra_fields else None,
             defaulted_fields=defaulted,
             warnings=warnings,
         )
