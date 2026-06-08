@@ -342,7 +342,7 @@ _DEFAULT_FIXTURE_PATH = (
     / "search_papers_response.v1.json"
 )
 
-_DEFAULT_SOURCES = ["openalex", "pubmed", "arxiv"]
+_DEFAULT_SOURCES = ["openalex", "pubmed", "arxiv", "consensus"]
 
 
 class FixturePaperSearchProvider(PaperSearchProvider):
@@ -404,8 +404,9 @@ def create_search_provider(
     Modes:
         - "fixture": deterministic test data (default)
         - "mcp": real MCP server via SDK
+        - "consensus": Consensus REST API (200M+ peer-reviewed papers)
 
-    Never falls back silently. In MCP mode, failures are visible errors.
+    Never falls back silently. In MCP/Consensus mode, failures are visible errors.
     """
     mode = os.environ.get("PAPER_SEARCH_PROVIDER", "fixture").lower()
 
@@ -418,4 +419,11 @@ def create_search_provider(
 
         return McpPaperSearchProvider()
 
-    raise ValueError(f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. Must be 'fixture' or 'mcp'.")
+    if mode == "consensus":
+        from integrations.tools.consensus_client import ConsensusSearchProvider
+
+        return ConsensusSearchProvider()
+
+    raise ValueError(
+        f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. Must be 'fixture', 'mcp', or 'consensus'."
+    )

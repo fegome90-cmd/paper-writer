@@ -1,0 +1,185 @@
+"""Tests for Consensus search provider."""
+
+import json
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from harness.ports.paper_search_provider import (
+    SearchProviderResult,
+    create_search_provider,
+)
+from integrations.tools.consensus_client import ConsensusSearchProvider
+
+# Sample Consensus API response
+SAMPLE_RESPONSE = {
+    "results": [
+        {
+            "title": "Retrieval-Augmented Code Generation: A Survey",
+            "authors": ["Author A", "Author B", "Author C", "Author D"],
+            "abstract": "This paper surveys retrieval-augmented approaches to code generation.",
+            "journal_name": "arXiv",
+            "publish_year": 2025,
+            "doi": "10.48550/arXiv.2510.04905",
+            "url": "https://consensus.app/papers/details/abc123/",
+            "citation_count": 42,
+            "study_type": "literature review",
+            "takeaway": "RAG approaches improve code generation quality by 15-30%.",
+        },
+        {
+            "title": "RepoCoder: Repository-Level Code Completion",
+            "authors": ["Fengji Zhang", "Bei Chen"],
+            "abstract": "We propose RepoCoder, an iterative retrieval-generation framework.",
+            "journal_name": "EMNLP",
+            "publish_year": 2023,
+            "doi": "10.18653/v1/2023.emnlp-main.151",
+            "url": "https://consensus.app/papers/details/def456/",
+            "citation_count": 120,
+            "study_type": "non-rct experimental",
+        },
+    ]
+}
+
+
+class TestConsensusProviderProperties:
+    """Property tests for ConsensusSearchProvider."""
+
+    def test_unauthenticated_by_default(self) -> None:
+        p = ConsensusSearchProvider()
+        assert p.is_authenticated is False
+
+    def test_authenticated_with_key(self) -> None:
+        p = ConsensusSearchProvider(api_key="test-key-123")
+        assert p.is_authenticated is True
+
+
+class TestConsensusProviderNormalization:
+    """Test normalization of Consensus API results."""
+
+    def test_normalize_full_result(self) -> None:
+        raw = SAMPLE_RESPONSE["results"][0]
+        paper = ConsensusSearchProvider._normalize(raw)
+
+        assert paper.title == "Retrieval-Augmented Code Generation: A Survey"
+        assert paper.doi == "10.48550/arXiv.2510.04905"
+        assert paper.year == 2025
+        assert "Author A" in paper.authors
+        assert "et al." in paper.authors  # 4 authors → truncated
+        assert paper.citations_count == 42
+        assert paper.source_platform == "consensus"
+        assert paper.extra_fields is not None
+        assert paper.extra_fields["study_type"] == "literature review"
+        assert paper.extra_fields["takeaway"] is not None
+
+    def test_normalize_minimal_result(self) -> None:
+        """Paper with only title should still normalize."""
+        raw = {"title": "Minimal Paper", "publish_year": 2024}
+        paper = ConsensusSearchProvider._normalize(raw)
+
+        assert paper.title == "Minimal Paper"
+        assert paper.doi is None
+        assert "doi" in paper.defaulted_fields
+        assert paper.year == 2024
+
+    def test_normalize_no_title_skipped(self) -> None:
+        """Papers without title should be skipped (raise ValueError)."""
+        raw = {"authors": ["Someone"], "publish_year": 2024}
+        with pytest.raises(ValueError, match="no title"):
+            ConsensusSearchProvider._normalize(raw)
+
+    def test_normalize_invalid_year(self) -> None:
+        raw = {"title": "Test", "publish_year": "not-a-year"}
+        paper = ConsensusSearchProvider._normalize(raw)
+        assert paper.year == 0
+        assert "year" in paper.defaulted_fields
+
+
+class TestConsensusProviderSearch:
+    """Test search via mocked HTTP."""
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_returns_normalized_papers(self, mock_urlopen: MagicMock) -> None:
+        """Search returns normalized papers from API response."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(SAMPLE_RESPONSE).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        result = provider.search("retrieval augmented code generation", limit=10)
+
+        assert isinstance(result, SearchProviderResult)
+        assert len(result.papers) == 2
+        assert result.papers[0].source_platform == "consensus"
+        assert result.provenance.provider == "consensus"
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_sends_api_key_when_set(self, mock_urlopen: MagicMock) -> None:
+        """API key is sent in x-api-key header."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider(api_key="my-key")
+        provider.search("test query")
+
+        req = mock_urlopen.call_args[0][0]
+        # urllib.request.Request stores headers with title-case keys
+        assert req.headers.get("X-api-key") == "my-key"
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_no_key_no_header(self, mock_urlopen: MagicMock) -> None:
+        """No API key header when unauthenticated."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider.search("test query")
+
+        req = mock_urlopen.call_args[0][0]
+        assert "x-api-key" not in req.headers
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_search_network_error_raises(self, mock_urlopen: MagicMock) -> None:
+        """Network errors raise RuntimeError."""
+        import urllib.error
+
+        mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
+
+        provider = ConsensusSearchProvider()
+        with pytest.raises(RuntimeError, match="network error"):
+            provider.search("test query")
+
+    def test_search_empty_query_raises(self) -> None:
+        provider = ConsensusSearchProvider()
+        with pytest.raises(ValueError, match="empty"):
+            provider.search("")
+
+    def test_search_invalid_limit_raises(self) -> None:
+        provider = ConsensusSearchProvider()
+        with pytest.raises(ValueError, match="Limit"):
+            provider.search("test", limit=0)
+
+
+class TestConsensusProviderFactory:
+    """Test provider creation via factory."""
+
+    def test_create_consensus_provider(self) -> None:
+        import os
+
+        old = os.environ.get("PAPER_SEARCH_PROVIDER")
+        try:
+            os.environ["PAPER_SEARCH_PROVIDER"] = "consensus"
+            provider = create_search_provider()
+            assert isinstance(provider, ConsensusSearchProvider)
+        finally:
+            if old is None:
+                os.environ.pop("PAPER_SEARCH_PROVIDER", None)
+            else:
+                os.environ["PAPER_SEARCH_PROVIDER"] = old
