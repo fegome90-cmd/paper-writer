@@ -19,7 +19,10 @@ from typing import Any
 import yaml
 
 # Regex to find Pandoc citation markers: [@key], [@key, @key2], @key
-_CITATION_RE = re.compile(r"(?:\[([^\]]*@[^\]]*)\])|(?:(?<=\s)@(\w[\w:.#+-]*))")
+# Supports: bracketed groups [@key, @key2] and bare @key after whitespace/start-of-line/punctuation
+_CITATION_RE = re.compile(
+    r"(?:\[([^\]]*@[^\]]*)\])|(?:(?<=\s)@(\w[\w:.#+-]*)|(?<=^)@(\w[\w:.#+-]*))", re.MULTILINE
+)
 
 
 def generate_verify_artifacts(
@@ -67,7 +70,10 @@ def _generate_search_manifest(search_dir: Path, output_dir: Path) -> list[str]:
 
     import json
 
-    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    try:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return []
 
     manifest: dict[str, Any] = {
         "schema": "search_manifest_v1",
@@ -82,21 +88,31 @@ def _generate_search_manifest(search_dir: Path, output_dir: Path) -> list[str]:
         },
     }
 
-    # Augment with screened counts
+    # Initialize results section before conditional augmentation
+    manifest["results"] = {}
+
     if screened_path.is_file():
-        screened = json.loads(screened_path.read_text(encoding="utf-8"))
-        manifest["results"] = {
-            "total_raw": screened.get("total_raw", 0),
-            "total_screened": screened.get("total_screened", 0),
-            "min_tier": screened.get("min_tier", ""),
-        }
+        try:
+            screened = json.loads(screened_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            screened = {}
+        manifest["results"].update(
+            {
+                "total_raw": screened.get("total_raw", 0),
+                "total_screened": screened.get("total_screened", 0),
+                "min_tier": screened.get("min_tier", ""),
+            }
+        )
         prisma = screened.get("prisma_flow", {})
         if prisma:
             manifest["prisma_flow"] = prisma
 
     # Raw results count
     if raw_path.is_file():
-        raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        try:
+            raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            raw = None
         if isinstance(raw, dict):
             manifest["results"]["raw_by_source"] = {
                 k: len(v) if isinstance(v, list) else 1 for k, v in raw.items()
@@ -105,7 +121,9 @@ def _generate_search_manifest(search_dir: Path, output_dir: Path) -> list[str]:
             manifest["results"]["raw_count"] = len(raw)
 
     out_path = output_dir / "search_manifest.yaml"
-    out_path.write_text(yaml.dump(manifest, default_flow_style=False, sort_keys=False), encoding="utf-8")
+    out_path.write_text(
+        yaml.dump(manifest, default_flow_style=False, sort_keys=False), encoding="utf-8"
+    )
     return [str(out_path)]
 
 
@@ -122,7 +140,10 @@ def _generate_evidence_matrix(search_dir: Path, output_dir: Path) -> list[str]:
 
     import json
 
-    screened = json.loads(screened_path.read_text(encoding="utf-8"))
+    try:
+        screened = json.loads(screened_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return []
     evidence = screened.get("evidence", [])
     if not evidence:
         return []
@@ -176,7 +197,8 @@ def _generate_evidence_matrix(search_dir: Path, output_dir: Path) -> list[str]:
 def _derive_cite_key(entry: dict[str, Any]) -> str:
     """Derive a citation key from entry metadata.
 
-    Matches the format used in references.bib: authorYYYYkeyword.
+    Matches the format used in references.bib: lastnameYYYYkeyword.
+    Handles both "Last, First" and "First Last" author formats.
     Falls back to DOI-based key if author/year are unavailable.
     """
     author = entry.get("author", "")
@@ -184,9 +206,14 @@ def _derive_cite_key(entry: dict[str, Any]) -> str:
     title = entry.get("title", "")
 
     if author and year:
-        first_author = author.split(" and ")[0].split(",")[0].strip()
-        # Normalize: lowercase, remove spaces
-        last_name = first_author.lower().replace(" ", "")
+        first_author = author.split(" and ")[0].strip()
+        # Handle "Last, First" format (BibTeX convention)
+        if "," in first_author:
+            last_name = first_author.split(",")[0].strip().lower().replace(" ", "")
+        else:
+            # "First Last" format — take last word as surname
+            parts = first_author.split()
+            last_name = parts[-1].lower() if parts else ""
         # Take first meaningful word from title
         title_word = ""
         if title:
@@ -218,7 +245,10 @@ def _generate_included_excluded_ledger(search_dir: Path, output_dir: Path) -> li
 
     import json
 
-    screened = json.loads(screened_path.read_text(encoding="utf-8"))
+    try:
+        screened = json.loads(screened_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return []
     evidence = screened.get("evidence", [])
 
     # Categorize by tier
@@ -258,7 +288,9 @@ def _generate_included_excluded_ledger(search_dir: Path, output_dir: Path) -> li
     }
 
     out_path = output_dir / "included_excluded_ledger.yaml"
-    out_path.write_text(yaml.dump(ledger, default_flow_style=False, sort_keys=False), encoding="utf-8")
+    out_path.write_text(
+        yaml.dump(ledger, default_flow_style=False, sort_keys=False), encoding="utf-8"
+    )
     return [str(out_path)]
 
 
@@ -267,9 +299,7 @@ def _generate_included_excluded_ledger(search_dir: Path, output_dir: Path) -> li
 # ------------------------------------------------------------------
 
 
-def _generate_claim_citation_audit(
-    draft_dir: Path, bib_path: Path, output_dir: Path
-) -> list[str]:
+def _generate_claim_citation_audit(draft_dir: Path, bib_path: Path, output_dir: Path) -> list[str]:
     """Produce claim_citation_audit.yaml — every [@key] mapped to bib entry.
 
     Scans all section .md files and the assembled manuscript for citation
@@ -279,17 +309,14 @@ def _generate_claim_citation_audit(
     bib_entries = _parse_bib_keys(bib_path)
 
     # Collect all citations from section files
+    # Note: we scan individual sections only (NOT assembled manuscript)
+    # to avoid double-counting citations that appear in both.
     citations: dict[str, dict[str, Any]] = {}
 
     for section_file in sorted(draft_dir.glob("*.md")):
         if section_file.name == "manuscript.md":
-            continue  # Skip assembled — covered by individual sections
+            continue  # Assembled manuscript = concatenation of sections; skip to avoid double-count
         _extract_citations_from_file(section_file, citations)
-
-    # Also scan assembled manuscript for completeness
-    manuscript = draft_dir / "manuscript.md"
-    if manuscript.is_file():
-        _extract_citations_from_file(manuscript, citations)
 
     # Build audit
     audited: list[dict[str, Any]] = []
@@ -322,7 +349,9 @@ def _generate_claim_citation_audit(
     }
 
     out_path = output_dir / "claim_citation_audit.yaml"
-    out_path.write_text(yaml.dump(audit, default_flow_style=False, sort_keys=False), encoding="utf-8")
+    out_path.write_text(
+        yaml.dump(audit, default_flow_style=False, sort_keys=False), encoding="utf-8"
+    )
     return [str(out_path)]
 
 
@@ -349,9 +378,7 @@ def _parse_bib_keys(bib_path: Path) -> dict[str, str]:
     return entries
 
 
-def _extract_citations_from_file(
-    file_path: Path, citations: dict[str, dict[str, Any]]
-) -> None:
+def _extract_citations_from_file(file_path: Path, citations: dict[str, dict[str, Any]]) -> None:
     """Extract all citation keys from a markdown file and update the dict."""
     section_name = file_path.stem
     text = file_path.read_text(encoding="utf-8")
