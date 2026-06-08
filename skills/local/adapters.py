@@ -95,9 +95,17 @@ class LiteratureSearchAdapter(SkillAdapter):
 
             # Extract provider-specific filter params from inputs
             _FILTER_KEYS = (
-                "year_min", "year_max", "study_types", "human",
-                "sample_size_min", "sjr_max", "duration_min", "duration_max",
-                "exclude_preprints", "publisher_name", "clinical_guideline",
+                "year_min",
+                "year_max",
+                "study_types",
+                "human",
+                "sample_size_min",
+                "sjr_max",
+                "duration_min",
+                "duration_max",
+                "exclude_preprints",
+                "publisher_name",
+                "clinical_guideline",
                 "medical_mode",
             )
             filters: dict[str, Any] = {}

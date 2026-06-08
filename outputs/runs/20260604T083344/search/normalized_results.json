@@ -1,9 +1,18 @@
 {
-  "query": "test",
-  "date": "2026-06-08",
-  "total_input": 4,
-  "total_after_dedup": 4,
-  "dedup_log": [],
+  "provenance": {
+    "provider": "fixture",
+    "query": "test",
+    "retrieved_at": "2026-06-08T11:43:14.967441+00:00",
+    "tool_name": "search_papers",
+    "sources": [
+      "openalex",
+      "pubmed",
+      "arxiv",
+      "consensus"
+    ],
+    "schema_version": "1.0",
+    "server_info": {}
+  },
   "papers": [
     {
       "title": "Attention Is All You Need: A Systematic Review of Transformer Architectures",
@@ -27,18 +36,6 @@
         "novelData": {
           "nested": true
         }
-      },
-      "_search_query": "test",
-      "_domain": "cs",
-      "scoring": {
-        "domain": "cs",
-        "final_score": 2.85,
-        "tier": "Discard",
-        "venue_tier": 2.0,
-        "recency_score": 0.7,
-        "citation_score": 0.5,
-        "relevance_score": 0.0,
-        "rigor_score": 0.4
       }
     },
     {
@@ -62,18 +59,6 @@
           "abstract"
         ],
         "warnings": []
-      },
-      "_search_query": "test",
-      "_domain": "cs",
-      "scoring": {
-        "domain": "cs",
-        "final_score": 2.65,
-        "tier": "Discard",
-        "venue_tier": 2.0,
-        "recency_score": 0.6,
-        "citation_score": 0.5,
-        "relevance_score": 0.0,
-        "rigor_score": 0.4
       }
     },
     {
@@ -95,18 +80,6 @@
           "citations_count"
         ],
         "warnings": []
-      },
-      "_search_query": "test",
-      "_domain": "cs",
-      "scoring": {
-        "domain": "cs",
-        "final_score": 3.05,
-        "tier": "Discard",
-        "venue_tier": 2.0,
-        "recency_score": 0.8,
-        "citation_score": 0.5,
-        "relevance_score": 0.0,
-        "rigor_score": 0.4
       }
     },
     {
@@ -130,27 +103,7 @@
           "citations_count"
         ],
         "warnings": []
-      },
-      "_search_query": "test",
-      "_domain": "cs",
-      "scoring": {
-        "domain": "cs",
-        "final_score": 3.65,
-        "tier": "Discard",
-        "venue_tier": 2.0,
-        "recency_score": 0.8,
-        "citation_score": 0.5,
-        "relevance_score": 0.0,
-        "rigor_score": 0.8
       }
     }
-  ],
-  "weights": {
-    "phase": "balanced",
-    "A": 0.25,
-    "B": 0.25,
-    "C": 0.2,
-    "D": 0.2,
-    "E": 0.1
-  }
+  ]
 }

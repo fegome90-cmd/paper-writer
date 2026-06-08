@@ -1,6 +1,6 @@
 {
-  "query": "systematic literature review",
-  "date": "2026-06-05",
+  "query": "test",
+  "date": "2026-06-08",
   "strategy": "systematic_keyword_search",
   "databases": [
     "PubMed",
@@ -12,7 +12,7 @@
     "Published between 2019 and 2024",
     "Peer-reviewed",
     "English language",
-    "Related to: systematic literature review"
+    "Related to: test"
   ],
   "weights_phase": "balanced"
 }

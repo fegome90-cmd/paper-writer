@@ -108,51 +108,74 @@ def main() -> None:
     )
     # Consensus/academic search filter params (forwarded to provider)
     search_parser.add_argument(
-        "--year-min", type=int, default=None,
+        "--year-min",
+        type=int,
+        default=None,
         help="Exclude papers published before this year.",
     )
     search_parser.add_argument(
-        "--year-max", type=int, default=None,
+        "--year-max",
+        type=int,
+        default=None,
         help="Exclude papers published after this year.",
     )
     search_parser.add_argument(
-        "--study-types", nargs="*", default=None,
+        "--study-types",
+        nargs="*",
+        default=None,
         help="Only include these study types (e.g. 'rct' 'systematic review').",
     )
     search_parser.add_argument(
-        "--human", action="store_true", default=False,
+        "--human",
+        action="store_true",
+        default=False,
         help="Only include human studies.",
     )
     search_parser.add_argument(
-        "--sample-size-min", type=int, default=None,
+        "--sample-size-min",
+        type=int,
+        default=None,
         help="Exclude studies with fewer participants.",
     )
     search_parser.add_argument(
-        "--sjr-max", type=int, default=None,
+        "--sjr-max",
+        type=int,
+        default=None,
         help="Exclude journals in lesser quartiles (1=best, 4=worst).",
     )
     search_parser.add_argument(
-        "--duration-min", type=int, default=None,
+        "--duration-min",
+        type=int,
+        default=None,
         help="Minimum study duration in days.",
     )
     search_parser.add_argument(
-        "--duration-max", type=int, default=None,
+        "--duration-max",
+        type=int,
+        default=None,
         help="Maximum study duration in days.",
     )
     search_parser.add_argument(
-        "--exclude-preprints", action="store_true", default=False,
+        "--exclude-preprints",
+        action="store_true",
+        default=False,
         help="Only include peer-reviewed papers.",
     )
     search_parser.add_argument(
-        "--publisher-name", default=None,
+        "--publisher-name",
+        default=None,
         help="Comma-separated publisher names to filter by.",
     )
     search_parser.add_argument(
-        "--clinical-guideline", action="store_true", default=False,
+        "--clinical-guideline",
+        action="store_true",
+        default=False,
         help="Filter to papers classified as clinical guidelines.",
     )
     search_parser.add_argument(
-        "--medical-mode", action="store_true", default=False,
+        "--medical-mode",
+        action="store_true",
+        default=False,
         help="Filter to top medical journals and guidelines.",
     )
 

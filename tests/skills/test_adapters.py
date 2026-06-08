@@ -88,19 +88,30 @@ class TestLiteratureSearchAdapter:
         )
 
         class SpyProvider(PaperSearchProvider):
-            def search(self, query: str, *, sources: list[str] | None = None, limit: int = 20, **filters: Any) -> SearchProviderResult:
+            def search(
+                self,
+                query: str,
+                *,
+                sources: list[str] | None = None,
+                limit: int = 20,
+                **filters: Any,
+            ) -> SearchProviderResult:
                 captured_kwargs.update(filters)
                 return SearchProviderResult(
                     papers=[],
                     raw_payload={"results": []},
                     provenance=SearchProvenance(
-                        provider="consensus", query=query,
+                        provider="consensus",
+                        query=query,
                         retrieved_at="2026-01-01T00:00:00Z",
-                        tool_name="test", sources=["consensus"],
+                        tool_name="test",
+                        sources=["consensus"],
                     ),
                 )
 
-        with patch("harness.ports.paper_search_provider.create_search_provider", return_value=SpyProvider()):
+        with patch(
+            "harness.ports.paper_search_provider.create_search_provider", return_value=SpyProvider()
+        ):
             adapter.execute(
                 command="search",
                 inputs={

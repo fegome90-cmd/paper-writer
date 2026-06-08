@@ -177,9 +177,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
         if filters.get("sjr_max") is not None:
             sjr = int(filters["sjr_max"])
             if not (1 <= sjr <= 4):
-                raise ValueError(
-                    f"sjr_max must be between 1 and 4 (spec constraint), got {sjr}"
-                )
+                raise ValueError(f"sjr_max must be between 1 and 4 (spec constraint), got {sjr}")
             params["sjr_max"] = str(sjr)
         if filters.get("exclude_preprints"):
             params["exclude_preprints"] = "true"
