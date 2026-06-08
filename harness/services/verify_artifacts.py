@@ -356,14 +356,18 @@ def _generate_claim_citation_audit(draft_dir: Path, bib_path: Path, output_dir: 
 
 
 def _parse_bib_keys(bib_path: Path) -> dict[str, str]:
-    """Extract cite keys → titles from a BibTeX file."""
+    """Extract cite keys → titles from a BibTeX file.
+
+    Uses brace-counting to correctly handle nested braces in titles
+    (e.g. ``{A {Bold} New Approach}``).
+    """
     if not bib_path.is_file():
         return {}
 
     text = bib_path.read_text(encoding="utf-8")
     entries: dict[str, str] = {}
     key_re = re.compile(r"@(\w+)\{([^,\s]+),")
-    title_re = re.compile(r"title\s*=\s*\{([^}]+)\}", re.IGNORECASE)
+    title_start_re = re.compile(r"title\s*=\s*\{", re.IGNORECASE)
 
     # Split into entries
     parts = re.split(r"\n(?=@)", text)
@@ -372,8 +376,22 @@ def _parse_bib_keys(bib_path: Path) -> dict[str, str]:
         if not key_match:
             continue
         cite_key = key_match.group(2)
-        title_match = title_re.search(part)
-        entries[cite_key] = title_match.group(1) if title_match else ""
+        title_match = title_start_re.search(part)
+        if not title_match:
+            entries[cite_key] = ""
+            continue
+
+        # Brace-counting extraction: find matching closing brace
+        start = title_match.end()  # position after the opening {
+        depth = 1
+        pos = start
+        while pos < len(part) and depth > 0:
+            if part[pos] == "{":
+                depth += 1
+            elif part[pos] == "}":
+                depth -= 1
+            pos += 1
+        entries[cite_key] = part[start : pos - 1] if depth == 0 else part[start:]
 
     return entries
 

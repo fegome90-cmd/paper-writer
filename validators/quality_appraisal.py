@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 class QualityAppraisalValidator:
@@ -85,12 +85,16 @@ class QualityAppraisalValidator:
         "SCAM",
     }
 
+    # Pre-computed lowercase sets for case-insensitive matching (B-6 fix)
+    _top_tier_lower: ClassVar[frozenset[str]] = frozenset(v.lower() for v in TOP_TIER_VENUES)
+    _good_venues_lower: ClassVar[frozenset[str]] = frozenset(v.lower() for v in GOOD_VENUES)
+
     def score_venue_reputation(self, paper: dict[str, Any]) -> int:
         """Score venue reputation (1-5)."""
         venue = (paper.get("venue") or "").strip().lower()
-        if venue in (v.lower() for v in self.TOP_TIER_VENUES):
+        if venue in self._top_tier_lower:
             return 5
-        if venue in (v.lower() for v in self.GOOD_VENUES):
+        if venue in self._good_venues_lower:
             return 3
         if venue and len(venue) > 2:
             return 2

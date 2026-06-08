@@ -278,3 +278,22 @@ class TestGenerateClaimCitationAudit:
         assert audit_path.is_file()
         audit = yaml.safe_load(audit_path.read_text())
         assert audit["total_unique_citations"] == 0
+
+
+def test_parse_bib_nested_braces(tmp_path: Path) -> None:
+    """BibTeX titles with nested braces are extracted completely (A-3 fix)."""
+    bib = tmp_path / "refs.bib"
+    bib.write_text(
+        "@article{k1,\n"
+        "  title = {A {Bold} New Approach},\n"
+        "  year = {2024}\n"
+        "}\n"
+        "@inproceedings{k2,\n"
+        "  title = {On the {\\em importance} of {nested {braces}} in BibTeX},\n"
+        "  year = {2023}\n"
+        "}\n"
+    )
+    result = _parse_bib_keys(bib)
+    assert result["k1"] == "A {Bold} New Approach"
+    assert "nested" in result["k2"]
+    assert "braces" in result["k2"]
