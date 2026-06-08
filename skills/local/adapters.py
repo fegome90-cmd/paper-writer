@@ -93,10 +93,23 @@ class LiteratureSearchAdapter(SkillAdapter):
         if raw_papers is None:
             from harness.ports.paper_search_provider import create_search_provider
 
+            # Extract provider-specific filter params from inputs
+            _FILTER_KEYS = (
+                "year_min", "year_max", "study_types", "human",
+                "sample_size_min", "sjr_max", "duration_min", "duration_max",
+                "exclude_preprints", "publisher_name", "clinical_guideline",
+                "medical_mode",
+            )
+            filters: dict[str, Any] = {}
+            for key in _FILTER_KEYS:
+                if key in inputs and inputs[key] is not None:
+                    filters[key] = inputs[key]
+
             provider = create_search_provider()
             provider_result = provider.search(
                 query=query,
                 limit=int(inputs.get("limit", 20)),
+                **filters,
             )
 
             # Write raw_results.json (provider output as-is)

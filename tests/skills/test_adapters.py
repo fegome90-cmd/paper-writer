@@ -68,6 +68,63 @@ class TestLiteratureSearchAdapter:
         # Normalized results also written
         assert (output_dir / "normalized_results.json").is_file()
 
+    def test_search_extracts_filter_params(self, tmp_path: Path) -> None:
+        """Filter params from inputs are forwarded to provider.search().
+
+        Verifies the adapter extracts year_min, study_types etc. from inputs
+        and passes them as kwargs to the provider's search method.
+        """
+        from unittest.mock import patch
+
+        adapter = LiteratureSearchAdapter()
+        output_dir = tmp_path / "outputs" / "search"
+
+        captured_kwargs: dict[str, Any] = {}
+
+        from harness.ports.paper_search_provider import (
+            PaperSearchProvider,
+            SearchProvenance,
+            SearchProviderResult,
+        )
+
+        class SpyProvider(PaperSearchProvider):
+            def search(self, query: str, *, sources: list[str] | None = None, limit: int = 20, **filters: Any) -> SearchProviderResult:
+                captured_kwargs.update(filters)
+                return SearchProviderResult(
+                    papers=[],
+                    raw_payload={"results": []},
+                    provenance=SearchProvenance(
+                        provider="consensus", query=query,
+                        retrieved_at="2026-01-01T00:00:00Z",
+                        tool_name="test", sources=["consensus"],
+                    ),
+                )
+
+        with patch("harness.ports.paper_search_provider.create_search_provider", return_value=SpyProvider()):
+            adapter.execute(
+                command="search",
+                inputs={
+                    "query": "machine learning",
+                    "output_dir": str(output_dir),
+                    "year_min": 2020,
+                    "year_max": 2025,
+                    "study_types": ["systematic review"],
+                    "exclude_preprints": True,
+                    # Non-filter inputs should NOT appear in kwargs
+                    "limit": 10,
+                    "weights_phase": "balanced",
+                },
+                context={},
+            )
+
+            assert captured_kwargs.get("year_min") == 2020
+            assert captured_kwargs.get("year_max") == 2025
+            assert captured_kwargs.get("study_types") == ["systematic review"]
+            assert captured_kwargs.get("exclude_preprints") is True
+            # limit and weights_phase are NOT filters
+            assert "limit" not in captured_kwargs
+            assert "weights_phase" not in captured_kwargs
+
     def test_search_with_papers_applies_real_scoring(self, tmp_path: Path) -> None:
         """When raw_papers provided, search deduplicates and scores them."""
         adapter = LiteratureSearchAdapter()
