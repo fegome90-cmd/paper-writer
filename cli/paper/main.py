@@ -106,6 +106,55 @@ def main() -> None:
         "--raw-papers",
         help="Path to JSON file containing raw paper candidates.",
     )
+    # Consensus/academic search filter params (forwarded to provider)
+    search_parser.add_argument(
+        "--year-min", type=int, default=None,
+        help="Exclude papers published before this year.",
+    )
+    search_parser.add_argument(
+        "--year-max", type=int, default=None,
+        help="Exclude papers published after this year.",
+    )
+    search_parser.add_argument(
+        "--study-types", nargs="*", default=None,
+        help="Only include these study types (e.g. 'rct' 'systematic review').",
+    )
+    search_parser.add_argument(
+        "--human", action="store_true", default=False,
+        help="Only include human studies.",
+    )
+    search_parser.add_argument(
+        "--sample-size-min", type=int, default=None,
+        help="Exclude studies with fewer participants.",
+    )
+    search_parser.add_argument(
+        "--sjr-max", type=int, default=None,
+        help="Exclude journals in lesser quartiles (1=best, 4=worst).",
+    )
+    search_parser.add_argument(
+        "--duration-min", type=int, default=None,
+        help="Minimum study duration in days.",
+    )
+    search_parser.add_argument(
+        "--duration-max", type=int, default=None,
+        help="Maximum study duration in days.",
+    )
+    search_parser.add_argument(
+        "--exclude-preprints", action="store_true", default=False,
+        help="Only include peer-reviewed papers.",
+    )
+    search_parser.add_argument(
+        "--publisher-name", default=None,
+        help="Comma-separated publisher names to filter by.",
+    )
+    search_parser.add_argument(
+        "--clinical-guideline", action="store_true", default=False,
+        help="Filter to papers classified as clinical guidelines.",
+    )
+    search_parser.add_argument(
+        "--medical-mode", action="store_true", default=False,
+        help="Filter to top medical journals and guidelines.",
+    )
 
     # paper chain
     chain_parser = subparsers.add_parser(
@@ -427,6 +476,24 @@ def main() -> None:
         orch_args["query"] = args.query or DEFAULT_SEARCH_QUERY
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
+        # Forward Consensus/academic filter params to provider
+        _CLI_FILTER_MAP = {
+            "year_min": args.year_min,
+            "year_max": args.year_max,
+            "study_types": args.study_types,
+            "human": args.human or None,
+            "sample_size_min": args.sample_size_min,
+            "sjr_max": args.sjr_max,
+            "duration_min": args.duration_min,
+            "duration_max": args.duration_max,
+            "exclude_preprints": args.exclude_preprints or None,
+            "publisher_name": args.publisher_name,
+            "clinical_guideline": args.clinical_guideline or None,
+            "medical_mode": args.medical_mode or None,
+        }
+        for key, val in _CLI_FILTER_MAP.items():
+            if val is not None:
+                orch_args[key] = val
     elif cmd_name == "chain":
         orch_command = "chain"
         orch_args["max_rounds"] = args.max_rounds
