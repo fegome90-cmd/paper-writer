@@ -279,6 +279,133 @@ class TestConsensusProviderSearch:
         assert len(result.papers) == 0
 
 
+class TestConsensusFilterParams:
+    """Test OpenAPI spec filter parameters — G4/G5 compliance."""
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_duration_min_sent_as_param(self, mock_urlopen: MagicMock) -> None:
+        """duration_min filter is sent as query parameter per OpenAPI spec."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider._call_api("test", 10, duration_min=30)
+
+        req = mock_urlopen.call_args[0][0]
+        assert "duration_min=30" in req.full_url
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_duration_max_sent_as_param(self, mock_urlopen: MagicMock) -> None:
+        """duration_max filter is sent as query parameter per OpenAPI spec."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider._call_api("test", 10, duration_max=365)
+
+        req = mock_urlopen.call_args[0][0]
+        assert "duration_max=365" in req.full_url
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_publisher_name_sent_as_param(self, mock_urlopen: MagicMock) -> None:
+        """publisher_name filter is sent as query parameter per OpenAPI spec."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider._call_api("test", 10, publisher_name="Springer,Nature")
+
+        req = mock_urlopen.call_args[0][0]
+        assert "publisher_name=" in req.full_url
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_clinical_guideline_sent_as_param(self, mock_urlopen: MagicMock) -> None:
+        """clinical_guideline filter is sent as query parameter per OpenAPI spec."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider._call_api("test", 10, clinical_guideline=True)
+
+        req = mock_urlopen.call_args[0][0]
+        assert "clinical_guideline=true" in req.full_url
+
+    def test_sjr_max_valid_range(self) -> None:
+        """sjr_max accepts values 1-4 per OpenAPI spec constraint."""
+        provider = ConsensusSearchProvider()
+        for val in [1, 2, 3, 4]:
+            # Should not raise — just verify validation passes
+            with patch("integrations.tools.consensus_client.urllib.request.urlopen") as mock:
+                mock_resp = MagicMock()
+                mock_resp.read.return_value = json.dumps({"results": []}).encode()
+                mock_resp.__enter__ = lambda s: mock_resp
+                mock_resp.__exit__ = MagicMock(return_value=False)
+                mock.return_value = mock_resp
+                provider._call_api("test", 10, sjr_max=val)  # no raise
+
+    def test_sjr_max_out_of_range_raises(self) -> None:
+        """sjr_max outside 1-4 raises ValueError per OpenAPI spec constraint."""
+        provider = ConsensusSearchProvider()
+        for bad in [0, 5, -1, 10]:
+            with pytest.raises(ValueError, match="sjr_max must be between 1 and 4"):
+                provider._call_api("test", 10, sjr_max=bad)
+
+    @patch("integrations.tools.consensus_client.urllib.request.urlopen")
+    def test_all_filters_combined(self, mock_urlopen: MagicMock) -> None:
+        """All 12 filter params can be sent in a single request."""
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"results": []}).encode()
+        mock_resp.__enter__ = lambda s: mock_resp
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
+
+        provider = ConsensusSearchProvider()
+        provider._call_api(
+            "test",
+            10,
+            year_min=2020,
+            year_max=2025,
+            study_types=["rct"],
+            human=True,
+            sample_size_min=100,
+            sjr_max=2,
+            exclude_preprints=True,
+            medical_mode=False,  # False → not sent
+            duration_min=30,
+            duration_max=365,
+            publisher_name="Nature",
+            clinical_guideline=True,
+        )
+
+        req = mock_urlopen.call_args[0][0]
+        url = req.full_url
+        # Verify all present params in URL
+        assert "year_min=2020" in url
+        assert "year_max=2025" in url
+        assert "human=true" in url
+        assert "sample_size_min=100" in url
+        assert "sjr_max=2" in url
+        assert "exclude_preprints=true" in url
+        assert "duration_min=30" in url
+        assert "duration_max=365" in url
+        assert "publisher_name=Nature" in url
+        assert "clinical_guideline=true" in url
+        # medical_mode=False should NOT be in URL (falsy)
+        assert "medical_mode" not in url
+
+
 class TestConsensusProviderFactory:
     """Test provider creation via factory."""
 

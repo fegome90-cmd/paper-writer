@@ -167,12 +167,25 @@ class ConsensusSearchProvider(PaperSearchProvider):
             params["human"] = "true"
         if filters.get("sample_size_min"):
             params["sample_size_min"] = str(filters["sample_size_min"])
-        if filters.get("sjr_max"):
-            params["sjr_max"] = str(filters["sjr_max"])
+        if filters.get("sjr_max") is not None:
+            sjr = int(filters["sjr_max"])
+            if not (1 <= sjr <= 4):
+                raise ValueError(
+                    f"sjr_max must be between 1 and 4 (spec constraint), got {sjr}"
+                )
+            params["sjr_max"] = str(sjr)
         if filters.get("exclude_preprints"):
             params["exclude_preprints"] = "true"
         if filters.get("medical_mode"):
             params["medical_mode"] = "true"
+        if filters.get("duration_min"):
+            params["duration_min"] = str(filters["duration_min"])
+        if filters.get("duration_max"):
+            params["duration_max"] = str(filters["duration_max"])
+        if filters.get("publisher_name"):
+            params["publisher_name"] = filters["publisher_name"]
+        if filters.get("clinical_guideline"):
+            params["clinical_guideline"] = "true"
 
         encoded = urllib.parse.urlencode(params, doseq=True)
         url = f"{_BASE_URL}{_SEARCH_PATH}?{encoded}"
