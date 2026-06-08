@@ -157,6 +157,7 @@ class PaperSearchProvider(ABC):
         *,
         sources: list[str] | None = None,
         limit: int = 20,
+        **kwargs: Any,
     ) -> SearchProviderResult:
         """Search for academic papers.
 
@@ -164,6 +165,9 @@ class PaperSearchProvider(ABC):
             query: Search query string.
             sources: Platform sources to search (e.g., ["arxiv", "pubmed"]).
             limit: Maximum results per platform (1-100).
+            **kwargs: Provider-specific filter parameters (e.g., year_min,
+                study_types for Consensus). Ignored by providers that don't
+                support them.
 
         Returns:
             SearchProviderResult with normalized papers and provenance.
@@ -357,6 +361,7 @@ class FixturePaperSearchProvider(PaperSearchProvider):
         *,
         sources: list[str] | None = None,
         limit: int = 20,
+        **kwargs: Any,
     ) -> SearchProviderResult:
         _validate_query_and_limit(query, limit)
 

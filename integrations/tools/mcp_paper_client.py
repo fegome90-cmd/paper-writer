@@ -13,6 +13,7 @@ import json
 import os
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -71,6 +72,7 @@ class McpPaperSearchProvider(PaperSearchProvider):
         *,
         sources: list[str] | None = None,
         limit: int = 20,
+        **kwargs: Any,
     ) -> SearchProviderResult:
         _validate_query_and_limit(query, limit)
 
