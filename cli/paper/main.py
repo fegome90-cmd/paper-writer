@@ -461,8 +461,23 @@ def main() -> None:
     # paper doctor
     subparsers.add_parser("doctor", help="Check environment and report tool status.")
 
-    # paper thesaurus
-    from thesaurus.cli import _cmd_audit, _cmd_import, _cmd_list, _cmd_rebuild, _cmd_search
+    # paper thesaurus (lazy — module may not be installed)
+    _thesaurus_available = False
+    try:
+        from thesaurus.cli import _cmd_audit, _cmd_import, _cmd_list, _cmd_rebuild, _cmd_search
+
+        _thesaurus_available = True
+    except ImportError:
+
+        def _cmd_unavailable(args) -> None:  # type: ignore[misc]
+            print(
+                "Error: thesaurus module not installed. "
+                "Install with: cd skills/local/thesaurus && uv pip install -e .",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        _cmd_import = _cmd_search = _cmd_list = _cmd_audit = _cmd_rebuild = _cmd_unavailable
 
     thesaurus_parser = subparsers.add_parser(
         "thesaurus", help="Biomedical concept normalization (MeSH/DeCS)."

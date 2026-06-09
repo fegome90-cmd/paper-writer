@@ -59,7 +59,9 @@ class TestDoctorInternalCaps:
         (journals_dir / "preset.yaml").write_text("name: nature")
 
         caps = check_internal_capabilities(tmp_path)
-        assert all(c.installed for c in caps)
+        # Thesaurus DB is optional — only check non-thesaurus caps
+        non_optional = [c for c in caps if c.name != "thesaurus"]
+        assert all(c.installed for c in non_optional)
 
     def test_empty_repo(self, tmp_path: Path) -> None:
         """Empty tmp_path falls back to package-bundled assets.
@@ -70,7 +72,7 @@ class TestDoctorInternalCaps:
         caps = check_internal_capabilities(tmp_path)
         # Package-bundled assets may or may not exist depending on
         # installation. At minimum, caps should be populated.
-        assert len(caps) == 3
+        assert len(caps) >= 3  # csl-styles, presets, thesaurus (optional)
 
 
 class TestDoctorReport:
