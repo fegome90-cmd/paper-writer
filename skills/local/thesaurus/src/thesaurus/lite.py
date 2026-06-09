@@ -9,7 +9,6 @@ from thesaurus.protocol import SemanticStore, StorageCapabilities
 
 _DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "workspace"
 _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "thesaurus.db"
-_MANIFEST_PATH = _DEFAULT_DB_DIR / "vocabulary" / "manifest.json"
 _MIGRATIONS_DIR = _DEFAULT_DB_DIR / "migrations"
 
 
@@ -41,10 +40,6 @@ class LiteSemanticStore(SemanticStore):
             "INSERT INTO concepts_fts (id, preferred_label, notation) VALUES (?, ?, ?)",
             (concept["id"], concept["preferred_label"], concept.get("notation", "")),
         )
-
-    def _delete_fts(self, conn: sqlite3.Connection, concept_id: str) -> None:
-        """Delete a concept from the FTS5 index."""
-        conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept_id,))
 
     @property
     def capabilities(self) -> StorageCapabilities:

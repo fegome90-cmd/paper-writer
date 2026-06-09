@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import sqlite3
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -161,7 +159,7 @@ def export_jsonl(db_path: str | Path, output_path: str | Path) -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "schema_version": "1",
     }
-    manifest_path = output_path.parent / f"{output_path.name}.manifest.json"
+    manifest_path = output_path.parent / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -174,18 +172,3 @@ def export_jsonl(db_path: str | Path, output_path: str | Path) -> dict:
     }
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Export MeSH SQLite to JSONL")
-    parser.add_argument("db_path", help="Path to mesh-import SQLite database")
-    parser.add_argument("output_path", help="Output JSONL file path")
-    args = parser.parse_args()
-
-    try:
-        result = export_jsonl(args.db_path, args.output_path)
-        print(json.dumps(result, ensure_ascii=False))
-    except FileNotFoundError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        sys.exit(1)
-    except RuntimeError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        sys.exit(1)

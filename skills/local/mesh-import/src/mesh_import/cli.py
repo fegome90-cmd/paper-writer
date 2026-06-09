@@ -2,8 +2,11 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_DB_PATH = os.path.join("workspace", "mesh.db")
 
@@ -77,6 +80,21 @@ def _cmd_expand(args: argparse.Namespace) -> None:
     print(json.dumps(results, ensure_ascii=False))
 
 
+def _cmd_export(args: argparse.Namespace) -> None:
+    from mesh_import.export import export_jsonl
+
+    db_path = getattr(args, "db_path", None) or _DEFAULT_DB_PATH
+    output_path = args.output_path
+
+    try:
+        result = export_jsonl(db_path, output_path)
+        print(json.dumps(result, ensure_ascii=False))
+    except FileNotFoundError as exc:
+        _print_error(str(exc), "export")
+    except RuntimeError as exc:
+        _print_error(str(exc), "export")
+
+
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     """Register 'mesh' subparser with import, resolve, expand subcommands."""
     mesh_parser = subparsers.add_parser("mesh", help="MeSH vocabulary import and lookup.")
@@ -115,3 +133,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         help=f"DB path (default: {_DEFAULT_DB_PATH}).",
     )
     mesh_expand.set_defaults(func=_cmd_expand)
+
+    mesh_export = mesh_sub.add_parser("export", help="Export MeSH SQLite to JSONL + manifest.")
+    mesh_export.add_argument("output_path", help="Output JSONL file path.")
+    mesh_export.add_argument(
+        "--db-path",
+        default=None,
+        help=f"Source DB path (default: {_DEFAULT_DB_PATH}).",
+    )
+    mesh_export.set_defaults(func=_cmd_export)

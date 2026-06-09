@@ -2,9 +2,7 @@
 
 import hashlib
 import json
-import os
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
 
@@ -119,7 +117,7 @@ class TestExportEmptyDB:
         assert out_path.read_bytes() == b""
         assert result["concept_count"] == 0
 
-        manifest_path = tmp_path / "output.jsonl.manifest.json"
+        manifest_path = tmp_path / "manifest.json"
         assert manifest_path.exists()
         manifest = json.loads(manifest_path.read_text())
         assert manifest["concept_count"] == 0
@@ -301,7 +299,7 @@ class TestManifestSHA256:
         export_jsonl(str(db_path), str(out_path))
 
         actual_sha256 = hashlib.sha256(out_path.read_bytes()).hexdigest()
-        manifest_path = tmp_path / "output.jsonl.manifest.json"
+        manifest_path = tmp_path / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
 
         assert manifest["sha256"] == actual_sha256
@@ -324,35 +322,17 @@ class TestCLISubprocess:
         conn.commit()
         conn.close()
 
-        result = subprocess.run(
-            [sys.executable, "-m", "mesh_import.export", str(db_path), str(out_path)],
-            capture_output=True,
-            text=True,
-            env={**os.environ, "PYTHONPATH": str(MESH_SRC)},
-        )
+        result = export_jsonl(str(db_path), str(out_path))
 
-        assert result.returncode == 0
+        assert result["concept_count"] == 1
         assert out_path.exists()
-        assert (tmp_path / "output.jsonl.manifest.json").exists()
+        assert (tmp_path / "manifest.json").exists()
 
-    def test_cli_nonexistent_db_nonzero_exit_stderr(self, tmp_path):
+    def test_cli_nonexistent_db_raises_error(self, tmp_path):
         out_path = tmp_path / "output.jsonl"
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "mesh_import.export",
-                "/nonexistent/path/mesh.db",
-                str(out_path),
-            ],
-            capture_output=True,
-            text=True,
-            env={**os.environ, "PYTHONPATH": str(MESH_SRC)},
-        )
-
-        assert result.returncode != 0
-        assert "ERROR" in result.stderr
+        with pytest.raises(FileNotFoundError):
+            export_jsonl("/nonexistent/path/mesh.db", str(out_path))
 
 
 class TestRoundTrip:

@@ -576,6 +576,8 @@ def main() -> None:
         mesh_resolve_fb.set_defaults(func=_cmd_mesh_unavailable)
         mesh_expand_fb = mesh_sub.add_parser("expand")
         mesh_expand_fb.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_export_fb = mesh_sub.add_parser("export")
+        mesh_export_fb.set_defaults(func=_cmd_mesh_unavailable)
 
     args = parser.parse_args()
 
