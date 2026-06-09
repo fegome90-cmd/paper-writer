@@ -302,41 +302,68 @@ def _normalize_paper(raw: dict[str, Any]) -> NormalizedPaper:
 
 
 def deduplicate_papers(papers: list[NormalizedPaper]) -> list[NormalizedPaper]:
-    """Remove duplicates based on DOI or title similarity across sources.
+    """Remove duplicates based on DOI, PMID, or title similarity across sources.
 
-    Keeps the version with more populated fields.  Defers DOI
+    Keeps the version with more populated fields.  Defers key
     registration until the paper is actually appended to the result
-    list, so that title-dedup skips never leave stale indices.
+    list, so that dedup skips never leave stale indices.
     """
     seen_dois: dict[str, int] = {}
+    seen_pmids: dict[str, int] = {}
     seen_titles: dict[str, int] = {}
     result: list[NormalizedPaper] = []
+
+    def _pick_richer(existing_idx: int, candidate: NormalizedPaper) -> bool:
+        """Return True if candidate has fewer defaulted fields than existing."""
+        existing_defaults = len(result[existing_idx].defaulted_fields)
+        current_defaults = len(candidate.defaulted_fields)
+        return current_defaults < existing_defaults
 
     for paper in papers:
         # DOI-based dedup
         if paper.doi:
             doi_key = paper.doi.lower().strip().rstrip("/")
             if doi_key in seen_dois:
-                # Keep the one with fewer defaulted fields
                 existing_idx = seen_dois[doi_key]
-                existing_defaults = len(result[existing_idx].defaulted_fields)
-                current_defaults = len(paper.defaulted_fields)
-                if current_defaults < existing_defaults:
-                    # Replace with richer version (result-local index)
+                if _pick_richer(existing_idx, paper):
                     result[existing_idx] = paper
                 continue
 
-        # Title-based dedup (normalized)
+        # PMID-based dedup (PubMed papers often lack DOI)
+        if paper.pmid:
+            pmid_key = paper.pmid.strip()
+            if pmid_key in seen_pmids:
+                existing_idx = seen_pmids[pmid_key]
+                if _pick_richer(existing_idx, paper):
+                    # Replace and re-register DOI if candidate has one
+                    result[existing_idx] = paper
+                    if paper.doi:
+                        doi_key = paper.doi.lower().strip().rstrip("/")
+                        seen_dois[doi_key] = existing_idx
+                continue
+
+        # Title-based dedup (normalized, keep richest)
         title_key = paper.title.lower().strip()
         if title_key in seen_titles:
+            existing_idx = seen_titles[title_key]
+            if _pick_richer(existing_idx, paper):
+                # Replace and re-register keys
+                result[existing_idx] = paper
+                if paper.doi:
+                    doi_key = paper.doi.lower().strip().rstrip("/")
+                    seen_dois[doi_key] = existing_idx
+                if paper.pmid:
+                    seen_pmids[paper.pmid.strip()] = existing_idx
             continue
 
-        # Paper survives both checks — append and register
+        # Paper survives all checks — append and register
         result.append(paper)
         idx = len(result) - 1
         if paper.doi:
             doi_key = paper.doi.lower().strip().rstrip("/")
             seen_dois[doi_key] = idx
+        if paper.pmid:
+            seen_pmids[paper.pmid.strip()] = idx
         seen_titles[title_key] = idx
 
     return result
