@@ -486,6 +486,69 @@ class TestCLINegativePaths:
             main()
         assert exc_info.value.code == 1
 
+    def test_import_bib_from_zotero_cli_success(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper import bib --from-zotero runs successfully."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        # Mock ZoteroSyncImporter response in the orchestrator builder wrappers
+        from harness.services import orchestrator_builder
+        from tests.harness.mocks import InMemoryToolWrapper
+
+        orig_build = orchestrator_builder.build_orchestrator_dependencies
+
+        def mock_build(*args, **kwargs):
+            deps = orig_build(*args, **kwargs)
+            # Replace zotero_sync wrapper with one that always passes
+            mock_wrappers = dict(deps.wrappers)
+            mock_wrappers["zotero_sync"] = InMemoryToolWrapper("bib_imported", return_status="pass")
+            return dataclasses.replace(deps, wrappers=types.MappingProxyType(mock_wrappers))
+
+        import dataclasses
+        import types
+
+        monkeypatch.setattr("cli.paper.main.build_orchestrator_dependencies", mock_build)
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "paper",
+                "import",
+                "bib",
+                "--from-zotero",
+                "--collection",
+                "ABC12345",
+                "--since",
+                "10",
+                "--bbt-local",
+                "--target",
+                str(tmp_path / "templates" / "references.bib"),
+            ],
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 0
+
+    def test_import_bib_missing_both_source_and_from_zotero_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """paper import bib without source and without --from-zotero fails."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "argv", ["paper", "init"])
+        with pytest.raises(SystemExit):
+            main()
+
+        monkeypatch.setattr(sys, "argv", ["paper", "import", "bib"])
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        # Should fail with exit code 2 (argument validation failure) or 1
+        assert exc_info.value.code in (1, 2)
+
     def test_render_format_epub_rejected(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

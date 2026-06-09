@@ -91,6 +91,7 @@ class TestBuilderContract:
             "audit_code_health",
             "render",
             "import_bib",
+            "zotero_sync",
         }
         assert set(deps.wrappers.keys()) == expected_keys
 
@@ -147,6 +148,7 @@ class TestBuilderContract:
             ReportingAuditor,
             StyleLinter,
             ZoteroImporter,
+            ZoteroSyncImporter,
         )
 
         deps = build_orchestrator_dependencies(project_root=tmp_path)
@@ -157,6 +159,7 @@ class TestBuilderContract:
         assert isinstance(deps.wrappers["audit_reporting"], ReportingAuditor)
         assert isinstance(deps.wrappers["render"], PandocRenderer)
         assert isinstance(deps.wrappers["import_bib"], ZoteroImporter)
+        assert isinstance(deps.wrappers["zotero_sync"], ZoteroSyncImporter)
 
     @pytest.mark.integration
     def test_builder_and_orchestrator_end_to_end_integration(self, tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ class TestZoteroImporterProperties:
         assert ZoteroImporter().name == "zotero-import"
 
     def test_gate(self) -> None:
-        assert ZoteroImporter().gate == "bib_normalized"
+        assert ZoteroImporter().gate == "bib_imported"
 
     def test_is_available(self) -> None:
         assert ZoteroImporter().is_available() is True

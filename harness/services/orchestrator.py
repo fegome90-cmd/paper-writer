@@ -448,7 +448,10 @@ class Orchestrator:
                 return [wrapper_result, validate_render_passed(self.checker)]
             return [wrapper_result]
         elif cmd == "import_bib":
-            wrapper_result = self._run_wrapper_gate("import_bib", request_args=request.args)
+            if request.args.get("from_zotero"):
+                wrapper_result = self._run_wrapper_gate("zotero_sync", request_args=request.args)
+            else:
+                wrapper_result = self._run_wrapper_gate("import_bib", request_args=request.args)
             if wrapper_result.status in ("pass", "warn"):
                 return [wrapper_result, validate_bib_normalized(self.checker)]
             return [wrapper_result]
@@ -623,9 +626,13 @@ class Orchestrator:
             if request_args.get("reference_doc"):
                 base["reference_doc"] = request_args["reference_doc"]
 
-        if command == "import_bib":
+        if command in ("import_bib", "zotero_sync"):
             base["source_bib"] = request_args.get("source_bib", "")
             base["target_bib"] = request_args.get("target_bib", "templates/references.bib")
+            base["from_zotero"] = request_args.get("from_zotero", False)
+            base["collection_key"] = request_args.get("collection_key")
+            base["since_version"] = request_args.get("since_version")
+            base["bbt_local"] = request_args.get("bbt_local", False)
 
         return base
 

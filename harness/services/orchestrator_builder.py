@@ -27,6 +27,7 @@ from integrations.tools import (
     StyleLinter,
     WritingQualityAuditor,
     ZoteroImporter,
+    ZoteroSyncImporter,
 )
 from skills.local.adapters import AcademicWriterAdapter, LiteratureSearchAdapter
 
@@ -109,6 +110,7 @@ def build_orchestrator_dependencies(
         "audit_code_health": CodeHealthAuditor(),
         "render": PandocRenderer(resolver=tool_resolver),
         "import_bib": ZoteroImporter(),
+        "zotero_sync": ZoteroSyncImporter(),
     }
 
     # 10. Return assembled dependencies with immutable dict wrappers.

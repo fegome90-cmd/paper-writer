@@ -166,14 +166,16 @@ class ZoteroClient:
             body, headers = self._get(url, expect_text=False)
             if isinstance(body, list):
                 for item in body:
-                    data = item.get("data", {})
-                    collections.append(
-                        {
-                            "key": data.get("key", ""),
-                            "name": data.get("name", ""),
-                            "parentCollection": data.get("parentCollection", False),
-                        }
-                    )
+                    if isinstance(item, dict):
+                        data = item.get("data", {})
+                        if isinstance(data, dict):
+                            collections.append(
+                                {
+                                    "key": data.get("key", ""),
+                                    "name": data.get("name", ""),
+                                    "parentCollection": data.get("parentCollection", False),
+                                }
+                            )
             url = self._parse_next_link(headers.get("Link") or headers.get("link") or "")
 
         return collections
@@ -185,6 +187,8 @@ class ZoteroClient:
     def _fetch_bbt_local(self, collection_key: str | None) -> str:
         """Pull BibTeX from Better BibTeX local server (localhost:23119)."""
         uid = self.config.user_id
+        if self.config.library_type == "user":
+            uid = "1"
         if collection_key:
             path = f"/better-bibtex/collection?/{uid}/{collection_key}.bibtex"
         else:

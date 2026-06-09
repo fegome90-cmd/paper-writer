@@ -452,11 +452,32 @@ def main() -> None:
     import_parser = subparsers.add_parser("import", help="Import external resources.")
     import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
     import_bib = import_sub.add_parser("bib", help="Import .bib from Zotero/Better BibTeX export.")
-    import_bib.add_argument("source", help="Path to source .bib file to import.")
+    import_bib.add_argument("source", nargs="?", help="Path to source .bib file to import.")
     import_bib.add_argument(
         "--target",
         default="templates/references.bib",
         help="Target bibliography path (default: templates/references.bib).",
+    )
+    import_bib.add_argument(
+        "--from-zotero",
+        action="store_true",
+        help="Sync directly from Zotero/Better BibTeX library/collection.",
+    )
+    import_bib.add_argument(
+        "--collection",
+        default=None,
+        help="Specific Zotero collection key (8-char string) to sync.",
+    )
+    import_bib.add_argument(
+        "--since",
+        type=int,
+        default=None,
+        help="Sync only changes made since this library version (integer).",
+    )
+    import_bib.add_argument(
+        "--bbt-local",
+        action="store_true",
+        help="Pull from local Better BibTeX endpoint instead of cloud API.",
     )
 
     # paper render
@@ -650,9 +671,19 @@ def main() -> None:
             orch_args["manuscript"] = args.file
     elif cmd_name == "import":
         if sub_name == "bib":
+            if not args.source and not args.from_zotero:
+                sys.stderr.write(
+                    "Error: Must specify source .bib file or "
+                    "use --from-zotero to sync from Zotero.\n"
+                )
+                sys.exit(1)
             orch_command = "import_bib"
-            orch_args["source_bib"] = args.source
+            orch_args["source_bib"] = args.source or ""
             orch_args["target_bib"] = args.target
+            orch_args["from_zotero"] = args.from_zotero
+            orch_args["collection_key"] = args.collection
+            orch_args["since_version"] = args.since
+            orch_args["bbt_local"] = args.bbt_local
     elif cmd_name == "render":
         orch_args["output_formats"] = args.formats if args.formats else ["docx", "pdf"]
         orch_args["csl"] = args.csl

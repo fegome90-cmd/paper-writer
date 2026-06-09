@@ -341,3 +341,32 @@ def test_orchestrator_import_bib_normalizes_bibliography() -> None:
     assert result.exit_code == 0
     # Wrapper gate (bib_normalized) should be set
     assert result.gate_changes.get("bib_normalized") is True
+
+
+def test_orchestrator_import_bib_from_zotero() -> None:
+    """import_bib with from_zotero=True runs zotero_sync wrapper and sets bib_imported gate."""
+    orch, _, _, _ = _create_orchestrator()
+
+    # Init first to create state file
+    res_init = orch.execute(OrchestratorRequest("init", "search", "stop_on_error"))
+    assert res_init.success is True
+
+    result = orch.execute(
+        OrchestratorRequest(
+            command="import_bib",
+            requested_stage="search",
+            failure_policy="stop_on_error",
+            args={
+                "from_zotero": True,
+                "collection_key": "ABC12345",
+                "since_version": 10,
+                "bbt_local": True,
+            },
+        )
+    )
+    assert result.success is True
+    assert result.exit_code == 0
+    # Wrapper gate (bib_imported) should be set
+    assert result.gate_changes.get("bib_imported") is True
+    # bib_normalized should also be set because references.bib exists after init
+    assert result.gate_changes.get("bib_normalized") is True

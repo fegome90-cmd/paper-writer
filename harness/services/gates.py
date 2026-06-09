@@ -372,7 +372,7 @@ def validate_ready_for_delivery(
 ) -> GateResult:
     """Final check gate — all hard gates must be True, soft gates warn."""
     required_gates = sorted(ManuscriptState.REQUIRED_GATES - {"ready_for_delivery"})
-    soft_gates = sorted(ManuscriptState.SOFT_GATES)
+    soft_gates = sorted(ManuscriptState.SOFT_GATES - {"bib_imported"})
 
     checks = []
     for g in required_gates:

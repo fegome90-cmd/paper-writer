@@ -21,30 +21,38 @@ def validate_scope_discipline(record: dict[str, Any]) -> list[dict[str, Any]]:
 
     scope = record.get("scope_classification")
     if not scope:
-        findings.append({
-            "severity": "error",
-            "message": "Missing scope_classification on academic record",
-        })
+        findings.append(
+            {
+                "severity": "error",
+                "message": "Missing scope_classification on academic record",
+            }
+        )
         return findings
 
     epistemic = record.get("epistemic_classification", "")
 
     # protocol_only + observed is contradictory
     if scope == "protocol_only" and epistemic == "observed":
-        findings.append({
-            "severity": "warning",
-            "message": (
-                "protocol_only record classified as 'observed' — "
-                "protocol papers cannot satisfy core observed evidence requirements"
-            ),
-        })
+        findings.append(
+            {
+                "severity": "warning",
+                "message": (
+                    "protocol_only record classified as 'observed' — "
+                    "protocol papers cannot satisfy core observed evidence requirements"
+                ),
+            }
+        )
 
     # horizon_scan narrated as core
     if scope in ("protocol_only", "horizon_scan"):
-        findings.append({
-            "severity": "info",
-            "message": f"Non-core scope ({scope}) — verify this is not narrated as core evidence",
-        })
+        findings.append(
+            {
+                "severity": "info",
+                "message": (
+                    f"Non-core scope ({scope}) — verify this is not narrated as core evidence"
+                ),
+            }
+        )
 
     return findings
 
@@ -67,7 +75,7 @@ def validate_search_window_integrity(
 
     # Build set of amended record IDs
     amended_ids: set[str] = set()
-    for amendment in (amendments or []):
+    for amendment in amendments or []:
         for rec_id in amendment.get("records", []):
             amended_ids.add(rec_id)
 
@@ -78,13 +86,15 @@ def validate_search_window_integrity(
             continue
         if year < start or year > end:
             if doi not in amended_ids:
-                findings.append({
-                    "severity": "error",
-                    "message": (
-                        f"Record {doi} (year={year}) outside search window "
-                        f"[{start}, {end}] without amendment"
-                    ),
-                })
+                findings.append(
+                    {
+                        "severity": "error",
+                        "message": (
+                            f"Record {doi} (year={year}) outside search window "
+                            f"[{start}, {end}] without amendment"
+                        ),
+                    }
+                )
 
     return findings
 
@@ -106,13 +116,15 @@ def validate_metadata_resolution(
         status = meta.get("status", "unresolved") if meta else "unresolved"
         if status != "resolved":
             doi = rec.get("doi", "unknown")
-            findings.append({
-                "severity": "error",
-                "message": (
-                    f"Unresolved metadata for critical-claim record {doi} — "
-                    f"academic completeness blocked"
-                ),
-            })
+            findings.append(
+                {
+                    "severity": "error",
+                    "message": (
+                        f"Unresolved metadata for critical-claim record {doi} — "
+                        f"academic completeness blocked"
+                    ),
+                }
+            )
 
     return findings
 
@@ -143,9 +155,11 @@ def validate_academic_completeness(
 
     # Check screening_records exist
     if "screening_records" not in evidence_data:
-        findings.append({
-            "severity": "error",
-            "message": "Academic mode requires screening_records in evidence output",
-        })
+        findings.append(
+            {
+                "severity": "error",
+                "message": "Academic mode requires screening_records in evidence output",
+            }
+        )
 
     return findings

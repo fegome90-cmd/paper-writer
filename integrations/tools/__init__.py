@@ -26,6 +26,7 @@ from integrations.tools.reporting_auditor import ReportingAuditor
 from integrations.tools.vale import StyleLinter
 from integrations.tools.writing_quality_auditor import WritingQualityAuditor
 from integrations.tools.zotero_import import ZoteroImporter
+from integrations.tools.zotero_sync import ZoteroSyncImporter
 
 __all__ = [
     "BibliographyNormalizer",
@@ -44,4 +45,5 @@ __all__ = [
     "ValidatorResult",
     "WritingQualityAuditor",
     "ZoteroImporter",
+    "ZoteroSyncImporter",
 ]

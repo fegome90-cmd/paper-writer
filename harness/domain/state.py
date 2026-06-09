@@ -62,6 +62,7 @@ class ManuscriptState:
         {
             "citation_verified",
             "ethics_passed",
+            "bib_imported",
         }
     )
 
@@ -193,6 +194,7 @@ class ManuscriptState:
             ]
         elif modified_artifact_type == "bib":
             resets = [
+                "bib_imported",
                 "bib_normalized",
                 "refs_validated",
                 "render_passed",

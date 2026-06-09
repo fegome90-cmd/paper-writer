@@ -35,7 +35,7 @@ class ZoteroImporter(ToolWrapper):
 
     @property
     def gate(self) -> str:
-        return "bib_normalized"
+        return "bib_imported"
 
     def is_available(self) -> bool:
         """Always available — pure Python, no external tool needed."""

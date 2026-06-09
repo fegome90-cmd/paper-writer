@@ -75,7 +75,10 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "search":
-            new_files = ["outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]  # noqa: E501
+            new_files = [
+                "outputs/latest/search/search_plan.json",
+                "outputs/latest/search/raw_results.json",
+            ]
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "screen":
@@ -96,7 +99,10 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "render":
-            new_files = ["outputs/latest/render/manuscript.docx", "outputs/latest/render/manuscript.pdf"]  # noqa: E501
+            new_files = [
+                "outputs/latest/render/manuscript.docx",
+                "outputs/latest/render/manuscript.pdf",
+            ]
             self.checker.existing_paths.update(new_files)
             return new_files
         return []
@@ -165,5 +171,6 @@ def create_mock_wrappers() -> dict[str, ToolWrapper]:
         "lint_style": InMemoryToolWrapper("style_passed"),
         "audit_reporting": InMemoryToolWrapper("reporting_passed"),
         "import_bib": InMemoryToolWrapper("bib_normalized"),
+        "zotero_sync": InMemoryToolWrapper("bib_imported"),
         "render": InMemoryToolWrapper("render_passed"),
     }
