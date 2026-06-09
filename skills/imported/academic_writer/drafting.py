@@ -183,14 +183,14 @@ def _convert_citations(content: str, bib_path: Path) -> str:
     Gracefully degrades: if bib file missing or conversion fails,
     returns content unchanged.
     """
-    if not bib_path.is_file():
-        return content
+    if not content or not bib_path or not bib_path.is_file():
+        return content or ""
     try:
         from validators.citation_format import convert_citations
 
         bib_text = bib_path.read_text(encoding="utf-8", errors="replace")
         return convert_citations(content, bib_text)
-    except (ValueError, OSError):
+    except (ValueError, OSError, TypeError):
         return content
 
 
