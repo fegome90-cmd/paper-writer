@@ -209,7 +209,8 @@ class LiteSemanticStore(SemanticStore):
         conn = self._connect()
         try:
             rows = conn.execute(
-                "SELECT id, preferred_label, notation "
+                "SELECT id, preferred_label, alt_labels, "
+                "broader, narrower, related, notation, source "
                 "FROM concepts ORDER BY preferred_label LIMIT ? OFFSET ?",
                 (limit, offset),
             ).fetchall()
@@ -217,7 +218,12 @@ class LiteSemanticStore(SemanticStore):
                 {
                     "id": row["id"],
                     "preferred_label": row["preferred_label"],
+                    "alt_labels": row["alt_labels"],
+                    "broader": row["broader"],
+                    "narrower": row["narrower"],
+                    "related": row["related"],
                     "notation": row["notation"],
+                    "source": row["source"],
                 }
                 for row in rows
             ]
