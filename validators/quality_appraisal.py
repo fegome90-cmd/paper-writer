@@ -265,8 +265,8 @@ class QualityAppraisalValidator:
             rating = "very_low"
 
         return {
-            "title": paper.get("title", ""),
-            "doi": paper.get("doi", ""),
+            "title": paper.get("title") or "",
+            "doi": paper.get("doi") or "",
             "year": paper.get("year"),
             "venue": paper.get("venue", ""),
             "scores": scores,
@@ -307,8 +307,10 @@ class QualityAppraisalValidator:
                 }
             ]
 
-        # Appraise each study
-        appraisals = [self.appraise_study(p) for p in papers]
+        # Appraise each study — skip non-dict entries gracefully
+        appraisals = [
+            self.appraise_study(p) for p in papers if isinstance(p, dict)
+        ]
 
         # Generate findings for low-quality studies
         findings: list[dict[str, Any]] = []
