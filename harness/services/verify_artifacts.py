@@ -12,6 +12,7 @@ the systematic review process and verify citation integrity:
 from __future__ import annotations
 
 import csv
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -414,3 +415,64 @@ def _extract_citations_from_file(file_path: Path, citations: dict[str, dict[str,
             citations[key]["count"] += 1
             if section_name not in citations[key]["sections"]:
                 citations[key]["sections"].append(section_name)
+
+
+def generate_academic_artifacts(
+    project_root: Path,
+    output_dir: Path,
+) -> list[str]:
+    """Generate academic-mode verify artifacts: screening_ledger.csv.
+
+    Called after standard verify artifacts when mode=academic.
+    Returns list of generated artifact paths.
+    """
+    generated: list[str] = []
+
+    # Find screened_evidence.json
+    latest_dir = project_root / "outputs" / "runs" / "latest"
+    evidence_path = latest_dir / "search" / "screened_evidence.json"
+    if not evidence_path.exists():
+        return generated
+
+    evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
+    screening_records = evidence_data.get("screening_records", [])
+    if not screening_records:
+        return generated
+
+    # Generate screening_ledger.csv
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ledger_path = output_dir / "screening_ledger.csv"
+
+    lines = ["record_id,included,final_stage,exclusion_reason"]
+    for rec in screening_records:
+        record_id = rec.get("record_id", "unknown")
+        included = rec.get("included", False)
+        history = rec.get("screening_history", [])
+
+        # Derive final stage and exclusion reason from history
+        final_stage = "unknown"
+        exclusion_reason = ""
+        if history:
+            last = history[-1]
+            final_stage = last.get("stage", "unknown")
+            if not included:
+                exclusion_reason = last.get("reason", "")
+
+        lines.append(f"{record_id},{included},{final_stage},{exclusion_reason}")
+
+    ledger_path.write_text("\n".join(lines), encoding="utf-8")
+    generated.append(str(ledger_path))
+
+    # Generate metadata_resolution_report.md (stub — full implementation in PR3)
+    report_path = output_dir / "metadata_resolution_report.md"
+    report_lines = ["# Metadata Resolution Report\n"]
+    for rec in evidence_data.get("evidence", []):
+        doi = rec.get("doi", "unknown")
+        meta = rec.get("metadata_resolution", {"status": "not_assessed"})
+        status = meta.get("status", "not_assessed") if meta else "not_assessed"
+        report_lines.append(f"- **{doi}**: {status}")
+    report_path.write_text("\n".join(report_lines), encoding="utf-8")
+    generated.append(str(report_path))
+
+    return generated
+
