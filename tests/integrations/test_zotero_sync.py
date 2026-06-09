@@ -151,7 +151,7 @@ class TestZoteroClient:
 
         assert bib == "@article{key1, title={Local BBT}}"
         req = mock_urlopen.call_args[0][0]
-        assert req.full_url == "http://localhost:23119/better-bibtex/library?/1/library.bibtex"
+        assert req.full_url == "http://localhost:23119/better-bibtex/export/library?/1/library.bibtex"
 
     @patch("urllib.request.urlopen")
     def test_bbt_local_collection(self, mock_urlopen: MagicMock) -> None:
@@ -168,7 +168,7 @@ class TestZoteroClient:
         assert isinstance(bib, str)
 
         req = mock_urlopen.call_args[0][0]
-        assert req.full_url == "http://localhost:23119/better-bibtex/collection?/1/COL123.bibtex"
+        assert req.full_url == "http://localhost:23119/better-bibtex/export/collection?/1/COL123.bibtex"
 
     @patch("urllib.request.urlopen")
     def test_fetch_collections(self, mock_urlopen: MagicMock) -> None:

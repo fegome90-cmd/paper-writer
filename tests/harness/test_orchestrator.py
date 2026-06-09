@@ -344,7 +344,7 @@ def test_orchestrator_import_bib_normalizes_bibliography() -> None:
 
 
 def test_orchestrator_import_bib_from_zotero() -> None:
-    """import_bib with from_zotero=True runs zotero_sync wrapper and sets bib_imported gate."""
+    """zotero_sync command runs zotero_sync wrapper and sets bib_imported gate."""
     orch, _, _, _ = _create_orchestrator()
 
     # Init first to create state file
@@ -353,11 +353,10 @@ def test_orchestrator_import_bib_from_zotero() -> None:
 
     result = orch.execute(
         OrchestratorRequest(
-            command="import_bib",
+            command="zotero_sync",
             requested_stage="search",
             failure_policy="stop_on_error",
             args={
-                "from_zotero": True,
                 "collection_key": "ABC12345",
                 "since_version": 10,
                 "bbt_local": True,
