@@ -185,6 +185,8 @@ class Orchestrator:
             # Trigger downstream gate reset if editing a draft
             if request.command in ("draft_section", "draft_all"):
                 self.state_manager.reset_downstream_gates("draft")
+            elif request.command in ("import_bib", "zotero_sync"):
+                self.state_manager.reset_downstream_gates("bib")
 
             action_artifacts = self.action_runner.run_action(request.command, request.args)
             artifacts.extend(action_artifacts)
@@ -450,12 +452,9 @@ class Orchestrator:
             return [wrapper_result]
         elif cmd in ("import_bib", "zotero_sync"):
             if cmd == "zotero_sync":
-                wrapper_result = self._run_wrapper_gate("zotero_sync", request_args=request.args)
+                return [self._run_wrapper_gate("zotero_sync", request_args=request.args)]
             else:
-                wrapper_result = self._run_wrapper_gate("import_bib", request_args=request.args)
-            if wrapper_result.status in ("pass", "warn"):
-                return [wrapper_result, validate_bib_normalized(self.checker)]
-            return [wrapper_result]
+                return [self._run_wrapper_gate("import_bib", request_args=request.args)]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
             return [
