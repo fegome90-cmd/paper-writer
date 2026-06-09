@@ -564,7 +564,9 @@ class TestR2BugHuntFixes:
         # The URL should not contain spaces or control characters
         url = f"https://api.semanticscholar.org/graph/v1/paper/{encoded}/references"
         assert " " not in url
-        assert ":" not in url.split("graph/v1/paper/")[1].split("/")[0]  # No raw colons after paper/
+        assert (
+            ":" not in url.split("graph/v1/paper/")[1].split("/")[0]
+        )  # No raw colons after paper/
 
     def test_bh2_invalid_tier_rejected(self, tmp_path: Path) -> None:
         """R2-BH2: Invalid tier names raise ValueError."""
@@ -609,4 +611,6 @@ class TestR2BugHuntFixes:
                 timeout=30,
             )
             assert result.returncode != 0, f"Expected failure for {args}"
-            assert expected_error in result.stderr, f"Expected '{expected_error}' in stderr for {args}, got: {result.stderr}"
+            assert expected_error in result.stderr, (
+                f"Expected '{expected_error}' in stderr for {args}, got: {result.stderr}"
+            )
