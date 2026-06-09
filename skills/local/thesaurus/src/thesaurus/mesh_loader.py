@@ -22,7 +22,7 @@ def load_jsonl(file_path: str | Path) -> list[dict]:
     path = Path(file_path)
     concepts = []
 
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8-sig") as f:
         for line_num, line in enumerate(f, start=1):
             line = line.strip()
             if not line:
@@ -66,14 +66,15 @@ def validate_jsonl_readable(file_path: str | Path) -> None:
     path = Path(file_path)
     lines = []
 
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8-sig") as f:
         for i, line in enumerate(f):
             lines.append(line.strip())
             if i >= 1:
                 break
 
-    if not lines:
-        raise ValueError("JSONL file is empty")
+    non_blank = [l for l in lines if l]
+    if not non_blank:
+        raise ValueError("JSONL file is empty (no non-blank lines)")
 
     # Validate each read line is valid JSON
     for i, line in enumerate(lines):
