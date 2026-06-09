@@ -19,7 +19,22 @@ import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote as _url_quote
 from urllib.request import Request, urlopen
+
+
+def _encode_paper_id(paper_id: str) -> str:
+    """URL-encode paper_id only if it's a title fallback (not S2/DOI/ArXiv ID).
+
+    S2 IDs are 40-char hex, DOIs start with 'DOI:', ArXiv IDs start with 'ArXiv:'.
+    These are URL-safe. Title fallbacks with spaces need encoding.
+    """
+    if paper_id.startswith("DOI:") or paper_id.startswith("ArXiv:"):
+        return paper_id
+    if len(paper_id) == 40 and all(c in "0123456789abcdef" for c in paper_id.lower()):
+        return paper_id
+    return _url_quote(paper_id, safe="")
+
 
 # Rate limiting: track last request time
 _last_request_time: float = 0.0
@@ -155,7 +170,7 @@ def get_references(
         List of paper dicts from references.
     """
     url = (
-        f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}/references"
+        f"https://api.semanticscholar.org/graph/v1/paper/{_encode_paper_id(paper_id)}/references"
         f"?limit={limit}&fields={fields}"
     )
 
@@ -190,7 +205,7 @@ def get_citations(
         List of paper dicts from citations.
     """
     url = (
-        f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}/citations"
+        f"https://api.semanticscholar.org/graph/v1/paper/{_encode_paper_id(paper_id)}/citations"
         f"?limit={limit}&fields={fields}"
     )
 
@@ -222,7 +237,7 @@ def get_paper(
     Returns:
         Paper dict or None if not found.
     """
-    url = f"https://api.semanticscholar.org/graph/v1/paper/{paper_id}?fields={fields}"
+    url = f"https://api.semanticscholar.org/graph/v1/paper/{_encode_paper_id(paper_id)}?fields={fields}"
     return _api_get(url, cache_dir=cache_dir)
 
 

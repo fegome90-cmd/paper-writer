@@ -519,6 +519,21 @@ def main() -> None:
                 orch_args[key] = val
     elif cmd_name == "chain":
         orch_command = "chain"
+        # R2-BH3: Validate chain parameter bounds
+        _chain_errors: list[str] = []
+        if args.max_rounds < 1:
+            _chain_errors.append(f"--max-rounds must be ≥1, got {args.max_rounds}")
+        if args.max_papers < 1:
+            _chain_errors.append(f"--max-papers must be ≥1, got {args.max_papers}")
+        if args.relevance_threshold <= 0 or args.relevance_threshold > 1:
+            _chain_errors.append(
+                f"--relevance-threshold must be 0<val≤1, got {args.relevance_threshold}"
+            )
+        if _chain_errors:
+            print("Chain parameter validation error:", file=sys.stderr)
+            for e in _chain_errors:
+                print(f"  - {e}", file=sys.stderr)
+            sys.exit(1)
         orch_args["max_rounds"] = args.max_rounds
         orch_args["max_papers"] = args.max_papers
         orch_args["relevance_threshold"] = args.relevance_threshold

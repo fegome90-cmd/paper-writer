@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 
 class TestApiGet:
     """_api_get() — rate-limited Semantic Scholar API calls."""
@@ -528,3 +530,83 @@ class TestDedupByDoiAndTitle:
         )
         # Seed + new paper = 2
         assert result["total_unique"] == 2
+
+
+class TestR2BugHuntFixes:
+    """Tests for bugs found by Round 2 bug hunt."""
+
+    def test_bh1_url_encodes_title_fallbacks(self) -> None:
+        """R2-BH1: Paper titles with spaces are URL-encoded in S2 API calls."""
+        from skills.imported.literature_search.chaining import _encode_paper_id
+
+        # S2 IDs (40-char hex) should NOT be encoded
+        assert _encode_paper_id("a" * 40) == "a" * 40
+
+        # DOI: prefix should NOT be encoded
+        assert _encode_paper_id("DOI:10.1234/test") == "DOI:10.1234/test"
+
+        # ArXiv: prefix should NOT be encoded
+        assert _encode_paper_id("ArXiv:2301.00001") == "ArXiv:2301.00001"
+
+        # Title with spaces SHOULD be encoded
+        encoded = _encode_paper_id("Reinforcement Learning for Robotic Manipulation")
+        assert " " not in encoded
+        assert "%20" in encoded or "+" in encoded  # URL encoding
+        assert "Reinforcement" in encoded
+
+    def test_bh1_url_encoding_prevents_invalid_url(self) -> None:
+        """R2-BH1: URL-encoded titles don't cause InvalidURL crashes."""
+        from skills.imported.literature_search.chaining import _encode_paper_id
+
+        title = "Reinforcement Learning for Robotic Manipulation: Benchmark Results"
+        encoded = _encode_paper_id(title)
+
+        # The URL should not contain spaces or control characters
+        url = f"https://api.semanticscholar.org/graph/v1/paper/{encoded}/references"
+        assert " " not in url
+        assert ":" not in url.split("graph/v1/paper/")[1].split("/")[0]  # No raw colons after paper/
+
+    def test_bh2_invalid_tier_rejected(self, tmp_path: Path) -> None:
+        """R2-BH2: Invalid tier names raise ValueError."""
+        from skills.imported.literature_search.search import screen
+
+        # Create minimal raw_results.json
+        raw_path = tmp_path / "raw_results.json"
+        raw_path.write_text(json.dumps({"papers": []}))
+
+        with pytest.raises(ValueError, match="Invalid min_tier"):
+            screen(tmp_path, tmp_path, min_tier="InvalidTier")
+
+    def test_bh2_valid_tiers_accepted(self, tmp_path: Path) -> None:
+        """R2-BH2: All valid tier names are accepted."""
+        from skills.imported.literature_search.search import screen
+
+        raw_path = tmp_path / "raw_results.json"
+        raw_path.write_text(json.dumps({"papers": []}))
+
+        for tier in ["Tier 1", "Tier 2", "Tier 3", "Discard"]:
+            result = screen(tmp_path, tmp_path, min_tier=tier)
+            assert "artifacts" in result
+
+    def test_bh3_chain_params_validated(self) -> None:
+        """R2-BH3: CLI rejects invalid chain parameters."""
+        import subprocess
+
+        for args, expected_error in [
+            ("--max-rounds 0", "--max-rounds"),
+            ("--max-rounds -1", "--max-rounds"),
+            ("--max-papers 0", "--max-papers"),
+            ("--max-papers -1", "--max-papers"),
+            ("--relevance-threshold -0.5", "--relevance-threshold"),
+            ("--relevance-threshold 0", "--relevance-threshold"),
+            ("--relevance-threshold 2.0", "--relevance-threshold"),
+        ]:
+            result = subprocess.run(
+                ["uv", "run", "python", "-m", "cli.paper.main", "chain"] + args.split(),
+                capture_output=True,
+                text=True,
+                cwd="/Users/felipe_gonzalez/Developer/paper-writer",
+                timeout=30,
+            )
+            assert result.returncode != 0, f"Expected failure for {args}"
+            assert expected_error in result.stderr, f"Expected '{expected_error}' in stderr for {args}, got: {result.stderr}"
