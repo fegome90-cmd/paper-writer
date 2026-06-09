@@ -386,7 +386,7 @@ def deduplicate(
             continue
 
         # Not a duplicate — extract title data (only for unique papers)
-        title = paper.get("title", "")
+        title = paper.get("title") or ""
         title_lower = title.lower()
         title_len = _len(title_lower)
 
