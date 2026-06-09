@@ -193,9 +193,9 @@ class ZoteroClient:
         if collection_key:
             import urllib.parse
             encoded_key = urllib.parse.quote(collection_key)
-            path = f"/better-bibtex/collection?/{uid}/{encoded_key}.bibtex"
+            path = f"/better-bibtex/export/collection?/{uid}/{encoded_key}.bibtex"
         else:
-            path = f"/better-bibtex/library?/{uid}/library.bibtex"
+            path = f"/better-bibtex/export/library?/{uid}/library.bibtex"
         body, _ = self._get(f"http://localhost:23119{path}", expect_text=True)
         return body if isinstance(body, str) else ""
 

@@ -196,9 +196,11 @@ class ManuscriptState:
             resets = [
                 "bib_imported",
                 "bib_normalized",
+                "citations_resolved",
                 "refs_validated",
                 "render_passed",
                 "ready_for_delivery",
+                "citation_verified",
             ]
         else:
             raise DomainStateError(f"Unknown artifact type for reset: {modified_artifact_type}")

@@ -449,7 +449,7 @@ class Orchestrator:
                 return [wrapper_result, validate_render_passed(self.checker)]
             return [wrapper_result]
         elif cmd in ("import_bib", "zotero_sync"):
-            if request.args.get("from_zotero"):
+            if cmd == "zotero_sync":
                 wrapper_result = self._run_wrapper_gate("zotero_sync", request_args=request.args)
             else:
                 wrapper_result = self._run_wrapper_gate("import_bib", request_args=request.args)

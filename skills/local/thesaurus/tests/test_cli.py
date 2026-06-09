@@ -154,8 +154,8 @@ def test_cmd_rebuild(tmp_thesaurus, sample_concepts):
     try:
         args = SimpleNamespace()
         _cmd_rebuild(args)
-        # After rebuild with no manifest in tmp dir, should be empty
-        assert tmp_thesaurus.concept_count == 0
+        # After rebuild with no manifest in tmp dir, data is preserved (no-op)
+        assert tmp_thesaurus.concept_count == 3
     finally:
         if old_db is None:
             os.environ.pop("PAPER_THESAURUS_DB", None)

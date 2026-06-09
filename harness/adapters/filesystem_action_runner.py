@@ -63,7 +63,7 @@ class FilesystemActionRunner(ActionRunner):
     def _resolve(self, rel_path: str) -> Path:
         """Resolve a relative path and verify it stays within repo boundaries."""
         resolved = (self.repo_path / rel_path).resolve()
-        if not str(resolved).startswith(str(self.repo_path)):
+        if not resolved.is_relative_to(self.repo_path):
             raise ValueError(f"Path traversal detected: '{rel_path}' resolves outside repo root.")
         return resolved
 
@@ -75,7 +75,7 @@ class FilesystemActionRunner(ActionRunner):
         run_dir = self._resolve(f"outputs/runs/{self.run_id}")
         run_dir.mkdir(parents=True, exist_ok=True)
         resolved = (run_dir / rel_path).resolve()
-        if not str(resolved).startswith(str(self.repo_path)):
+        if not resolved.is_relative_to(self.repo_path):
             raise ValueError(f"Path traversal detected: '{rel_path}' resolves outside repo root.")
         # Update latest symlink — use raw path (not _resolve) to avoid
         # following the existing symlink, which would resolve to the old target dir

@@ -61,6 +61,11 @@ class LiteSemanticStore(SemanticStore):
 
     def add_concept(self, concept: dict) -> None:
         """Add or replace a single concept. Transactional via context manager."""
+        # Normalize alt_labels: accept list or JSON string
+        alt_labels = concept.get("alt_labels", "[]")
+        if isinstance(alt_labels, list):
+            alt_labels = json.dumps(alt_labels)
+
         conn = self._connect()
         try:
             with conn:
@@ -75,7 +80,7 @@ class LiteSemanticStore(SemanticStore):
                     (
                         concept["id"],
                         concept["preferred_label"],
-                        concept.get("alt_labels", "[]"),
+                        alt_labels,
                         concept.get("broader", ""),
                         concept.get("narrower", ""),
                         concept.get("related", ""),
@@ -92,6 +97,11 @@ class LiteSemanticStore(SemanticStore):
         try:
             with conn:
                 for concept in concepts:
+                    # Normalize alt_labels: accept list or JSON string
+                    alt_labels = concept.get("alt_labels", "[]")
+                    if isinstance(alt_labels, list):
+                        alt_labels = json.dumps(alt_labels)
+
                     self._upsert_fts(conn, concept)
                     conn.execute(
                         """
@@ -103,7 +113,7 @@ class LiteSemanticStore(SemanticStore):
                         (
                             concept["id"],
                             concept["preferred_label"],
-                            concept.get("alt_labels", "[]"),
+                            alt_labels,
                             concept.get("broader", ""),
                             concept.get("narrower", ""),
                             concept.get("related", ""),
@@ -123,10 +133,18 @@ class LiteSemanticStore(SemanticStore):
     def search(self, query: str, limit: int = 20) -> list[dict]:
         """Search concepts via FTS5 + JSON alt_labels parsing."""
         limit = max(0, limit)
+
+        # Guard: empty or whitespace-only queries return nothing
+        if not query or not query.strip():
+            return []
+
         conn = self._connect()
         try:
-            # FTS5 search on preferred_label + notation
-            fts_results = {}
+            # FTS5 search on preferred_label + notation.
+            # Wrap query in double quotes so FTS5 treats user input as a
+            # literal phrase, preventing operator injection (AND, OR, NOT, *).
+            fts_query = '"' + query.replace('"', '""') + '"'
+            fts_results: dict[str, dict] = {}
             try:
                 rows = conn.execute(
                     """SELECT id, preferred_label, notation,
@@ -135,7 +153,7 @@ class LiteSemanticStore(SemanticStore):
                        WHERE concepts_fts MATCH ?
                        ORDER BY rank
                        LIMIT ?""",
-                    (query, limit),
+                    (fts_query, limit),
                 ).fetchall()
                 for row in rows:
                     fts_results[row["id"]] = {
@@ -144,12 +162,10 @@ class LiteSemanticStore(SemanticStore):
                         "match_type": "preferred_label",
                         "notation": row["notation"],
                     }
-            except sqlite3.OperationalError as exc:
-                msg = str(exc).lower()
-                # Only swallow FTS5 query syntax errors; re-raise everything else
-                if "fts5" not in msg or "syntax error" not in msg:
-                    raise
-                # FTS5 match syntax error — skip FTS results, LIKE fallback handles it
+            except sqlite3.OperationalError:
+                # Any FTS5 error (syntax, unterminated string, etc.) —
+                # skip FTS results entirely, LIKE fallback handles it.
+                pass
 
             # Also search alt_labels (JSON column) for synonym matches
             escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -237,24 +253,41 @@ class LiteSemanticStore(SemanticStore):
             conn.close()
 
     def rebuild(self) -> None:
-        """Delete DB, run migration, re-import from JSONL. Idempotent."""
+        """Delete DB, run migration, re-import from JSONL. Idempotent.
+
+        Validates manifest (SHA256 + concept_count) BEFORE deleting
+        the existing DB.  If no manifest exists, this is a no-op —
+        the current DB is preserved.
+        """
+        workspace = self._db_path.parent
+        manifest_path = workspace / "vocabulary" / "manifest.json"
+
+        if not manifest_path.exists():
+            return  # No manifest → nothing to rebuild from, preserve DB
+
+        # Validate manifest against JSONL before touching the DB
+        from thesaurus.manifest import load_manifest, validate_manifest
+
+        manifest = load_manifest(manifest_path)
+        source_file = manifest.get("source_file", "")
+        if not source_file:
+            return  # No source_file in manifest → nothing to import
+
+        jsonl_path = manifest_path.parent / source_file
+        if not jsonl_path.exists():
+            return  # Source JSONL missing → nothing to import
+
+        validate_manifest(manifest, jsonl_path)  # Raises ManifestError on mismatch
+
+        # Only now is it safe to delete and recreate
         self._db_path.unlink(missing_ok=True)
         run_migration(self._db_path, sql_dir=_MIGRATIONS_DIR)
 
-        # Resolve manifest relative to DB path's workspace directory
-        workspace = self._db_path.parent
-        manifest_path = workspace / "vocabulary" / "manifest.json"
-        if manifest_path.exists():
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            source_file = manifest.get("source_file", "")
-            if source_file:
-                from thesaurus.mesh_loader import load_jsonl
+        from thesaurus.mesh_loader import load_jsonl
 
-                jsonl_path = manifest_path.parent / source_file
-                if jsonl_path.exists():
-                    concepts = load_jsonl(jsonl_path)
-                    if concepts:
-                        self.import_concepts(concepts)
+        concepts = load_jsonl(jsonl_path)
+        if concepts:
+            self.import_concepts(concepts)
 
     def _get_manifest_sha(self) -> str:
         """Get SHA256 of manifest file."""

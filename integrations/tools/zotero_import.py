@@ -131,7 +131,7 @@ class ZoteroImporter(ToolWrapper):
             target_path = repo_root / target_path
             
         target_path = target_path.resolve()
-        if not str(target_path).startswith(str(repo_root)):
+        if not target_path.is_relative_to(repo_root):
             return ValidatorResult(
                 validator="zotero-import",
                 status="fail",
@@ -182,9 +182,9 @@ class ZoteroImporter(ToolWrapper):
             depth = 1
             pos = start
             while pos < len(content) and depth > 0:
-                if content[pos] == "{":
+                if content[pos] == "{" and content[pos - 1] != "\\":
                     depth += 1
-                elif content[pos] == "}":
+                elif content[pos] == "}" and content[pos - 1] != "\\":
                     depth -= 1
                 pos += 1
             if depth != 0:
@@ -200,33 +200,45 @@ class ZoteroImporter(ToolWrapper):
             key = entry_body[:comma_pos].strip()
             body = entry_body[comma_pos + 1 :]
             fields: dict[str, str] = {}
-            for field_match in re.finditer(r"(\w+)\s*=\s*", body, re.IGNORECASE):
+            
+            bpos = 0
+            while bpos < len(body):
+                field_match = re.search(r"(\w+)\s*=\s*", body[bpos:], re.IGNORECASE)
+                if not field_match:
+                    break
                 field_name = field_match.group(1).lower().strip()
-                val_start = field_match.end()
+                val_start = bpos + field_match.end()
+                
                 if val_start < len(body) and body[val_start] == "{":
                     vd = 1
                     vp = val_start + 1
                     while vp < len(body) and vd > 0:
-                        if body[vp] == "{":
+                        if body[vp] == "{" and body[vp - 1] != "\\":
                             vd += 1
-                        elif body[vp] == "}":
+                        elif body[vp] == "}" and body[vp - 1] != "\\":
                             vd -= 1
                         vp += 1
                     fields[field_name] = body[val_start + 1 : vp - 1].strip()
+                    bpos = vp
                 elif val_start < len(body):
-                    # Bare value (no braces) — scan to next field boundary or end.
-                    # Cannot split on plain "," because "author = Smith, John" would
-                    # truncate at the comma inside the value. Instead advance until
-                    # we see a pattern that looks like the start of the next field
-                    # ("<whitespace><word><whitespace>=" at brace-depth 0).
-                    next_field = re.search(
-                        r"(?:,\s*)(\w+)\s*=", body[val_start:], re.IGNORECASE
-                    )
-                    if next_field:
-                        end = val_start + next_field.start() + 1  # up to the comma
-                    else:
-                        end = len(body)
-                    fields[field_name] = body[val_start:end].strip().strip('"').strip("'")
+                    in_double_quote = False
+                    in_single_quote = False
+                    vp = val_start
+                    while vp < len(body):
+                        if body[vp] == '"' and (vp == 0 or body[vp-1] != '\\') and not in_single_quote:
+                            in_double_quote = not in_double_quote
+                        elif body[vp] == "'" and (vp == 0 or body[vp-1] != '\\') and not in_double_quote:
+                            in_single_quote = not in_single_quote
+                        elif not in_double_quote and not in_single_quote and body[vp] == ',':
+                            next_field = re.match(r"\s*\w+\s*=", body[vp+1:])
+                            if next_field:
+                                break
+                        vp += 1
+                    fields[field_name] = body[val_start:vp].strip().strip('"').strip("'")
+                    bpos = vp
+                else:
+                    break
+            
             entries[key] = fields
             entry_types[key] = m.group(1)
 
