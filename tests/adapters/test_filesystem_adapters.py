@@ -302,7 +302,9 @@ def test_emit_manifest_includes_render_artifacts(tmp_path: Path) -> None:
 
     # Create bib
     (tmp_path / "templates").mkdir(exist_ok=True)
-    (tmp_path / "templates" / "references.bib").write_text("@article{a,author={A},title={T},year={2020}}\n")
+    (tmp_path / "templates" / "references.bib").write_text(
+        "@article{a,author={A},title={T},year={2020}}\n"
+    )
 
     all_passed = dict.fromkeys(ManuscriptState.REQUIRED_GATES, True)
     manifest_path_str = runner.emit_manifest(all_passed)

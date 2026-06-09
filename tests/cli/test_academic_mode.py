@@ -76,7 +76,9 @@ class TestReviewConfigLoading:
         config_dir = tmp_path / "outputs"
         config_dir.mkdir(parents=True)
         (config_dir / "review_config.yaml").write_text(
-            yaml.dump({"mode": "academic", "search_window": {"start_year": 2020, "end_year": 2024}}),
+            yaml.dump(
+                {"mode": "academic", "search_window": {"start_year": 2020, "end_year": 2024}}
+            ),
             encoding="utf-8",
         )
         config = load_review_config(tmp_path)

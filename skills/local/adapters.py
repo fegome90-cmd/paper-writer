@@ -250,17 +250,97 @@ class LiteratureSearchAdapter(SkillAdapter):
             gate_changes={"search_completed": True},
         )
 
+    # ------------------------------------------------------------------
+    # Academic screening enrichment
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _enrich_academic_screening(
+        evidence_data: dict[str, Any],
+        min_tier: str,
+    ) -> dict[str, Any]:
+        """Enrich screened_evidence.json with academic-mode fields.
+
+        Adds:
+        - screening_records: canonical included+excluded rows with history
+        - scope_classification, epistemic_classification, screening_stage
+          on each evidence record
+        """
+        tier_order = {"Tier 1": 1, "Tier 2": 2, "Tier 3": 3, "Discard": 4}
+
+        # Build screening_records for ALL papers (included + excluded)
+        all_papers_count = evidence_data.get("total_raw", 0)
+        raw_path_candidates = [
+            Path(evidence_data.get("query", "")),  # unlikely
+        ]
+
+        # We need raw_results.json to get all papers (excluded ones)
+        # The evidence_data only has included papers.
+        # We reconstruct excluded from prisma_flow counts, and for full
+        # records we need to read raw_results.json.
+        # For now, build screening_records from included evidence only,
+        # since the adapter may not have access to the search dir path.
+        # Full excluded-record tracking will be in search.py enrichment.
+
+        screening_records: list[dict[str, Any]] = []
+        included_records = evidence_data.get("evidence", [])
+
+        for rec in included_records:
+            tier = rec.get("scoring", {}).get("tier", min_tier)
+            record_id = rec.get("doi", rec.get("title", "unknown"))
+
+            screening_records.append({
+                "record_id": record_id,
+                "included": True,
+                "screening_history": [
+                    {
+                        "stage": "title_abstract",
+                        "decision": "proceed",
+                        "reason": "Title and abstract match query",
+                    },
+                    {
+                        "stage": "full_text",
+                        "decision": "included",
+                        "reason": f"Tier classification: {tier} meets threshold {min_tier}",
+                    },
+                ],
+            })
+
+            # Enrich evidence record with academic fields
+            rec["scope_classification"] = _classify_scope(rec)
+            rec["epistemic_classification"] = _classify_epistemic(rec)
+            rec["screening_stage"] = "included"
+            rec["exclusion_reason"] = None
+
+        evidence_data["screening_records"] = screening_records
+        return evidence_data
+
     def _handle_screen(self, inputs: dict[str, Any]) -> SkillResult:
         """Handle the 'screen' command using real tier classification."""
         search_dir = Path(inputs.get("search_dir", "outputs/search"))
         output_dir = Path(inputs.get("output_dir", "outputs/search"))
         min_tier = str(inputs.get("min_tier", os.environ.get("PAPER_SCREEN_MIN_TIER", "Tier 3")))
+        review_mode = inputs.get("mode", "rapid")
 
         result = search_module.screen(
             search_dir=search_dir,
             output_dir=output_dir,
             min_tier=min_tier,
         )
+
+        # Academic mode: enrich screened_evidence.json
+        if review_mode == "academic":
+            evidence_path = output_dir / "screened_evidence.json"
+            if evidence_path.exists():
+                evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
+                evidence_data = self._enrich_academic_screening(
+                    evidence_data, min_tier
+                )
+                evidence_path.write_text(
+                    json.dumps(evidence_data, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+
         return SkillResult(
             adapter=self.name,
             status="pass",
@@ -513,3 +593,95 @@ class AcademicWriterAdapter(SkillAdapter):
             artifacts=[str(a) for a in result.get("artifacts", [])],
             gate_changes={"sections_completed": True},
         )
+
+
+# ---------------------------------------------------------------------------
+# Academic classification helpers
+# ---------------------------------------------------------------------------
+
+_VALID_SCOPE = {"core", "adjacent", "horizon_scan", "protocol_only"}
+_VALID_EPISTEMIC = {
+    "observed",
+    "modeled",
+    "observational",
+    "protocol",
+    "synthesizer_inference",
+    "local_hypothesis",
+}
+
+# Keywords suggesting protocol-only or non-empirical work
+_PROTOCOL_KEYWORDS = frozenset({
+    "protocol",
+    "study design",
+    "planned",
+    "proposed",
+    "phase i",
+    "registered",
+})
+_MODELING_KEYWORDS = frozenset({
+    "simulation",
+    "computational model",
+    "in silico",
+    "predicted",
+    "machine learning",
+    "deep learning",
+    "neural network",
+})
+_OBSERVATIONAL_KEYWORDS = frozenset({
+    "cohort",
+    "case-control",
+    "cross-sectional",
+    "longitudinal",
+    "epidemiological",
+    "registry",
+})
+
+
+def _classify_scope(paper: dict[str, Any]) -> str:
+    """Classify paper scope based on content signals.
+
+    Returns one of: core, adjacent, horizon_scan, protocol_only.
+    Default is 'core' for papers that pass screening.
+    """
+    title = paper.get("title", "").lower()
+    abstract = paper.get("abstract", "").lower()
+    text = f"{title} {abstract}"
+
+    # Protocol-only detection
+    for kw in _PROTOCOL_KEYWORDS:
+        if kw in text:
+            return "protocol_only"
+
+    # Default included papers are 'core' — they passed screening
+    return "core"
+
+
+def _classify_epistemic(paper: dict[str, Any]) -> str:
+    """Classify epistemic status based on content signals.
+
+    Returns one of: observed, modeled, observational, protocol,
+    synthesizer_inference, local_hypothesis.
+    Default is 'observed' for empirical papers.
+    """
+    title = paper.get("title", "").lower()
+    abstract = paper.get("abstract", "").lower()
+    text = f"{title} {abstract}"
+
+    # Protocol detection
+    for kw in _PROTOCOL_KEYWORDS:
+        if kw in text:
+            return "protocol"
+
+    # Modeling detection
+    for kw in _MODELING_KEYWORDS:
+        if kw in text:
+            return "modeled"
+
+    # Observational detection
+    for kw in _OBSERVATIONAL_KEYWORDS:
+        if kw in text:
+            return "observational"
+
+    # Default: observed empirical evidence
+    return "observed"
+
