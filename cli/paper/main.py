@@ -487,7 +487,7 @@ def main() -> None:
         _thesaurus_available = True
     except ImportError:
 
-        def _cmd_unavailable(args) -> None:  # type: ignore[misc]
+        def _cmd_unavailable(args: Any) -> None:
             print(
                 "Error: thesaurus module not installed. "
                 "Install with: cd skills/local/thesaurus && uv pip install -e .",
