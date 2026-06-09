@@ -308,9 +308,7 @@ class QualityAppraisalValidator:
             ]
 
         # Appraise each study — skip non-dict entries gracefully
-        appraisals = [
-            self.appraise_study(p) for p in papers if isinstance(p, dict)
-        ]
+        appraisals = [self.appraise_study(p) for p in papers if isinstance(p, dict)]
 
         # Generate findings for low-quality studies
         findings: list[dict[str, Any]] = []
