@@ -152,8 +152,8 @@ def extract_author_year_citations(text: str) -> list[dict[str, Any]]:
     """
     citations: list[dict[str, Any]] = []
 
-    # Pattern: (AuthorAuthor et al., YYYY) or (Author, YYYY) or (Author and Author, YYYY)
-    pattern = re.compile(
+    # Parenthetical format: (Author, Year) or (Author et al., Year)
+    pattern_parenthetical = re.compile(
         r"\("
         r"([A-Z][a-zA-Z\s]+(?:et\s+al\.)?(?:\s+and\s+[A-Z][a-zA-Z\s]+(?:et\s+al\.)?)*)"
         r"\s*,\s*"
@@ -161,7 +161,15 @@ def extract_author_year_citations(text: str) -> list[dict[str, Any]]:
         r"\)"
     )
 
-    for match in pattern.finditer(text):
+    # Narrative format: Author (Year) — author outside parens
+    # Matches: Smith (2020), Wang et al. (2023), Smith and Jones (2023)
+    pattern_narrative = re.compile(
+        r"([A-Z][a-zA-Z\s]+(?:et\s+al\.)?(?:\s+and\s+[A-Z][a-zA-Z\s]+(?:et\s+al\.)?)*)"
+        r"\s+"
+        r"\((\d{4})\)"
+    )
+
+    for match in pattern_parenthetical.finditer(text):
         raw_authors = match.group(1).strip()
         year = match.group(2)
 
@@ -188,6 +196,35 @@ def extract_author_year_citations(text: str) -> list[dict[str, Any]]:
             {
                 "raw": match.group(0),
                 "authors": last_names,
+                "year": year,
+                "start": match.start(),
+                "end": match.end(),
+            }
+        )
+
+    # Also detect narrative format: Author (Year)
+    for match in pattern_narrative.finditer(text):
+        raw_authors = match.group(1).strip()
+        year = match.group(2)
+
+        narr_last_names: list[str] = []
+        author_parts = re.split(r"\s+and\s+", raw_authors)
+        for part in author_parts:
+            part = re.sub(r"\s*et\s+al\.?\s*$", "", part).strip()
+            if "," in part:
+                last_name = part.split(",")[0].strip()
+            else:
+                words = part.split()
+                last_name = words[-1] if words else ""
+            if last_name:
+                normalized = re.sub(r"[^a-z]", "", last_name.lower())
+                if normalized:
+                    narr_last_names.append(normalized)
+
+        citations.append(
+            {
+                "raw": match.group(0),
+                "authors": narr_last_names,
                 "year": year,
                 "start": match.start(),
                 "end": match.end(),
@@ -234,10 +271,11 @@ def convert_citations(text: str, bib_text: str) -> str:
     if not citations:
         return text
 
-    # Replace from end to start to preserve positions
+    # Sort by start position descending to replace from end to start
+    # (preserves earlier positions during replacement)
     resolved_count = 0
     result = text
-    for citation in reversed(citations):
+    for citation in sorted(citations, key=lambda c: c["start"], reverse=True):
         bib_key = resolve_citation(citation, author_year_index)
         if bib_key:
             result = result[: citation["start"]] + f"@{bib_key}" + result[citation["end"] :]
