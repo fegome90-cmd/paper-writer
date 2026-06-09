@@ -127,7 +127,7 @@ class ZoteroImporter(ToolWrapper):
         target_bib = artifacts.get("target_bib", "templates/references.bib")
         target_path = Path(target_bib)
         if not target_path.is_absolute():
-            repo_root = Path(context.get("repo_path", "."))
+            repo_root = Path(context.get("repo_path") or context.get("cwd", "."))
             target_path = repo_root / target_path
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
@@ -197,8 +197,17 @@ class ZoteroImporter(ToolWrapper):
                         vp += 1
                     fields[field_name] = body[val_start + 1 : vp - 1].strip()
                 elif val_start < len(body):
-                    end = body.find(",", val_start)
-                    if end == -1:
+                    # Bare value (no braces) — scan to next field boundary or end.
+                    # Cannot split on plain "," because "author = Smith, John" would
+                    # truncate at the comma inside the value. Instead advance until
+                    # we see a pattern that looks like the start of the next field
+                    # ("<whitespace><word><whitespace>=" at brace-depth 0).
+                    next_field = re.search(
+                        r"(?:,\s*)(\w+)\s*=", body[val_start:], re.IGNORECASE
+                    )
+                    if next_field:
+                        end = val_start + next_field.start() + 1  # up to the comma
+                    else:
                         end = len(body)
                     fields[field_name] = body[val_start:end].strip().strip('"').strip("'")
             entries[key] = fields

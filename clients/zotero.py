@@ -22,7 +22,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
-__all__ = ["ZoteroClient", "ZoteroConfig", "ZoteroUnavailable"]
+__all__ = ["ZoteroClient", "ZoteroConfig", "ZoteroError"]
 
 ZOTERO_API_BASE = "https://api.zotero.org"
 ZOTERO_LOCAL_BASE = "http://localhost:23119/api"
@@ -30,7 +30,7 @@ DEFAULT_TIMEOUT = 15
 MAX_RETRIES = 3
 
 
-class ZoteroUnavailable(Exception):
+class ZoteroError(Exception):
     """Raised when Zotero API is unreachable or returns unexpected errors."""
 
 
@@ -48,7 +48,7 @@ class ZoteroConfig:
     bbt_local: bool = False      # True → Better BibTeX pull endpoint
 
     @staticmethod
-    def from_env() -> "ZoteroConfig":
+    def from_env() -> ZoteroConfig:
         """Build config from environment variables.
 
         Required:
@@ -119,7 +119,7 @@ class ZoteroClient:
             BibTeX string (may be empty if nothing changed since ``since_version``).
 
         Raises:
-            ZoteroUnavailable: on network errors, auth failures, or unexpected HTTP errors.
+            ZoteroError: on network errors, auth failures, or unexpected HTTP errors.
         """
         if self.config.bbt_local:
             return self._fetch_bbt_local(collection_key)
@@ -151,7 +151,7 @@ class ZoteroClient:
             List of collection dicts with keys: key, name, parentCollection.
 
         Raises:
-            ZoteroUnavailable: on network or API errors.
+            ZoteroError: on network or API errors.
         """
         lib = f"{self.config.library_type}s/{self.config.user_id}"
         base = ZOTERO_LOCAL_BASE if self.config.local_mode else ZOTERO_API_BASE
@@ -215,7 +215,7 @@ class ZoteroClient:
         Returns (body, response_headers). Body is str when expect_text=True,
         list when expect_text=False (JSON array).
 
-        Raises ZoteroUnavailable on unrecoverable errors.
+        Raises ZoteroError on unrecoverable errors.
         """
         req = urllib.request.Request(url, headers=self._headers())
         try:
@@ -226,7 +226,7 @@ class ZoteroClient:
                     try:
                         return raw.decode("utf-8"), resp_headers
                     except UnicodeDecodeError as e:
-                        raise ZoteroUnavailable(f"Zotero response decode failed: {e}") from e
+                        raise ZoteroError(f"Zotero response decode failed: {e}") from e
                 try:
                     parsed = json.loads(raw.decode("utf-8"))
                     return parsed, resp_headers

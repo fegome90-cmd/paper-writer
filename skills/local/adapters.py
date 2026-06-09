@@ -427,6 +427,26 @@ class LiteratureSearchAdapter(SkillAdapter):
         artifacts = [str(p) for p in result.get("artifacts", [])]
         artifacts.append(str(provenance_path))
 
+        # Academic mode: rewrite search_plan.json preserving window + amendments
+        review_mode = inputs.get("mode", "rapid")
+        if review_mode == "academic":
+            plan_path = output_dir / "search_plan.json"
+            plan_data: dict[str, Any] = {
+                "query": query or raw_data.get("query", ""),
+            }
+            search_window = inputs.get("search_window")
+            amendments = inputs.get("amendments", [])
+            if search_window:
+                plan_data["search_window"] = search_window
+            if amendments:
+                plan_data["amendments"] = amendments
+            plan_path.write_text(
+                json.dumps(plan_data, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            if str(plan_path) not in artifacts:
+                artifacts.append(str(plan_path))
+
         return SkillResult(
             adapter=self.name,
             status="pass",
