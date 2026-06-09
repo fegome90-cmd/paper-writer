@@ -4,6 +4,18 @@ citations_in_bib: 8
 citations_missing_from_bib: 0
 bib_total_entries: 14
 entries:
+- cite_key: chen2021humaneval
+  in_bibliography: true
+  bib_title: Evaluating Large Language Models Trained on Code
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: gao2024rag
+  in_bibliography: true
+  bib_title: 'Retrieval-Augmented Generation for Large Language Models: A Survey'
+  occurrences: 45
+  sections:
+  - outline
 - cite_key: jimenez2023swebench
   in_bibliography: true
   bib_title: 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?'
@@ -13,6 +25,12 @@ entries:
 - cite_key: parvez2021ragcode
   in_bibliography: true
   bib_title: Retrieval Augmented Code Generation and Summarization
+  occurrences: 45
+  sections:
+  - outline
+- cite_key: shinn2024reflexion
+  in_bibliography: true
+  bib_title: 'Reflexion: Language Agents with Verbal Reinforcement Learning'
   occurrences: 45
   sections:
   - outline
@@ -32,25 +50,6 @@ entries:
   in_bibliography: true
   bib_title: 'Retrieval-Augmented Code Generation: A Survey with Focus on Repository-Level
     Approaches'
-  occurrences: 45
-  sections:
-  - outline
-- cite_key: wang2025coderagbench
-  in_bibliography: true
-  bib_title: 'CodeRAG-Bench: Can Retrieval Augment Code Generation?'
-  occurrences: 45
-  sections:
-  - outline
-- cite_key: yang2024sweagent
-  in_bibliography: true
-  bib_title: 'SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering'
-  occurrences: 45
-  sections:
-  - outline
-- cite_key: zhang2023repocoder
-  in_bibliography: true
-  bib_title: 'RepoCoder: Repository-Level Code Completion through Iterative Retrieval
-    and Generation'
   occurrences: 45
   sections:
   - outline

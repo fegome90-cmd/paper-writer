@@ -1,7 +1,7 @@
 schema_version: '1.1'
 project: paper-writer
 status: ready_for_delivery
-generated_at: '2026-06-06T11:29:03.152280'
+generated_at: '2026-06-08T21:14:35.754313'
 stage: rendered
 gate_snapshot:
   bib_normalized: true

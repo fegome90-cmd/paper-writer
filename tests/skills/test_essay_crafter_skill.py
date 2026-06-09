@@ -40,9 +40,7 @@ def test_essay_crafter_declares_structure_and_cleanup_gates() -> None:
 
 
 def test_integrity_pipeline_includes_new_gate_order() -> None:
-    content = (SKILL_DIR / "references" / "integrity_pipeline.md").read_text(
-        encoding="utf-8"
-    )
+    content = (SKILL_DIR / "references" / "integrity_pipeline.md").read_text(encoding="utf-8")
 
     required_gates = [
         "Roadmap gate",

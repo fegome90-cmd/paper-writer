@@ -490,6 +490,7 @@ class TestBugHuntFixes:
         captured_warnings: list[str] = []
 
         import logging
+
         logger = logging.getLogger("skills.local.adapters")
 
         class WarningHandler(logging.Handler):
@@ -500,7 +501,10 @@ class TestBugHuntFixes:
         logger.addHandler(handler)
 
         try:
-            with patch("harness.ports.paper_search_provider.create_search_provider", return_value=FixturePaperSearchProvider()):
+            with patch(
+                "harness.ports.paper_search_provider.create_search_provider",
+                return_value=FixturePaperSearchProvider(),
+            ):
                 adapter.execute(
                     command="search",
                     inputs={

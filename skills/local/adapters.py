@@ -144,8 +144,14 @@ class LiteratureSearchAdapter(SkillAdapter):
                 _range_errors.append(f"year_min ({year_min_val}) > year_max ({year_max_val})")
             duration_min_val = filters.get("duration_min")
             duration_max_val = filters.get("duration_max")
-            if duration_min_val and duration_max_val and int(duration_min_val) > int(duration_max_val):
-                _range_errors.append(f"duration_min ({duration_min_val}) > duration_max ({duration_max_val})")
+            if (
+                duration_min_val
+                and duration_max_val
+                and int(duration_min_val) > int(duration_max_val)
+            ):
+                _range_errors.append(
+                    f"duration_min ({duration_min_val}) > duration_max ({duration_max_val})"
+                )
             sjr_val = filters.get("sjr_max")
             if sjr_val is not None and not (1 <= int(sjr_val) <= 4):
                 _range_errors.append(f"sjr_max ({sjr_val}) must be 1-4")
