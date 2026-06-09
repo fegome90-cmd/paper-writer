@@ -1,0 +1,27 @@
+# Reverse Proxy - NO DETECTADO
+
+## Fecha de Auditoría
+2025-06-09 06:36:11 -04
+
+## Búsqueda de Reverse Proxy
+No se detectaron servicios de reverse proxy tradicionales (Nginx, Caddy, Traefik).
+
+## Verificación
+No se pudo verificar el estado de servicios del sistema debido a restricciones de permisos.
+
+## Comandos requeridos
+```bash
+# Verificar servicios web
+launchctl list | grep -E "(nginx|caddy|traefik|apache)"
+systemctl status nginx caddy traefik httpd 2>/dev/null
+```
+
+## Evaluación de Riesgo
+- **PROXY EXTERNO**: NO DETECTADO
+- **EXPOSICIÓN DIRECTA**: Los servicios parecen estar escuchando directamente
+
+## Conclusión
+No hay evidencia de un reverse proxy configurado. Los servicios (OpenClaw y Hermes) están escuchando directamente en sus puertos respectivos.
+
+## Limitaciones
+No se pudo verificar configuraciones de proxy debido a restricciones de permisos del sistema.
