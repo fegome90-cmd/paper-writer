@@ -39,6 +39,7 @@ include = [
   "rules*",
   "schemas*",
 ]
+exclude = ["skills.local.thesaurus*"]
 
 [tool.setuptools.package-data]
 "templates" = ["*.*", "**/*.*"]

@@ -153,7 +153,7 @@ class PandocRenderer(ToolWrapper):
                 findings.append(
                     {
                         "code": "missing_csl_file",
-                        "severity": "warning",
+                        "severity": "error",
                         "message": f"Provided CSL file does not exist: {csl}",
                         "artifact": str(csl_path),
                     }
@@ -165,7 +165,7 @@ class PandocRenderer(ToolWrapper):
                 findings.append(
                     {
                         "code": "missing_reference_doc",
-                        "severity": "warning",
+                        "severity": "error",
                         "message": f"Provided reference doc does not exist: {reference_doc}",
                         "artifact": str(ref_path),
                     }

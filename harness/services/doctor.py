@@ -151,6 +151,24 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
         )
     )
 
+    # Check thesaurus store
+    thesaurus_db = repo_path / "skills" / "local" / "thesaurus" / "workspace" / "thesaurus.db"
+    has_thesaurus = thesaurus_db.exists() and thesaurus_db.stat().st_size > 0
+    caps.append(
+        ToolStatus(
+            name="thesaurus",
+            installed=has_thesaurus,
+            version="active" if has_thesaurus else "missing",
+            required_for=["Biomedical concept normalization (MeSH/DeCS)"],
+            degraded_message=(
+                "DEGRADED: Thesaurus DB not found. "
+                "Run 'paper thesaurus import' to load concepts."
+                if not has_thesaurus
+                else ""
+            ),
+        )
+    )
+
     return caps
 
 

@@ -1,0 +1,6 @@
+{
+  "source_file": "sample.jsonl",
+  "sha256": "00dd6488d05f4262d00b626e5c32620681682b369fb763e2db01be5995f1bddb",
+  "concept_count": 100,
+  "schema_version": "1"
+}

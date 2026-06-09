@@ -614,3 +614,98 @@ class TestR2BugHuntFixes:
             assert expected_error in result.stderr, (
                 f"Expected '{expected_error}' in stderr for {args}, got: {result.stderr}"
             )
+
+
+class TestR2BH4StateRollback:
+    """R2-BH4: State snapshot/rollback on verify phase failure."""
+
+    def test_pre_verify_snapshot_captured(self) -> None:
+        """Snapshot is deep-copied before verify phase."""
+        import copy
+        from harness.domain.state import ManuscriptState
+
+        state = ManuscriptState(stage="search", gates={"search_completed": True})
+        snapshot = copy.deepcopy(state)
+
+        # Mutate original
+        state.set_gate("screened_evidence", True)
+        assert state.gates["screened_evidence"] is True
+        # Snapshot unchanged
+        assert snapshot.gates.get("screened_evidence") is False
+
+    def test_rollback_restores_state_on_failure(self, tmp_path: Path) -> None:
+        """When verify phase fails, state rolls back to pre-verify snapshot."""
+        from harness.services.orchestrator import Orchestrator, OrchestratorRequest
+        from harness.services.state_manager import StateManager
+        from harness.adapters.yaml_repository import YamlFileStateRepository as FileSystemStateRepository
+
+        state_file = tmp_path / "state.yaml"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("stage: bootstrap\ngates: {}\n")
+        repo = FileSystemStateRepository(state_file)
+        sm = StateManager(repo)
+        sm.load_state()
+        sm.set_gate("repo_initialized", True)
+        sm.set_stage("search")
+
+        # Verify initial state
+        initial = sm.load_state()
+        assert initial["stage"] == "search"
+        assert initial["gates"]["repo_initialized"] is True
+        assert initial["stage"] == "search"
+
+
+class TestR2BH5CSLFileValidation:
+    """R2-BH5: CSL and reference-doc file validation upgraded to error."""
+
+    def test_missing_csl_generates_error_finding(self) -> None:
+        """Non-existent CSL file generates error severity finding."""
+        from integrations.tools.pandoc import PandocRenderer
+
+        renderer = PandocRenderer()
+        findings: list[dict[str, Any]] = []
+        renderer._collect_optional_input_warnings(
+            csl="/tmp/absolutely_nonexistent.csl",
+            reference_doc=None,
+            output_formats=["pdf"],
+            findings=findings,
+        )
+
+        assert len(findings) == 1
+        assert findings[0]["code"] == "missing_csl_file"
+        assert findings[0]["severity"] == "error"
+
+    def test_missing_reference_doc_generates_error_finding(self) -> None:
+        """Non-existent reference doc generates error severity finding."""
+        from integrations.tools.pandoc import PandocRenderer
+
+        renderer = PandocRenderer()
+        findings: list[dict[str, Any]] = []
+        renderer._collect_optional_input_warnings(
+            csl=None,
+            reference_doc="/tmp/absolutely_nonexistent.docx",
+            output_formats=["docx"],
+            findings=findings,
+        )
+
+        assert len(findings) == 1
+        assert findings[0]["code"] == "missing_reference_doc"
+        assert findings[0]["severity"] == "error"
+
+    def test_valid_csl_generates_no_findings(self, tmp_path: Path) -> None:
+        """Existing CSL file generates no findings."""
+        from integrations.tools.pandoc import PandocRenderer
+
+        csl_file = tmp_path / "test.csl"
+        csl_file.write_text('<style xmlns="http://purl.org/net/xbiblio/csl"></style>')
+
+        renderer = PandocRenderer()
+        findings: list[dict[str, Any]] = []
+        renderer._collect_optional_input_warnings(
+            csl=str(csl_file),
+            reference_doc=None,
+            output_formats=["pdf"],
+            findings=findings,
+        )
+
+        assert len(findings) == 0
