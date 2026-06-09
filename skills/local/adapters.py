@@ -63,7 +63,7 @@ class LiteratureSearchAdapter(SkillAdapter):
             if command == "export_bib":
                 return self._handle_export_bib(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
-        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
+        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError, AttributeError) as exc:
             return SkillResult(
                 adapter=self.name,
                 status="fail",
@@ -529,7 +529,7 @@ class AcademicWriterAdapter(SkillAdapter):
             if command == "draft_all":
                 return self._handle_draft_all(inputs)
             raise ValueError(f"Unknown command for {self.name}: {command}")
-        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError) as exc:
+        except (ValueError, FileNotFoundError, json.JSONDecodeError, TypeError, KeyError, AttributeError) as exc:
             return SkillResult(
                 adapter=self.name,
                 status="fail",
