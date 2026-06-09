@@ -243,9 +243,19 @@ class LiteSemanticStore(SemanticStore):
         conn = self._connect()
         try:
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
+            # Count total alt_labels across all concepts
+            total_alt = 0
+            rows = conn.execute("SELECT alt_labels FROM concepts").fetchall()
+            for row in rows:
+                try:
+                    alts = json.loads(row["alt_labels"]) if row["alt_labels"] else []
+                    total_alt += len(alts)
+                except (json.JSONDecodeError, TypeError):
+                    pass
             db_size = self._db_path.stat().st_size if self._db_path.exists() else 0
             return {
                 "total_concepts": count,
+                "total_alt_labels": total_alt,
                 "fts5_enabled": True,
                 "db_size_bytes": db_size,
             }

@@ -48,6 +48,9 @@ def validate_manifest(manifest: dict, jsonl_path: str | Path) -> None:
     """
     jsonl_path = Path(jsonl_path)
 
+    if not jsonl_path.exists():
+        raise ManifestError(f"Source JSONL not found: {jsonl_path}")
+
     # Validate SHA256
     content = jsonl_path.read_bytes()
     actual_sha = hashlib.sha256(content).hexdigest()

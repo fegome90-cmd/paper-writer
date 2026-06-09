@@ -66,7 +66,7 @@ class TestZoteroImportValidBib:
         target = tmp_path / "references.bib"
         result = ZoteroImporter().run(
             {"source_bib": str(source), "target_bib": str(target)},
-            {},
+            {"repo_path": str(tmp_path)},
         )
         assert result.status == "pass"
         assert target.exists()
@@ -86,7 +86,7 @@ class TestZoteroImportValidBib:
         target = tmp_path / "references.bib"
         result = ZoteroImporter().run(
             {"source_bib": str(source), "target_bib": str(target)},
-            {},
+            {"repo_path": str(tmp_path)},
         )
         assert result.status == "fail"
         assert any(f["code"] == "malformed_doi" for f in result.findings)
@@ -107,7 +107,7 @@ class TestZoteroImportValidBib:
         # Explicitly set target to tmp_path to avoid writing into repo tree
         result = ZoteroImporter().run(
             {"source_bib": str(source), "target_bib": str(tmp_path / "references.bib")},
-            {},
+            {"repo_path": str(tmp_path)},
         )
         assert result.status == "pass"
 
@@ -131,7 +131,7 @@ class TestZoteroImportValidBib:
         target = tmp_path / "refs.bib"
         result = ZoteroImporter().run(
             {"source_bib": str(source), "target_bib": str(target)},
-            {},
+            {"repo_path": str(tmp_path)},
         )
         # book missing doi = warning from refs validator, not import blocker
         assert result.status in ("pass", "warn")
