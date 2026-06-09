@@ -194,6 +194,13 @@ def score_citations(
     if citation_count is None or year is None:
         return 0.50  # conservative default
 
+    # Coerce non-int types gracefully
+    try:
+        citation_count = int(citation_count)
+        year = int(year)
+    except (ValueError, TypeError):
+        return 0.50
+
     if current_year is None:
         import datetime
 
@@ -249,7 +256,9 @@ _RIGOR_PATTERNS: list[tuple[re.Pattern[str], float]] = [
 
 def score_rigor(paper: dict[str, Any]) -> float:
     """Score evaluation rigor via priority-ordered keyword match."""
-    text = f"{paper.get('title', '')} {paper.get('abstract', '')}"
+    if not isinstance(paper, dict):
+        return 0.40  # default
+    text = f"{paper.get('title', '') or ''} {paper.get('abstract', '') or ''}"
 
     for pattern, score in _RIGOR_PATTERNS:
         if pattern.search(text):
@@ -298,6 +307,8 @@ def detect_domain(paper: dict[str, Any]) -> str:
 
     Priority: explicit override > CS venue > clinical keywords > default 'cs'.
     """
+    if not isinstance(paper, dict):
+        return "cs"  # default
     # 1. Explicit override
     explicit = paper.get("domain")
     if explicit:
@@ -419,12 +430,21 @@ def extract_cs_metrics(paper: dict[str, Any], query: str) -> CSMetrics:
 
     current_year = datetime.date.today().year
 
+    if not isinstance(paper, dict):
+        paper = {}
+
     venue = paper.get("venue", "") or ""
     pub_type = paper.get("publication_type", "") or ""
     year_raw = paper.get("year")
-    year = int(year_raw) if year_raw is not None else None
+    try:
+        year = int(year_raw) if year_raw is not None else None
+    except (ValueError, TypeError):
+        year = None
     citation_count_raw = paper.get("citation_count")
-    citation_count = int(citation_count_raw) if citation_count_raw is not None else None
+    try:
+        citation_count = int(citation_count_raw) if citation_count_raw is not None else None
+    except (ValueError, TypeError):
+        citation_count = None
     title = paper.get("title", "") or ""
     abstract = paper.get("abstract", "") or ""
 
