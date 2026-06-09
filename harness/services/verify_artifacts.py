@@ -362,7 +362,7 @@ def _parse_bib_keys(bib_path: Path) -> dict[str, str]:
     Uses brace-counting to correctly handle nested braces in titles
     (e.g. ``{A {Bold} New Approach}``).
     """
-    if not bib_path.is_file():
+    if not bib_path or not bib_path.is_file():
         return {}
 
     text = bib_path.read_text(encoding="utf-8")
