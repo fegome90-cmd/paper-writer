@@ -167,19 +167,22 @@ class TestValidateStyle:
         assert passive[0]["severity"] == "warning"
 
     def test_long_sentence_detected(self) -> None:
-        # Build a sentence longer than 300 characters
-        words = ["word"] * 80
+        # Build a sentence longer than 500 characters (the actual threshold)
+        words = ["word"] * 130
         long_sentence = " ".join(words) + "."
+        # Sanity-check: sentence length must exceed _MAX_SENTENCE_LENGTH (500)
+        assert len(long_sentence) > 500, f"Test sentence too short: {len(long_sentence)} chars"
         findings = validate_style(long_sentence)
         long = [f for f in findings if f["code"] == "long_sentence"]
         assert len(long) >= 1
         assert long[0]["severity"] == "warning"
 
     def test_both_passive_and_long_sentence(self) -> None:
-        # Build a long passive sentence
+        # Build a long passive sentence exceeding the 500-char threshold
         prefix = "The data was collected by the research team "
-        padding = " ".join(["detail"] * 60)
+        padding = " ".join(["detail"] * 120)
         text = f"{prefix} {padding}."
+        assert len(text) > 500, f"Test sentence too short: {len(text)} chars"
         findings = validate_style(text)
         codes = {f["code"] for f in findings}
         assert "passive_voice" in codes

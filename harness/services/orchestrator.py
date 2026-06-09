@@ -451,10 +451,13 @@ class Orchestrator:
                 return [wrapper_result, validate_render_passed(self.checker)]
             return [wrapper_result]
         elif cmd in ("import_bib", "zotero_sync"):
-            if cmd == "zotero_sync":
-                return [self._run_wrapper_gate("zotero_sync", request_args=request.args)]
-            else:
-                return [self._run_wrapper_gate("import_bib", request_args=request.args)]
+            wrapper_key = "zotero_sync" if cmd == "zotero_sync" else "import_bib"
+            wrapper_result = self._run_wrapper_gate(wrapper_key, request_args=request.args)
+            # Chain bib_normalized validation when the wrapper succeeds so the gate
+            # is evaluated immediately after import/sync (mirrors render → render_passed chain).
+            if wrapper_result.status in ("pass", "warn"):
+                return [wrapper_result, validate_bib_normalized(self.checker)]
+            return [wrapper_result]
         elif cmd == "verify":
             state_gates = self.state_manager.load_state().get("gates", {})
             return [
