@@ -49,7 +49,7 @@ def _capture_request(
             ["paper", "init", "--preset", "nature"],
             "init",
             "stop_on_error",
-            {"preset": "nature"},
+            {"preset": "nature", "mode": "rapid"},
         ),
         (
             ["paper", "search", "--query", "voice disorders"],
@@ -146,7 +146,10 @@ def test_cli_maps_commands_to_orchestrator_request(
 
     assert request.command == expected_command
     assert request.failure_policy == expected_policy
-    assert request.args == expected_args
+    # Args must be a superset of expected (CLI may inject review_config defaults)
+    for key, value in expected_args.items():
+        assert key in request.args, f"Missing key '{key}' in request.args"
+        assert request.args[key] == value, f"request.args['{key}'] != {value!r}"
     assert request.requested_stage == "unknown"
     assert request.context["actor"] == "cli"
     assert request.context["cwd"] == str(tmp_path)
@@ -224,4 +227,7 @@ def test_cli_render_flags_are_forwarded_exactly(
 
     assert request.command == "render"
     assert request.failure_policy == "stop_on_error"
-    assert request.args == expected_render_args
+    # Render args must be a superset of expected (CLI may inject review_config defaults)
+    for key, value in expected_render_args.items():
+        assert key in request.args, f"Missing key '{key}' in request.args"
+        assert request.args[key] == value, f"request.args['{key}'] != {value!r}"

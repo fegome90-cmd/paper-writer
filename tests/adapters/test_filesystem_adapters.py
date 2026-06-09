@@ -75,10 +75,11 @@ def test_action_runner_init(tmp_path: Path) -> None:
     runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
     artifacts = runner.run_action("init", {})
 
-    assert len(artifacts) == 3
+    assert len(artifacts) == 4  # state.yaml, manuscript.qmd, references.bib, review_config.yaml
     assert (tmp_path / "templates" / "manuscript.qmd").is_file()
     assert (tmp_path / "templates" / "references.bib").is_file()
     assert (tmp_path / "outputs" / "runs").is_dir()
+    assert (tmp_path / "outputs" / "review_config.yaml").is_file()
     assert (tmp_path / "outputs" / "logs").is_dir()
 
 

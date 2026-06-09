@@ -94,6 +94,24 @@ def main() -> None:
         default=None,
         help="Journal preset name (e.g. 'nature'). Loads from templates/journals/<name>/.",
     )
+    init_parser.add_argument(
+        "--mode",
+        choices=["rapid", "academic"],
+        default="rapid",
+        help="Review mode: 'rapid' (default) or 'academic' for full evidence curation.",
+    )
+    init_parser.add_argument(
+        "--search-window-start",
+        type=int,
+        default=None,
+        help="Academic mode: start year for search window.",
+    )
+    init_parser.add_argument(
+        "--search-window-end",
+        type=int,
+        default=None,
+        help="Academic mode: end year for search window.",
+    )
 
     # paper search
     search_parser = subparsers.add_parser("search", help="Execute scientific literature search.")
@@ -536,6 +554,12 @@ def main() -> None:
 
     if cmd_name == "init":
         orch_args["preset"] = args.preset
+        orch_args["mode"] = args.mode
+        if args.search_window_start is not None and args.search_window_end is not None:
+            orch_args["search_window"] = {
+                "start_year": args.search_window_start,
+                "end_year": args.search_window_end,
+            }
     elif cmd_name == "search":
         if args.query is None:
             print(DEFAULT_SEARCH_QUERY_NOTICE)
@@ -628,6 +652,18 @@ def main() -> None:
         orch_args["reference_doc"] = args.reference_doc
 
     repo_path = resolve_project_root(args.project, Path.cwd())
+
+    # Load review config for non-init commands to forward mode + search_window
+    if cmd_name != "init" and cmd_name not in ("doctor", "thesaurus"):
+        from harness.services.review_config import load_review_config
+
+        review_cfg = load_review_config(repo_path)
+        orch_args["mode"] = review_cfg.get("mode", "rapid")
+        if review_cfg.get("search_window"):
+            orch_args.setdefault("search_window", review_cfg["search_window"])
+        if review_cfg.get("amendments"):
+            orch_args.setdefault("amendments", review_cfg["amendments"])
+
     request = OrchestratorRequest(
         command=orch_command,
         requested_stage="unknown",

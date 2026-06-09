@@ -187,6 +187,16 @@ class FilesystemActionRunner(ActionRunner):
 
             artifacts.extend([str(state_file), str(manuscript_qmd), str(references_bib)])
 
+            # Persist review mode configuration
+            from harness.services.review_config import save_review_config
+
+            review_mode = args.get("mode", "rapid")
+            search_window = args.get("search_window")
+            config_path = save_review_config(
+                self.repo_path, mode=review_mode, search_window=search_window
+            )
+            artifacts.append(str(config_path))
+
         elif command == "search":
             search_dir = self._resolve_run("search")
             search_dir.mkdir(parents=True, exist_ok=True)
