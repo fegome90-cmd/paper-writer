@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DescriptorRecordSet xmlns="http://www.nlm.nih.gov/mesh">
+  <DescriptorRecord>
+    <DescriptorUI>D000099</DescriptorUI>
+    <DescriptorName><String>Broken</String></DescriptorName>
+    <ConceptList>
+      <Concept PreferredConcept="Y">
+        <ConceptUI>M000099</ConceptUI>
+        <ConceptName><String>Broken</String></ConceptName>
+        <TermList>
+          <Term TermPreferred="Y">
+            <TermUI>T000099</TermUI>
+            <String>Unclosed tag here

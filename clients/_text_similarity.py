@@ -6,6 +6,7 @@ and collapsing whitespace, then computes SequenceMatcher ratio.
 
 Threshold 0.70 for "matched" verdict (validated across 150+ citation types).
 """
+
 from __future__ import annotations
 
 import string

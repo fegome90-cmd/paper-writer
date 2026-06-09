@@ -10,10 +10,10 @@ class TestHardeningErrors:
         client = CrossrefClient()
         with patch("clients.crossref.urllib.request.urlopen") as mock_url:
             mock_resp = MagicMock()
-            mock_resp.read.return_value = b'invalid json'
+            mock_resp.read.return_value = b"invalid json"
             mock_resp.__enter__.return_value = mock_resp
             mock_url.return_value = mock_resp
-            
+
             with caplog.at_level(logging.WARNING):
                 res = client._get("/test", {})
                 assert res is None
@@ -23,14 +23,15 @@ class TestHardeningErrors:
         client = SemanticScholarClient()
         with patch("clients.semantic_scholar.urllib.request.urlopen") as mock_url:
             mock_resp = MagicMock()
-            mock_resp.read.return_value = b'\xff\xfe'
+            mock_resp.read.return_value = b"\xff\xfe"
             mock_resp.__enter__.return_value = mock_resp
             mock_url.return_value = mock_resp
-            
+
             with caplog.at_level(logging.WARNING):
                 res = client._get("/test")
                 assert res is None
                 assert "Request failed: UnicodeDecodeError" in caplog.text
+
 
 class TestHardeningPolite:
     def test_crossref_polite_env_var(self, monkeypatch):

@@ -2,6 +2,7 @@
 
 Outage latch, DI, and year tiebreaker ported from ARS.
 """
+
 from __future__ import annotations
 
 import urllib.error

@@ -16,6 +16,7 @@ should be reconsidered.
 Usage:
     uv run python benchmarks/trifecta_integration_bench.py
 """
+
 from __future__ import annotations
 
 import json
@@ -96,7 +97,8 @@ def run_paper_command(cmd: list[str], mode: str, timeout: int = 30) -> Benchmark
         else:
             # For terminal output, count lines that look like findings
             findings_count = sum(
-                1 for line in output.splitlines()
+                1
+                for line in output.splitlines()
                 if any(p in line for p in ("::", "validation_gap", "dead_code", "data_flow_break"))
             )
 
@@ -211,7 +213,9 @@ def format_report(results: dict[str, Any], comparison: dict[str, Any]) -> str:
         "|---------|-----------------|---------------|-------|",
     ]
 
-    for cmd, w, t in zip(results["commands"], results["without_trifecta"], results["with_trifecta"], strict=False):  # noqa: E501
+    for cmd, w, t in zip(
+        results["commands"], results["without_trifecta"], results["with_trifecta"], strict=False
+    ):
         w_status = "✅" if w.is_effective() else "❌"
         t_status = "✅" if t.is_effective() else "❌"
         w_findings = w.findings_count
@@ -222,11 +226,13 @@ def format_report(results: dict[str, Any], comparison: dict[str, Any]) -> str:
             f"| {t_status} ({t_findings} findings) | +{delta} |"
         )
 
-    lines.extend([
-        "",
-        "## Verdict",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Verdict",
+            "",
+        ]
+    )
 
     if comparison["delta"]["effective_commands"] > 0:
         lines.append(

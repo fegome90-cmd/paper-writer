@@ -351,6 +351,7 @@ class Orchestrator:
             "protocol": "screen",
             "render": "rendering",
             "import_bib": "bootstrap",
+            "zotero_sync": "bootstrap",
             "verify": "rendered",
         }
 
@@ -447,7 +448,7 @@ class Orchestrator:
             if wrapper_result.status in ("pass", "warn"):
                 return [wrapper_result, validate_render_passed(self.checker)]
             return [wrapper_result]
-        elif cmd == "import_bib":
+        elif cmd in ("import_bib", "zotero_sync"):
             if request.args.get("from_zotero"):
                 wrapper_result = self._run_wrapper_gate("zotero_sync", request_args=request.args)
             else:

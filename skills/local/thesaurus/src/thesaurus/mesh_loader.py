@@ -37,9 +37,7 @@ def load_jsonl(file_path: str | Path) -> list[dict]:
             if "id" not in record:
                 raise ValueError(f"Missing required field 'id' on line {line_num}")
             if "preferred_label" not in record:
-                raise ValueError(
-                    f"Missing required field 'preferred_label' on line {line_num}"
-                )
+                raise ValueError(f"Missing required field 'preferred_label' on line {line_num}")
 
             # Normalize alt_labels to JSON string for storage
             alt_labels = record.get("alt_labels", [])

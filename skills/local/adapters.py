@@ -279,22 +279,24 @@ class LiteratureSearchAdapter(SkillAdapter):
             tier = rec.get("scoring", {}).get("tier", min_tier)
             record_id = rec.get("doi", rec.get("title", "unknown"))
 
-            screening_records.append({
-                "record_id": record_id,
-                "included": True,
-                "screening_history": [
-                    {
-                        "stage": "title_abstract",
-                        "decision": "proceed",
-                        "reason": "Title and abstract match query",
-                    },
-                    {
-                        "stage": "full_text",
-                        "decision": "included",
-                        "reason": f"Tier classification: {tier} meets threshold {min_tier}",
-                    },
-                ],
-            })
+            screening_records.append(
+                {
+                    "record_id": record_id,
+                    "included": True,
+                    "screening_history": [
+                        {
+                            "stage": "title_abstract",
+                            "decision": "proceed",
+                            "reason": "Title and abstract match query",
+                        },
+                        {
+                            "stage": "full_text",
+                            "decision": "included",
+                            "reason": f"Tier classification: {tier} meets threshold {min_tier}",
+                        },
+                    ],
+                }
+            )
 
             # Enrich evidence record with academic fields
             rec["scope_classification"] = _classify_scope(rec)
@@ -323,9 +325,7 @@ class LiteratureSearchAdapter(SkillAdapter):
             evidence_path = output_dir / "screened_evidence.json"
             if evidence_path.exists():
                 evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
-                evidence_data = self._enrich_academic_screening(
-                    evidence_data, min_tier
-                )
+                evidence_data = self._enrich_academic_screening(evidence_data, min_tier)
                 evidence_path.write_text(
                     json.dumps(evidence_data, indent=2, ensure_ascii=False),
                     encoding="utf-8",
@@ -620,31 +620,37 @@ _VALID_EPISTEMIC = {
 }
 
 # Keywords suggesting protocol-only or non-empirical work
-_PROTOCOL_KEYWORDS = frozenset({
-    "protocol",
-    "study design",
-    "planned",
-    "proposed",
-    "phase i",
-    "registered",
-})
-_MODELING_KEYWORDS = frozenset({
-    "simulation",
-    "computational model",
-    "in silico",
-    "predicted",
-    "machine learning",
-    "deep learning",
-    "neural network",
-})
-_OBSERVATIONAL_KEYWORDS = frozenset({
-    "cohort",
-    "case-control",
-    "cross-sectional",
-    "longitudinal",
-    "epidemiological",
-    "registry",
-})
+_PROTOCOL_KEYWORDS = frozenset(
+    {
+        "protocol",
+        "study design",
+        "planned",
+        "proposed",
+        "phase i",
+        "registered",
+    }
+)
+_MODELING_KEYWORDS = frozenset(
+    {
+        "simulation",
+        "computational model",
+        "in silico",
+        "predicted",
+        "machine learning",
+        "deep learning",
+        "neural network",
+    }
+)
+_OBSERVATIONAL_KEYWORDS = frozenset(
+    {
+        "cohort",
+        "case-control",
+        "cross-sectional",
+        "longitudinal",
+        "epidemiological",
+        "registry",
+    }
+)
 
 
 def _classify_scope(paper: dict[str, Any]) -> str:
@@ -694,4 +700,3 @@ def _classify_epistemic(paper: dict[str, Any]) -> str:
 
     # Default: observed empirical evidence
     return "observed"
-

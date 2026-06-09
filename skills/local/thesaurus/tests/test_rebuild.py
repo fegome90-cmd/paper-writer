@@ -38,8 +38,16 @@ def test_rebuild_with_no_manifest(tmp_path):
     db_path = tmp_path / "thesaurus.db"
     store = LiteSemanticStore(db_path=str(db_path))
     concepts = [
-        {"id": "C1", "preferred_label": "Test", "alt_labels": "[]",
-         "broader": "", "narrower": "", "related": "", "notation": "", "source": "test"},
+        {
+            "id": "C1",
+            "preferred_label": "Test",
+            "alt_labels": "[]",
+            "broader": "",
+            "narrower": "",
+            "related": "",
+            "notation": "",
+            "source": "test",
+        },
     ]
     store.import_concepts(concepts)
     assert store.concept_count == 1

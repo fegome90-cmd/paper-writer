@@ -1,6 +1,5 @@
 """Tests for SemanticStore protocol invariants and capabilities."""
 
-
 from thesaurus.protocol import StorageCapabilities
 
 

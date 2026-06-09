@@ -51,10 +51,8 @@ class ZoteroSyncImporter(ToolWrapper):
         return "bib_imported"
 
     def is_available(self) -> bool:
-        """True when ZOTERO_USER_ID is set (cloud key optional for local modes)."""
-        import os
-
-        return bool(os.environ.get("ZOTERO_USER_ID", "").strip())
+        """Always returns True; run() performs strict environment checks based on artifacts."""
+        return True
 
     def run(self, artifacts: dict[str, Any], context: dict[str, Any]) -> ValidatorResult:
         """Fetch from Zotero and delegate validation to ZoteroImporter.
@@ -68,7 +66,9 @@ class ZoteroSyncImporter(ToolWrapper):
         Raises:
             ToolNotAvailableError: when ZOTERO_USER_ID is missing.
         """
-        if not self.is_available():
+        bbt_local_override = bool(artifacts.get("bbt_local"))
+        import os
+        if not bbt_local_override and not os.environ.get("ZOTERO_BBT_LOCAL", "").lower() == "true" and not os.environ.get("ZOTERO_USER_ID", "").strip():
             raise ToolNotAvailableError(
                 "ZOTERO_USER_ID is not set. "
                 "Set it in .envrc or your shell environment."
@@ -76,7 +76,7 @@ class ZoteroSyncImporter(ToolWrapper):
 
         # Build config (raises KeyError with helpful message if USER_ID missing)
         try:
-            config = ZoteroConfig.from_env()
+            config = ZoteroConfig.from_env(bbt_local_override=bbt_local_override)
         except KeyError as exc:
             raise ToolNotAvailableError(str(exc)) from exc
 
@@ -109,6 +109,14 @@ class ZoteroSyncImporter(ToolWrapper):
             )
 
         if not bibtex.strip():
+            if since_version is not None:
+                return ValidatorResult(
+                    validator="zotero-sync",
+                    status="pass",
+                    summary="Incremental sync completed. No new changes since provided version.",
+                    findings=[],
+                    artifacts_checked=[],
+                )
             return ValidatorResult(
                 validator="zotero-sync",
                 status="fail",
@@ -134,19 +142,20 @@ class ZoteroSyncImporter(ToolWrapper):
             tmp.write(bibtex)
             tmp_path = tmp.name
 
-        import_artifacts = {
-            "source_bib": tmp_path,
-            "target_bib": artifacts.get("target_bib", "templates/references.bib"),
-        }
-
-        importer = ZoteroImporter()
-        result = importer.run(import_artifacts, context)
-
-        # Clean up temp file
         try:
-            Path(tmp_path).unlink(missing_ok=True)
-        except OSError:
-            pass
+            import_artifacts = {
+                "source_bib": tmp_path,
+                "target_bib": artifacts.get("target_bib", "templates/references.bib"),
+            }
+
+            importer = ZoteroImporter()
+            result = importer.run(import_artifacts, context)
+        finally:
+            # Clean up temp file
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except OSError:
+                pass
 
         # Rewrite validator name so logs are clear about which path ran
         return ValidatorResult(

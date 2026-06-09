@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DescriptorRecordSet xmlns="http://www.nlm.nih.gov/mesh">
+  <DescriptorRecord>
+    <DescriptorUI>D000001</DescriptorUI>
+    <DescriptorName><String>Café</String></DescriptorName>
+    <Annotation>A brewed beverage annotation</Annotation>
+    <RegistryNumber>0</RegistryNumber>
+    <TreeNumberList>
+      <TreeNumber>A01</TreeNumber>
+      <TreeNumber>A01.123</TreeNumber>
+    </TreeNumberList>
+    <ConceptList>
+      <Concept PreferredConcept="Y">
+        <ConceptUI>M0000001</ConceptUI>
+        <ConceptName><String>Café</String></ConceptName>
+        <CUI>C0000001</CUI>
+        <SemanticTypeList>
+          <SemanticType>Organic Chemical</SemanticType>
+        </SemanticTypeList>
+        <ConceptRelation RelationName="BRD">
+          <ConceptUI>M0000002</ConceptUI>
+        </ConceptRelation>
+        <ScopeNote>A popular brewed drink prepared from roasted coffee beans.</ScopeNote>
+        <TermList>
+          <Term TermPreferred="Y">
+            <TermUI>T000001</TermUI>
+            <String>Café</String>
+          </Term>
+          <Term>
+            <TermUI>T000002</TermUI>
+            <String>coffee</String>
+          </Term>
+        </TermList>
+      </Concept>
+      <Concept>
+        <ConceptUI>M0000002</ConceptUI>
+        <ConceptName><String>Beverages</String></ConceptName>
+        <TermList>
+          <Term TermPreferred="Y">
+            <TermUI>T000003</TermUI>
+            <String>beverage</String>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </DescriptorRecord>
+  <DescriptorRecord>
+    <DescriptorUI>D000002</DescriptorUI>
+    <DescriptorName><String>Aspirin</String></DescriptorName>
+    <Annotation>A common pain reliever</Annotation>
+    <RegistryNumber>R16CO5Y76E</RegistryNumber>
+    <TreeNumberList>
+      <TreeNumber>D02.123</TreeNumber>
+    </TreeNumberList>
+    <PharmacologicalActionList>
+      <PharmacologicalAction>
+        <DescriptorReferredTo>
+          <DescriptorUI>D000001</DescriptorUI>
+        </DescriptorReferredTo>
+      </PharmacologicalAction>
+    </PharmacologicalActionList>
+    <ConceptList>
+      <Concept PreferredConcept="Y">
+        <ConceptUI>M0000003</ConceptUI>
+        <ConceptName><String>Aspirin</String></ConceptName>
+        <CUI>C0000002</CUI>
+        <ConceptRelation RelationName="REL">
+          <ConceptUI>M0000001</ConceptUI>
+        </ConceptRelation>
+        <TermList>
+          <Term TermPreferred="Y">
+            <TermUI>T000004</TermUI>
+            <String>Aspirin</String>
+          </Term>
+        </TermList>
+      </Concept>
+    </ConceptList>
+  </DescriptorRecord>
+</DescriptorRecordSet>

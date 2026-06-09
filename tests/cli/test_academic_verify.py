@@ -114,27 +114,33 @@ class TestAcademicVerifyArtifacts:
         search_dir = tmp_path / "outputs" / "runs" / "latest" / "search"
         search_dir.mkdir(parents=True)
         (search_dir / "screened_evidence.json").write_text(
-            json.dumps({
-                "query": "test",
-                "evidence": [
-                    {
-                        "title": "Test Paper",
-                        "doi": "10.1000/test",
-                        "scope_classification": "core",
-                        "epistemic_classification": "observed",
-                    }
-                ],
-                "screening_records": [
-                    {
-                        "record_id": "10.1000/test",
-                        "included": True,
-                        "screening_history": [
-                            {"stage": "title_abstract", "decision": "proceed", "reason": "match"},
-                            {"stage": "full_text", "decision": "included", "reason": "Tier 2"},
-                        ],
-                    }
-                ],
-            }),
+            json.dumps(
+                {
+                    "query": "test",
+                    "evidence": [
+                        {
+                            "title": "Test Paper",
+                            "doi": "10.1000/test",
+                            "scope_classification": "core",
+                            "epistemic_classification": "observed",
+                        }
+                    ],
+                    "screening_records": [
+                        {
+                            "record_id": "10.1000/test",
+                            "included": True,
+                            "screening_history": [
+                                {
+                                    "stage": "title_abstract",
+                                    "decision": "proceed",
+                                    "reason": "match",
+                                },
+                                {"stage": "full_text", "decision": "included", "reason": "Tier 2"},
+                            ],
+                        }
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -168,9 +174,9 @@ class TestAcademicVerifyArtifacts:
         generate_academic_artifacts(project_root=tmp_path, output_dir=verify_dir)
 
         ledger_path = verify_dir / "screening_ledger.csv"
-        assert (
-            not ledger_path.exists()
-        ), "screening_ledger.csv should NOT exist without screening_records"
+        assert not ledger_path.exists(), (
+            "screening_ledger.csv should NOT exist without screening_records"
+        )
 
 
 class TestAcademicProtocolOutput:
@@ -184,27 +190,33 @@ class TestAcademicProtocolOutput:
         search_dir = tmp_path / "search"
         search_dir.mkdir()
         (search_dir / "screened_evidence.json").write_text(
-            json.dumps({
-                "query": "test query",
-                "evidence": [
-                    {
-                        "title": "Test Paper",
-                        "doi": "10.1000/test",
-                        "scope_classification": "core",
-                        "epistemic_classification": "observed",
-                        "screening_stage": "included",
-                    }
-                ],
-                "screening_records": [
-                    {
-                        "record_id": "10.1000/test",
-                        "included": True,
-                        "screening_history": [
-                            {"stage": "title_abstract", "decision": "proceed", "reason": "match"},
-                        ],
-                    }
-                ],
-            }),
+            json.dumps(
+                {
+                    "query": "test query",
+                    "evidence": [
+                        {
+                            "title": "Test Paper",
+                            "doi": "10.1000/test",
+                            "scope_classification": "core",
+                            "epistemic_classification": "observed",
+                            "screening_stage": "included",
+                        }
+                    ],
+                    "screening_records": [
+                        {
+                            "record_id": "10.1000/test",
+                            "included": True,
+                            "screening_history": [
+                                {
+                                    "stage": "title_abstract",
+                                    "decision": "proceed",
+                                    "reason": "match",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
 

@@ -304,34 +304,40 @@ def _normalize_paper(raw: dict[str, Any]) -> NormalizedPaper:
 def deduplicate_papers(papers: list[NormalizedPaper]) -> list[NormalizedPaper]:
     """Remove duplicates based on DOI or title similarity across sources.
 
-    Keeps the version with more populated fields.
+    Keeps the version with more populated fields.  Defers DOI
+    registration until the paper is actually appended to the result
+    list, so that title-dedup skips never leave stale indices.
     """
     seen_dois: dict[str, int] = {}
     seen_titles: dict[str, int] = {}
     result: list[NormalizedPaper] = []
 
-    for i, paper in enumerate(papers):
+    for paper in papers:
         # DOI-based dedup
         if paper.doi:
             doi_key = paper.doi.lower().strip().rstrip("/")
             if doi_key in seen_dois:
                 # Keep the one with fewer defaulted fields
                 existing_idx = seen_dois[doi_key]
-                existing_defaults = len(papers[existing_idx].defaulted_fields)
+                existing_defaults = len(result[existing_idx].defaulted_fields)
                 current_defaults = len(paper.defaulted_fields)
                 if current_defaults < existing_defaults:
-                    # Replace with richer version
+                    # Replace with richer version (result-local index)
                     result[existing_idx] = paper
                 continue
-            seen_dois[doi_key] = i
 
         # Title-based dedup (normalized)
         title_key = paper.title.lower().strip()
         if title_key in seen_titles:
             continue
-        seen_titles[title_key] = i
 
+        # Paper survives both checks — append and register
         result.append(paper)
+        idx = len(result) - 1
+        if paper.doi:
+            doi_key = paper.doi.lower().strip().rstrip("/")
+            seen_dois[doi_key] = idx
+        seen_titles[title_key] = idx
 
     return result
 

@@ -161,8 +161,7 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
             version="active" if has_thesaurus else "missing",
             required_for=["Biomedical concept normalization (MeSH/DeCS)"],
             degraded_message=(
-                "DEGRADED: Thesaurus DB not found. "
-                "Run 'paper thesaurus import' to load concepts."
+                "DEGRADED: Thesaurus DB not found. Run 'paper thesaurus import' to load concepts."
                 if not has_thesaurus
                 else ""
             ),

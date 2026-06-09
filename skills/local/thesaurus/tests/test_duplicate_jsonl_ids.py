@@ -23,12 +23,28 @@ def test_duplicate_ids_parsed_both_lines(tmp_path):
 def test_duplicate_ids_last_write_wins_on_import(tmp_thesaurus):
     """Import with duplicate IDs: last-write-wins via INSERT OR REPLACE."""
     concepts1 = [
-        {"id": "C1", "preferred_label": "First", "alt_labels": "[]",
-         "broader": "", "narrower": "", "related": "", "notation": "", "source": "synthetic"},
+        {
+            "id": "C1",
+            "preferred_label": "First",
+            "alt_labels": "[]",
+            "broader": "",
+            "narrower": "",
+            "related": "",
+            "notation": "",
+            "source": "synthetic",
+        },
     ]
     concepts2 = [
-        {"id": "C1", "preferred_label": "Second", "alt_labels": "[]",
-         "broader": "", "narrower": "", "related": "", "notation": "", "source": "synthetic"},
+        {
+            "id": "C1",
+            "preferred_label": "Second",
+            "alt_labels": "[]",
+            "broader": "",
+            "narrower": "",
+            "related": "",
+            "notation": "",
+            "source": "synthetic",
+        },
     ]
 
     tmp_thesaurus.import_concepts(concepts1)

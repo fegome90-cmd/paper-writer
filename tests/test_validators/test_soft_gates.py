@@ -1,4 +1,5 @@
 """Tests for soft gates — citation_verified and ethics_passed."""
+
 from __future__ import annotations
 
 import pytest

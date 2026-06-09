@@ -3,6 +3,7 @@
 Checks for AI disclosure statement in methods or acknowledgments.
 Pattern-based (not LLM-based) — catches obvious omissions.
 """
+
 from __future__ import annotations
 
 import re
@@ -47,22 +48,24 @@ class EthicsValidator:
                 break
 
         if not has_disclosure:
-            findings.append({
-                "command": "audit_ethics",
-                "rule_id": "ethics.missing_ai_disclosure",
-                "finding_id": "",
-                "severity": "P0",
-                "file": manuscript.path,
-                "line": 0,
-                "column": 0,
-                "span": [0, 0],
-                "message": "No AI disclosure statement found in methods or acknowledgments",
-                "section": "methods",
-                "evidence": {"patterns_checked": len(self.rules)},
-                "recommendation": (
-                    "Add explicit AI disclosure: which tools, how used, who is accountable."
-                ),
-            })
+            findings.append(
+                {
+                    "command": "audit_ethics",
+                    "rule_id": "ethics.missing_ai_disclosure",
+                    "finding_id": "",
+                    "severity": "P0",
+                    "file": manuscript.path,
+                    "line": 0,
+                    "column": 0,
+                    "span": [0, 0],
+                    "message": "No AI disclosure statement found in methods or acknowledgments",
+                    "section": "methods",
+                    "evidence": {"patterns_checked": len(self.rules)},
+                    "recommendation": (
+                        "Add explicit AI disclosure: which tools, how used, who is accountable."
+                    ),
+                }
+            )
 
         return deduplicate_findings(findings)
 

@@ -376,6 +376,73 @@ class TestProviderSelection:
             assert isinstance(provider, ConsensusSearchProvider)
 
 
+class TestDedupResultLocalIndexes:
+    """Regression: deduplicate_papers must use result-local, not input, indices.
+
+    When a DOI-bearing paper is skipped by title-dedup before a later
+    DOI duplicate tries to replace it, the old code used input indices
+    and hit IndexError on the shorter result list.
+    """
+
+    def test_title_skip_before_doi_dup_no_index_error(self) -> None:
+        """p1 (no DOI) → p2 (DOI, title dup → skipped) → p3 (same DOI, richer).
+
+        p2 registers its DOI but is then title-skipped.  p3 matches the
+        DOI and must replace p2's slot without IndexError.
+        """
+        p1 = NormalizedPaper(
+            title="Alpha",
+            doi=None,
+            pmid=None,
+            year=2020,
+            authors="A",
+            abstract="a",
+            url=None,
+            pdf_url=None,
+            source_platform="test",
+            source_id="1",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=["abstract"],
+        )
+        # p2 has DOI but same title as p1 — title-dedup skips it
+        p2 = NormalizedPaper(
+            title="Alpha",
+            doi="10.1/a",
+            pmid=None,
+            year=2020,
+            authors="A",
+            abstract="a",
+            url=None,
+            pdf_url=None,
+            source_platform="test",
+            source_id="2",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=["abstract", "year", "authors"],
+        )
+        # p3 has same DOI as p2, fewer defaults → should replace
+        p3 = NormalizedPaper(
+            title="Gamma",
+            doi="10.1/a",
+            pmid=None,
+            year=2021,
+            authors="G",
+            abstract="g",
+            url=None,
+            pdf_url=None,
+            source_platform="test",
+            source_id="3",
+            categories=[],
+            citations_count=0,
+            defaulted_fields=[],
+        )
+        result = deduplicate_papers([p1, p2, p3])
+        assert len(result) == 2
+        assert result[0].title == "Alpha"
+        assert result[0].doi is None
+        assert result[1].title == "Gamma"
+        assert result[1].doi == "10.1/a"
 
 
 # ── 5. Limit validation ─────────────────────────────────────────────

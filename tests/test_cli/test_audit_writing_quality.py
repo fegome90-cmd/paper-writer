@@ -1,4 +1,5 @@
 """CLI integration tests for `paper audit writing-quality`."""
+
 from __future__ import annotations
 
 import json
@@ -13,8 +14,16 @@ class TestAuditWritingQualityCLI:
     def test_detects_ai_typical_terms(self):
         """Fixture has 'delve', 'tapestry', 'robust' — should produce findings."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--output", "json", str(FIXTURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--output",
+                "json",
+                str(FIXTURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -32,9 +41,20 @@ class TestAuditWritingQualityCLI:
     def test_whitelist_excludes_terms(self):
         """Whitelist should exclude specified terms from detection."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--whitelist", "delve", "--whitelist", "tapestry",
-             "--output", "json", str(FIXTURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--whitelist",
+                "delve",
+                "--whitelist",
+                "tapestry",
+                "--output",
+                "json",
+                str(FIXTURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -48,8 +68,16 @@ class TestAuditWritingQualityCLI:
     def test_json_output_structure(self):
         """JSON output should have required keys."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--output", "json", str(FIXTURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--output",
+                "json",
+                str(FIXTURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -65,8 +93,16 @@ class TestAuditWritingQualityCLI:
     def test_terminal_output(self):
         """Terminal output should produce non-empty output."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--output", "terminal", str(FIXTURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--output",
+                "terminal",
+                str(FIXTURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -76,8 +112,16 @@ class TestAuditWritingQualityCLI:
     def test_missing_file_exits_1(self):
         """Non-existent file should exit with code 1."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--output", "json", "/tmp/nonexistent.md"],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--output",
+                "json",
+                "/tmp/nonexistent.md",
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -87,8 +131,16 @@ class TestAuditWritingQualityCLI:
     def test_severity_by_section(self):
         """'robust' in abstract should be P1, not P2."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "writing-quality",
-             "--output", "json", str(FIXTURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "writing-quality",
+                "--output",
+                "json",
+                str(FIXTURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -96,7 +148,8 @@ class TestAuditWritingQualityCLI:
         data = json.loads(result.stdout)
         # Find robust findings in abstract
         robust_abstract = [
-            f for f in data["findings"]
+            f
+            for f in data["findings"]
             if f["rule_id"] == "writing_quality.ai_typical.robust"
             and f.get("section") == "abstract"
         ]

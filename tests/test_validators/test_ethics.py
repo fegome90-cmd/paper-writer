@@ -1,4 +1,5 @@
 """Tests for validators.ethics — AI disclosure compliance."""
+
 from __future__ import annotations
 
 from parsers.manuscript import Manuscript, Section, Sentence
@@ -12,13 +13,15 @@ def _make_manuscript(text: str = "") -> Manuscript:
     sentences = []
     for i, line in enumerate(text.split("\n")):
         if line.strip():
-            sentences.append(Sentence(
-                text=line.strip(),
-                line=i + 1,
-                col=0,
-                char_start=text.find(line),
-                char_end=text.find(line) + len(line),
-            ))
+            sentences.append(
+                Sentence(
+                    text=line.strip(),
+                    line=i + 1,
+                    col=0,
+                    char_start=text.find(line),
+                    char_end=text.find(line) + len(line),
+                )
+            )
     return Manuscript(
         path="test.md",
         format="markdown",

@@ -452,16 +452,19 @@ def main() -> None:
     import_parser = subparsers.add_parser("import", help="Import external resources.")
     import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
     import_bib = import_sub.add_parser("bib", help="Import .bib from Zotero/Better BibTeX export.")
-    import_bib.add_argument("source", nargs="?", help="Path to source .bib file to import.")
+    
+    import_bib_source = import_bib.add_mutually_exclusive_group()
+    import_bib_source.add_argument("source", nargs="?", help="Path to source .bib file to import.")
+    import_bib_source.add_argument(
+        "--from-zotero",
+        action="store_true",
+        help="Sync directly from Zotero/Better BibTeX library/collection.",
+    )
+
     import_bib.add_argument(
         "--target",
         default="templates/references.bib",
         help="Target bibliography path (default: templates/references.bib).",
-    )
-    import_bib.add_argument(
-        "--from-zotero",
-        action="store_true",
-        help="Sync directly from Zotero/Better BibTeX library/collection.",
     )
     import_bib.add_argument(
         "--collection",
@@ -549,6 +552,30 @@ def main() -> None:
 
     thesaurus_rebuild = thesaurus_sub.add_parser("rebuild", help="Rebuild DB from JSONL.")
     thesaurus_rebuild.set_defaults(func=_cmd_rebuild)
+
+    # paper mesh (lazy — module may not be installed)
+    try:
+        from mesh_import.cli import register as _register_mesh
+
+        _register_mesh(subparsers)
+    except ImportError:
+
+        def _cmd_mesh_unavailable(args: Any) -> None:
+            print(
+                "Error: mesh-import module not installed. "
+                "Install with: cd skills/local/mesh-import && uv pip install -e .",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        mesh_parser = subparsers.add_parser("mesh", help="MeSH vocabulary import and lookup.")
+        mesh_sub = mesh_parser.add_subparsers(dest="mesh_subcommand", required=True)
+        mesh_fallback = mesh_sub.add_parser("import")
+        mesh_fallback.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_resolve_fb = mesh_sub.add_parser("resolve")
+        mesh_resolve_fb.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_expand_fb = mesh_sub.add_parser("expand")
+        mesh_expand_fb.set_defaults(func=_cmd_mesh_unavailable)
 
     args = parser.parse_args()
 
@@ -677,7 +704,7 @@ def main() -> None:
                     "use --from-zotero to sync from Zotero.\n"
                 )
                 sys.exit(1)
-            orch_command = "import_bib"
+            orch_command = "zotero_sync" if args.from_zotero else "import_bib"
             orch_args["source_bib"] = args.source or ""
             orch_args["target_bib"] = args.target
             orch_args["from_zotero"] = args.from_zotero
@@ -692,7 +719,7 @@ def main() -> None:
     repo_path = resolve_project_root(args.project, Path.cwd())
 
     # Load review config for non-init commands to forward mode + search_window
-    if cmd_name != "init" and cmd_name not in ("doctor", "thesaurus"):
+    if cmd_name != "init" and cmd_name not in ("doctor", "thesaurus", "mesh"):
         from harness.services.review_config import load_review_config
 
         review_cfg = load_review_config(repo_path)

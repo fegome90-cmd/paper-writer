@@ -1,4 +1,5 @@
 """Tests for clients._retry — exponential backoff retry utility."""
+
 from __future__ import annotations
 
 import urllib.error
@@ -17,10 +18,12 @@ class TestRetryWithBackoff:
         assert fn.call_count == 1
 
     def test_retries_on_429_then_succeeds(self):
-        fn = MagicMock(side_effect=[
-            urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
-            "ok",
-        ])
+        fn = MagicMock(
+            side_effect=[
+                urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
+                "ok",
+            ]
+        )
         mock_sleep = MagicMock()
         result = retry_with_backoff(fn, sleep_fn=mock_sleep)
         assert result == "ok"
@@ -51,11 +54,13 @@ class TestRetryWithBackoff:
         assert fn.call_count == 1
 
     def test_backoff_delays_are_exponential(self):
-        fn = MagicMock(side_effect=[
-            urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
-            urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
-            "ok",
-        ])
+        fn = MagicMock(
+            side_effect=[
+                urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
+                urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
+                "ok",
+            ]
+        )
         mock_sleep = MagicMock()
         result = retry_with_backoff(fn, sleep_fn=mock_sleep)
         assert result == "ok"
@@ -64,11 +69,13 @@ class TestRetryWithBackoff:
         assert calls == [2.0, 4.0]
 
     def test_on_retry_callback_invoked_after_each_backoff(self):
-        fn = MagicMock(side_effect=[
-            urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
-            urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
-            "ok",
-        ])
+        fn = MagicMock(
+            side_effect=[
+                urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
+                urllib.error.HTTPError(None, 429, "Too Many Requests", {}, None),
+                "ok",
+            ]
+        )
         on_retry = MagicMock()
         mock_sleep = MagicMock()
         result = retry_with_backoff(fn, on_retry=on_retry, sleep_fn=mock_sleep)

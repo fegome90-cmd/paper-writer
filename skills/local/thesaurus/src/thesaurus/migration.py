@@ -42,9 +42,7 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
 
     # Check if already applied (skip if schema_migrations doesn't exist yet)
     try:
-        cursor = conn.execute(
-            "SELECT version FROM schema_migrations WHERE version = ?", (version,)
-        )
+        cursor = conn.execute("SELECT version FROM schema_migrations WHERE version = ?", (version,))
         if cursor.fetchone() is not None:
             return
     except sqlite3.OperationalError:

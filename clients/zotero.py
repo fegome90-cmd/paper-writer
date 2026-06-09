@@ -52,7 +52,7 @@ class ZoteroConfig:
     bbt_local: bool = False  # True → Better BibTeX pull endpoint
 
     @staticmethod
-    def from_env() -> ZoteroConfig:
+    def from_env(bbt_local_override: bool = False) -> ZoteroConfig:
         """Build config from environment variables.
 
         Required:
@@ -67,18 +67,19 @@ class ZoteroConfig:
         Raises:
             KeyError if ZOTERO_USER_ID is not set.
         """
+        bbt_local = bbt_local_override or (os.environ.get("ZOTERO_BBT_LOCAL", "").lower() == "true")
         user_id = os.environ.get("ZOTERO_USER_ID", "").strip()
-        if not user_id:
+        if not bbt_local and not user_id:
             raise KeyError(
                 "ZOTERO_USER_ID is not set. "
                 "Find your user ID at https://www.zotero.org/settings/keys"
             )
         return ZoteroConfig(
-            user_id=user_id,
+            user_id=user_id or "1",
             api_key=os.environ.get("ZOTERO_API_KEY") or None,
             library_type=os.environ.get("ZOTERO_LIBRARY_TYPE", "user").strip(),
             local_mode=os.environ.get("ZOTERO_LOCAL", "").lower() == "true",
-            bbt_local=os.environ.get("ZOTERO_BBT_LOCAL", "").lower() == "true",
+            bbt_local=bbt_local,
         )
 
 
@@ -190,7 +191,9 @@ class ZoteroClient:
         if self.config.library_type == "user":
             uid = "1"
         if collection_key:
-            path = f"/better-bibtex/collection?/{uid}/{collection_key}.bibtex"
+            import urllib.parse
+            encoded_key = urllib.parse.quote(collection_key)
+            path = f"/better-bibtex/collection?/{uid}/{encoded_key}.bibtex"
         else:
             path = f"/better-bibtex/library?/{uid}/library.bibtex"
         body, _ = self._get(f"http://localhost:23119{path}", expect_text=True)
@@ -200,7 +203,9 @@ class ZoteroClient:
         base = ZOTERO_LOCAL_BASE if self.config.local_mode else ZOTERO_API_BASE
         lib = f"{self.config.library_type}s/{self.config.user_id}"
         if collection_key:
-            url = f"{base}/{lib}/collections/{collection_key}/items?format=bibtex&limit=100"
+            import urllib.parse
+            encoded_key = urllib.parse.quote(collection_key)
+            url = f"{base}/{lib}/collections/{encoded_key}/items?format=bibtex&limit=100"
         else:
             url = f"{base}/{lib}/items/top?format=bibtex&limit=100"
         if since_version is not None:
@@ -241,7 +246,10 @@ class ZoteroClient:
 
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < MAX_RETRIES:
-                retry_after = int(e.headers.get("Retry-After", 10))
+                try:
+                    retry_after = int(e.headers.get("Retry-After", 10))
+                except ValueError:
+                    retry_after = 10
                 time.sleep(retry_after)
                 # ARS pattern: refresh anchor after backoff sleep
                 return self._get(url, expect_text=expect_text, attempt=attempt + 1)
@@ -249,8 +257,8 @@ class ZoteroClient:
                 # Not Modified — return empty body, preserve headers
                 return ("" if expect_text else []), dict(e.headers)
             raise ZoteroUnavailableError(f"Zotero HTTP {e.code}: {e.reason} — {url}") from e
-        except (urllib.error.URLError, OSError, TimeoutError) as e:
-            raise ZoteroUnavailableError(f"Zotero unreachable: {e}") from e
+        except (urllib.error.URLError, OSError, TimeoutError, ValueError) as e:
+            raise ZoteroUnavailableError(f"Zotero unreachable or invalid URL: {e}") from e
 
     @staticmethod
     def _parse_next_link(link_header: str) -> str | None:

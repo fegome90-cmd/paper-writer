@@ -6,6 +6,7 @@ and parse the response.
 
 Run with: MCP_TRIFECTA_MODE=real uv run pytest tests/integrations/test_trifecta_integration.py
 """
+
 from __future__ import annotations
 
 import os

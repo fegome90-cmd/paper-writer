@@ -158,7 +158,7 @@ class CrossrefClient:
                 item_year = _extract_year(cand)
                 venue_list = cand.get("container-title") or []
                 venue = venue_list[0] if venue_list else None
-                
+
                 # Tiebreaker logic (Item 7): +0.05 bonus for year match
                 year_match = year is not None and item_year == year
                 score = sim + (0.05 if year_match else 0.0)

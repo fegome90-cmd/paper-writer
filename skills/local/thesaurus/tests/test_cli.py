@@ -21,6 +21,7 @@ def test_cmd_import_success(tmp_path, sample_concepts):
 
     # Create manifest
     import hashlib
+
     content = jsonl_path.read_bytes()
     sha = hashlib.sha256(content).hexdigest()
     manifest = {

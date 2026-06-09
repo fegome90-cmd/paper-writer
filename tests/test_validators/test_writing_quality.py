@@ -1,4 +1,5 @@
 """Tests for validators.writing_quality — AI-typical term detection."""
+
 from __future__ import annotations
 
 from parsers.manuscript import ManuscriptParser

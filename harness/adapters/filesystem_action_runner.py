@@ -138,7 +138,8 @@ class FilesystemActionRunner(ActionRunner):
                                 for finding in findings:
                                     if finding.get("severity") == "error":
                                         logger.warning(
-                                            "Preset validation: %s", finding.get("message", "unknown")  # noqa: E501
+                                            "Preset validation: %s",
+                                            finding.get("message", "unknown"),
                                         )
                             except (ValueError, OSError) as exc:
                                 logger.warning("Preset validation failed: %s", exc)
@@ -214,17 +215,11 @@ class FilesystemActionRunner(ActionRunner):
                     context={"cwd": str(self.repo_path)},
                 )
                 raw_results_path = self._resolve_run("search/raw_results.json")
-                if not raw_results_path.exists():
-                    raw_results_path.write_text(
-                        '{"query":"fallback","papers":['
-                        '{"title":"Fallback Paper","doi":"10.1000/fallback",'
-                        '"year":2024,"authors":"Demo et al.",'
-                        '"metrics":{"population_score":7,"intervention_score":6,'
-                        '"outcome_score":5,"evidence_score":4,"sample_score":0.5,'
-                        '"journal_score":1.5,"citations_score":0.1,'
-                        '"coi_penalty":0,"context_score":5}}]}',
-                        encoding="utf-8",
-                    )
+                # Fail-closed: do NOT synthesize fake papers when adapter
+                # produces no raw_results.json.  The adapter is responsible
+                # for writing it.  If missing, downstream commands must treat
+                # search as incomplete.
+                if raw_results_path.exists():
                     artifacts.append(str(raw_results_path))
                 artifacts.extend(result.artifacts)
             else:
@@ -392,6 +387,7 @@ class FilesystemActionRunner(ActionRunner):
             "audit_reporting",
             "audit_ethics",
             "import_bib",
+            "zotero_sync",
         ]:
             log_dir = self._resolve_run("logs")
             log_dir.mkdir(parents=True, exist_ok=True)

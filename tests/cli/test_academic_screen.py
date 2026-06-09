@@ -181,8 +181,7 @@ class TestAcademicSearchPlan:
                 "query": "test query",
                 "output_dir": str(search_dir),
                 "raw_papers": (
-                    '[{"title":"P1","doi":"10.1000/a",'
-                    '"year":2023,"authors":"X","metrics":{}}]'
+                    '[{"title":"P1","doi":"10.1000/a","year":2023,"authors":"X","metrics":{}}]'
                 ),
                 "mode": "academic",
                 "search_window": {"start_year": 2020, "end_year": 2024},
@@ -209,10 +208,12 @@ class TestChainingSingleWriter:
         _make_raw_results(search_dir / "raw_results.json")
         plan_path = search_dir / "search_plan.json"
         plan_path.write_text(
-            json.dumps({
-                "query": "test",
-                "search_window": {"start_year": 2020, "end_year": 2024},
-            }),
+            json.dumps(
+                {
+                    "query": "test",
+                    "search_window": {"start_year": 2020, "end_year": 2024},
+                }
+            ),
             encoding="utf-8",
         )
 

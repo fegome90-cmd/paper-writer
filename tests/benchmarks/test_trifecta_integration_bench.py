@@ -3,6 +3,7 @@
 These tests verify the benchmark logic is correct (without running the
 actual subprocess commands — that's done by the benchmark itself).
 """
+
 from __future__ import annotations
 
 from benchmarks.trifecta_integration_bench import (
@@ -68,11 +69,13 @@ class TestComputeComparison:
             _make_result("real", success=True, output="real output"),
             _make_result("real", success=True, output="real output"),
         ]
-        result = compute_comparison({
-            "without_trifecta": without,
-            "with_trifecta": with_t,
-            "commands": ["c1", "c2", "c3"],
-        })
+        result = compute_comparison(
+            {
+                "without_trifecta": without,
+                "with_trifecta": with_t,
+                "commands": ["c1", "c2", "c3"],
+            }
+        )
         assert result["without_trifecta"]["effective_commands"] == 1
         assert result["with_trifecta"]["effective_commands"] == 2
 
@@ -86,11 +89,13 @@ class TestComputeComparison:
             _make_result("real", success=True, output="real", findings_count=35),
             _make_result("real", success=True, output="real", findings_count=0),
         ]
-        result = compute_comparison({
-            "without_trifecta": without,
-            "with_trifecta": with_t,
-            "commands": ["c1", "c2"],
-        })
+        result = compute_comparison(
+            {
+                "without_trifecta": without,
+                "with_trifecta": with_t,
+                "commands": ["c1", "c2"],
+            }
+        )
         assert result["without_trifecta"]["total_findings"] == 0
         assert result["with_trifecta"]["total_findings"] == 35
         assert result["delta"]["total_findings"] == 35
@@ -103,11 +108,13 @@ class TestComputeComparison:
         with_t = [
             _make_result("real", success=True, output="real", findings_count=20),
         ]
-        result = compute_comparison({
-            "without_trifecta": without,
-            "with_trifecta": with_t,
-            "commands": ["c1"],
-        })
+        result = compute_comparison(
+            {
+                "without_trifecta": without,
+                "with_trifecta": with_t,
+                "commands": ["c1"],
+            }
+        )
         assert result["delta"]["total_findings"] == 15
 
 

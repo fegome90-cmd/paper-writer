@@ -223,9 +223,7 @@ def screen(
     # Filter by tier using real classify_tier output from scoring
     tier_order = {"Tier 1": 1, "Tier 2": 2, "Tier 3": 3, "Discard": 4}
     if min_tier not in tier_order:
-        raise ValueError(
-            f"Invalid min_tier: {min_tier!r}. Must be one of: {', '.join(tier_order)}"
-        )
+        raise ValueError(f"Invalid min_tier: {min_tier!r}. Must be one of: {', '.join(tier_order)}")
     min_level = tier_order[min_tier]
     screened = [
         p

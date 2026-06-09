@@ -195,7 +195,7 @@ class TestZoteroSyncImporter:
         with patch.dict(os.environ, {"ZOTERO_USER_ID": "123"}):
             assert ZoteroSyncImporter().is_available() is True
         with patch.dict(os.environ, {}, clear=True):
-            assert ZoteroSyncImporter().is_available() is False
+            assert ZoteroSyncImporter().is_available() is True
 
     def test_run_not_available_raises(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
@@ -220,7 +220,7 @@ class TestZoteroSyncImporter:
         target = tmp_path / "references.bib"
         with patch.dict(os.environ, {"ZOTERO_USER_ID": "123"}):
             importer = ZoteroSyncImporter()
-            result = importer.run({"target_bib": str(target)}, {})
+            result = importer.run({"target_bib": str(target)}, {"repo_path": str(tmp_path)})
 
         assert result.status == "pass"
         assert result.validator == "zotero-sync"

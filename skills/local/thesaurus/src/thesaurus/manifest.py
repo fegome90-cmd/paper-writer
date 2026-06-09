@@ -53,9 +53,7 @@ def validate_manifest(manifest: dict, jsonl_path: str | Path) -> None:
     actual_sha = hashlib.sha256(content).hexdigest()
     expected_sha = manifest.get("sha256", "")
     if actual_sha != expected_sha:
-        raise ManifestError(
-            f"SHA256 mismatch: expected {expected_sha}, got {actual_sha}"
-        )
+        raise ManifestError(f"SHA256 mismatch: expected {expected_sha}, got {actual_sha}")
 
     # Validate concept_count — count non-empty lines from the raw bytes already read
     actual_count = sum(1 for line in content.splitlines() if line.strip())

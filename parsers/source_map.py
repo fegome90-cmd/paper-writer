@@ -7,6 +7,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class SourcePosition:
     """Zero-based position in source text (line, column, char offset)."""
+
     line: int
     column: int
     char_offset: int

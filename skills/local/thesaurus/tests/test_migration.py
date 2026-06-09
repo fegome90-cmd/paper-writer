@@ -14,9 +14,10 @@ def test_migration_creates_tables(tmp_path):
     run_migration(db_path, sql_dir)
 
     conn = sqlite3.connect(str(db_path))
-    tables = [row[0] for row in conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    ).fetchall()]
+    tables = [
+        row[0]
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    ]
     conn.close()
 
     assert "concepts" in tables
@@ -30,7 +31,7 @@ def test_migration_idempotent(tmp_path):
     sql_dir = Path(__file__).parent.parent / "workspace" / "migrations"
 
     run_migration(db_path, sql_dir)
-    run_migration(db_path,  sql_dir)  # Second run should be no-op
+    run_migration(db_path, sql_dir)  # Second run should be no-op
 
 
 def test_migration_records_version(tmp_path):

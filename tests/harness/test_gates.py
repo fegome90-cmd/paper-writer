@@ -38,7 +38,11 @@ def test_validate_repo_initialized_fail(checker: InMemoryArtifactChecker) -> Non
 
 def test_validate_search_completed_success(checker: InMemoryArtifactChecker) -> None:
     checker.existing_paths.update(
-        ["outputs/latest/search", "outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]  # noqa: E501
+        [
+            "outputs/latest/search",
+            "outputs/latest/search/search_plan.json",
+            "outputs/latest/search/raw_results.json",
+        ]
     )
     result = validate_search_completed(checker)
     assert result.status == "pass"
@@ -54,7 +58,9 @@ def test_validate_screened_evidence(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_screened_evidence(checker)
     assert result1.status == "fail"
 
-    checker.existing_paths.update(["outputs/latest/search", "outputs/latest/search/screened_evidence.json"])  # noqa: E501
+    checker.existing_paths.update(
+        ["outputs/latest/search", "outputs/latest/search/screened_evidence.json"]
+    )
     result2 = validate_screened_evidence(checker)
     assert result2.status == "pass"
 
@@ -133,7 +139,9 @@ def test_validate_render_passed(checker: InMemoryArtifactChecker) -> None:
     result1 = validate_render_passed(checker)
     assert result1.status == "fail"
 
-    checker.existing_paths.update(["outputs/latest/render", "outputs/latest/render/manuscript.docx"])  # noqa: E501
+    checker.existing_paths.update(
+        ["outputs/latest/render", "outputs/latest/render/manuscript.docx"]
+    )
     result2 = validate_render_passed(checker)
     assert result2.status == "pass"
 

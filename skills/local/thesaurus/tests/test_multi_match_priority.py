@@ -1,7 +1,6 @@
 """Tests for match_type priority when multiple fields match."""
 
 
-
 def test_preferred_label_wins_over_notation(tmp_thesaurus):
     """When query matches both preferred_label and notation, preferred_label wins."""
     concepts = [

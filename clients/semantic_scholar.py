@@ -124,7 +124,7 @@ class SemanticScholarClient:
 
                 authors = [a.get("name", "") for a in cand.get("authors", []) if a.get("name")]
                 item_year = cand.get("year")
-                
+
                 # Tiebreaker logic (Item 7)
                 year_match = year is not None and item_year == year
                 score = sim + (0.05 if year_match else 0.0)

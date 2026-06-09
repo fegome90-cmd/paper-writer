@@ -3,6 +3,7 @@
 Extends existing ClaimsValidator with citation verification.
 Does NOT replace ClaimsValidator — adds alignment checks on top.
 """
+
 from __future__ import annotations
 
 import re
@@ -22,6 +23,7 @@ class ClaimAlignmentValidator:
 
     def __init__(self, citation_verifier: CitationVerifyValidator | None = None) -> None:
         from validators.claims import ClaimsValidator
+
         self.claims_validator = ClaimsValidator()
         self.citation_verifier = citation_verifier or CitationVerifyValidator(offline=True)
 
@@ -40,9 +42,7 @@ class ClaimAlignmentValidator:
             status = self._classify_alignment(verification)
 
             if status != "supported":
-                alignment_findings.append(
-                    self._make_alignment_finding(candidate, status)
-                )
+                alignment_findings.append(self._make_alignment_finding(candidate, status))
 
         return deduplicate_findings(alignment_findings)
 
@@ -93,9 +93,7 @@ class ClaimAlignmentValidator:
             "recommendation": "Add or verify citation support for this claim.",
         }
 
-    def _make_alignment_finding(
-        self, candidate: dict[str, Any], status: str
-    ) -> dict[str, Any]:
+    def _make_alignment_finding(self, candidate: dict[str, Any], status: str) -> dict[str, Any]:
         """Create finding based on alignment status."""
         rule_id = f"claim_alignment.{status}"
         return {

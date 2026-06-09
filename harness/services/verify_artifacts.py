@@ -475,4 +475,3 @@ def generate_academic_artifacts(
     generated.append(str(report_path))
 
     return generated
-

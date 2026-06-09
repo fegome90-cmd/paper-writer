@@ -205,3 +205,12 @@ class ManuscriptState:
 
         for gate in resets:
             self.gates[gate] = False
+
+        # Downgrade stage based on remaining satisfied gates
+        current_idx = self.STAGE_ORDER.index(self.stage)
+        for i in range(current_idx, -1, -1):
+            candidate_stage = self.STAGE_ORDER[i]
+            preconditions = self.STAGE_PRECONDITIONS.get(candidate_stage, frozenset())
+            if all(self.gates.get(gate, False) for gate in preconditions):
+                self.stage = candidate_stage
+                break

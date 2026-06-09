@@ -1,4 +1,5 @@
 """CLI integration tests for `paper audit ethics`."""
+
 from __future__ import annotations
 
 import json
@@ -18,8 +19,16 @@ class TestAuditEthicsCLI:
     def test_missing_ai_disclosure_finds_p0(self):
         """Manuscript without AI disclosure should produce P0 finding."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "ethics",
-             "--output", "json", str(FIXTURE_NO_DISCLOSURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "ethics",
+                "--output",
+                "json",
+                str(FIXTURE_NO_DISCLOSURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -35,8 +44,16 @@ class TestAuditEthicsCLI:
     def test_with_ai_disclosure_passes(self):
         """Manuscript with AI disclosure should pass (no P0 findings)."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "ethics",
-             "--output", "json", str(FIXTURE_WITH_DISCLOSURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "ethics",
+                "--output",
+                "json",
+                str(FIXTURE_WITH_DISCLOSURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -49,8 +66,16 @@ class TestAuditEthicsCLI:
     def test_json_output_structure(self):
         """JSON output should have required keys."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "ethics",
-             "--output", "json", str(FIXTURE_NO_DISCLOSURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "ethics",
+                "--output",
+                "json",
+                str(FIXTURE_NO_DISCLOSURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -66,8 +91,16 @@ class TestAuditEthicsCLI:
     def test_terminal_output(self):
         """Terminal output should produce non-empty output."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "ethics",
-             "--output", "terminal", str(FIXTURE_NO_DISCLOSURE)],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "ethics",
+                "--output",
+                "terminal",
+                str(FIXTURE_NO_DISCLOSURE),
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
@@ -78,8 +111,16 @@ class TestAuditEthicsCLI:
     def test_missing_file_exits_1(self):
         """Non-existent file should exit with code 1."""
         result = subprocess.run(
-            [sys.executable, "-m", "cli.paper.main", "audit", "ethics",
-             "--output", "json", "/tmp/nonexistent.md"],
+            [
+                sys.executable,
+                "-m",
+                "cli.paper.main",
+                "audit",
+                "ethics",
+                "--output",
+                "json",
+                "/tmp/nonexistent.md",
+            ],
             capture_output=True,
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),

@@ -3,6 +3,7 @@
 Exponential backoff on HTTP 429: 2s, 4s, 8s, max 3 retries.
 Ported from ARS scripts/_text_similarity.py retry constants.
 """
+
 from __future__ import annotations
 
 import time

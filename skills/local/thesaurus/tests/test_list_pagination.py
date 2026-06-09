@@ -1,7 +1,6 @@
 """Tests for list pagination and empty store."""
 
 
-
 def test_list_pagination(tmp_thesaurus):
     """List returns ≤limit per page, offset works."""
     concepts = [

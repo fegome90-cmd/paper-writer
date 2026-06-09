@@ -125,10 +125,27 @@ class ZoteroImporter(ToolWrapper):
 
         # Copy to target if validation passed
         target_bib = artifacts.get("target_bib", "templates/references.bib")
+        repo_root = Path(context.get("repo_path") or context.get("cwd", ".")).resolve()
         target_path = Path(target_bib)
         if not target_path.is_absolute():
-            repo_root = Path(context.get("repo_path") or context.get("cwd", "."))
             target_path = repo_root / target_path
+            
+        target_path = target_path.resolve()
+        if not str(target_path).startswith(str(repo_root)):
+            return ValidatorResult(
+                validator="zotero-import",
+                status="fail",
+                summary="Path traversal detected for target_bib.",
+                findings=[
+                    {
+                        "code": "path_traversal",
+                        "severity": "error",
+                        "message": f"Target path resolves outside repository bounds: {target_bib}",
+                    }
+                ],
+                artifacts_checked=[],
+            )
+
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
 
