@@ -46,7 +46,7 @@ def load_manifest() -> dict[str, Any]:
 
 def _extract_cite_keys(bib_path: Path) -> list[str]:
     """Extract citation keys from a BibTeX file."""
-    if not bib_path.exists():
+    if not bib_path or not bib_path.exists():
         return []
 
     content = bib_path.read_text(encoding="utf-8", errors="replace")
