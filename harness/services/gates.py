@@ -444,7 +444,11 @@ def validate_ethics_passed_gate(
 
     def check_gate() -> None:
         if not state_gates.get("ethics_passed", False):
-            raise ValueError("ethics_passed gate not yet evaluated or not satisfied")
+            raise ValueError(
+                "Ethics check has not been run. "
+                "Run 'paper audit_ethics' to evaluate AI disclosure compliance "
+                "before verification."
+            )
 
     checks = [
         Check(
