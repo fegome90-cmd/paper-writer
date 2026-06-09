@@ -33,7 +33,12 @@ def run_migration(db_path: str | Path, sql_dir: str | Path | None = None) -> Non
 
 def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
     """Execute a single SQL migration file in a transaction."""
-    version = int(sql_file.stem.split("_")[0])
+    try:
+        version = int(sql_file.stem.split("_")[0])
+    except (ValueError, IndexError) as exc:
+        raise ValueError(
+            f"Migration file '{sql_file.name}' must follow naming convention NNNN_name.sql"
+        ) from exc
 
     # Check if already applied (skip if schema_migrations doesn't exist yet)
     try:
@@ -46,9 +51,11 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
         pass  # schema_migrations table doesn't exist yet — first migration
 
     sql = sql_file.read_text(encoding="utf-8")
+    statements = [s.strip() for s in sql.split(";") if s.strip()]
     try:
         conn.execute("BEGIN")
-        conn.executescript(sql)
+        for stmt in statements:
+            conn.execute(stmt)
         conn.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
             (version,),

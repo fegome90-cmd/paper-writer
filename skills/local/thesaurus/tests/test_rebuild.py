@@ -3,6 +3,8 @@
 import sqlite3
 from pathlib import Path
 
+from thesaurus.lite import LiteSemanticStore
+
 
 def test_rebuild_idempotency(tmp_thesaurus, sample_concepts):
     """Two consecutive rebuilds produce same concept count."""
@@ -13,9 +15,9 @@ def test_rebuild_idempotency(tmp_thesaurus, sample_concepts):
     count2 = tmp_thesaurus.concept_count
 
     # Note: rebuild re-imports from JSONL if manifest exists,
-    # but with tmp_path the manifest won't be there, so count2 may differ.
-    # This test verifies rebuild doesn't crash and produces valid state.
-    assert count2 >= 0
+    # but with tmp_path the manifest won't be there, so store will be empty.
+    # Verify rebuild completes cleanly and produces valid empty state.
+    assert count2 == 0
 
 
 def test_rebuild_creates_fresh_db(tmp_thesaurus, sample_concepts):
@@ -32,12 +34,20 @@ def test_rebuild_creates_fresh_db(tmp_thesaurus, sample_concepts):
     conn.close()
 
 
-def test_rebuild_with_no_manifest(tmp_thesaurus, sample_concepts):
+def test_rebuild_with_no_manifest(tmp_path):
     """Rebuild with no manifest completes without error."""
-    tmp_thesaurus.import_concepts(sample_concepts)
-    tmp_thesaurus.rebuild()
-    # With no manifest/source data, store should be empty
-    assert tmp_thesaurus.concept_count == 0
+    db_path = tmp_path / "thesaurus.db"
+    store = LiteSemanticStore(db_path=str(db_path))
+    concepts = [
+        {"id": "C1", "preferred_label": "Test", "alt_labels": "[]",
+         "broader": "", "narrower": "", "related": "", "notation": "", "source": "test"},
+    ]
+    store.import_concepts(concepts)
+    assert store.concept_count == 1
+
+    store.rebuild()
+    # Temp dir has no manifest, so store should be empty after rebuild
+    assert store.concept_count == 0
 
 
 def test_rebuild_from_corrupt_db(tmp_thesaurus, sample_concepts):

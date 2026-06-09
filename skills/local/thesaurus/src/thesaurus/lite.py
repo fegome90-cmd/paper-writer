@@ -32,6 +32,22 @@ class LiteSemanticStore(SemanticStore):
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _upsert_fts(self, conn: sqlite3.Connection, concept: dict) -> None:
+        """Insert or replace a concept in the FTS5 index."""
+        # Delete existing FTS entry if any
+        conn.execute(
+            "DELETE FROM concepts_fts WHERE id = ?", (concept["id"],)
+        )
+        # Insert new FTS entry
+        conn.execute(
+            "INSERT INTO concepts_fts (id, preferred_label, notation) VALUES (?, ?, ?)",
+            (concept["id"], concept["preferred_label"], concept.get("notation", "")),
+        )
+
+    def _delete_fts(self, conn: sqlite3.Connection, concept_id: str) -> None:
+        """Delete a concept from the FTS5 index."""
+        conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept_id,))
+
     @property
     def capabilities(self) -> StorageCapabilities:
         return StorageCapabilities(vector_search=False, full_text=True)
@@ -48,6 +64,7 @@ class LiteSemanticStore(SemanticStore):
     def add_concept(self, concept: dict) -> None:
         conn = self._connect()
         try:
+            self._upsert_fts(conn, concept)
             conn.execute(
                 """INSERT OR REPLACE INTO concepts
                    (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
@@ -73,6 +90,7 @@ class LiteSemanticStore(SemanticStore):
         try:
             conn.execute("BEGIN")
             for concept in concepts:
+                self._upsert_fts(conn, concept)
                 conn.execute(
                     """INSERT OR REPLACE INTO concepts
                        (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
@@ -108,7 +126,7 @@ class LiteSemanticStore(SemanticStore):
             fts_results = {}
             try:
                 rows = conn.execute(
-                    """SELECT rowid, preferred_label, notation,
+                    """SELECT id, preferred_label, notation,
                               rank
                        FROM concepts_fts
                        WHERE concepts_fts MATCH ?
@@ -117,19 +135,22 @@ class LiteSemanticStore(SemanticStore):
                     (query, limit),
                 ).fetchall()
                 for row in rows:
-                    fts_results[row["rowid"]] = {
-                        "id": row["rowid"],
+                    fts_results[row["id"]] = {
+                        "id": row["id"],
                         "preferred_label": row["preferred_label"],
                         "match_type": "preferred_label",
                         "notation": row["notation"],
                     }
-            except sqlite3.OperationalError:
-                pass  # FTS5 match syntax error — skip FTS results
+            except sqlite3.OperationalError as exc:
+                if "fts5" not in str(exc).lower() and "match" not in str(exc).lower():
+                    raise
+                # FTS5 match syntax error — skip FTS results
 
             # Also search alt_labels (JSON column) for synonym matches
-            like_pattern = f"%{query}%"
+            escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like_pattern = f"%{escaped}%"
             alt_rows = conn.execute(
-                "SELECT id, preferred_label, alt_labels, notation FROM concepts WHERE alt_labels LIKE ?",
+                "SELECT id, preferred_label, alt_labels, notation FROM concepts WHERE alt_labels LIKE ? ESCAPE '\\'",
                 (like_pattern,),
             ).fetchall()
 
@@ -211,16 +232,15 @@ class LiteSemanticStore(SemanticStore):
     def rebuild(self) -> None:
         """Delete DB, run migration, re-import from JSONL. Idempotent."""
         self._db_path.unlink(missing_ok=True)
-        run_migration(self._db_path)
+        run_migration(self._db_path, sql_dir=_MIGRATIONS_DIR)
 
-        manifest_path = _MANIFEST_PATH
+        # Resolve manifest relative to DB path's workspace directory
+        workspace = self._db_path.parent
+        manifest_path = workspace / "vocabulary" / "manifest.json"
         if manifest_path.exists():
-            import json
-
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             source_file = manifest.get("source_file", "")
             if source_file:
-                from thesaurus.manifest import load_manifest, validate_manifest
                 from thesaurus.mesh_loader import load_jsonl
 
                 jsonl_path = manifest_path.parent / source_file
@@ -233,7 +253,8 @@ class LiteSemanticStore(SemanticStore):
         """Get SHA256 of manifest file."""
         import hashlib
 
-        if _MANIFEST_PATH.exists():
-            content = _MANIFEST_PATH.read_bytes()
+        manifest_path = self._db_path.parent / "vocabulary" / "manifest.json"
+        if manifest_path.exists():
+            content = manifest_path.read_bytes()
             return hashlib.sha256(content).hexdigest()[:16]
         return ""

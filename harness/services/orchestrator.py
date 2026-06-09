@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -203,8 +204,6 @@ class Orchestrator:
         _pre_verify_snapshot = None
         _sm_state = getattr(self.state_manager, "state", None)
         if _sm_state is not None:
-            import copy
-
             _pre_verify_snapshot = copy.deepcopy(_sm_state)
         try:
             gate_verdicts = self._run_gate_verification(request)
@@ -278,18 +277,19 @@ class Orchestrator:
             blockers.append(msg)
             steps.append({"step_id": "persist_state", "status": "failed", "error": msg})
             # R2-BH4: Roll back state to snapshot if persist failed mid-transaction
-            try:
-                self.state_manager.state = _pre_verify_snapshot
-                self.state_manager.save_state()
-                steps.append({"step_id": "rollback_state", "status": "succeeded"})
-            except Exception as rollback_err:
-                steps.append(
-                    {
-                        "step_id": "rollback_state",
-                        "status": "failed",
-                        "error": f"State rollback also failed: {rollback_err}",
-                    }
-                )
+            if _pre_verify_snapshot is not None:
+                try:
+                    self.state_manager.state = _pre_verify_snapshot
+                    self.state_manager.save_state()
+                    steps.append({"step_id": "rollback_state", "status": "succeeded"})
+                except Exception as rollback_err:
+                    steps.append(
+                        {
+                            "step_id": "rollback_state",
+                            "status": "failed",
+                            "error": f"State rollback also failed: {rollback_err}",
+                        }
+                    )
             fail_result = self._build_fail_result(
                 result, steps, blockers, warnings, artifacts, gate_changes
             )
