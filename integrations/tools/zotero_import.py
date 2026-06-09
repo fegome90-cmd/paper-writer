@@ -182,9 +182,13 @@ class ZoteroImporter(ToolWrapper):
             depth = 1
             pos = start
             while pos < len(content) and depth > 0:
-                if content[pos] == "{" and content[pos - 1] != "\\":
+                # Skip escaped braces (\{ and \}) to avoid depth desync
+                if content[pos] == "\\" and pos + 1 < len(content) and content[pos + 1] in "{}":
+                    pos += 2
+                    continue
+                if content[pos] == "{":
                     depth += 1
-                elif content[pos] == "}" and content[pos - 1] != "\\":
+                elif content[pos] == "}":
                     depth -= 1
                 pos += 1
             if depth != 0:
@@ -200,41 +204,57 @@ class ZoteroImporter(ToolWrapper):
             key = entry_body[:comma_pos].strip()
             body = entry_body[comma_pos + 1 :]
             fields: dict[str, str] = {}
-            
+
             bpos = 0
             while bpos < len(body):
-                field_match = re.search(r"(\w+)\s*=\s*", body[bpos:], re.IGNORECASE)
+                # Skip leading whitespace, commas, and newlines between fields
+                while bpos < len(body) and body[bpos] in " \t\r\n,":
+                    bpos += 1
+
+                # Use re.match (anchored) so we only match a field key at the
+                # current parse position — never inside a previously-parsed value.
+                field_match = re.match(r"(\w+)\s*=\s*", body[bpos:], re.IGNORECASE)
                 if not field_match:
                     break
                 field_name = field_match.group(1).lower().strip()
                 val_start = bpos + field_match.end()
-                
+
                 if val_start < len(body) and body[val_start] == "{":
+                    # Brace-delimited value
                     vd = 1
                     vp = val_start + 1
                     while vp < len(body) and vd > 0:
-                        if body[vp] == "{" and body[vp - 1] != "\\":
+                        if body[vp] == "\\" and vp + 1 < len(body) and body[vp + 1] in "{}":
+                            vp += 2
+                            continue
+                        if body[vp] == "{":
                             vd += 1
-                        elif body[vp] == "}" and body[vp - 1] != "\\":
+                        elif body[vp] == "}":
                             vd -= 1
                         vp += 1
                     fields[field_name] = body[val_start + 1 : vp - 1].strip()
                     bpos = vp
+                elif val_start < len(body) and body[val_start] == '"':
+                    # Double-quote-delimited value
+                    vp = val_start + 1
+                    while vp < len(body):
+                        if body[vp] == "\\" and vp + 1 < len(body):
+                            vp += 2
+                            continue
+                        if body[vp] == '"':
+                            vp += 1
+                            break
+                        vp += 1
+                    fields[field_name] = body[val_start + 1 : vp - 1].strip()
+                    bpos = vp
                 elif val_start < len(body):
-                    in_double_quote = False
-                    in_single_quote = False
+                    # Bare value: ends at next comma that precedes a field key
                     vp = val_start
                     while vp < len(body):
-                        if body[vp] == '"' and (vp == 0 or body[vp-1] != '\\') and not in_single_quote:
-                            in_double_quote = not in_double_quote
-                        elif body[vp] == "'" and (vp == 0 or body[vp-1] != '\\') and not in_double_quote:
-                            in_single_quote = not in_single_quote
-                        elif not in_double_quote and not in_single_quote and body[vp] == ',':
-                            next_field = re.match(r"\s*\w+\s*=", body[vp+1:])
-                            if next_field:
-                                break
+                        if body[vp] == "," and re.match(r"\s*\w+\s*=", body[vp + 1 :]):
+                            break
                         vp += 1
-                    fields[field_name] = body[val_start:vp].strip().strip('"').strip("'")
+                    fields[field_name] = body[val_start:vp].strip().rstrip(",")
                     bpos = vp
                 else:
                     break
