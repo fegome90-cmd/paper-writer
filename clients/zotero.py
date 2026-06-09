@@ -127,6 +127,8 @@ class ZoteroClient:
             ZoteroError: on network errors, auth failures, or unexpected HTTP errors.
         """
         if self.config.bbt_local:
+            if since_version is not None:
+                raise ValueError("Incremental sync (--since) is not supported with Better BibTeX local pull (--bbt-local)")
             return self._fetch_bbt_local(collection_key)
 
         chunks: list[str] = []

@@ -182,13 +182,14 @@ class Orchestrator:
         # 2. APPLY PHASE: Execute command action
         # ----------------------------------------------------
         try:
-            # Trigger downstream gate reset if editing a draft
+            action_artifacts = self.action_runner.run_action(request.command, request.args)
+
+            # Trigger downstream gate reset only after action succeeds
             if request.command in ("draft_section", "draft_all"):
                 self.state_manager.reset_downstream_gates("draft")
             elif request.command in ("import_bib", "zotero_sync"):
                 self.state_manager.reset_downstream_gates("bib")
 
-            action_artifacts = self.action_runner.run_action(request.command, request.args)
             artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
         except (ValueError, StateManagerError, DomainStateError, OSError) as e:

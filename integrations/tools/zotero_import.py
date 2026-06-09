@@ -131,6 +131,9 @@ class ZoteroImporter(ToolWrapper):
             target_path = repo_root / target_path
             
         target_path = target_path.resolve()
+        if target_path.is_dir():
+            target_path = target_path / "references.bib"
+        
         if not target_path.is_relative_to(repo_root):
             return ValidatorResult(
                 validator="zotero-import",
@@ -147,7 +150,14 @@ class ZoteroImporter(ToolWrapper):
             )
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, target_path)
+        
+        incremental = artifacts.get("incremental", False)
+        if incremental and target_path.exists():
+            with open(target_path, "a", encoding="utf-8") as tf:
+                with open(source_path, "r", encoding="utf-8") as sf:
+                    tf.write("\n" + sf.read())
+        else:
+            shutil.copy2(source_path, target_path)
 
         warnings = [f for f in findings if f["severity"] == "warning"]
         status = "warn" if warnings else "pass"
@@ -175,20 +185,23 @@ class ZoteroImporter(ToolWrapper):
 
         # Brace-depth-aware parser handles single-line and multiline entries
         _META_TYPES = frozenset({"string", "comment", "preamble"})
-        for m in re.finditer(r"@(\w+)\s*\{", content, re.IGNORECASE):
+        for m in re.finditer(r"@(\w+)\s*([\{\(])", content, re.IGNORECASE):
             if m.group(1).lower() in _META_TYPES:
                 continue
             start = m.end()
             depth = 1
             pos = start
+            open_char = m.group(2)
+            close_char = "}" if open_char == "{" else ")"
+            
             while pos < len(content) and depth > 0:
-                # Skip escaped braces (\{ and \}) to avoid depth desync
-                if content[pos] == "\\" and pos + 1 < len(content) and content[pos + 1] in "{}":
+                # Skip escaped characters to avoid depth desync
+                if content[pos] == "\\" and pos + 1 < len(content):
                     pos += 2
                     continue
-                if content[pos] == "{":
+                if content[pos] == open_char:
                     depth += 1
-                elif content[pos] == "}":
+                elif content[pos] == close_char:
                     depth -= 1
                 pos += 1
             if depth != 0:
@@ -213,9 +226,10 @@ class ZoteroImporter(ToolWrapper):
 
                 # Use re.match (anchored) so we only match a field key at the
                 # current parse position — never inside a previously-parsed value.
-                field_match = re.match(r"(\w+)\s*=\s*", body[bpos:], re.IGNORECASE)
+                field_match = re.match(r"([\w-]+)\s*=\s*", body[bpos:], re.IGNORECASE)
                 if not field_match:
-                    break
+                    bpos += 1
+                    continue
                 field_name = field_match.group(1).lower().strip()
                 val_start = bpos + field_match.end()
 
@@ -224,7 +238,7 @@ class ZoteroImporter(ToolWrapper):
                     vd = 1
                     vp = val_start + 1
                     while vp < len(body) and vd > 0:
-                        if body[vp] == "\\" and vp + 1 < len(body) and body[vp + 1] in "{}":
+                        if body[vp] == "\\" and vp + 1 < len(body):
                             vp += 2
                             continue
                         if body[vp] == "{":

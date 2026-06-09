@@ -146,6 +146,7 @@ class ZoteroSyncImporter(ToolWrapper):
             import_artifacts = {
                 "source_bib": tmp_path,
                 "target_bib": artifacts.get("target_bib", "templates/references.bib"),
+                "incremental": since_version is not None,
             }
 
             importer = ZoteroImporter()
