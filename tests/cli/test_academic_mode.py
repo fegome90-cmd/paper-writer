@@ -177,7 +177,10 @@ class TestAdapterTransport:
             inputs={
                 "query": "cancer treatment",
                 "output_dir": str(search_dir),
-                "raw_papers": '[{"title":"Paper 1","doi":"10.1000/test","year":2023,"authors":"Test","metrics":{}}]',
+                "raw_papers": (
+                    '[{"title":"Paper 1","doi":"10.1000/test",'
+                    '"year":2023,"authors":"Test","metrics":{}}]'
+                ),
                 "mode": "academic",
                 "search_window": {"start_year": 2020, "end_year": 2024},
             },
@@ -205,7 +208,10 @@ class TestAdapterTransport:
             inputs={
                 "query": "test query",
                 "output_dir": str(search_dir),
-                "raw_papers": '[{"title":"Paper 1","doi":"10.1000/test","year":2023,"authors":"Test","metrics":{}}]',
+                "raw_papers": (
+                    '[{"title":"Paper 1","doi":"10.1000/test",'
+                    '"year":2023,"authors":"Test","metrics":{}}]'
+                ),
             },
             context={"cwd": str(tmp_path)},
         )

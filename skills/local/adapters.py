@@ -169,7 +169,8 @@ class LiteratureSearchAdapter(SkillAdapter):
             provider_name = type(provider).__name__
             if filters and provider_name != "ConsensusSearchProvider":
                 logger.warning(
-                    "Filter params %s ignored by %s — only ConsensusSearchProvider supports API filters",
+                    "Filter params %s ignored by %s"
+                    " — only ConsensusSearchProvider supports API filters",
                     list(filters.keys()),
                     provider_name,
                 )
@@ -266,21 +267,10 @@ class LiteratureSearchAdapter(SkillAdapter):
         - scope_classification, epistemic_classification, screening_stage
           on each evidence record
         """
-        tier_order = {"Tier 1": 1, "Tier 2": 2, "Tier 3": 3, "Discard": 4}
 
         # Build screening_records for ALL papers (included + excluded)
-        all_papers_count = evidence_data.get("total_raw", 0)
-        raw_path_candidates = [
-            Path(evidence_data.get("query", "")),  # unlikely
-        ]
-
-        # We need raw_results.json to get all papers (excluded ones)
-        # The evidence_data only has included papers.
-        # We reconstruct excluded from prisma_flow counts, and for full
-        # records we need to read raw_results.json.
-        # For now, build screening_records from included evidence only,
-        # since the adapter may not have access to the search dir path.
-        # Full excluded-record tracking will be in search.py enrichment.
+        # We only have included records from evidence_data; full excluded
+        # tracking will come when search.py is enriched (PR2 future).
 
         screening_records: list[dict[str, Any]] = []
         included_records = evidence_data.get("evidence", [])

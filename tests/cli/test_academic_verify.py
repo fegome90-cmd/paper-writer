@@ -141,7 +141,7 @@ class TestAcademicVerifyArtifacts:
         verify_dir = tmp_path / "outputs" / "runs" / "latest" / "verify"
         verify_dir.mkdir(parents=True)
 
-        artifacts = generate_academic_artifacts(
+        generate_academic_artifacts(
             project_root=tmp_path,
             output_dir=verify_dir,
         )
@@ -168,7 +168,9 @@ class TestAcademicVerifyArtifacts:
         generate_academic_artifacts(project_root=tmp_path, output_dir=verify_dir)
 
         ledger_path = verify_dir / "screening_ledger.csv"
-        assert not ledger_path.exists(), "screening_ledger.csv should NOT exist without screening_records"
+        assert (
+            not ledger_path.exists()
+        ), "screening_ledger.csv should NOT exist without screening_records"
 
 
 class TestAcademicProtocolOutput:

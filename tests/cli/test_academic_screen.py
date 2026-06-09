@@ -19,7 +19,10 @@ def _make_raw_results(path: Path, papers: list[dict[str, Any]] | None = None) ->
     if papers is None:
         papers = [
             {
-                "title": "Randomized controlled trial of novel antihypertensive therapy in patients with severe hypertension",
+                "title": (
+                    "Randomized controlled trial of novel antihypertensive"
+                    " therapy in patients with severe hypertension"
+                ),
                 "doi": "10.1000/inc",
                 "year": 2023,
                 "authors": "Author A",
@@ -177,7 +180,10 @@ class TestAcademicSearchPlan:
             inputs={
                 "query": "test query",
                 "output_dir": str(search_dir),
-                "raw_papers": '[{"title":"P1","doi":"10.1000/a","year":2023,"authors":"X","metrics":{}}]',
+                "raw_papers": (
+                    '[{"title":"P1","doi":"10.1000/a",'
+                    '"year":2023,"authors":"X","metrics":{}}]'
+                ),
                 "mode": "academic",
                 "search_window": {"start_year": 2020, "end_year": 2024},
                 "amendments": [{"reason": "Added seminal paper", "records": ["10.1000/a"]}],
