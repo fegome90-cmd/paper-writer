@@ -352,7 +352,7 @@ _DEFAULT_FIXTURE_PATH = (
     / "search_papers_response.v1.json"
 )
 
-_DEFAULT_SOURCES = ["openalex", "pubmed", "arxiv", "consensus"]
+_DEFAULT_SOURCES = ["openalex", "pubmed", "arxiv"]
 
 
 class FixturePaperSearchProvider(PaperSearchProvider):

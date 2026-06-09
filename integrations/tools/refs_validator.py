@@ -122,11 +122,24 @@ class RefsValidator(ToolWrapper):
         # BibTeX keys must contain at least one letter — filter out
         # pure-numeric keys (e.g. @1 from Pandoc/LLM auto-numbering)
         # and common false positives (email domains, social handles).
-        _FALSE_POSITIVES = frozenset({
-            "example", "handle", "figure", "table", "section",
-            "equation", "chapter", "appendix", "ref", "cite",
-            "see", "email", "http", "https",
-        })
+        _FALSE_POSITIVES = frozenset(
+            {
+                "example",
+                "handle",
+                "figure",
+                "table",
+                "section",
+                "equation",
+                "chapter",
+                "appendix",
+                "ref",
+                "cite",
+                "see",
+                "email",
+                "http",
+                "https",
+            }
+        )
         for match in re.finditer(r"@(\w[\w\-]*)", content):
             candidate = match.group(1)
             # Skip pure-numeric keys (not valid BibTeX)
