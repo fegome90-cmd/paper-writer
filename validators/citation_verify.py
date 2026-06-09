@@ -337,6 +337,8 @@ class CitationVerifyValidator:
         1. Try APA pattern: extract text after "(YEAR). " — most reliable
         2. Fall back to segment-based extraction for numbered formats
         """
+        if not ref_text or not isinstance(ref_text, str):
+            return ""
         # Strip reference number prefix
         text = re.sub(r"^[\d\[\(]+[\.\]\)]*\s*", "", ref_text.strip())
 
@@ -383,6 +385,8 @@ class CitationVerifyValidator:
     @staticmethod
     def _clean_title_segment(text: str) -> str:
         """Remove trailing venue/year noise from a title candidate."""
+        if not text or not isinstance(text, str):
+            return ""
         # Strip arXiv ID suffix FIRST (before year strip, which would eat
         # the trailing digits of an ID like "arXiv:2301.00001").
         # NOTE: "arXiv" is only stripped when followed by an arXiv ID
@@ -679,6 +683,8 @@ def reduce_citation_verdict(findings: list[dict[str, Any]]) -> str:
     has_unresolvable = False
 
     for f in findings:
+        if not f or not isinstance(f, dict):
+            continue
         rule_id = f.get("rule_id", "")
         severity = f.get("severity", "")
 
