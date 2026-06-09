@@ -30,6 +30,11 @@ These commands execute local handler functions in `cli/paper/main.py` and do not
 - `paper gate method <file>`
 - `paper trace <symbol>`
 - `paper graph-overview`
+- `paper thesaurus import <file>`
+- `paper thesaurus search <query> [--limit N]`
+- `paper thesaurus list [--offset N] [--limit N]`
+- `paper thesaurus audit`
+- `paper thesaurus rebuild`
 
 Direct execution is evidenced by `args.func` dispatch and the special-case `doctor` branch in `cli/paper/main.py`.
 
@@ -40,7 +45,8 @@ These commands are parsed by the CLI and then mapped to `OrchestratorRequest` ob
 | CLI command | Orchestrator command | Failure policy |
 |---|---|---|
 | `paper init [--preset <name>]` | `init` | `stop_on_error` |
-| `paper search [--raw-papers <json>]` | `search` | `stop_on_error` |
+| `paper search [filter opts]` | `search` | `stop_on_error` |
+| `paper chain [chain opts]` | `chain` | `stop_on_error` |
 | `paper screen` | `screen` | `stop_on_error` |
 | `paper draft outline` | `draft_outline` | `stop_on_error` |
 | `paper draft section <name>` | `draft_section` | `stop_on_error` |
@@ -59,7 +65,8 @@ This mapping is exercised by `tests/cli/test_cli_request_mapping.py`.
 ### Project and workflow commands
 
 - `paper init`
-- `paper search`
+- `paper search [filter options]`
+- `paper chain [chain options]`
 - `paper screen`
 - `paper draft outline`
 - `paper draft section <name>`
@@ -72,28 +79,50 @@ This mapping is exercised by `tests/cli/test_cli_request_mapping.py`.
 - `paper verify`
 - `paper doctor`
 
-### Phase 0 / direct audit commands
+### Search filter options
 
-- `paper audit prose <file>`
-- `paper audit claims <file>`
-- `paper audit citations <file>`
-- `paper audit ethics <file>`
-- `paper audit writing-quality <file>`
-- `paper gate method <file>`
+Consensus API filter parameters forwarded through the pipeline to `ConsensusSearchProvider`:
 
-### Repository inspection commands
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--year-min` | int | None | Exclude papers published before this year |
+| `--year-max` | int | None | Exclude papers published after this year |
+| `--study-types` | str[] | None | Only include these study types (e.g. `rct`, `systematic review`) |
+| `--human` | flag | false | Only include human studies |
+| `--sample-size-min` | int | None | Exclude studies with fewer participants |
+| `--sjr-max` | int (1-4) | None | Exclude journals in lesser quartiles (1=best, 4=worst) |
+| `--duration-min` | int | None | Minimum study duration in days |
+| `--duration-max` | int | None | Maximum study duration in days |
+| `--exclude-preprints` | flag | false | Only include peer-reviewed papers |
+| `--publisher-name` | str | None | Comma-separated publisher names to filter by |
+| `--clinical-guideline` | flag | false | Filter to papers classified as clinical guidelines |
+| `--medical-mode` | flag | false | Filter to top medical journals and guidelines |
 
-- `paper audit code-health`
-- `paper trace <symbol>`
-- `paper graph-overview`
+Range validation: `year_min ≤ year_max`, `duration_min ≤ duration_max`, `sjr_max ∈ [1,4]`. Empty/whitespace queries are rejected.
+
+### Chain options
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--max-rounds` | int | 2 | Maximum chaining iterations (≥1) |
+| `--max-papers` | int | 80 | Stop when corpus reaches this size (≥1) |
+| `--relevance-threshold` | float | 0.15 | Minimum relevance score (0 < val ≤ 1) |
+| `--no-cache` | flag | false | Disable API response caching |
+
+Bounds validation: `--max-rounds ≥ 1`, `--max-papers ≥ 1`, `0 < --relevance-threshold ≤ 1`. Invalid values are rejected before orchestration.
 
 ## Contractual notes
 
 - The CLI resolves project root via explicit `--project/-C`, then ascending search for `outputs/state.yaml`, then current working directory.
 - For orchestrated commands, the CLI only maps arguments and failure policy; stage progression and gate evaluation live in the harness.
-- `paper doctor` reports environment state and degraded-mode conditions through `harness/services/doctor.py`.
+- `paper doctor` reports environment state and degraded-mode conditions through `harness/services/doctor.py`. It also checks the thesaurus DB status.
 - `paper render` defaults to `docx` and `pdf` when no `--format` flags are provided.
 - `paper render` forwards repeated `--format` flags exactly as parsed; de-duplication is not done in the CLI layer.
+- `paper render` validates CSL and reference-doc paths: non-existent files generate error-severity findings and fail the render gate.
+- `paper chain` validates parameter bounds before orchestration: `--max-rounds ≥ 1`, `--max-papers ≥ 1`, `0 < --relevance-threshold ≤ 1`.
+- `paper thesaurus` commands are direct (Phase 0) — they execute handler functions from `skills/local/thesaurus/src/thesaurus/cli.py` and do not go through the orchestrator.
+- `paper search` forwards 12 Consensus filter params (`--year-min/max`, `--study-types`, `--human`, `--sample-size-min`, `--sjr-max`, `--duration-min/max`, `--exclude-preprints`, `--publisher-name`, `--clinical-guideline`, `--medical-mode`) through the pipeline to `ConsensusSearchProvider`. Non-Consensus providers silently ignore these params with a warning.
+- S2 API paper IDs with spaces are URL-encoded via `_encode_paper_id()` in `chaining.py`. S2 hex IDs, `DOI:` and `ArXiv:` prefixed IDs are passed through unchanged.
 
 ## Evidence scope
 

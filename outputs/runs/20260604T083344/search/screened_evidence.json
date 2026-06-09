@@ -1,11 +1,11 @@
 {
   "query": "test",
-  "date": "2026-06-08",
+  "date": "2026-06-09",
   "total_raw": 4,
   "total_screened": 0,
-  "min_tier": "InvalidTier",
+  "min_tier": "Tier 3",
   "inclusion_criteria": [
-    "tier <= InvalidTier",
+    "tier <= Tier 3",
     "has title",
     "has DOI"
   ],

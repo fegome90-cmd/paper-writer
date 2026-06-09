@@ -1,7 +1,7 @@
 schema: search_manifest_v1
 query: test
 strategy: systematic_keyword_search
-date: '2026-06-08'
+date: '2026-06-09'
 databases:
 - PubMed
 - Embase

@@ -62,34 +62,10 @@ class LiteSemanticStore(SemanticStore):
             conn.close()
 
     def add_concept(self, concept: dict) -> None:
+        """Add or replace a single concept. Transactional via context manager."""
         conn = self._connect()
         try:
-            self._upsert_fts(conn, concept)
-            conn.execute(
-                """INSERT OR REPLACE INTO concepts
-                   (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    concept["id"],
-                    concept["preferred_label"],
-                    concept.get("alt_labels", "[]"),
-                    concept.get("broader", ""),
-                    concept.get("narrower", ""),
-                    concept.get("related", ""),
-                    concept.get("notation", ""),
-                    concept.get("source", ""),
-                ),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-
-    def import_concepts(self, concepts: list[dict]) -> int:
-        """Import pre-validated concept dicts. Transactional with INSERT OR REPLACE."""
-        conn = self._connect()
-        try:
-            conn.execute("BEGIN")
-            for concept in concepts:
+            with conn:
                 self._upsert_fts(conn, concept)
                 conn.execute(
                     """INSERT OR REPLACE INTO concepts
@@ -106,20 +82,42 @@ class LiteSemanticStore(SemanticStore):
                         concept.get("source", ""),
                     ),
                 )
-            # Update last_import timestamp
-            conn.execute(
-                "INSERT OR REPLACE INTO meta (key, value) VALUES ('last_import', datetime('now'))"
-            )
-            conn.execute("COMMIT")
+        finally:
+            conn.close()
+
+    def import_concepts(self, concepts: list[dict]) -> int:
+        """Import pre-validated concept dicts. Transactional with INSERT OR REPLACE."""
+        conn = self._connect()
+        try:
+            with conn:
+                for concept in concepts:
+                    self._upsert_fts(conn, concept)
+                    conn.execute(
+                        """INSERT OR REPLACE INTO concepts
+                           (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            concept["id"],
+                            concept["preferred_label"],
+                            concept.get("alt_labels", "[]"),
+                            concept.get("broader", ""),
+                            concept.get("narrower", ""),
+                            concept.get("related", ""),
+                            concept.get("notation", ""),
+                            concept.get("source", ""),
+                        ),
+                    )
+                # Update last_import timestamp
+                conn.execute(
+                    "INSERT OR REPLACE INTO meta (key, value) VALUES ('last_import', datetime('now'))"
+                )
             return len(concepts)
-        except Exception:
-            conn.execute("ROLLBACK")
-            raise
         finally:
             conn.close()
 
     def search(self, query: str, limit: int = 20) -> list[dict]:
         """Search concepts via FTS5 + JSON alt_labels parsing."""
+        limit = max(0, limit)
         conn = self._connect()
         try:
             # FTS5 search on preferred_label + notation
@@ -142,9 +140,11 @@ class LiteSemanticStore(SemanticStore):
                         "notation": row["notation"],
                     }
             except sqlite3.OperationalError as exc:
-                if "fts5" not in str(exc).lower() and "match" not in str(exc).lower():
+                msg = str(exc).lower()
+                # Only swallow FTS5 query syntax errors; re-raise everything else
+                if "fts5" not in msg or "syntax error" not in msg:
                     raise
-                # FTS5 match syntax error — skip FTS results
+                # FTS5 match syntax error — skip FTS results, LIKE fallback handles it
 
             # Also search alt_labels (JSON column) for synonym matches
             escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -182,6 +182,8 @@ class LiteSemanticStore(SemanticStore):
             conn.close()
 
     def list_concepts(self, offset: int = 0, limit: int = 50) -> list[dict]:
+        offset = max(0, offset)
+        limit = max(0, limit)
         conn = self._connect()
         try:
             rows = conn.execute(
@@ -256,5 +258,5 @@ class LiteSemanticStore(SemanticStore):
         manifest_path = self._db_path.parent / "vocabulary" / "manifest.json"
         if manifest_path.exists():
             content = manifest_path.read_bytes()
-            return hashlib.sha256(content).hexdigest()[:16]
+            return hashlib.sha256(content).hexdigest()
         return ""

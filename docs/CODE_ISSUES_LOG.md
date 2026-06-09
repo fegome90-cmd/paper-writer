@@ -50,3 +50,41 @@ Un agente externo auditó el repo y encontró las siguientes observaciones (ya r
 | LLM-001 | **Alta** | `clients/llm_content.py`, `drafting.py` | Creado cliente LLM subprocess (claude/codex/gemini). Integrado en drafting.py con opt-in explícito (`PAPER_LLM_CLI=claude`). 4 secciones generadas con calidad Q2 (4,941 palabras, 34 citas). | ✅ Resuelto |
 | GAP-001 | **Crítica** | `templates/references.bib` | Bibliografía insuficiente (14 refs, need 40-80). Scoring arreglado (9/14 Tier 3), pero falta búsqueda iterativa (GAP-007). | 🟡 Parcial |
 | GAP-002 | **Crítica** | `cli/paper/main.py`, `drafting.py` | 3 secciones faltan (abstract, lit_review, conclusion). Desbloqueado por GAP-003. | ❌ Pendiente |
+
+## Bug Hunt Round 1 — Consensus Search Integration (Session 7, 2026-06-08)
+
+Found by Ripper+Walker+Sniper adversarial agents via actual CLI execution.
+
+| ID | Severity | Component | Description | Estado |
+|:---|:---|:---|:---|:---|
+| BH-1 | **Alta** | `skills/local/adapters.py` | Consensus filters silently ignored by non-Consensus providers. No warning to user. | ✅ Resuelto — warn log when filters ignored by non-Consensus provider |
+| BH-2 | **Media** | `skills/local/adapters.py` | No CLI range validation for year_min/max, duration_min/max, sjr_max. Invalid ranges accepted silently. | ✅ Resuelto — adapter validates ranges before API call |
+| BH-3 | **Media** | `cli/paper/main.py` | Empty/whitespace query accepted by search command. Wastes API call. | ✅ Resuelto — reject empty/whitespace queries |
+| BH-4 | **Baja** | `cli/paper/main.py` | Non-existent raw_papers file path accepted, crashes at parse time with unhelpful error. | ✅ Resuelto — detect non-existent file before parse |
+| BH-CRITICAL | **Crítica** | `skills/local/adapters.py`, ABC | `**kwargs` not in ABC or FixturePaperSearchProvider/McpPaperSearchProvider. Adapter filter forwarding crashed non-Consensus providers with TypeError. | ✅ Resuelto — added **kwargs to ABC and all 3 implementations |
+
+## Bug Hunt Round 2 — Chain/Screen/Render Pipeline (Session 7, 2026-06-08)
+
+Found by Ripper+Walker+Sniper adversarial agents on chain/screen/draft/audit/render commands.
+
+| ID | Severity | Component | Description | Estado |
+|:---|:---|:---|:---|:---|
+| R2-BH1 | **Crítica** | `skills/imported/literature_search/chaining.py` | Paper titles with spaces crash S2 API (InvalidURL). `_encode_paper_id()` URL-encodes title fallbacks only; S2 hex IDs, DOI:, ArXiv: passed through. | ✅ Resuelto |
+| R2-BH2 | **Alta** | `skills/imported/literature_search/search.py` | Invalid tier names in `screen()` silently default to Tier 3 instead of raising. | ✅ Resuelto — `ValueError` on invalid tier |
+| R2-BH3 | **Alta** | `cli/paper/main.py` | Chain params not validated: `--max-rounds 0`, `--max-papers -1`, `--relevance-threshold 2.0` accepted. | ✅ Resuelto — bounds validation before orchestration |
+| R2-BH4 | **Alta** | `harness/services/orchestrator.py` | No state snapshot/rollback on verify phase failure. Gates mutate without rollback on transient errors. | ✅ Resuelto — `copy.deepcopy` snapshot + restore on exception |
+| R2-BH5 | **Media** | `integrations/tools/pandoc.py` | CSL/reference-doc validation emits warning but should be error. Non-existent files accepted without halting. | ✅ Resuelto — severity upgraded from `warning` to `error` |
+
+### Judgment Day Review (Session 7, 2026-06-09)
+
+Dual adversarial review of R2 bug fix diff. Round 1 found 2 confirmed WARNING (real):
+1. Rollback crashes when snapshot is None — **fixed** with `if _pre_verify_snapshot is not None` guard.
+2. `import copy` inside hot path — **fixed**, moved to module top-level.
+
+Round 2 re-judgment: **APPROVED** — 0 CRITICAL, 0 confirmed WARNING.
+
+### Preexisting Issues Noted (Not from R2 diff)
+
+| ID | Severity | Component | Description | Estado |
+|:---|:---|:---|:---|:---|
+| PRE-1 | **Alta** | `cli/paper/main.py:463` | `from thesaurus.cli import ...` at module level inside `main()`. If thesaurus module missing, ALL paper commands break with `ModuleNotFoundError`. 74 CLI tests affected. | ❌ Pendiente |

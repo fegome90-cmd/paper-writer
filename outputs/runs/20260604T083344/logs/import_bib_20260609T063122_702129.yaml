@@ -1,0 +1,30 @@
+command: import_bib
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  source_bib: /dev/null
+  target_bib: templates/references.bib
+success: false
+exit_code: 1
+stage_before: rendered
+stage_after: rendered
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_bib_normalized
+  status: failed
+  error: 'file_not_found: Source file does not exist: /dev/null'
+blockers:
+- 'file_not_found: Source file does not exist: /dev/null'
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/logs/import_bib.log
+gate_changes:
+  bib_normalized: false
+state_changes:
+  stage_before: rendered
+  stage_after: rendered

@@ -51,16 +51,13 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
         pass  # schema_migrations table doesn't exist yet — first migration
 
     sql = sql_file.read_text(encoding="utf-8")
+    # NOTE: This split-by-semicolon is safe only for DDL migrations (no string literals
+    # or comments containing semicolons). Do not use for arbitrary SQL with user data.
     statements = [s.strip() for s in sql.split(";") if s.strip()]
-    try:
-        conn.execute("BEGIN")
+    with conn:
         for stmt in statements:
             conn.execute(stmt)
         conn.execute(
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
             (version,),
         )
-        conn.execute("COMMIT")
-    except Exception:
-        conn.execute("ROLLBACK")
-        raise

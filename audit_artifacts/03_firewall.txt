@@ -1,0 +1,30 @@
+# Estado del Firewall - NO VERIFICADO
+
+## Fecha de Auditoría
+2025-06-09 06:36:11 -04
+
+## Limitaciones
+No se pudo verificar el estado del firewall macOS debido a restricciones de permisos.
+
+## Comandos requeridos (necesitan sudo/privilegios elevados)
+- /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+- /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode
+
+## Recomendación
+El usuario debe ejecutar manualmente:
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode
+```
+
+## Evaluación de Riesgo
+- **FIREWALL DESCONOCIDO**: No se puede determinar si el firewall está activo
+- **RIESGO POTENCIAL**: Si el firewall está desactivado y el puerto 5000 está expuesto, podría haber exposición externa
+- **PRIORIDAD**: ALTA - Verificar estado del firewall antes de concluir la auditoría
+
+## Nota
+macOS tiene dos capas de firewall:
+1. Application Firewall (socketfilterfw)
+2. pf (Packet Filter) - firewall más tradicional
+
+No se pudo verificar ninguno de los dos debido a restricciones de permisos.

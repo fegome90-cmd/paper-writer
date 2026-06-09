@@ -107,6 +107,19 @@ Required fields:
 
 Error handling: unknown commands return `SkillResult(status="fail")` with error summary and warnings.
 
+### Consensus Filter Passthrough
+
+The `LiteratureSearchAdapter` extracts 12 Consensus-specific filter keys from inputs and forwards them as `**kwargs` to `provider.search()`:
+
+**Filter keys** (`_FILTER_KEYS`): `year_min`, `year_max`, `study_types`, `human`, `sample_size_min`, `sjr_max`, `duration_min`, `duration_max`, `exclude_preprints`, `publisher_name`, `clinical_guideline`, `medical_mode`.
+
+**Range validation** (adapter-level):
+- `year_min ≤ year_max`
+- `duration_min ≤ duration_max`
+- `sjr_max ∈ [1, 4]`
+
+**Provider compatibility**: Non-Consensus providers (`FixturePaperSearchProvider`, `McpPaperSearchProvider`) accept `**kwargs` and silently ignore unsupported filters with a warning log entry.
+
 ### AcademicWriterAdapter
 
 - **Location**: `skills/local/adapters.py`

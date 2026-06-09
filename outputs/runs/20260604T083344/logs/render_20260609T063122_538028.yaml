@@ -1,0 +1,38 @@
+command: render
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  output_formats:
+  - pdf
+  - docx
+  csl: null
+  reference_doc: null
+success: true
+exit_code: 0
+stage_before: rendered
+stage_after: rendered
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_render_passed
+  status: succeeded
+  error: null
+- step_id: verify_gate_render_passed
+  status: succeeded
+  error: null
+- step_id: persist_state
+  status: succeeded
+blockers: []
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/drafts/manuscript.md
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/render
+gate_changes:
+  render_passed: true
+state_changes:
+  stage_before: rendered
+  stage_after: rendered

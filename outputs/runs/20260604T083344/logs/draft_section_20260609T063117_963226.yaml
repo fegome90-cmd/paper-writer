@@ -1,0 +1,30 @@
+command: draft_section
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  name: methods
+success: false
+exit_code: 1
+stage_before: rendered
+stage_after: rendered
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: failed
+  error: 'Action failed: State Manager failed to save state: Cannot save invalid state:
+    Stage-gates inconsistency at stage ''rendered'': precondition gates not satisfied:
+    [''render_passed'']. A stage cannot be active unless its precondition gates are
+    True.'
+blockers:
+- 'Action failed: State Manager failed to save state: Cannot save invalid state: Stage-gates
+  inconsistency at stage ''rendered'': precondition gates not satisfied: [''render_passed''].
+  A stage cannot be active unless its precondition gates are True.'
+warnings: []
+artifacts: []
+gate_changes: {}
+state_changes:
+  stage_before: rendered
+  stage_after: rendered

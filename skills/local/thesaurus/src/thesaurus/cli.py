@@ -1,8 +1,14 @@
 """CLI direct-call functions for paper thesaurus commands."""
 
 import json
+import os
 import sys
 from pathlib import Path
+
+
+def _get_db_path() -> str | None:
+    """Get DB path from PAPER_THESAURUS_DB env var, or None for default."""
+    return os.environ.get("PAPER_THESAURUS_DB")
 
 
 def _cmd_import(args) -> None:
@@ -23,7 +29,7 @@ def _cmd_import(args) -> None:
         validate_manifest(manifest, file_path)
         validate_jsonl_readable(file_path)
         concepts = load_jsonl(file_path)
-        store = create_store()
+        store = create_store(db_path=_get_db_path())
         count = store.import_concepts(concepts)
         print(f"Loaded {count} concepts from {file_path.name}")
     except ManifestError as e:
@@ -41,8 +47,8 @@ def _cmd_search(args) -> None:
     """Handle paper thesaurus search."""
     from thesaurus.factory import create_store
 
-    store = create_store()
-    results = store.search(args.query, limit=args.limit if hasattr(args, "limit") else 20)
+    store = create_store(db_path=_get_db_path())
+    results = store.search(args.query, limit=getattr(args, "limit", 20))
 
     if not results:
         print("No concepts found")
@@ -56,7 +62,7 @@ def _cmd_list(args) -> None:
     """Handle paper thesaurus list."""
     from thesaurus.factory import create_store
 
-    store = create_store()
+    store = create_store(db_path=_get_db_path())
     offset = getattr(args, "offset", 0)
     limit = getattr(args, "limit", 50)
     results = store.list_concepts(offset=offset, limit=limit)
@@ -75,7 +81,7 @@ def _cmd_audit(args) -> None:
     from thesaurus.audit import format_audit
     from thesaurus.factory import create_store
 
-    store = create_store()
+    store = create_store(db_path=_get_db_path())
     print(format_audit(store))
 
 
@@ -83,7 +89,7 @@ def _cmd_rebuild(args) -> None:
     """Handle paper thesaurus rebuild."""
     from thesaurus.factory import create_store
 
-    store = create_store()
+    store = create_store(db_path=_get_db_path())
     store.rebuild()
     count = store.concept_count
     print(f"Rebuilt thesaurus: {count} concepts loaded")

@@ -70,6 +70,10 @@ message: Cannot move from drafting to rendering while sections_completed is fals
 - The state manager does not infer missing gate values optimistically.
 - The state manager must preserve untouched gates when mutating one gate.
 
+## Snapshot for Rollback
+
+The orchestrator may capture a `copy.deepcopy` of `state_manager.state` before a transactional phase. On failure, it restores the snapshot via `state_manager.state = snapshot` followed by `save_state()`. This is an external protocol — the state manager itself does not initiate snapshots.
+
 ## Audit Checklist
 
 - [ ] Schema matches the authoritative harness doc.

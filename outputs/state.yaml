@@ -1,10 +1,10 @@
 # Schema version: 1.0
 stage: rendered
 gates:
-  bib_normalized: true
-  citations_resolved: true
+  bib_normalized: false
+  citations_resolved: false
   outline_drafted: true
-  ready_for_delivery: true
+  ready_for_delivery: false
   refs_validated: true
   render_passed: true
   repo_initialized: true

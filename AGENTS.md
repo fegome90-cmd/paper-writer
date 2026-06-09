@@ -1,25 +1,50 @@
-# paper-writer - AGENTS.md
+# AGENTS.md
 
-> **Generated**: 2026-05-29 | **Governance**: Constitucion AI v1.1
+Repository-level instructions for Codex in `/Users/felipe_gonzalez/Developer/paper-writer`.
 
-## 🏛️ Gobernanza Agéntica
+## Purpose
 
-Este repositorio opera bajo la **Constitucion de Codigo Agentico v1.1**.
-Source of Truth: `https://github.com/fegome90-cmd/constitucion-ai`
+- Keep repo-specific guidance SHORT, concrete, and verifiable.
+- Treat code, Makefile targets, and maintained docs as the source of truth.
 
-## Reglas
+## Verified Commands
 
-- Todo claim debe tener evidencia trazable o ser marcado como hipótesis
-- Los method gates son fail-closed
-- El orchestrador nunca llama subprocess directamente — usa ToolWrapper port
-- Todos los tool wrappers retornan ValidatorResult
-- Ningún cambio es real sin evidencia de ejecución
-- Consulta `docs/trifecta-mcp-agent-guide.md` para evitar el anti-patrón "One-Tool MCP" y usar la herramienta exacta (callers, ast_hover, etc.) en lugar de depender solo de ctx_oracle.
+Verified in this repo on 2026-06-09:
 
-## Skills
+- Setup dev env: `make init`
+- Run tests: `make test`
+- Lint: `make lint`
+- Type-check: `make typecheck`
+- Full verification: `make verify`
+- Real-material validation: `make validate CASE=verification/local-data/<case>.local.yaml`
+- CLI help from source: `python3 -m cli.paper.main --help`
 
-| Skill | Description | File |
-|-------|-------------|------|
-| `trifecta-mcp` | Code navigation and semantic search via Trifecta MCP | [SKILL.md](skills/local/trifecta-mcp/SKILL.md) |
-| `essay_crafter` | Deterministic essay pipeline with evidence passports, ARS-style integrity gates, and OpenAI-ready structured outputs | [SKILL.md](skills/local/essay_crafter/SKILL.md) |
-| `autoresearch` | Elite autonomous engineering (Full Gentle AI SDD + Judgment Day) | [.gemini/skills/autoresearch/SKILL.md](.gemini/skills/autoresearch/SKILL.md) |
+## Working Rules
+
+- Every technical claim needs traceable evidence or must be marked as a hypothesis.
+- Method gates are fail-closed.
+- Orchestrator work must go through ToolWrapper ports; do not bypass them with direct subprocess orchestration.
+- Tool wrappers must return `ValidatorResult`.
+- No change is complete without execution evidence from the relevant command.
+- If docs and code disagree, trust the current code and Makefile first, then fix or flag the doc drift.
+- Prefer the narrowest validation that proves the change; use `make verify` for cross-cutting work.
+
+## Repo-Specific Guidance
+
+- For CLI behavior and command surface, check `docs/tools/paper-cli.md` and `cli/paper/main.py`.
+- For testing expectations and scope, check `docs/TESTING_STRATEGY.md`.
+- For gate behavior, check `docs/GATE_SYSTEM.md`.
+- For Trifecta usage, read `docs/trifecta-mcp-agent-guide.md` and use the exact tool needed (`callers`, `ast_hover`, etc.), not a generic one-tool fallback.
+- Do not rely on stale bootstrap commands documented elsewhere unless they also exist in the current `Makefile` or codebase.
+
+## Local Skills
+
+- `skills/local/trifecta-mcp/SKILL.md`
+- `skills/local/essay_crafter/SKILL.md`
+- `.gemini/skills/autoresearch/SKILL.md`
+
+## References
+
+- `README.md`
+- `Makefile`
+- `pyproject.toml`

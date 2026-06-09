@@ -155,6 +155,17 @@ Each step should have:
 Note: unlike `gentle-ai`, `paper-writer` does not need universal rollback on day one.
 Rollback should be enabled only for clearly reversible scaffolding/mutation steps.
 
+### Verify Phase Rollback
+
+When the verify phase fails mid-transaction (e.g. gate persistence fails after some gates have been mutated), the orchestrator rolls back to a pre-verify snapshot:
+
+1. Before the verify `try` block, a `copy.deepcopy` snapshot of `ManuscriptState` is captured.
+2. On exception in the verify phase, if the snapshot is not `None`, the orchestrator restores `state_manager.state` to the snapshot and calls `save_state()`.
+3. A `rollback_state` step is appended to the result steps (succeeded or failed).
+4. If both the original failure and the rollback fail, both errors are recorded in steps and blockers.
+
+This prevents partial gate mutation from corrupting the state on transient failures.
+
 ## 8. Failure Policy
 
 The orchestrator must use explicit failure policy, not implicit behavior.
@@ -333,6 +344,9 @@ A future audit of the orchestrator should verify:
 - [ ] step results are structured
 - [ ] stage advancement is driven by postconditions, not optimism
 - [ ] final delivery depends on `outputs/manifest.yaml` and `ready_for_delivery`
+- [ ] verify phase rollback captures snapshot and restores on failure
+- [ ] chain command validates parameter bounds before orchestration
+- [ ] non-existent CSL/reference-doc files generate error-severity findings
 
 ## 16. Bottom Line
 

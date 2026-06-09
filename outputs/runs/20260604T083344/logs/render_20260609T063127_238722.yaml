@@ -1,0 +1,53 @@
+command: render
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  output_formats:
+  - docx
+  - pdf
+  csl: templates/references.bib
+  reference_doc: templates/references.bib
+success: false
+exit_code: 1
+stage_before: rendered
+stage_after: rendered
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_render_passed
+  status: failed
+  error: "pandoc_render_error: Failed to render .docx: pandoc: Uncaught exception\
+    \ ghc-internal:GHC.Internal.Exception.ErrorCall:\n\nData.Binary.Get.runGet at\
+    \ position 4: Did not find end of central directory signature\n\nHasCallStack\
+    \ backtrace:\n  error, called at libraries/binary/src/Data/Binary/Get.hs:345:5\
+    \ in binary-0.8.9.3-05ed:Data.Binary.Get"
+- step_id: persist_state
+  status: failed
+  error: 'Verification/Persistence failed: State Manager failed to save state: Cannot
+    save invalid state: Stage-gates inconsistency at stage ''rendered'': precondition
+    gates not satisfied: [''render_passed'']. A stage cannot be active unless its
+    precondition gates are True.'
+- step_id: rollback_state
+  status: succeeded
+blockers:
+- "pandoc_render_error: Failed to render .docx: pandoc: Uncaught exception ghc-internal:GHC.Internal.Exception.ErrorCall:\n\
+  \nData.Binary.Get.runGet at position 4: Did not find end of central directory signature\n\
+  \nHasCallStack backtrace:\n  error, called at libraries/binary/src/Data/Binary/Get.hs:345:5\
+  \ in binary-0.8.9.3-05ed:Data.Binary.Get"
+- 'Verification/Persistence failed: State Manager failed to save state: Cannot save
+  invalid state: Stage-gates inconsistency at stage ''rendered'': precondition gates
+  not satisfied: [''render_passed'']. A stage cannot be active unless its precondition
+  gates are True.'
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/drafts/manuscript.md
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/render
+gate_changes:
+  render_passed: false
+state_changes:
+  stage_before: rendered
+  stage_after: rendered

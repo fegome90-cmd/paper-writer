@@ -2,7 +2,7 @@
   "provenance": {
     "provider": "fixture",
     "query": "test",
-    "retrieved_at": "2026-06-08T11:43:14.967441+00:00",
+    "retrieved_at": "2026-06-09T10:31:23.981810+00:00",
     "tool_name": "search_papers",
     "sources": [
       "openalex",

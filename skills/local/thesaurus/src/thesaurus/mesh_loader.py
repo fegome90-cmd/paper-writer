@@ -56,14 +56,14 @@ def load_jsonl(file_path: str | Path) -> list[dict]:
 def validate_jsonl_readable(file_path: str | Path) -> None:
     """Lightweight structural check on a JSONL file.
 
-    Reads only first/last 2 lines + line count. Does NOT read the full file.
+    Reads first 2 lines to verify structure. Does NOT read the full file.
     Raises ValueError on structural issues.
 
     Args:
         file_path: Path to the JSONL file.
 
     Raises:
-        ValueError: On structural issues (empty file, malformed first/last lines).
+        ValueError: On structural issues (empty file, malformed lines).
     """
     path = Path(file_path)
     lines = []
@@ -77,9 +77,10 @@ def validate_jsonl_readable(file_path: str | Path) -> None:
     if not lines:
         raise ValueError("JSONL file is empty")
 
-    # Check first line is valid JSON
-    if lines[0]:
-        try:
-            json.loads(lines[0])
-        except json.JSONDecodeError as e:
-            raise ValueError(f"First line is not valid JSON: {e}") from e
+    # Validate each read line is valid JSON
+    for i, line in enumerate(lines):
+        if line:
+            try:
+                json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Line {i + 1} is not valid JSON: {e}") from e

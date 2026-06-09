@@ -1,0 +1,46 @@
+command: render
+requested_stage: unknown
+failure_policy: stop_on_error
+args:
+  output_formats:
+  - docx
+  - pdf
+  csl: /tmp/nonexistent_12345.csl
+  reference_doc: null
+success: false
+exit_code: 1
+stage_before: rendered
+stage_after: rendered
+steps:
+- step_id: load_state
+  status: succeeded
+- step_id: validate_preconditions
+  status: succeeded
+- step_id: run_core_action
+  status: succeeded
+- step_id: verify_gate_render_passed
+  status: failed
+  error: 'missing_csl_file: Provided CSL file does not exist: /tmp/nonexistent_12345.csl'
+- step_id: persist_state
+  status: failed
+  error: 'Verification/Persistence failed: State Manager failed to save state: Cannot
+    save invalid state: Stage-gates inconsistency at stage ''rendered'': precondition
+    gates not satisfied: [''render_passed'']. A stage cannot be active unless its
+    precondition gates are True.'
+- step_id: rollback_state
+  status: succeeded
+blockers:
+- 'missing_csl_file: Provided CSL file does not exist: /tmp/nonexistent_12345.csl'
+- 'Verification/Persistence failed: State Manager failed to save state: Cannot save
+  invalid state: Stage-gates inconsistency at stage ''rendered'': precondition gates
+  not satisfied: [''render_passed'']. A stage cannot be active unless its precondition
+  gates are True.'
+warnings: []
+artifacts:
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/drafts/manuscript.md
+- /Users/felipe_gonzalez/Developer/paper-writer/outputs/runs/20260604T083344/render
+gate_changes:
+  render_passed: false
+state_changes:
+  stage_before: rendered
+  stage_after: rendered

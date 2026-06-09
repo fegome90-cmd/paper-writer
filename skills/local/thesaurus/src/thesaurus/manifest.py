@@ -3,7 +3,7 @@
 import hashlib
 from pathlib import Path
 
-from thesaurus.mesh_loader import load_jsonl
+
 
 
 class ManifestError(Exception):
@@ -59,9 +59,8 @@ def validate_manifest(manifest: dict, jsonl_path: str | Path) -> None:
             f"SHA256 mismatch: expected {expected_sha}, got {actual_sha}"
         )
 
-    # Validate concept_count
-    concepts = load_jsonl(jsonl_path)
-    actual_count = len(concepts)
+    # Validate concept_count — count non-empty lines from the raw bytes already read
+    actual_count = sum(1 for line in content.splitlines() if line.strip())
     expected_count = manifest.get("concept_count", -1)
     if actual_count != expected_count:
         raise ManifestError(
