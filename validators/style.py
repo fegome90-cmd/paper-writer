@@ -15,7 +15,32 @@ _PASSIVE_RE = re.compile(
 )
 
 # Sentence length threshold (characters)
-_MAX_SENTENCE_LENGTH = 300
+# 500 is appropriate for academic prose — typical sentences are 150-250 chars,
+# complex sentences with citations can reach 400-500.
+_MAX_SENTENCE_LENGTH = 500
+
+# Common academic abbreviations that should NOT trigger sentence splits.
+# The sentence splitter replaces these with placeholders before splitting.
+_ABBREVIATION_GUARDS: list[tuple[str, str]] = [
+    (r"\bet al\.", "et al_"),
+    (r"\be\.g\.", "e_g_"),
+    (r"\bi\.e\.", "i_e_"),
+    (r"\bDr\.", "Dr_"),
+    (r"\bProf\.", "Prof_"),
+    (r"\bFig\.", "Fig_"),
+    (r"\bEq\.", "Eq_"),
+    (r"\bvs\.", "vs_"),
+    (r"\bcf\.", "cf_"),
+    (r"\bapprox\.", "approx_"),
+    (r"\bdept\.", "dept_"),
+    (r"\bUniv\.", "Univ_"),
+    (r"\bNo\.", "No_"),
+    (r"\bVol\.", "Vol_"),
+    (r"\bpp\.", "pp_"),
+    (r"\bSr\.", "Sr_"),
+    (r"\bJr\.", "Jr_"),
+    (r"\bSt\.", "St_"),
+]
 
 # Strong claims without hedging
 _UNBACKED_CLAIMS_LIST: list[str] = [
@@ -121,7 +146,11 @@ def validate_style(text: str, file_label: str = "") -> list[dict[str, Any]]:
         )
 
     # Check sentence length
-    sentences = re.split(r"[.!?]+", text)
+    # Protect academic abbreviations before splitting (e.g. → e_g_, et al. → et al_)
+    safe_text = text
+    for pattern, replacement in _ABBREVIATION_GUARDS:
+        safe_text = re.sub(pattern, replacement, safe_text)
+    sentences = re.split(r"[.!?]+", safe_text)
     for sentence in sentences:
         sentence = sentence.strip()
         if len(sentence) > _MAX_SENTENCE_LENGTH:
