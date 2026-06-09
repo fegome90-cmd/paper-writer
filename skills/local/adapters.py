@@ -224,6 +224,24 @@ class LiteratureSearchAdapter(SkillAdapter):
             raw_papers=raw_papers,
             weights_phase=weights_phase,
         )
+
+        # Academic mode: write search_plan.json with declared search window
+        review_mode = inputs.get("mode", "rapid")
+        search_window = inputs.get("search_window")
+        amendments = inputs.get("amendments", [])
+        if review_mode == "academic" or search_window:
+            search_plan_path = output_dir / "search_plan.json"
+            plan_data: dict[str, Any] = {"query": query}
+            if search_window:
+                plan_data["search_window"] = search_window
+            if amendments:
+                plan_data["amendments"] = amendments
+            search_plan_path.write_text(
+                json.dumps(plan_data, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result["artifacts"].append(search_plan_path)
+
         return SkillResult(
             adapter=self.name,
             status="pass",

@@ -4,6 +4,7 @@ Covers: review_config.yaml persistence, CLI --mode flag, orchestrator
 request forwarding, and adapter transport.
 """
 
+import json
 from pathlib import Path
 
 import yaml
@@ -161,32 +162,57 @@ class TestOrchestratorRequestTransport:
 class TestAdapterTransport:
     """skills/local/adapters.py forwards mode and search_window."""
 
-    def test_search_adapter_accepts_mode_in_inputs(self, tmp_path: Path) -> None:
-        """LiteratureSearchAdapter.execute accepts mode/search_window without crashing."""
-        # Create a minimal raw_results.json so the adapter doesn't fail
+    def test_search_adapter_writes_search_plan_in_academic_mode(self, tmp_path: Path) -> None:
+        """LiteratureSearchAdapter writes search_plan.json in academic mode."""
         search_dir = tmp_path / "search"
         search_dir.mkdir(parents=True)
-        (search_dir / "raw_results.json").write_text(
-            '{"query":"test","papers":[]}', encoding="utf-8"
-        )
 
         from skills.local.adapters import LiteratureSearchAdapter
 
         adapter = LiteratureSearchAdapter()
-        # The adapter should accept mode/search_window in inputs without error
         result = adapter.execute(
             command="search",
             inputs={
-                "query": "test query",
+                "query": "cancer treatment",
                 "output_dir": str(search_dir),
-                "raw_papers": None,
+                "raw_papers": '[{"title":"Paper 1","doi":"10.1000/test","year":2023,"authors":"Test","metrics":{}}]',
                 "mode": "academic",
                 "search_window": {"start_year": 2020, "end_year": 2024},
             },
             context={"cwd": str(tmp_path)},
         )
-        # Mode should not crash; adapter may silently ignore for now
-        assert result is not None
+        assert result.status == "pass"
+        # search_plan.json should exist with search window
+        plan_path = search_dir / "search_plan.json"
+        assert plan_path.exists(), "search_plan.json should be written in academic mode"
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        assert plan["query"] == "cancer treatment"
+        assert plan["search_window"]["start_year"] == 2020
+        assert plan["search_window"]["end_year"] == 2024
+
+    def test_search_adapter_no_search_window_in_rapid_mode(self, tmp_path: Path) -> None:
+        """LiteratureSearchAdapter does NOT write search_window in rapid mode."""
+        search_dir = tmp_path / "search"
+        search_dir.mkdir(parents=True)
+
+        from skills.local.adapters import LiteratureSearchAdapter
+
+        adapter = LiteratureSearchAdapter()
+        result = adapter.execute(
+            command="search",
+            inputs={
+                "query": "test query",
+                "output_dir": str(search_dir),
+                "raw_papers": '[{"title":"Paper 1","doi":"10.1000/test","year":2023,"authors":"Test","metrics":{}}]',
+            },
+            context={"cwd": str(tmp_path)},
+        )
+        assert result.status == "pass"
+        plan_path = search_dir / "search_plan.json"
+        if plan_path.exists():
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            # search_window should NOT be present in rapid mode
+            assert "search_window" not in plan, "search_window should NOT be in rapid mode plan"
 
     def test_chain_adapter_forwards_mode(self, tmp_path: Path) -> None:
         """Chain via adapter forwards mode through search re-invocation."""
