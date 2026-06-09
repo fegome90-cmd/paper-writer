@@ -15,6 +15,7 @@ Covers the 12 mandatory test cases from the integration contract:
 12. (Pipeline test — separate file)
 """
 
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -375,7 +376,7 @@ class TestProviderSelection:
             assert isinstance(provider, ConsensusSearchProvider)
 
 
-import os
+
 
 # ── 5. Limit validation ─────────────────────────────────────────────
 
@@ -458,7 +459,7 @@ class TestFixtureProviderIntegration:
 
         # Fixture has DOI 10.1234/arxiv.2301.00001 in both arxiv and openalex
         dois = [p.doi for p in result.papers if p.doi]
-        assert len(dois) == len(set(d.lower().rstrip("/") for d in dois))
+        assert len(dois) == len({d.lower().rstrip("/") for d in dois})
 
     def test_provenance_has_all_required_fields(self) -> None:
         provider = FixturePaperSearchProvider(fixture_path=FIXTURE_PATH)

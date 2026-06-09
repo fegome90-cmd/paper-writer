@@ -604,7 +604,7 @@ class TestR2BugHuntFixes:
             ("--relevance-threshold 2.0", "--relevance-threshold"),
         ]:
             result = subprocess.run(
-                ["uv", "run", "python", "-m", "cli.paper.main", "chain"] + args.split(),
+                ["uv", "run", "python", "-m", "cli.paper.main", "chain", *args.split()],
                 capture_output=True,
                 text=True,
                 cwd="/Users/felipe_gonzalez/Developer/paper-writer",
@@ -622,6 +622,7 @@ class TestR2BH4StateRollback:
     def test_pre_verify_snapshot_captured(self) -> None:
         """Snapshot is deep-copied before verify phase."""
         import copy
+
         from harness.domain.state import ManuscriptState
 
         state = ManuscriptState(stage="search", gates={"search_completed": True})
@@ -635,9 +636,10 @@ class TestR2BH4StateRollback:
 
     def test_rollback_restores_state_on_failure(self, tmp_path: Path) -> None:
         """When verify phase fails, state rolls back to pre-verify snapshot."""
-        from harness.services.orchestrator import Orchestrator, OrchestratorRequest
+        from harness.adapters.yaml_repository import (
+            YamlFileStateRepository as FileSystemStateRepository,
+        )
         from harness.services.state_manager import StateManager
-        from harness.adapters.yaml_repository import YamlFileStateRepository as FileSystemStateRepository
 
         state_file = tmp_path / "state.yaml"
         state_file.parent.mkdir(parents=True, exist_ok=True)

@@ -2,7 +2,7 @@
 
 import os
 
-from thesaurus.protocol import SemanticStore, StorageCapabilities
+from thesaurus.protocol import SemanticStore
 
 
 def create_store(db_path: str | None = None) -> SemanticStore:

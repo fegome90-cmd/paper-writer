@@ -225,7 +225,7 @@ class TestValidateReporting:
 
     def test_section_with_content_ok(self) -> None:
         sections = {
-            "methods": "# Methods\n\nWe enrolled participants (n=200) in a cohort study design.\nThis has some limitations."
+            "methods": "# Methods\n\nWe enrolled participants (n=200) in a cohort study design.\nThis has some limitations."  # noqa: E501
         }
         findings = validate_reporting(sections)
         empty = [f for f in findings if f["code"] == "empty_section"]

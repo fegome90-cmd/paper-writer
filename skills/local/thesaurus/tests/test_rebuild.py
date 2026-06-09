@@ -9,7 +9,6 @@ from thesaurus.lite import LiteSemanticStore
 def test_rebuild_idempotency(tmp_thesaurus, sample_concepts):
     """Two consecutive rebuilds produce same concept count."""
     tmp_thesaurus.import_concepts(sample_concepts)
-    count1 = tmp_thesaurus.concept_count
 
     tmp_thesaurus.rebuild()
     count2 = tmp_thesaurus.concept_count

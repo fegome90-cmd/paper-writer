@@ -6,8 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "manuscript_with_ai_terms.md"
 
 

@@ -1,6 +1,5 @@
 """CLI direct-call functions for paper thesaurus commands."""
 
-import json
 import os
 import sys
 from pathlib import Path

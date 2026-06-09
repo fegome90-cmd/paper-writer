@@ -75,7 +75,7 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "search":
-            new_files = ["outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]
+            new_files = ["outputs/latest/search/search_plan.json", "outputs/latest/search/raw_results.json"]  # noqa: E501
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "screen":
@@ -96,7 +96,7 @@ class InMemoryActionRunner(ActionRunner):
             self.checker.existing_paths.update(new_files)
             return new_files
         elif command == "render":
-            new_files = ["outputs/latest/render/manuscript.docx", "outputs/latest/render/manuscript.pdf"]
+            new_files = ["outputs/latest/render/manuscript.docx", "outputs/latest/render/manuscript.pdf"]  # noqa: E501
             self.checker.existing_paths.update(new_files)
             return new_files
         return []

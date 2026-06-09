@@ -1,6 +1,5 @@
 """Tests for list pagination and empty store."""
 
-import json
 
 
 def test_list_pagination(tmp_thesaurus):

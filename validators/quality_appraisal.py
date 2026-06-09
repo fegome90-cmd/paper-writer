@@ -23,7 +23,7 @@ class QualityAppraisalValidator:
     """Evaluate quality of included studies for systematic review."""
 
     # Quality dimensions and their weights
-    DIMENSIONS = {
+    DIMENSIONS: ClassVar[dict[str, dict[str, Any]]] = {
         "venue_reputation": {
             "weight": 0.20,
             "description": "Venue reputation (top-tier conference/journal)",
@@ -47,7 +47,7 @@ class QualityAppraisalValidator:
     }
 
     # Top-tier venues for CS/SE (rank 1)
-    TOP_TIER_VENUES = {
+    TOP_TIER_VENUES: ClassVar[set[str]] = {
         "NeurIPS",
         "ICML",
         "ICLR",
@@ -69,7 +69,7 @@ class QualityAppraisalValidator:
     }
 
     # Well-known venues (rank 2)
-    GOOD_VENUES = {
+    GOOD_VENUES: ClassVar[set[str]] = {
         "arXiv",
         "TMLR",
         "JMLR",
@@ -222,7 +222,7 @@ class QualityAppraisalValidator:
         year = paper.get("year")
         if not isinstance(year, int):
             try:
-                year = int(year)
+                year = int(year)  # type: ignore[arg-type]
             except (ValueError, TypeError):
                 return 1
         if year >= 2024:
@@ -252,7 +252,7 @@ class QualityAppraisalValidator:
         # Weighted total (0-5 scale)
         weighted = 0.0
         for dim, info in self.DIMENSIONS.items():
-            weighted += float(scores[dim]) * float(info["weight"])  # type: ignore[arg-type]
+            weighted += float(scores[dim]) * float(info["weight"])
 
         # Quality rating
         if weighted >= 4.0:

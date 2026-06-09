@@ -43,7 +43,7 @@ def generate_prisma_mermaid(screened_evidence_path: Path) -> str:
     other = ident.get("other_sources", 0)
     seeds = ident.get("seed_papers", 0)
     total_id = ident.get("total_identified", 0)
-    dups = ident.get("duplicates_removed", 0)
+    ident.get("duplicates_removed", 0)
 
     screened_n = scr.get("records_screened", 0)
     excluded_scr = scr.get("records_excluded", 0)

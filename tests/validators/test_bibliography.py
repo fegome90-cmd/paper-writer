@@ -67,7 +67,6 @@ class TestDetectDuplicateKeys:
         assert detect_duplicate_keys(entries) == []
 
     def test_exact_duplicate(self) -> None:
-        entries = {"smith2023": {"title": "A"}, "smith2023": {"title": "B"}}
         # Python dict dedupes at parse level — but function should handle it
         # Use a dict with case-variant keys for a realistic test
         pass

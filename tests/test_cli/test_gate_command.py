@@ -49,11 +49,11 @@ class TestCmdGateMethod:
         }
         args = _make_gate_args(file=str(md))
         with (
-            patch("validators.method_gate.MethodGateValidator") as MockValidator,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.method_gate.MethodGateValidator") as mock_validator,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock()
-            MockValidator.return_value.validate.return_value = mock_result
+            mock_parser.return_value.parse.return_value = MagicMock()
+            mock_validator.return_value.validate.return_value = mock_result
             _cmd_gate_method(args)
         # No SystemExit means success (exit 0)
 
@@ -70,11 +70,11 @@ class TestCmdGateMethod:
         }
         args = _make_gate_args(file=str(md))
         with (
-            patch("validators.method_gate.MethodGateValidator") as MockValidator,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.method_gate.MethodGateValidator") as mock_validator,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock()
-            MockValidator.return_value.validate.return_value = mock_result
+            mock_parser.return_value.parse.return_value = MagicMock()
+            mock_validator.return_value.validate.return_value = mock_result
             with pytest.raises(SystemExit) as exc_info:
                 _cmd_gate_method(args)
             assert exc_info.value.code == 1
@@ -94,11 +94,11 @@ class TestCmdGateMethod:
         }
         args = _make_gate_args(file=str(md), output="json")
         with (
-            patch("validators.method_gate.MethodGateValidator") as MockValidator,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.method_gate.MethodGateValidator") as mock_validator,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock()
-            MockValidator.return_value.validate.return_value = mock_result
+            mock_parser.return_value.parse.return_value = MagicMock()
+            mock_validator.return_value.validate.return_value = mock_result
             _cmd_gate_method(args)
 
         captured = capsys.readouterr()

@@ -15,7 +15,6 @@ import pytest
 
 from clients.trifecta import TrifectaClient, get_trifecta_client
 
-
 # These tests require the real Trifecta CLI to be installed
 pytestmark = pytest.mark.skipif(
     os.environ.get("MCP_TRIFECTA_MODE") != "real",

@@ -25,8 +25,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESULTS_PATH = REPO_ROOT / "docs" / "integration" / "trifecta-bench-results.md"
@@ -41,7 +40,7 @@ class BenchmarkResult:
     success: bool
     output: str
     findings_count: int = 0
-    capabilities: List[str] = field(default_factory=list)
+    capabilities: list[str] = field(default_factory=list)
     error: str = ""
 
     def is_effective(self) -> bool:
@@ -54,7 +53,7 @@ class BenchmarkResult:
         return True
 
 
-def run_paper_command(cmd: List[str], mode: str, timeout: int = 30) -> BenchmarkResult:
+def run_paper_command(cmd: list[str], mode: str, timeout: int = 30) -> BenchmarkResult:
     """Run a paper command with the given MCP_TRIFECTA_MODE.
 
     Args:
@@ -71,7 +70,7 @@ def run_paper_command(cmd: List[str], mode: str, timeout: int = 30) -> Benchmark
 
     try:
         result = subprocess.run(
-            ["uv", "run", "paper"] + cmd,
+            ["uv", "run", "paper", *cmd],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -130,7 +129,7 @@ def run_paper_command(cmd: List[str], mode: str, timeout: int = 30) -> Benchmark
         )
 
 
-def run_benchmark() -> Dict[str, Any]:
+def run_benchmark() -> dict[str, Any]:
     """Run the full A/B benchmark.
 
     Returns:
@@ -143,8 +142,8 @@ def run_benchmark() -> Dict[str, Any]:
         ["graph-overview"],
     ]
 
-    without_trifecta: List[BenchmarkResult] = []
-    with_trifecta: List[BenchmarkResult] = []
+    without_trifecta: list[BenchmarkResult] = []
+    with_trifecta: list[BenchmarkResult] = []
 
     for cmd in commands_to_test:
         # Run without Trifecta
@@ -159,7 +158,7 @@ def run_benchmark() -> Dict[str, Any]:
     }
 
 
-def compute_comparison(results: Dict[str, Any]) -> Dict[str, Any]:
+def compute_comparison(results: dict[str, Any]) -> dict[str, Any]:
     """Compute comparison metrics from benchmark results."""
     without = results["without_trifecta"]
     with_t = results["with_trifecta"]
@@ -188,7 +187,7 @@ def compute_comparison(results: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def format_report(results: Dict[str, Any], comparison: Dict[str, Any]) -> str:
+def format_report(results: dict[str, Any], comparison: dict[str, Any]) -> str:
     """Format the benchmark results as a markdown report."""
     lines = [
         "# Trifecta Integration Benchmark Results",
@@ -199,10 +198,10 @@ def format_report(results: Dict[str, Any], comparison: Dict[str, Any]) -> str:
         "## Summary",
         "",
         f"- **Commands tested**: {comparison['commands_tested']}",
-        f"- **Effective commands WITHOUT Trifecta**: {comparison['without_trifecta']['effective_commands']}",
-        f"- **Effective commands WITH Trifecta**: {comparison['with_trifecta']['effective_commands']}",
+        f"- **Effective commands WITHOUT Trifecta**: {comparison['without_trifecta']['effective_commands']}",  # noqa: E501
+        f"- **Effective commands WITH Trifecta**: {comparison['with_trifecta']['effective_commands']}",  # noqa: E501
         f"- **Delta (net new capabilities)**: +{comparison['delta']['effective_commands']}",
-        f"- **Total findings WITHOUT Trifecta**: {comparison['without_trifecta']['total_findings']}",
+        f"- **Total findings WITHOUT Trifecta**: {comparison['without_trifecta']['total_findings']}",  # noqa: E501
         f"- **Total findings WITH Trifecta**: {comparison['with_trifecta']['total_findings']}",
         f"- **Delta findings**: +{comparison['delta']['total_findings']}",
         "",
@@ -212,7 +211,7 @@ def format_report(results: Dict[str, Any], comparison: Dict[str, Any]) -> str:
         "|---------|-----------------|---------------|-------|",
     ]
 
-    for cmd, w, t in zip(results["commands"], results["without_trifecta"], results["with_trifecta"]):
+    for cmd, w, t in zip(results["commands"], results["without_trifecta"], results["with_trifecta"], strict=False):  # noqa: E501
         w_status = "✅" if w.is_effective() else "❌"
         t_status = "✅" if t.is_effective() else "❌"
         w_findings = w.findings_count

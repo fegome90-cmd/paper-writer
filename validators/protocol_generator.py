@@ -224,7 +224,7 @@ def _build_data_extraction(search_dir: Path) -> str:
             for f in sorted(fields):
                 lines.append(f"- `{f}`\n")
             if "scoring" in sample:
-                scoring_fields = [k for k in sample["scoring"].keys()]
+                scoring_fields = list(sample["scoring"].keys())
                 lines.append("\n**Scoring fields:**\n")
                 for f in sorted(scoring_fields):
                     lines.append(f"- `{f}`\n")

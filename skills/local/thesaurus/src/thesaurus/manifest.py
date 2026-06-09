@@ -4,8 +4,6 @@ import hashlib
 from pathlib import Path
 
 
-
-
 class ManifestError(Exception):
     """Raised when manifest validation fails."""
 

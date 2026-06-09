@@ -1,6 +1,5 @@
 """Tests for match_type priority when multiple fields match."""
 
-import json
 
 
 def test_preferred_label_wins_over_notation(tmp_thesaurus):

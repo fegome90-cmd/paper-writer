@@ -1,6 +1,6 @@
 import sys
-import pytest
 from pathlib import Path
+
 
 def test_orchestrator_imports_audit():
     """Verify that orchestrator.py does not even import subprocess or os.system."""
@@ -14,11 +14,12 @@ def test_orchestrator_imports_audit():
 
 def test_orchestrator_no_dynamic_subprocess_real():
     """Execute Orchestrator and use sys.addaudithook to ensure no subprocess is spawned."""
+    from unittest.mock import MagicMock
+
+    from harness.ports.action_runner import ActionRunner
+    from harness.ports.artifact_checker import ArtifactChecker
     from harness.services.orchestrator import Orchestrator, OrchestratorRequest
     from harness.services.state_manager import StateManager
-    from harness.ports.artifact_checker import ArtifactChecker
-    from harness.ports.action_runner import ActionRunner
-    from unittest.mock import MagicMock
 
     # Setup real dependencies where possible, mock only ports
     mock_state_manager = MagicMock(spec=StateManager)
@@ -52,18 +53,19 @@ def test_orchestrator_no_dynamic_subprocess_real():
     try:
         orchestrator.execute(request)
     finally:
-        # We can't remove audit hooks in Python, but we can check if any occurred during our execution
+        # We can't remove audit hooks in Python, but we can check if any occurred during our execution  # noqa: E501
         pass
 
     assert not violations, f"Constitutional violation! Forbidden event detected: {violations}"
 
 def test_method_gates_fail_closed_real():
     """Verify fail-closed behavior with a real Orchestrator execution path."""
+    from unittest.mock import MagicMock
+
+    from harness.ports.action_runner import ActionRunner
+    from harness.ports.artifact_checker import ArtifactChecker
     from harness.services.orchestrator import Orchestrator, OrchestratorRequest
     from harness.services.state_manager import StateManager
-    from harness.ports.artifact_checker import ArtifactChecker
-    from harness.ports.action_runner import ActionRunner
-    from unittest.mock import MagicMock
 
     mock_state_manager = MagicMock(spec=StateManager)
     mock_state_manager.exists.return_value = True

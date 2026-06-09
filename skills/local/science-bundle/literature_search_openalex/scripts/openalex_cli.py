@@ -36,9 +36,10 @@ import logging
 import os
 import re
 import sys
-from typing import Any, Sequence
 import urllib.error
 import urllib.parse
+from collections.abc import Sequence
+from typing import Any
 
 import dotenv
 from science_skills.scienceskillscommon import http_client

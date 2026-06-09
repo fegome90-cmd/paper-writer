@@ -376,7 +376,7 @@ class TestConsensusFilterParams:
             with patch("integrations.tools.consensus_client.urllib.request.urlopen") as mock:
                 mock_resp = MagicMock()
                 mock_resp.read.return_value = json.dumps({"results": []}).encode()
-                mock_resp.__enter__ = lambda s: mock_resp
+                mock_resp.__enter__ = lambda s: mock_resp  # noqa: B023
                 mock_resp.__exit__ = MagicMock(return_value=False)
                 mock.return_value = mock_resp
                 provider._call_api("test", 10, sjr_max=val)  # no raise

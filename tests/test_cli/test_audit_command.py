@@ -45,12 +45,12 @@ class TestCmdAuditProse:
         md.write_text("# Test\n\nSome content.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.prose.ProseValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.prose.ProseValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
-            MockVal.return_value.rules_count = 5
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
+            mock_val.return_value.rules_count = 5
             _cmd_audit_prose(args)
         data = json.loads(capsys.readouterr().out)
         assert data["command"] == "audit_prose"
@@ -62,13 +62,13 @@ class TestCmdAuditProse:
         md.write_text("# Test\n\nSome content.")
         args = _make_args(file=str(md), output="text")
         with (
-            patch("validators.prose.ProseValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.prose.ProseValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
             patch("engine.formatter.format_terminal") as mock_fmt,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
-            MockVal.return_value.rules_count = 5
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
+            mock_val.return_value.rules_count = 5
             mock_fmt.return_value = "formatted output"
             _cmd_audit_prose(args)
         assert "formatted output" in capsys.readouterr().out
@@ -86,12 +86,12 @@ class TestCmdAuditProse:
             {"severity": "P1", "rule_id": "prose.hedging.seem"},
         ]
         with (
-            patch("validators.prose.ProseValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.prose.ProseValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = findings
-            MockVal.return_value.rules_count = 5
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = findings
+            mock_val.return_value.rules_count = 5
             _cmd_audit_prose(args)
         data = json.loads(capsys.readouterr().out)
         assert data["summary"]["by_severity"]["P1"] == 2
@@ -112,13 +112,13 @@ class TestCmdAuditClaims:
         md.write_text("# Test\n\nThis is clearly the best approach.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.claims.ClaimsValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.claims.ClaimsValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
             patch("validators.claims.build_claims_report") as mock_report,
         ):
-            MockParser.return_value.parse.return_value = MagicMock()
-            MockVal.return_value.validate.return_value = []
-            MockVal.return_value.rules = []
+            mock_parser.return_value.parse.return_value = MagicMock()
+            mock_val.return_value.validate.return_value = []
+            mock_val.return_value.rules = []
             mock_report.return_value = {
                 "command": "audit_claims",
                 "summary": {"total_candidates": 0},
@@ -133,14 +133,14 @@ class TestCmdAuditClaims:
         md.write_text("# Test\n\nThis is clearly the best approach.")
         args = _make_args(file=str(md), output="text")
         with (
-            patch("validators.claims.ClaimsValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.claims.ClaimsValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
             patch("validators.claims.build_claims_report") as mock_report,
             patch("engine.formatter.format_claims_output") as mock_fmt,
         ):
-            MockParser.return_value.parse.return_value = MagicMock()
-            MockVal.return_value.validate.return_value = []
-            MockVal.return_value.rules = []
+            mock_parser.return_value.parse.return_value = MagicMock()
+            mock_val.return_value.validate.return_value = []
+            mock_val.return_value.rules = []
             mock_report.return_value = {"command": "audit_claims", "summary": {}}
             mock_fmt.return_value = "claims formatted"
             _cmd_audit_claims(args)
@@ -161,11 +161,11 @@ class TestCmdAuditCitations:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json", offline=True)
         with (
-            patch("validators.citation_verify.CitationVerifyValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.citation_verify.CitationVerifyValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
             _cmd_audit_citations(args)
         data = json.loads(capsys.readouterr().out)
         assert data["command"] == "audit_citations"
@@ -179,12 +179,12 @@ class TestCmdAuditCitations:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="text")
         with (
-            patch("validators.citation_verify.CitationVerifyValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.citation_verify.CitationVerifyValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
             patch("engine.formatter.format_terminal") as mock_fmt,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
             mock_fmt.return_value = "terminal output"
             _cmd_audit_citations(args)
         assert "terminal output" in capsys.readouterr().out
@@ -194,11 +194,11 @@ class TestCmdAuditCitations:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.citation_verify.CitationVerifyValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.citation_verify.CitationVerifyValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
             with pytest.raises(SystemExit) as exc:
                 _cmd_audit_citations(args)
             assert exc.value.code == 1
@@ -216,11 +216,11 @@ class TestCmdAuditEthics:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.ethics.EthicsValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.ethics.EthicsValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
             _cmd_audit_ethics(args)
         data = json.loads(capsys.readouterr().out)
         assert data["command"] == "audit_ethics"
@@ -230,11 +230,11 @@ class TestCmdAuditEthics:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.ethics.EthicsValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.ethics.EthicsValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
             with pytest.raises(SystemExit) as exc:
                 _cmd_audit_ethics(args)
             assert exc.value.code == 1
@@ -254,12 +254,12 @@ class TestCmdAuditWritingQuality:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.writing_quality.WritingQualityValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.writing_quality.WritingQualityValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = []
-            MockVal.return_value.rules = []
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = []
+            mock_val.return_value.rules = []
             _cmd_audit_writing_quality(args)
         data = json.loads(capsys.readouterr().out)
         assert data["command"] == "audit_writing_quality"
@@ -269,12 +269,12 @@ class TestCmdAuditWritingQuality:
         md.write_text("# Test\n\nSome text.")
         args = _make_args(file=str(md), output="json")
         with (
-            patch("validators.writing_quality.WritingQualityValidator") as MockVal,
-            patch("parsers.manuscript.ManuscriptParser") as MockParser,
+            patch("validators.writing_quality.WritingQualityValidator") as mock_val,
+            patch("parsers.manuscript.ManuscriptParser") as mock_parser,
         ):
-            MockParser.return_value.parse.return_value = MagicMock(format="markdown")
-            MockVal.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
-            MockVal.return_value.rules = []
+            mock_parser.return_value.parse.return_value = MagicMock(format="markdown")
+            mock_val.return_value.validate.return_value = [{"severity": "P0", "rule_id": "test"}]
+            mock_val.return_value.rules = []
             with pytest.raises(SystemExit) as exc:
                 _cmd_audit_writing_quality(args)
             assert exc.value.code == 1

@@ -34,6 +34,10 @@ class ZoteroError(Exception):
     """Raised when Zotero API is unreachable or returns unexpected errors."""
 
 
+class ZoteroUnavailableError(ZoteroError):
+    """Raised when Zotero is unreachable (HTTP errors, URL errors, timeouts)."""
+
+
 @dataclass(frozen=True)
 class ZoteroConfig:
     """Immutable configuration for ZoteroClient.
@@ -43,9 +47,9 @@ class ZoteroConfig:
 
     user_id: str
     api_key: str | None = None
-    library_type: str = "user"   # "user" | "group"
-    local_mode: bool = False     # True → localhost:23119/api/
-    bbt_local: bool = False      # True → Better BibTeX pull endpoint
+    library_type: str = "user"  # "user" | "group"
+    local_mode: bool = False  # True → localhost:23119/api/
+    bbt_local: bool = False  # True → Better BibTeX pull endpoint
 
     @staticmethod
     def from_env() -> ZoteroConfig:
@@ -188,9 +192,7 @@ class ZoteroClient:
         body, _ = self._get(f"http://localhost:23119{path}", expect_text=True)
         return body if isinstance(body, str) else ""
 
-    def _build_items_url(
-        self, collection_key: str | None, since_version: int | None
-    ) -> str:
+    def _build_items_url(self, collection_key: str | None, since_version: int | None) -> str:
         base = ZOTERO_LOCAL_BASE if self.config.local_mode else ZOTERO_API_BASE
         lib = f"{self.config.library_type}s/{self.config.user_id}"
         if collection_key:
@@ -231,7 +233,7 @@ class ZoteroClient:
                     parsed = json.loads(raw.decode("utf-8"))
                     return parsed, resp_headers
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                    raise ZoteroUnavailable(f"Zotero JSON parse failed: {e}") from e
+                    raise ZoteroUnavailableError(f"Zotero JSON parse failed: {e}") from e
 
         except urllib.error.HTTPError as e:
             if e.code == 429 and attempt < MAX_RETRIES:
@@ -242,11 +244,9 @@ class ZoteroClient:
             if e.code == 304:
                 # Not Modified — return empty body, preserve headers
                 return ("" if expect_text else []), dict(e.headers)
-            raise ZoteroUnavailable(
-                f"Zotero HTTP {e.code}: {e.reason} — {url}"
-            ) from e
+            raise ZoteroUnavailableError(f"Zotero HTTP {e.code}: {e.reason} — {url}") from e
         except (urllib.error.URLError, OSError, TimeoutError) as e:
-            raise ZoteroUnavailable(f"Zotero unreachable: {e}") from e
+            raise ZoteroUnavailableError(f"Zotero unreachable: {e}") from e
 
     @staticmethod
     def _parse_next_link(link_header: str) -> str | None:

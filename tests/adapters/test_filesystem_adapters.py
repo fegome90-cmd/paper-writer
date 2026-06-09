@@ -185,7 +185,7 @@ def test_action_runner_chain(tmp_path: Path) -> None:
     runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
 
     # Without adapter — falls through (no artifacts, search dir created)
-    artifacts = runner.run_action("chain", {})
+    runner.run_action("chain", {})
     search_dir = _run_path(tmp_path, "search")
     assert search_dir.is_dir()
 

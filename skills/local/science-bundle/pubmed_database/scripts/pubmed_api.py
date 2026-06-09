@@ -111,7 +111,7 @@ def _get(url, params=None, *, raw=False, client=None):
       }
     else:
       return {
-          "error": f"HTTP Error {e.status_code or 'Error'}: {str(e)}",
+          "error": f"HTTP Error {e.status_code or 'Error'}: {e!s}",
           "endpoint": url.split("?")[0],
       }
   except json.JSONDecodeError as e:

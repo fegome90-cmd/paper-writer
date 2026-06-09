@@ -211,7 +211,7 @@ def screen(
                 final_score = calculate_cs_final_score(metrics, cs_weights)
             else:
                 weights = get_default_weights("balanced")
-                d_score = calculate_d_score(metrics)
+                calculate_d_score(metrics)
                 final_score = calculate_final_score(metrics, weights)
 
             tier = classify_tier(final_score)

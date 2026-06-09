@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mesh-import"
+version = "0.1.0"
+description = "MeSH vocabulary parser and SQLite store."
+requires-python = ">=3.10"
+dependencies = [
+    "lxml>=5.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "RUF"]
+ignore = []

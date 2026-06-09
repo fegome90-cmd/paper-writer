@@ -108,7 +108,7 @@ class TestGenerateSearchManifest:
         )
 
         output_dir = tmp_path / "verify"
-        paths = generate_verify_artifacts(
+        generate_verify_artifacts(
             search_dir, tmp_path / "drafts", tmp_path / "refs.bib", output_dir
         )
 
@@ -122,7 +122,7 @@ class TestGenerateSearchManifest:
         search_dir = tmp_path / "empty_search"
         search_dir.mkdir()
         output_dir = tmp_path / "verify"
-        paths = generate_verify_artifacts(
+        generate_verify_artifacts(
             search_dir, tmp_path / "drafts", tmp_path / "refs.bib", output_dir
         )
         # No search_plan.json → no search_manifest

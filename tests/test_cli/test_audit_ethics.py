@@ -6,8 +6,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 FIXTURE_NO_DISCLOSURE = (
     Path(__file__).resolve().parent.parent / "fixtures" / "manuscript_without_ai_disclosure.md"
 )

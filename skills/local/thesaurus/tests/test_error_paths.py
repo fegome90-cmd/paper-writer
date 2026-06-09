@@ -1,7 +1,6 @@
 """Tests for error paths: malformed JSONL, missing manifest, corrupt DB, etc."""
 
 import json
-from pathlib import Path
 
 import pytest
 

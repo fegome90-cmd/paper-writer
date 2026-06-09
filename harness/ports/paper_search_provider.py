@@ -137,7 +137,7 @@ class SearchProviderResult:
 
     @property
     def total_from_source(self) -> int:
-        return self.raw_payload.get("total", 0)
+        return int(self.raw_payload.get("total", 0))
 
 
 # ── Protocol ──────────────────────────────────────────────────────────

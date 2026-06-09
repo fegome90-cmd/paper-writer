@@ -482,7 +482,7 @@ class TestDetectDomain:
             detect_domain(
                 {
                     "venue": "The Lancet",
-                    "abstract": "We conducted a randomized controlled trial with patients in the intervention group and control group.",
+                    "abstract": "We conducted a randomized controlled trial with patients in the intervention group and control group.",  # noqa: E501
                 }
             )
             == "clinical"
@@ -579,7 +579,7 @@ class TestCalculateCSFinalScore:
         assert calculate_cs_final_score(m, w) == 0.0
 
     def test_worked_example_evor(self) -> None:
-        """EvoR (Su et al., 2024, EMNLP): venue=4.5, recency=0.90, citations=0.5, relevance=~1.4, rigor=0.8."""
+        """EvoR (Su et al., 2024, EMNLP): venue=4.5, recency=0.90, citations=0.5, relevance=~1.4, rigor=0.8."""  # noqa: E501
         from skills.imported.literature_search.scoring_cs import (
             CSMetrics,
             calculate_cs_final_score,

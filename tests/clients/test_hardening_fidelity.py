@@ -1,8 +1,8 @@
-import time
-import pytest
 import urllib.error
 from unittest.mock import MagicMock, patch
+
 from clients.crossref import CrossrefClient
+
 
 def test_crossref_inter_retry_timing():
     current_time = 1000.0

@@ -35,9 +35,7 @@ class LiteSemanticStore(SemanticStore):
     def _upsert_fts(self, conn: sqlite3.Connection, concept: dict) -> None:
         """Insert or replace a concept in the FTS5 index."""
         # Delete existing FTS entry if any
-        conn.execute(
-            "DELETE FROM concepts_fts WHERE id = ?", (concept["id"],)
-        )
+        conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept["id"],))
         # Insert new FTS entry
         conn.execute(
             "INSERT INTO concepts_fts (id, preferred_label, notation) VALUES (?, ?, ?)",
@@ -68,9 +66,12 @@ class LiteSemanticStore(SemanticStore):
             with conn:
                 self._upsert_fts(conn, concept)
                 conn.execute(
-                    """INSERT OR REPLACE INTO concepts
-                       (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    """
+                    INSERT OR REPLACE INTO concepts
+                      (id, preferred_label, alt_labels,
+                       broader, narrower, related, notation, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
                     (
                         concept["id"],
                         concept["preferred_label"],
@@ -93,9 +94,12 @@ class LiteSemanticStore(SemanticStore):
                 for concept in concepts:
                     self._upsert_fts(conn, concept)
                     conn.execute(
-                        """INSERT OR REPLACE INTO concepts
-                           (id, preferred_label, alt_labels, broader, narrower, related, notation, source)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                        """
+                        INSERT OR REPLACE INTO concepts
+                          (id, preferred_label, alt_labels,
+                           broader, narrower, related, notation, source)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
                         (
                             concept["id"],
                             concept["preferred_label"],
@@ -109,7 +113,8 @@ class LiteSemanticStore(SemanticStore):
                     )
                 # Update last_import timestamp
                 conn.execute(
-                    "INSERT OR REPLACE INTO meta (key, value) VALUES ('last_import', datetime('now'))"
+                    "INSERT OR REPLACE INTO meta (key, value) "
+                    "VALUES ('last_import', datetime('now'))"
                 )
             return len(concepts)
         finally:
@@ -150,7 +155,8 @@ class LiteSemanticStore(SemanticStore):
             escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
             like_pattern = f"%{escaped}%"
             alt_rows = conn.execute(
-                "SELECT id, preferred_label, alt_labels, notation FROM concepts WHERE alt_labels LIKE ? ESCAPE '\\'",
+                "SELECT id, preferred_label, alt_labels, notation "
+                "FROM concepts WHERE alt_labels LIKE ? ESCAPE '\\'",
                 (like_pattern,),
             ).fetchall()
 
@@ -187,7 +193,8 @@ class LiteSemanticStore(SemanticStore):
         conn = self._connect()
         try:
             rows = conn.execute(
-                "SELECT id, preferred_label, notation FROM concepts ORDER BY preferred_label LIMIT ? OFFSET ?",
+                "SELECT id, preferred_label, notation "
+                "FROM concepts ORDER BY preferred_label LIMIT ? OFFSET ?",
                 (limit, offset),
             ).fetchall()
             return [
@@ -205,9 +212,7 @@ class LiteSemanticStore(SemanticStore):
         conn = self._connect()
         try:
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
-            row = conn.execute(
-                "SELECT value FROM meta WHERE key = 'last_import'"
-            ).fetchone()
+            row = conn.execute("SELECT value FROM meta WHERE key = 'last_import'").fetchone()
             last_import = row[0] if row else ""
             return {
                 "concept_count": count,

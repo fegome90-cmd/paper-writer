@@ -135,10 +135,10 @@ class FilesystemActionRunner(ActionRunner):
 
                                 preset_data = yaml.safe_load(src.read_text(encoding="utf-8"))
                                 findings = validate_preset(preset_data or {})
-                                for f in findings:
-                                    if f.get("severity") == "error":
+                                for finding in findings:
+                                    if finding.get("severity") == "error":
                                         logger.warning(
-                                            "Preset validation: %s", f.get("message", "unknown")
+                                            "Preset validation: %s", finding.get("message", "unknown")  # noqa: E501
                                         )
                             except (ValueError, OSError) as exc:
                                 logger.warning("Preset validation failed: %s", exc)
@@ -426,7 +426,7 @@ class FilesystemActionRunner(ActionRunner):
 
         elif command == "export_bib":
             search_dir = self._resolve_run("search")
-            bib_path = self._resolve(args.get("bib_path", "templates/references.bib"))
+            export_bib_path = self._resolve(args.get("bib_path", "templates/references.bib"))
 
             adapter = self._skill_adapters.get("literature_search")
             if adapter:
@@ -434,7 +434,7 @@ class FilesystemActionRunner(ActionRunner):
                     command="export_bib",
                     inputs={
                         "search_dir": str(search_dir),
-                        "bib_path": str(bib_path),
+                        "bib_path": str(export_bib_path),
                     },
                     context={"cwd": str(self.repo_path)},
                 )
@@ -483,11 +483,11 @@ class FilesystemActionRunner(ActionRunner):
             verify_dir.mkdir(parents=True, exist_ok=True)
             search_dir = self._resolve_run("search")
             draft_dir = self._resolve_run("drafts")
-            bib_path = self._resolve("templates/references.bib")
+            verify_bib_path = self._resolve("templates/references.bib")
             artifact_paths = generate_verify_artifacts(
                 search_dir=search_dir,
                 draft_dir=draft_dir,
-                bib_path=bib_path,
+                bib_path=verify_bib_path,
                 output_dir=verify_dir,
             )
             artifacts.extend(artifact_paths)

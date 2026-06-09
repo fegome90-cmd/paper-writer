@@ -1,6 +1,5 @@
 """Tests for SemanticStore protocol invariants and capabilities."""
 
-import json
 
 from thesaurus.protocol import StorageCapabilities
 
@@ -12,7 +11,7 @@ def test_capabilities_immutability():
     assert caps.full_text is True
     try:
         caps.full_text = False
-        assert False, "Should have raised FrozenInstanceError"
+        raise AssertionError("Should have raised FrozenInstanceError")
     except Exception:
         pass  # Expected — frozen dataclass
 
@@ -41,7 +40,7 @@ def test_invalid_profile_raises():
 
         try:
             create_store()
-            assert False, "Should have raised ValueError"
+            raise AssertionError("Should have raised ValueError")
         except ValueError as e:
             assert "unknown" in str(e).lower()
     finally:

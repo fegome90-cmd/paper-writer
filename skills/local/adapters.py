@@ -19,11 +19,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from harness.ports.skill_adapter import SkillAdapter, SkillResult
 from skills.imported.academic_writer import drafting as writer_module
 from skills.imported.literature_search import search as search_module
+
+logger = logging.getLogger(__name__)
 
 
 class LiteratureSearchAdapter(SkillAdapter):
@@ -117,7 +117,7 @@ class LiteratureSearchAdapter(SkillAdapter):
             from harness.ports.paper_search_provider import create_search_provider
 
             # Extract provider-specific filter params from inputs
-            _FILTER_KEYS = (
+            _FILTER_KEYS = (  # noqa: N806
                 "year_min",
                 "year_max",
                 "study_types",

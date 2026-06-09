@@ -218,7 +218,10 @@ def main() -> None:
         "--relevance-threshold",
         type=float,
         default=0.15,
-        help="Minimum relevance score to include (default: 0.15, auto-lowered for highly-cited papers).",
+        help=(
+            "Minimum relevance score to include"
+            " (default: 0.15, auto-lowered for highly-cited papers)."
+        ),
     )
     chain_parser.add_argument(
         "--no-cache",
@@ -252,9 +255,13 @@ def main() -> None:
     sec_parser = draft_sub.add_parser("section", help="Draft section.")
     sec_parser.add_argument(
         "name",
-        help="Section name (abstract, introduction, literature_review, methods, results, discussion, conclusion)",
+        help=(
+            "Section name"
+            " (abstract, introduction, literature_review,"
+            " methods, results, discussion, conclusion)"
+        ),
     )
-    draft_all_parser = draft_sub.add_parser(
+    draft_sub.add_parser(
         "all", help="Draft all sections in dependency order with cross-section context."
     )
 
@@ -567,7 +574,7 @@ def main() -> None:
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
         # Forward Consensus/academic filter params to provider
-        _CLI_FILTER_MAP = {
+        _CLI_FILTER_MAP = {  # noqa: N806
             "year_min": args.year_min,
             "year_max": args.year_max,
             "study_types": args.study_types,

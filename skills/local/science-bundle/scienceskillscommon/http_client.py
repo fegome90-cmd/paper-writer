@@ -68,21 +68,22 @@ import os
 import random
 import re
 import time
-from typing import Any, Iterator
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterator
+from typing import Any
 
 __all__ = [
-    "HttpClient",
-    "HttpError",
-    "HttpResponse",
-    "DEFAULT_BACKOFF_BASE_SECS",
-    "DEFAULT_BACKOFF_MAX_SECS",
-    "DEFAULT_JITTER_SECS",
-    "DEFAULT_MAX_RETRIES",
-    "DEFAULT_TIMEOUT_SECS",
-    "RETRYABLE_STATUS_CODES",
+  "DEFAULT_BACKOFF_BASE_SECS",
+  "DEFAULT_BACKOFF_MAX_SECS",
+  "DEFAULT_JITTER_SECS",
+  "DEFAULT_MAX_RETRIES",
+  "DEFAULT_TIMEOUT_SECS",
+  "RETRYABLE_STATUS_CODES",
+  "HttpClient",
+  "HttpError",
+  "HttpResponse",
 ]
 
 RETRYABLE_STATUS_CODES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
@@ -241,7 +242,7 @@ class HttpResponse:
       back to `"utf-8"` when absent.
   """
 
-  __slots__ = ("data", "status_code", "headers", "url", "encoding")
+  __slots__ = ("data", "encoding", "headers", "status_code", "url")
 
   def __init__(
       self,
@@ -316,7 +317,7 @@ def _parse_throttle_control(headers) -> float:
       X-Throttling-Control: Request Count status: Green (12%),
           Request Time status: Yellow (55%), Service status: Green (8%)
 
-  Each dimension has a colour: Green (<50%), Yellow (50–75%), Red (>75%), Black
+  Each dimension has a colour: Green (<50%), Yellow (50-75%), Red (>75%), Black
   (blocked).  We return the worst-case backpressure delay across all dimensions
   so the client can slow down **before** hitting a hard 429/503.
 

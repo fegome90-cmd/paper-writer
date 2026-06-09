@@ -1,11 +1,9 @@
-import pytest
-import urllib.error
-import json
 import logging
-import os
 from unittest.mock import MagicMock, patch
-from clients.crossref import CrossrefClient, CrossrefResult
-from clients.semantic_scholar import SemanticScholarClient, S2Result
+
+from clients.crossref import CrossrefClient
+from clients.semantic_scholar import SemanticScholarClient
+
 
 class TestHardeningErrors:
     def test_crossref_json_decode_error(self, caplog):
