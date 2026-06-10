@@ -29,6 +29,8 @@ class EthicsValidator:
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Check for AI disclosure statement in methods/acknowledgments."""
+        if manuscript is None:
+            return []
         findings: list[dict[str, Any]] = []
 
         # Determine which sections to search based on evidence_required

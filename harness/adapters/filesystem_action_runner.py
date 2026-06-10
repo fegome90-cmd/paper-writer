@@ -7,6 +7,7 @@ from typing import Any
 import yaml
 
 from harness.ports.action_runner import ActionRunner
+from harness.ports.paper_search_provider import SEARCH_FILTER_KEYS
 from harness.ports.skill_adapter import SkillAdapter
 from harness.services.assembler import assemble_manuscript
 from harness.services.verify_artifacts import generate_verify_artifacts
@@ -89,6 +90,13 @@ class FilesystemActionRunner(ActionRunner):
         except OSError:
             pass  # Symlinks may not be supported on all platforms
         return resolved
+
+    def _check_result(self, result: Any, command: str) -> None:
+        if hasattr(result, "status") and result.status == "fail":
+            error_msg = getattr(result, "summary", "") or (
+                f"Skill adapter returned status='fail' for command '{command}'"
+            )
+            raise ValueError(error_msg)
 
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
         if args is None:
@@ -205,15 +213,20 @@ class FilesystemActionRunner(ActionRunner):
             adapter = self._skill_adapters.get("literature_search")
             if adapter:
                 raw_papers = args.get("raw_papers")
+                inputs = {
+                    "query": args.get("query", ""),
+                    "output_dir": str(search_dir),
+                    "raw_papers": raw_papers,
+                }
+                for key in SEARCH_FILTER_KEYS:
+                    if key in args and args[key] is not None:
+                        inputs[key] = args[key]
                 result = adapter.execute(
                     command="search",
-                    inputs={
-                        "query": args.get("query", ""),
-                        "output_dir": str(search_dir),
-                        "raw_papers": raw_papers,
-                    },
+                    inputs=inputs,
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "search")
                 raw_results_path = self._resolve_run("search/raw_results.json")
                 # Fail-closed: do NOT synthesize fake papers when adapter
                 # produces no raw_results.json.  The adapter is responsible
@@ -248,6 +261,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "screen")
                 artifacts.extend(result.artifacts)
             else:
                 evidence_file = self._resolve_run("search/screened_evidence.json")
@@ -277,6 +291,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "chain")
                 artifacts.extend(result.artifacts)
 
         elif command == "draft_outline":
@@ -296,6 +311,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "draft_outline")
                 artifacts.extend(result.artifacts)
             else:
                 outline_file = self._resolve_run("drafts/outline.md")
@@ -338,6 +354,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "draft_section")
                 artifacts.extend(result.artifacts)
             else:
                 section_file = self._resolve_run(f"drafts/{section_name}.md")
@@ -362,6 +379,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "draft_all")
                 artifacts.extend(result.artifacts)
             else:
                 # Fallback: create mock sections for all manifest sections
@@ -434,6 +452,7 @@ class FilesystemActionRunner(ActionRunner):
                     },
                     context={"cwd": str(self.repo_path)},
                 )
+                self._check_result(result, "export_bib")
                 artifacts.extend(result.artifacts)
 
         elif command in (
@@ -487,6 +506,9 @@ class FilesystemActionRunner(ActionRunner):
                 output_dir=verify_dir,
             )
             artifacts.extend(artifact_paths)
+
+        else:
+            raise ValueError(f"Unknown action command: '{command}'")
 
         return artifacts
 

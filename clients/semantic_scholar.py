@@ -81,7 +81,7 @@ class SemanticScholarClient:
             if not data or not data.get("paperId"):
                 return S2Result(found=False)
 
-            authors = [a.get("name", "") for a in data.get("authors", []) if a.get("name")]
+            authors = [a.get("name", "") for a in data.get("authors") or [] if a.get("name")]
 
             return S2Result(
                 found=True,
@@ -122,7 +122,7 @@ class SemanticScholarClient:
                 if sim < TITLE_SIMILARITY_THRESHOLD:
                     continue
 
-                authors = [a.get("name", "") for a in cand.get("authors", []) if a.get("name")]
+                authors = [a.get("name", "") for a in cand.get("authors") or [] if a.get("name")]
                 item_year = cand.get("year")
 
                 # Tiebreaker logic (Item 7)

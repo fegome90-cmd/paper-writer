@@ -36,7 +36,14 @@ def load_review_config(project_root: Path) -> dict[str, Any]:
         if not isinstance(data, dict):
             logger.warning("review_config.yaml is not a dict; using defaults.")
             return dict(_DEFAULT_CONFIG)
-        return {**_DEFAULT_CONFIG, **data}
+        # Filter to known keys and guard against null values overwriting defaults.
+        # {**_DEFAULT_CONFIG, **data} would overwrite 'rapid' with None if YAML
+        # has mode:null — same .get() null pattern as #490/#492/yaml_repository.
+        merged = dict(_DEFAULT_CONFIG)
+        for key in _DEFAULT_CONFIG:
+            if key in data and data[key] is not None:
+                merged[key] = data[key]
+        return merged
     except (yaml.YAMLError, OSError) as exc:
         logger.warning("Failed to load review_config.yaml: %s", exc)
         return dict(_DEFAULT_CONFIG)

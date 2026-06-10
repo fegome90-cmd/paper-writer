@@ -152,4 +152,17 @@ class RefsValidator(ToolWrapper):
             if not any(c.isalpha() for c in candidate):
                 continue
             keys.add(candidate)
+
+        # Also detect unresolved author-year citations in prose:
+        # (Author, Year) or Author (Year) patterns that the LLM may have
+        # hallucinated. These bypass @key validation and silently pass to PDF.
+        # Report them as synthetic keys so validate_citation_consistency flags them.
+        from validators.citation_format import extract_author_year_citations as _extract_ay
+
+        for cit in _extract_ay(content):
+            # These are raw prose citations — not in @key format.
+            # Add a synthetic marker so the gate catches them as unresolved.
+            raw = cit.get("raw", "")
+            if raw:
+                keys.add(f"__PROSE_CITATION__{raw}")
         return keys

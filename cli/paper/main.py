@@ -37,6 +37,275 @@ DEFAULT_SEARCH_QUERY_NOTICE = (
 )
 
 
+# ------------------------------------------------------------------
+# Zotero CLI handlers
+# ------------------------------------------------------------------
+
+
+def _zotero_client() -> tuple[Any, str | None]:
+    """Build ZoteroClient from env. Returns (client, error_msg)."""
+    from clients.zotero import ZoteroClient, ZoteroConfig
+
+    try:
+        config = ZoteroConfig.from_env()
+    except KeyError as exc:
+        return None, str(exc).strip("'")
+    return ZoteroClient(config=config), None
+
+
+def _cmd_zotero_collections(args: Any) -> None:
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        collections = client.fetch_collections()
+        for c in collections:
+            parent = c.get("parentCollection", False)
+            prefix = "  " if parent else ""
+            print(f"{prefix}{c['key']}: {c['name']}")
+        print(f"\n{len(collections)} collection(s)")
+    except ZoteroError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_search(args: Any) -> None:
+    import json as _json
+
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        results = client.search_items(
+            args.query,
+            item_type=args.item_type,
+            tag=args.tag,
+            collection_key=args.collection,
+            limit=args.limit,
+        )
+        if args.output_json:
+            print(_json.dumps(results, indent=2, ensure_ascii=False))
+            return
+        for item in results:
+            key = item.get("key", "?")
+            title = item.get("title", "(no title)")
+            year = item.get("date", "")[:4] if item.get("date") else ""
+            item_type = item.get("itemType", "")
+            print(f"  {key}  {year:>4}  {item_type:<20}  {title}")
+        print(f"\n{len(results)} result(s)")
+    except ZoteroError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_get(args: Any) -> None:
+    import json as _json
+
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        item = client.get_item(args.key)
+        if args.output_json:
+            print(_json.dumps(item, indent=2, ensure_ascii=False))
+            return
+        data = item.get("data", item) if isinstance(item, dict) else item
+        if isinstance(data, dict):
+            for k, v in data.items():
+                if k not in ("key", "version", "itemType") and v:
+                    print(f"  {k}: {v}")
+    except (ZoteroError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_create(args: Any) -> None:
+    import json as _json
+
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        items = _json.loads(Path(args.file).read_text(encoding="utf-8"))
+    except (_json.JSONDecodeError, FileNotFoundError) as exc:
+        print(f"Error reading {args.file}: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    if not isinstance(items, list):
+        items = [items]
+
+    if args.collection:
+        for item in items:
+            if isinstance(item, dict):
+                collections = item.get("collections", [])
+                if args.collection not in collections:
+                    collections.append(args.collection)
+                item["collections"] = collections
+
+    try:
+        result = client.create_items(items)
+        successful = result.get("successful") or {}
+        failed = result.get("failed") or {}
+        unchanged = result.get("unchanged") or {}
+        print(f"Created: {len(successful)}, Unchanged: {len(unchanged)}, Failed: {len(failed)}")
+        for idx, item_data in successful.items():
+            if isinstance(item_data, dict):
+                print(f"  {item_data.get('key', '?')}: {item_data.get('title', 'ok')}")
+            else:
+                print(f"  [{idx}]: {item_data}")
+        for idx, info in failed.items():
+            print(f"  FAILED [{idx}]: {info}", file=sys.stderr)
+    except ZoteroError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_template(args: Any) -> None:
+    import json as _json
+
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        template = client.get_item_template(args.item_type)
+        print(_json.dumps(template, indent=2, ensure_ascii=False))
+    except ZoteroError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_update(args: Any) -> None:
+    import json as _json
+
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+    try:
+        changes = _json.loads(Path(args.file).read_text(encoding="utf-8"))
+    except (_json.JSONDecodeError, FileNotFoundError) as exc:
+        print(f"Error reading {args.file}: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    try:
+        # Always fetch current item for version and data
+        current = client.get_item(args.key)
+        current_data = current.get("data", current) if isinstance(current, dict) else current
+
+        # Resolve version: explicit arg > auto-detect from item
+        version = args.version
+        if version is None:
+            version = current.get("version") if isinstance(current, dict) else None
+            if version is None and isinstance(current_data, dict):
+                version = current_data.get("version")
+            if version is None:
+                print("Error: could not determine item version. Use --version.", file=sys.stderr)
+                raise SystemExit(1) from None
+
+        if args.partial:
+            # PATCH: only send changed fields
+            headers = client.partial_update_item(args.key, changes, version=version)
+        else:
+            # PUT: must send complete item data. Merge user changes into current data.
+            if not isinstance(current_data, dict):
+                print("Error: could not extract item data for update", file=sys.stderr)
+                raise SystemExit(1) from None
+            # Merge: user data overwrites current fields
+            merged = {**current_data, **changes}
+            merged["key"] = args.key
+            merged["version"] = version
+            # Remove read-only fields that cause 400 on PUT
+            for readonly_field in ("dateAdded", "dateModified", "citationKey"):
+                merged.pop(readonly_field, None)
+            headers = client.update_item(args.key, merged, version=version)
+        new_version = headers.get("Last-Modified-Version", "?")
+        print(f"Updated {args.key} → version {new_version}")
+    except (ZoteroError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_delete(args: Any) -> None:
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    try:
+        if len(args.keys) == 1:
+            # Single item: auto-detect version if not provided
+            version = args.version
+            if version is None:
+                item = client.get_item(args.keys[0])
+                version = item.get("version") or item.get("data", {}).get("version")
+                if version is None:
+                    print(
+                        "Error: could not determine item version. Use --version.", file=sys.stderr
+                    )
+                    raise SystemExit(1) from None
+            client.delete_item(args.keys[0], version=version)
+            print(f"Deleted {args.keys[0]} (version {version})")
+        else:
+            # Batch: require library version
+            if args.version is None:
+                print(
+                    "Error: --version (library version) is required for batch delete.",
+                    file=sys.stderr,
+                )
+                raise SystemExit(1) from None
+            client.delete_items(args.keys, library_version=args.version)
+            print(f"Deleted {len(args.keys)} items")
+    except (ZoteroError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
+def _cmd_zotero_upload(args: Any) -> None:
+    from clients.zotero import ZoteroError
+
+    client, err = _zotero_client()
+    if err:
+        print(f"Error: {err}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+    try:
+        result = client.upload_file(
+            args.key,
+            args.file,
+            existing_md5=args.existing_md5,
+            force_update=args.force,
+        )
+        print(f"Status: {result.get('status')}")
+        if result.get("status") == "uploaded":
+            print(f"  File: {result.get('filename')}")
+            print(f"  Size: {result.get('size')} bytes")
+            print(f"  MD5:  {result.get('md5')}")
+        else:
+            print(f"  {result.get('message', 'File already exists')}")
+    except (ZoteroError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
+
+
 def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
     """Resolve project root. Priority: flag → ascending search → CWD.
 
@@ -50,7 +319,7 @@ def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
                 f"Error: Project path does not exist: {explicit_path}",
                 file=sys.stderr,
             )
-            raise SystemExit(1)
+            raise SystemExit(1) from None
         return resolved
 
     # Ascending search for outputs/state.yaml (innermost match)
@@ -452,7 +721,7 @@ def main() -> None:
     import_parser = subparsers.add_parser("import", help="Import external resources.")
     import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
     import_bib = import_sub.add_parser("bib", help="Import .bib from Zotero/Better BibTeX export.")
-    
+
     import_bib_source = import_bib.add_mutually_exclusive_group()
     import_bib_source.add_argument("source", nargs="?", help="Path to source .bib file to import.")
     import_bib_source.add_argument(
@@ -503,6 +772,82 @@ def main() -> None:
         default=None,
         help="Path to reference docx for styling.",
     )
+
+    # paper zotero
+    zotero_parser = subparsers.add_parser("zotero", help="Zotero library operations.")
+    zotero_sub = zotero_parser.add_subparsers(dest="subcommand", required=True)
+
+    # zotero collections
+    zotero_collections = zotero_sub.add_parser("collections", help="List all collections.")
+    zotero_collections.set_defaults(func=_cmd_zotero_collections)
+
+    # zotero search
+    zotero_search = zotero_sub.add_parser("search", help="Full-text search in library.")
+    zotero_search.add_argument("query", help="Search query.")
+    zotero_search.add_argument(
+        "--type", dest="item_type", default=None, help="Filter by item type (e.g. journalArticle)."
+    )
+    zotero_search.add_argument("--tag", default=None, help="Filter by tag.")
+    zotero_search.add_argument("--collection", default=None, help="Limit to collection key.")
+    zotero_search.add_argument("--limit", type=int, default=25, help="Max results (default 25).")
+    zotero_search.add_argument(
+        "--json", dest="output_json", action="store_true", help="Output as JSON."
+    )
+    zotero_search.set_defaults(func=_cmd_zotero_search)
+
+    # zotero get
+    zotero_get = zotero_sub.add_parser("get", help="Fetch a single item by key.")
+    zotero_get.add_argument("key", help="8-character Zotero item key.")
+    zotero_get.add_argument(
+        "--json", dest="output_json", action="store_true", help="Output as JSON."
+    )
+    zotero_get.set_defaults(func=_cmd_zotero_get)
+
+    # zotero create
+    zotero_create = zotero_sub.add_parser("create", help="Create items from a JSON file.")
+    zotero_create.add_argument("file", help="Path to JSON file with item data (array of items).")
+    zotero_create.add_argument(
+        "--collection", default=None, help="Add items to this collection key."
+    )
+    zotero_create.set_defaults(func=_cmd_zotero_create)
+
+    # zotero template
+    zotero_template = zotero_sub.add_parser("template", help="Get empty template for an item type.")
+    zotero_template.add_argument("item_type", help="Item type (e.g. journalArticle, book).")
+    zotero_template.set_defaults(func=_cmd_zotero_template)
+
+    # zotero update
+    zotero_update = zotero_sub.add_parser("update", help="Update an existing item.")
+    zotero_update.add_argument("key", help="8-character Zotero item key.")
+    zotero_update.add_argument("file", help="Path to JSON file with updated item data.")
+    zotero_update.add_argument(
+        "--version", type=int, default=None, help="Current item version. Auto-detected if omitted."
+    )
+    zotero_update.add_argument("--partial", action="store_true", help="Partial update (PATCH).")
+    zotero_update.set_defaults(func=_cmd_zotero_update)
+
+    # zotero delete
+    zotero_delete = zotero_sub.add_parser("delete", help="Delete one or more items.")
+    zotero_delete.add_argument("keys", nargs="+", help="Item key(s) to delete (max 50).")
+    zotero_delete.add_argument(
+        "--version",
+        type=int,
+        default=None,
+        help="Current item/library version. Auto-detected if omitted.",
+    )
+    zotero_delete.set_defaults(func=_cmd_zotero_delete)
+
+    # zotero upload
+    zotero_upload = zotero_sub.add_parser("upload", help="Upload file to an attachment item.")
+    zotero_upload.add_argument("key", help="Attachment item key.")
+    zotero_upload.add_argument("file", help="Path to file to upload.")
+    zotero_upload.add_argument(
+        "--existing-md5", default=None, help="MD5 of existing file (for updates)."
+    )
+    zotero_upload.add_argument(
+        "--force", action="store_true", help="Force re-upload if file exists."
+    )
+    zotero_upload.set_defaults(func=_cmd_zotero_upload)
 
     # paper verify
     subparsers.add_parser("verify", help="Run final verification check.")
@@ -624,7 +969,7 @@ def main() -> None:
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
         # Forward Consensus/academic filter params to provider
-        _CLI_FILTER_MAP = {  # noqa: N806
+        _CLI_FILTER_MAP = {  # noqa: N806  # Keys mirror SEARCH_FILTER_KEYS in harness.ports.paper_search_provider
             "year_min": args.year_min,
             "year_max": args.year_max,
             "study_types": args.study_types,

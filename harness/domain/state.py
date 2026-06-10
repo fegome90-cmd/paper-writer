@@ -48,6 +48,7 @@ class ManuscriptState:
             "screened_evidence",
             "outline_drafted",
             "sections_completed",
+            "bib_imported",
             "bib_normalized",
             "citations_resolved",
             "refs_validated",
@@ -62,7 +63,6 @@ class ManuscriptState:
         {
             "citation_verified",
             "ethics_passed",
-            "bib_imported",
         }
     )
 
@@ -79,6 +79,7 @@ class ManuscriptState:
         "validating": frozenset({"sections_completed"}),
         "rendering": frozenset(
             {
+                "bib_imported",
                 "bib_normalized",
                 "citations_resolved",
                 "refs_validated",
@@ -201,6 +202,19 @@ class ManuscriptState:
                 "render_passed",
                 "ready_for_delivery",
                 "citation_verified",
+            ]
+        elif modified_artifact_type == "search":
+            resets = [
+                "screened_evidence",
+                "outline_drafted",
+                "sections_completed",
+                "citations_resolved",
+                "style_passed",
+                "reporting_passed",
+                "render_passed",
+                "ready_for_delivery",
+                "citation_verified",
+                "ethics_passed",
             ]
         else:
             raise DomainStateError(f"Unknown artifact type for reset: {modified_artifact_type}")

@@ -383,7 +383,7 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
 
     validator = QualityAppraisalValidator()
     evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
-    papers = evidence_data.get("evidence", [])
+    papers = evidence_data.get("evidence") or []
 
     t0 = time.time()
     findings = validator.validate(papers)

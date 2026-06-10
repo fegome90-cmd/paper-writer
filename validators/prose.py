@@ -93,6 +93,8 @@ class ProseValidator:
         Returns:
             List of finding dicts conforming to schemas/finding.schema.json
         """
+        if manuscript is None:
+            return []
         findings: list[dict[str, Any]] = []
 
         for rule in self.registry:

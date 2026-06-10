@@ -81,8 +81,8 @@ def _generate_search_manifest(search_dir: Path, output_dir: Path) -> list[str]:
         "query": plan.get("query", ""),
         "strategy": plan.get("strategy", ""),
         "date": plan.get("date", ""),
-        "databases": plan.get("databases", []),
-        "inclusion_criteria": plan.get("inclusion_criteria", []),
+        "databases": plan.get("databases") or [],
+        "inclusion_criteria": plan.get("inclusion_criteria") or [],
         "filters": {
             "year_range": plan.get("year_range", ""),
             "language": plan.get("language", "English"),
@@ -104,7 +104,7 @@ def _generate_search_manifest(search_dir: Path, output_dir: Path) -> list[str]:
                 "min_tier": screened.get("min_tier", ""),
             }
         )
-        prisma = screened.get("prisma_flow", {})
+        prisma = screened.get("prisma_flow") or {}
         if prisma:
             manifest["prisma_flow"] = prisma
 
@@ -145,7 +145,7 @@ def _generate_evidence_matrix(search_dir: Path, output_dir: Path) -> list[str]:
         screened = json.loads(screened_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return []
-    evidence = screened.get("evidence", [])
+    evidence = screened.get("evidence") or []
     if not evidence:
         return []
 
@@ -170,7 +170,7 @@ def _generate_evidence_matrix(search_dir: Path, output_dir: Path) -> list[str]:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for entry in evidence:
-            scoring = entry.get("scoring", {})
+            scoring = entry.get("scoring") or {}
             # Derive cite_key from DOI or title
             doi = entry.get("doi", "")
             cite_key = _derive_cite_key(entry)
@@ -250,14 +250,14 @@ def _generate_included_excluded_ledger(search_dir: Path, output_dir: Path) -> li
         screened = json.loads(screened_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return []
-    evidence = screened.get("evidence", [])
+    evidence = screened.get("evidence") or []
 
     # Categorize by tier
     included: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
 
     for entry in evidence:
-        scoring = entry.get("scoring", {})
+        scoring = entry.get("scoring") or {}
         tier = scoring.get("tier", "Discard")
         cite_key = _derive_cite_key(entry)
         record = {
@@ -336,7 +336,7 @@ def _generate_claim_citation_audit(draft_dir: Path, bib_path: Path, output_dir: 
                 "in_bibliography": bib_match,
                 "bib_title": bib_entries.get(key, ""),
                 "occurrences": info.get("count", 0),
-                "sections": info.get("sections", []),
+                "sections": info.get("sections") or [],
             }
         )
 
@@ -435,7 +435,7 @@ def generate_academic_artifacts(
         return generated
 
     evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
-    screening_records = evidence_data.get("screening_records", [])
+    screening_records = evidence_data.get("screening_records") or []
     if not screening_records:
         return generated
 
@@ -447,7 +447,7 @@ def generate_academic_artifacts(
     for rec in screening_records:
         record_id = rec.get("record_id", "unknown")
         included = rec.get("included", False)
-        history = rec.get("screening_history", [])
+        history = rec.get("screening_history") or []
 
         # Derive final stage and exclusion reason from history
         final_stage = "unknown"
@@ -466,7 +466,7 @@ def generate_academic_artifacts(
     # Generate metadata_resolution_report.md (stub — full implementation in PR3)
     report_path = output_dir / "metadata_resolution_report.md"
     report_lines = ["# Metadata Resolution Report\n"]
-    for rec in evidence_data.get("evidence", []):
+    for rec in evidence_data.get("evidence") or []:
         doi = rec.get("doi", "unknown")
         meta = rec.get("metadata_resolution", {"status": "not_assessed"})
         status = meta.get("status", "not_assessed") if meta else "not_assessed"

@@ -170,7 +170,7 @@ def create_mock_wrappers() -> dict[str, ToolWrapper]:
         "check_refs_metadata": InMemoryToolWrapper("refs_validated"),
         "lint_style": InMemoryToolWrapper("style_passed"),
         "audit_reporting": InMemoryToolWrapper("reporting_passed"),
-        "import_bib": InMemoryToolWrapper("bib_normalized"),
+        "import_bib": InMemoryToolWrapper("bib_imported"),
         "zotero_sync": InMemoryToolWrapper("bib_imported"),
         "render": InMemoryToolWrapper("render_passed"),
     }

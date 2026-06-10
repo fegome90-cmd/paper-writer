@@ -390,10 +390,14 @@ def deduplicate(
         title_lower = title.lower()
         title_len = _len(title_lower)
 
-        # 3. Check title similarity (only if no DOI/PMID match).
+        # 3. Check title similarity.
+        # Papers with DOI/PMID still need title check against title-only papers
+        # (to catch the case where the richer paper arrives later).
+        # But two papers that BOTH have DOI/PMID should never merge by title —
+        # they're different publications.
         # Uses for...else to eliminate is_dup flag.
-        if not doi and not pmid:
-            word_set = _make_ws(title_lower)
+        word_set = _make_ws(title_lower)
+        if True:
             # Determine which length buckets to check. For threshold 0.95,
             # max L/S ≈ 1.105. So we only need buckets in [L/1.105, L*1.105].
             # int() naturally floors to 0 for small values (no max(0) needed).
@@ -404,6 +408,12 @@ def deduplicate(
                 if not bucket_entries:
                     continue
                 for prev_idx, ptl, ptl_len, pws in bucket_entries:
+                    # Skip title merge if BOTH papers have DOI or both have PMID.
+                    # They're different publications that happen to share a title.
+                    if (doi or pmid) and prev_idx < len(unique_papers):
+                        existing = unique_papers[prev_idx]
+                        if (doi and existing.get("doi")) or (pmid and existing.get("pmid")):
+                            continue
                     # Fast length-based pre-filter: max possible
                     # SequenceMatcher ratio = 2*min(L1,L2)/(L1+L2).
                     # If this is below threshold, SequenceMatcher can
@@ -419,6 +429,21 @@ def deduplicate(
                         continue
                     # Exact match short-circuit
                     if title_lower == ptl:
+                        # If current paper has DOI/PMID and previous doesn't, replace
+                        if (doi or pmid) and prev_idx < len(unique_papers):
+                            _existing = unique_papers[prev_idx]
+                            if not _existing.get("doi") and not _existing.get("pmid"):
+                                unique_papers[prev_idx] = paper
+                                log.append(
+                                    {
+                                        **_title_log,
+                                        "kept_index": prev_idx,
+                                        "removed_index": prev_idx,
+                                        "reason": "similar_title_replace",
+                                        "detail": "similarity=1.000, richer version kept",
+                                    }
+                                )
+                                break
                         log.append(
                             {
                                 **_title_log,
@@ -434,6 +459,28 @@ def deduplicate(
                         continue
                     similarity = sm.ratio()
                     if similarity >= threshold:
+                        # If current paper has DOI but matched previous
+                        # doesn't, replace the weaker one.
+                        _richer_prev: dict[str, Any] | None = None
+                        if (doi or pmid) and prev_idx < len(unique_papers):
+                            _richer_prev = unique_papers[prev_idx]
+                        if (
+                            _richer_prev
+                            and not _richer_prev.get("doi")
+                            and not _richer_prev.get("pmid")
+                        ):
+                            # Replace weaker paper with richer one
+                            unique_papers[prev_idx] = paper
+                            log.append(
+                                {
+                                    **_title_log,
+                                    "kept_index": prev_idx,
+                                    "removed_index": prev_idx,
+                                    "reason": "similar_title_replace",
+                                    "detail": f"similarity={similarity:.3f}, richer version kept",
+                                }
+                            )
+                            continue
                         log.append(
                             {
                                 **_title_log,
@@ -447,25 +494,19 @@ def deduplicate(
                     continue  # no match in this bucket → try next
                 break  # match found → stop checking buckets
             else:
-                # No match in any bucket → unique title-only paper
+                # No match in any bucket → unique paper
                 unique_papers.append(paper)
                 entry = (idx, title_lower, title_len, word_set)
                 bucket_key = title_len // _BUCKET_SZ
                 if bucket_key <= _MAX_BUCKET:
                     buckets[bucket_key].append(entry)
-                continue  # back to main loop (skip DOI/PMID registration)
+                # Register DOI/PMID for future dedup
+                if doi:
+                    seen_dois[doi] = idx
+                if pmid:
+                    seen_pmids[pmid] = idx
+                continue  # back to main loop
             continue  # found duplicate → back to main loop
-
-        # DOI/PMID paper — not a duplicate, register (only if within bucket range)
-        bucket_key = title_len // _BUCKET_SZ
-        if bucket_key <= _MAX_BUCKET:
-            if doi:
-                seen_dois[doi] = idx
-            if pmid:
-                seen_pmids[pmid] = idx
-            word_set = _make_ws(title_lower)
-            unique_papers.append(paper)
-            buckets[bucket_key].append((idx, title_lower, title_len, word_set))
 
     # unique_papers populated during registration; no need to extract from buckets
     return unique_papers, log

@@ -55,6 +55,8 @@ def validate_reporting(
     Returns:
         List of finding dicts for missing or incomplete reporting elements.
     """
+    if sections is None:
+        return []
     findings: list[dict[str, Any]] = []
     combined_text = " ".join(sections.values()).lower()
 

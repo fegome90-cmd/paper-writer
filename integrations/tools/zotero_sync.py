@@ -70,15 +70,15 @@ class ZoteroSyncImporter(ToolWrapper):
         import os
         if not bbt_local_override and not os.environ.get("ZOTERO_BBT_LOCAL", "").lower() == "true" and not os.environ.get("ZOTERO_USER_ID", "").strip():
             raise ToolNotAvailableError(
-                "ZOTERO_USER_ID is not set. "
-                "Set it in .envrc or your shell environment."
+                "zotero_credentials",
+                install_hint="Set ZOTERO_USER_ID in .envrc or your shell environment."
             )
 
         # Build config (raises KeyError with helpful message if USER_ID missing)
         try:
             config = ZoteroConfig.from_env(bbt_local_override=bbt_local_override)
         except KeyError as exc:
-            raise ToolNotAvailableError(str(exc)) from exc
+            raise ToolNotAvailableError("zotero_credentials", install_hint=str(exc).strip("'")) from exc
 
         collection_key: str | None = artifacts.get("collection_key")
         since_version_raw = artifacts.get("since_version")

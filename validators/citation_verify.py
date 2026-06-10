@@ -36,7 +36,7 @@ ARXIV_ID_PATTERN = re.compile(
 )
 
 # arXiv DOI prefix per DataCite (https://arxiv.org/help/bulk_data)
-ARXIV_DOI_PREFIX = "10.48550/arXiv."
+ARXIV_DOI_PREFIX = "10.48550/arxiv."
 
 
 def extract_arxiv_id_from_doi(doi: str) -> str | None:
@@ -47,7 +47,7 @@ def extract_arxiv_id_from_doi(doi: str) -> str | None:
     other DOI registrants (Nature, IEEE, etc.) can have NNNN.NNNNN patterns
     that are NOT arXiv IDs.
     """
-    if not doi or not doi.startswith(ARXIV_DOI_PREFIX):
+    if not doi or not doi.lower().startswith(ARXIV_DOI_PREFIX):
         return None
     # Strip the prefix and validate the remaining ID format
     arxiv_id = doi[len(ARXIV_DOI_PREFIX) :].rstrip("/")
@@ -715,5 +715,9 @@ def reduce_citation_verdict(findings: list[dict[str, Any]]) -> str:
     if has_title_mismatch:
         return "unresolvable"
 
-    # 4. All other findings = verified (e.g., preprint warnings)
+    # 4. Any remaining findings with error severity = at least unresolvable
+    if any(isinstance(f, dict) and f.get("severity") == "error" for f in findings):
+        return "unresolvable"
+
+    # 5. All other findings = verified (e.g., preprint warnings)
     return "verified"

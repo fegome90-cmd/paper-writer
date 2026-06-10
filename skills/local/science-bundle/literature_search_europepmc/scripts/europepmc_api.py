@@ -151,7 +151,7 @@ def search(query, max_results=10, result_type="core", cursor="*", sort=""):
     url = f"search?{urllib.parse.urlencode(params)}"
     print(f"Searching Europe PMC (open access): {query}", file=sys.stderr)
     data = _API_CLIENT.fetch_json(url)
-    results = data.get("resultList", {}).get("result", [])
+    results = (data.get("resultList") or {}).get("result") or []
     hit_count = data.get("hitCount", 0)
     next_cursor = data.get("nextCursorMark", "")
 
@@ -210,7 +210,7 @@ def get_citations(source, article_id, page=1, page_size=25):
     print(f"Fetching citations for {source}/{article_id}...", file=sys.stderr)
     data = _API_CLIENT.fetch_json(url)
     hit_count = data.get("hitCount", 0)
-    citations = data.get("citationList", {}).get("citation", [])
+    citations = (data.get("citationList") or {}).get("citation") or []
     return {"hitCount": hit_count, "citations": citations}
 
 
@@ -227,7 +227,7 @@ def get_references(source, article_id, page=1, page_size=25):
     print(f"Fetching references for {source}/{article_id}...", file=sys.stderr)
     data = _API_CLIENT.fetch_json(url)
     hit_count = data.get("hitCount", 0)
-    references = data.get("referenceList", {}).get("reference", [])
+    references = (data.get("referenceList") or {}).get("reference") or []
     return {"hitCount": hit_count, "references": references}
 
 

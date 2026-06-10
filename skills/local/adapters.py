@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from harness.ports.paper_search_provider import SEARCH_FILTER_KEYS
 from harness.ports.skill_adapter import SkillAdapter, SkillResult
 from skills.imported.academic_writer import drafting as writer_module
 from skills.imported.literature_search import search as search_module
@@ -124,22 +125,8 @@ class LiteratureSearchAdapter(SkillAdapter):
             from harness.ports.paper_search_provider import create_search_provider
 
             # Extract provider-specific filter params from inputs
-            _FILTER_KEYS = (  # noqa: N806
-                "year_min",
-                "year_max",
-                "study_types",
-                "human",
-                "sample_size_min",
-                "sjr_max",
-                "duration_min",
-                "duration_max",
-                "exclude_preprints",
-                "publisher_name",
-                "clinical_guideline",
-                "medical_mode",
-            )
             filters: dict[str, Any] = {}
-            for key in _FILTER_KEYS:
+            for key in SEARCH_FILTER_KEYS:
                 if key in inputs and inputs[key] is not None:
                     filters[key] = inputs[key]
 
@@ -173,14 +160,16 @@ class LiteratureSearchAdapter(SkillAdapter):
 
             # BH-1: Warn when filters are passed but provider doesn't support them
             provider = create_search_provider()
-            provider_name = type(provider).__name__
-            if filters and provider_name != "ConsensusSearchProvider":
-                logger.warning(
-                    "Filter params %s ignored by %s"
-                    " — only ConsensusSearchProvider supports API filters",
-                    list(filters.keys()),
-                    provider_name,
-                )
+            supported = set(provider.supported_filters)
+            if filters:
+                unsupported = set(filters.keys()) - supported
+                if unsupported:
+                    logger.warning(
+                        "Filter params %s not supported by %s (supported: %s)",
+                        list(unsupported),
+                        type(provider).__name__,
+                        list(supported),
+                    )
             provider_result = provider.search(
                 query=query,
                 limit=int(inputs.get("limit", 20)),

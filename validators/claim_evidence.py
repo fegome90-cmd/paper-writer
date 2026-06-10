@@ -132,6 +132,8 @@ _STOPWORDS = frozenset(
 
 def _tokenize(text: str) -> set[str]:
     """Extract meaningful tokens from text (lowercase, no stopwords)."""
+    if not text:
+        return set()
     text = text.lower()
     # Remove punctuation except hyphens within words
     text = re.sub(r"[^\w\s-]", " ", text)

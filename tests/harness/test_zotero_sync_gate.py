@@ -3,8 +3,8 @@ from harness.services.gates import validate_ready_for_delivery
 from tests.harness.mocks import InMemoryArtifactChecker
 
 
-def test_bib_imported_is_valid_soft_gate() -> None:
-    """bib_imported should be accepted as a soft gate in ManuscriptState."""
+def test_bib_imported_is_valid_required_gate() -> None:
+    """bib_imported is a REQUIRED gate — must be True for rendering."""
     state = ManuscriptState(stage="bootstrap", gates={"bib_imported": False})
     state.validate()
     state.set_gate("bib_imported", True)
@@ -18,8 +18,12 @@ def test_bib_imported_is_reset_on_bib_modification() -> None:
     assert state.gates["bib_imported"] is False
 
 
-def test_ready_for_delivery_ignores_bib_imported() -> None:
-    """validate_ready_for_delivery ignores bib_imported False status."""
+def test_ready_for_delivery_requires_bib_imported() -> None:
+    """validate_ready_for_delivery BLOCKS when bib_imported is False.
+
+    bib_imported is now a REQUIRED gate — bibliography must come from a
+    verified source (Zotero) before delivery to prevent fabricated references.
+    """
     checker = InMemoryArtifactChecker()
     gates_state = {
         "repo_initialized": True,
@@ -27,6 +31,7 @@ def test_ready_for_delivery_ignores_bib_imported() -> None:
         "screened_evidence": True,
         "outline_drafted": True,
         "sections_completed": True,
+        "bib_imported": False,  # NOT imported from verified source
         "bib_normalized": True,
         "citations_resolved": True,
         "refs_validated": True,
@@ -36,9 +41,7 @@ def test_ready_for_delivery_ignores_bib_imported() -> None:
         "ready_for_delivery": False,
         "citation_verified": True,
         "ethics_passed": True,
-        "bib_imported": False,  # False soft gate
     }
     result = validate_ready_for_delivery(checker, gates_state)
-    assert result.status == "pass"
-    assert not result.blockers
-    assert not result.warnings
+    assert result.status == "fail"
+    assert any("bib_imported" in b for b in result.blockers)

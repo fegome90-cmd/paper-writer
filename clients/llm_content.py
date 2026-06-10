@@ -339,7 +339,7 @@ def get_llm_client(
 def generate_section(
     section_name: str,
     evidence: list[dict[str, Any]],
-    bib_keys: list[str],
+    bib_keys: list[dict[str, str]] | list[str],
     outline_context: str = "",
 ) -> LLMResult:
     """Generate a complete academic section using an LLM CLI.
@@ -372,10 +372,24 @@ def generate_section(
             year = paper.get("year", "N/A")
             evidence_block += f"{i}. {title} ({authors}, {year})\n"
 
-    # Build citation reference — keys only
+    # Build citation reference — keys with metadata to prevent fabrication.
+    # When bib_keys are strings, we show @key names. When enriched with
+    # metadata (from parse_bib_keys), we show title/authors to help LLM
+    # cite correctly and reduce hallucination risk.
     cite_block = ""
     if bib_keys:
-        cite_block = f"## Citation Keys\n\n{', '.join(f'@{k}' for k in bib_keys[:15])}\n"
+        cite_block = "## Citation Keys\n\n"
+        for item in bib_keys[:15]:
+            if isinstance(item, dict):
+                key = item.get("key", "?")
+                title = item.get("title", "")
+                authors = item.get("authors", "")
+                year = item.get("year", "")
+                meta = " — ".join(p for p in [title, f"{authors}, {year}" if authors else ""] if p)
+                cite_block += f"- @{key}: {meta}\n" if meta else f"- @{key}\n"
+            else:
+                cite_block += f"- @{item}\n"
+        cite_block += "\n"
 
     # Keep outline context short — just the section structure
     outline_snippet = ""

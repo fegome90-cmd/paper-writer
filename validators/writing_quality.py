@@ -35,6 +35,8 @@ class WritingQualityValidator:
 
     def validate(self, manuscript: Manuscript) -> list[dict[str, Any]]:
         """Run all writing quality rules against the manuscript."""
+        if manuscript is None:
+            return []
         findings: list[dict[str, Any]] = []
 
         for rule in self.rules:

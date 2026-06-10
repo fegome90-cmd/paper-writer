@@ -17,6 +17,8 @@ def validate_scope_discipline(record: dict[str, Any]) -> list[dict[str, Any]]:
     - scope_classification must be present
     - protocol_only records cannot be treated as core observed evidence
     """
+    if not record:
+        return []
     findings: list[dict[str, Any]] = []
 
     scope = record.get("scope_classification")

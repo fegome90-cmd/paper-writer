@@ -131,6 +131,8 @@ def validate_style(text: str, file_label: str = "") -> list[dict[str, Any]]:
     Returns:
         List of finding dicts.
     """
+    if not text:
+        return []
     findings: list[dict[str, Any]] = []
     location = file_label or "manuscript"
 

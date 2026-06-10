@@ -30,7 +30,7 @@ from harness.ports.paper_search_provider import (
 
 # ── Defaults ──────────────────────────────────────────────────────────
 
-_DEFAULT_SERVER_PATH = "/Users/felipe_gonzalez/.openclaw/mcp-servers/paper-mcp/dist/server.js"
+_DEFAULT_SERVER_PATH = ""
 _INIT_TIMEOUT = timedelta(seconds=10)
 _TOOL_TIMEOUT = timedelta(seconds=30)
 
@@ -59,7 +59,12 @@ class McpPaperSearchProvider(PaperSearchProvider):
         self._init_timeout = init_timeout or _INIT_TIMEOUT
         self._tool_timeout = tool_timeout or _TOOL_TIMEOUT
 
-        # Validate server path exists — fail-closed
+        if not self._server_path:
+            raise RuntimeError(
+                "PAPER_MCP_SERVER_PATH env var required for MCP search provider. "
+                "Set it to your paper-mcp server.js path."
+            )
+
         if not Path(self._server_path).is_file():
             raise RuntimeError(
                 f"MCP server not found at: {self._server_path}. "

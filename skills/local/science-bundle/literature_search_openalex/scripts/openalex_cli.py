@@ -219,7 +219,7 @@ def handle_resolve(args: argparse.Namespace) -> None:
 
     # Extract minimal fields to make disambiguation easier for the user/agent.
     results = []
-    for item in data.get("results", []):
+    for item in data.get("results") or []:
         entry = {
             "id": item.get("id"),
             "display_name": item.get("display_name"),

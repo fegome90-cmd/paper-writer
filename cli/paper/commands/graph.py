@@ -71,7 +71,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
             data = result.data
             if data.get("path_exists") or data.get("path"):
                 print(f"Path from {symbol} to {args.to_symbol}:")
-                for hop in data.get("path", []):
+                for hop in data.get("path") or []:
                     print(f"  → {hop}")
             else:
                 print(f"No path found from {symbol} to {args.to_symbol}")
@@ -106,7 +106,7 @@ def _cmd_graph_overview(args: argparse.Namespace) -> None:
         print(f"  Cycles (imports): {data.get('imports_cycles', '?')}")
         print(f"  Cycles (inherits): {data.get('inherits_cycles', '?')}")
         print(f"  Orphans: {data.get('orphan_count', '?')}")
-        top_hubs = data.get("top_hubs", [])
+        top_hubs = data.get("top_hubs") or []
         if top_hubs:
             print("  Top Hubs:")
             for hub in top_hubs[:5]:

@@ -125,6 +125,15 @@ def test_cli_full_pipeline(
     captured = capsys.readouterr()
 
     # 6. Run validations with real wrappers
+    # Import bibliography (bib_imported is now REQUIRED for rendering)
+    # Use the references.bib written by _write_test_content as import source
+    test_bib_source = tmp_path / "test_export.bib"
+    test_bib_source.write_text(MINIMAL_BIB, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["paper", "import", "bib", str(test_bib_source)])
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+
     monkeypatch.setattr(sys, "argv", ["paper", "lint", "bib"])
     with pytest.raises(SystemExit) as exc_info:
         main()

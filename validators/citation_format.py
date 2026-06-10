@@ -274,12 +274,31 @@ def convert_citations(text: str, bib_text: str) -> str:
     # Sort by start position descending to replace from end to start
     # (preserves earlier positions during replacement)
     resolved_count = 0
+    unresolved_count = 0
     result = text
     for citation in sorted(citations, key=lambda c: c["start"], reverse=True):
         bib_key = resolve_citation(citation, author_year_index)
         if bib_key:
             result = result[: citation["start"]] + f"@{bib_key}" + result[citation["end"] :]
             resolved_count += 1
+        else:
+            # UNRESOLVED citation — likely LLM hallucination.
+            # Replace with a visible marker so it doesn't silently pass to PDF.
+            unresolved_count += 1
+            result = (
+                result[: citation["start"]]
+                + f"[UNRESOLVED: {citation['raw']}]"
+                + result[citation["end"] :]
+            )
+
+    if unresolved_count > 0:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "Citation conversion: %d resolved, %d unresolved (possible hallucinations)",
+            resolved_count,
+            unresolved_count,
+        )
 
     return result
 

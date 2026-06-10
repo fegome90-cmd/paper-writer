@@ -49,6 +49,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="12345", api_key="secret-key")
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         bib = client.fetch_bibtex()
 
         assert bib == "@article{key1, title={Paper 1}}"
@@ -84,6 +86,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="12345")
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         bib = client.fetch_bibtex()
 
         assert bib == "@article{key1, title={Paper 1}}\n@article{key2, title={Paper 2}}"
@@ -101,6 +105,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="12345")
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         client.fetch_bibtex(since_version=99)
 
         req = mock_urlopen.call_args[0][0]
@@ -130,6 +136,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="12345")
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         bib = client.fetch_bibtex()
 
         assert bib == "@article{key1}"
@@ -147,6 +155,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="my_user_id", bbt_local=True)
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         bib = client.fetch_bibtex()
 
         assert bib == "@article{key1, title={Local BBT}}"
@@ -164,6 +174,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="my_user_id", bbt_local=True)
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         bib = client.fetch_bibtex(collection_key="COL123")
         assert isinstance(bib, str)
 
@@ -183,6 +195,8 @@ class TestZoteroClient:
 
         config = ZoteroConfig(user_id="12345")
         client = ZoteroClient(config)
+        client._opener = MagicMock()
+        client._opener.open = mock_urlopen
         cols = client.fetch_collections()
 
         assert len(cols) == 1

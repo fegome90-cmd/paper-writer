@@ -64,6 +64,8 @@ class MethodGateValidator:
         Returns:
             GateResult dict conforming to schemas/method_gate.schema.json
         """
+        if manuscript is None:
+            return {"status": "fail", "items": [], "summary": "No manuscript provided"}
         # 1. Resolve checklist based on study_type
         t0 = time.perf_counter()
         checklist = self._resolve_checklist(study_type, checklist_name)

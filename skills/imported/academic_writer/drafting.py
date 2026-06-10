@@ -44,13 +44,39 @@ def load_manifest() -> dict[str, Any]:
     return data
 
 
-def _extract_cite_keys(bib_path: Path) -> list[str]:
-    """Extract citation keys from a BibTeX file."""
+def _extract_cite_keys(bib_path: Path) -> list[dict[str, str]]:
+    """Extract citation keys with metadata from a BibTeX file.
+
+    Returns list of dicts with 'key', 'title', 'authors', 'year' fields.
+    This enriched format is passed to the LLM prompt to reduce hallucination
+    risk — the LLM can see what each @key refers to and cite accurately.
+    """
     if not bib_path or not bib_path.exists():
         return []
 
     content = bib_path.read_text(encoding="utf-8", errors="replace")
-    return re.findall(r"@\w+\{(\w+)", content)
+    keys: list[dict[str, str]] = []
+
+    # Use the citation_format parser for structured extraction
+    try:
+        from validators.citation_format import parse_bib_keys
+
+        entries = parse_bib_keys(content)
+        for key, fields in entries.items():
+            keys.append(
+                {
+                    "key": key,
+                    "title": fields.get("title", ""),
+                    "authors": fields.get("authors", ""),
+                    "year": fields.get("year", ""),
+                }
+            )
+    except ImportError:
+        # Fallback: simple regex extraction without metadata
+        for match in re.finditer(r"@\w+\{([^,\s]+)", content):
+            keys.append({"key": match.group(1).strip()})
+
+    return keys
 
 
 def draft_outline(
@@ -453,7 +479,7 @@ def _try_llm_generation(
     display_name: str,
     query: str,
     evidence_items: list[dict[str, Any]],
-    cite_keys: list[str],
+    cite_keys: list[dict[str, str]] | list[str],
     subsections: list[str],
     model: str,
     tone: str,

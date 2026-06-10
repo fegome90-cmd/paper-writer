@@ -153,6 +153,7 @@ def test_validate_ready_for_delivery(checker: InMemoryArtifactChecker) -> None:
         "screened_evidence": True,
         "outline_drafted": True,
         "sections_completed": True,
+        "bib_imported": True,
         "bib_normalized": True,
         "citations_resolved": True,
         "refs_validated": True,

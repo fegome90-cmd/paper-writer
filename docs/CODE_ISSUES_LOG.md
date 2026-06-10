@@ -87,4 +87,4 @@ Round 2 re-judgment: **APPROVED** — 0 CRITICAL, 0 confirmed WARNING.
 
 | ID | Severity | Component | Description | Estado |
 |:---|:---|:---|:---|:---|
-| PRE-1 | **Alta** | `cli/paper/main.py:463` | `from thesaurus.cli import ...` at module level inside `main()`. If thesaurus module missing, ALL paper commands break with `ModuleNotFoundError`. 74 CLI tests affected. | ❌ Pendiente |
+| PRE-1 | **Alta** | `cli/paper/main.py:463` | `from thesaurus.cli import ...` at module level inside `main()`. If thesaurus module missing, ALL paper commands break with `ModuleNotFoundError`. 74 CLI tests affected. | ✅ Resuelto — lazy import with try/except already in place |

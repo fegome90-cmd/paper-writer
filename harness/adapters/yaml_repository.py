@@ -28,8 +28,10 @@ class YamlFileStateRepository(StateRepository):
         if not isinstance(data, dict):
             raise StateRepositoryError("State contents must be a dictionary.")
 
-        stage = data.get("stage", "")
-        gates = data.get("gates", {})
+        # Use 'or' to handle null values — data.get() returns None when key
+        # exists with null value, bypassing the default. Same pattern as #490/#492.
+        stage = data.get("stage") or ""
+        gates = data.get("gates") or {}
 
         # Auto-upgrade: map legacy stage names to current names.
         # schema_version < 1.1 used "verified" (now "rendered").

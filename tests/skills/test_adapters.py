@@ -517,7 +517,7 @@ class TestBugHuntFixes:
                 )
 
             assert len(captured_warnings) == 1
-            assert "ignored by FixturePaperSearchProvider" in captured_warnings[0]
+            assert "not supported by FixturePaperSearchProvider" in captured_warnings[0]
             assert "year_min" in captured_warnings[0]
         finally:
             logger.removeHandler(handler)

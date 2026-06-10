@@ -40,6 +40,8 @@ def generate_protocol(
     Returns:
         Markdown protocol string.
     """
+    if not search_dir:
+        search_dir = Path(".")
     sections: list[str] = []
 
     # Header

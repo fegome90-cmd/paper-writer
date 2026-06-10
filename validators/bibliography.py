@@ -154,7 +154,7 @@ def validate_doi_format(doi: str, entry_key: str) -> list[dict[str, Any]]:
     """
     findings: list[dict[str, Any]] = []
     # DOI pattern: 10.XXXX/... where XXXX is registrant code
-    if not re.match(r"^10\.\d{4,9}/\S+$", doi.strip()):
+    if not doi or not re.match(r"^10\.\d{4,9}/\S+$", doi.strip()):
         findings.append(
             {
                 "code": "malformed_doi",
@@ -180,6 +180,8 @@ def validate_year_range(year: str, entry_key: str) -> list[dict[str, Any]]:
         List of findings for out-of-range years.
     """
     findings: list[dict[str, Any]] = []
+    if year is None:
+        return findings
     try:
         year_int = int(year.strip())
     except ValueError:

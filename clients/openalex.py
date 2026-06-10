@@ -44,7 +44,7 @@ class OpenAlexResult:
 def _extract_authors(work: dict[str, Any]) -> list[str]:
     """Extract author display names from OpenAlex authorships."""
     names: list[str] = []
-    for authorship in work.get("authorships", []):
+    for authorship in work.get("authorships") or []:
         author = authorship.get("author", {})
         name = author.get("display_name", "")
         if name:

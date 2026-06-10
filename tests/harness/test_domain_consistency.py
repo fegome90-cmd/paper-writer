@@ -44,6 +44,7 @@ class TestStageGatesConsistency:
     def test_rendering_with_all_validation_gates_true(self) -> None:
         """rendering should be valid when all validation gates are True."""
         gates = _make_all_gates_false()
+        gates["bib_imported"] = True
         gates["bib_normalized"] = True
         gates["citations_resolved"] = True
         gates["refs_validated"] = True

@@ -17,6 +17,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+SEARCH_FILTER_KEYS: tuple[str, ...] = (
+    "year_min",
+    "year_max",
+    "study_types",
+    "human",
+    "sample_size_min",
+    "sjr_max",
+    "duration_min",
+    "duration_max",
+    "exclude_preprints",
+    "publisher_name",
+    "clinical_guideline",
+    "medical_mode",
+)
+"""Canonical filter kwargs accepted by PaperSearchProvider.search(**kwargs)."""
+
 # ── Data types ────────────────────────────────────────────────────────
 
 
@@ -150,6 +166,15 @@ class PaperSearchProvider(ABC):
     Fail visibly in case of errors.
     """
 
+    @property
+    def supported_filters(self) -> list[str]:
+        """Return list of filter parameter names this provider supports.
+
+        Override in subclasses that support filters. Default: empty list.
+        Used by adapters to warn when filters are silently ignored.
+        """
+        return []
+
     @abstractmethod
     def search(
         self,
@@ -224,7 +249,7 @@ def _normalize_paper(raw: dict[str, Any]) -> NormalizedPaper:
         warnings.append("No published date available")
 
     # Authors — format as string
-    raw_authors = raw.get("authors", [])
+    raw_authors = raw.get("authors") or []
     if raw_authors:
         if len(raw_authors) > 3:
             authors = ", ".join(str(a) for a in raw_authors[:3]) + " et al."

@@ -4,7 +4,7 @@ gates:
   bib_normalized: true
   citations_resolved: true
   outline_drafted: true
-  ready_for_delivery: true
+  ready_for_delivery: false
   refs_validated: true
   render_passed: true
   repo_initialized: true
@@ -15,3 +15,4 @@ gates:
   style_passed: true
   citation_verified: true
   ethics_passed: true
+  bib_imported: false

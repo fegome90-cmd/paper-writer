@@ -56,7 +56,7 @@ def _extract_year(item: dict[str, Any]) -> int | None:
 def _extract_authors(item: dict[str, Any]) -> list[str]:
     """Extract author names from Crossref response."""
     authors = []
-    for author in item.get("author", []):
+    for author in item.get("author") or []:
         given = author.get("given", "")
         family = author.get("family", "")
         if given or family:
@@ -145,7 +145,7 @@ class CrossrefClient:
             if not data:
                 return []
 
-            candidates = data.get("message", {}).get("items", [])
+            candidates = (data.get("message") or {}).get("items") or []
             results: list[CrossrefResult] = []
 
             for cand in candidates:

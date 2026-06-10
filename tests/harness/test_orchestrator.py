@@ -132,6 +132,10 @@ def test_orchestrator_sequential_flow() -> None:
     assert res_last.stage_after == "validating"  # Successfully transitioned!
 
     # 6. Run Validators
+    # import_bib (sets bib_imported — REQUIRED gate for rendering)
+    res_import = orch.execute(OrchestratorRequest("import_bib", "validating", "continue_on_error"))
+    assert res_import.success is True
+
     # lint_bib
     res_bib = orch.execute(OrchestratorRequest("lint_bib", "validating", "continue_on_error"))
     assert res_bib.success is True

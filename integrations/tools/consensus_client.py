@@ -23,6 +23,8 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any
 
+from clients._retry import retry_with_backoff
+
 logger = logging.getLogger(__name__)
 
 from harness.ports.paper_search_provider import (
@@ -46,7 +48,23 @@ def _stable_hash(text: str) -> str:
 
 
 # Valid study types from Consensus API spec
-VALID_STUDY_TYPES = frozenset(
+_REQUIRED_QUERY_RESULT_FIELDS: frozenset[str] = frozenset(
+    # Per OpenAPI spec: these fields are required in every QueryResult
+    [
+        "abstract",
+        "authors",
+        "doi",
+        "journal_name",
+        "pages",
+        "publish_year",
+        "title",
+        "url",
+        "volume",
+        "citation_count",
+    ]
+)
+
+_VALID_STUDY_TYPES: frozenset[str] = frozenset(
     {
         "rct",
         "meta-analysis",
@@ -77,6 +95,24 @@ class ConsensusSearchProvider(PaperSearchProvider):
     def __init__(self, *, api_key: str | None = None, timeout: int = _REQUEST_TIMEOUT) -> None:
         self._api_key = api_key or os.environ.get("CONSENSUS_API_KEY", "")
         self._timeout = timeout
+
+    @property
+    def supported_filters(self) -> list[str]:
+        """Filter parameters supported by the Consensus API (OpenAPI spec)."""
+        return [
+            "year_min",
+            "year_max",
+            "study_types",
+            "human",
+            "sample_size_min",
+            "sjr_max",
+            "duration_min",
+            "duration_max",
+            "exclude_preprints",
+            "publisher_name",
+            "clinical_guideline",
+            "medical_mode",
+        ]
 
     @property
     def is_authenticated(self) -> bool:
@@ -126,6 +162,18 @@ class ConsensusSearchProvider(PaperSearchProvider):
 
         papers: list[NormalizedPaper] = []
         for raw in results:
+            if not isinstance(raw, dict):
+                logger.warning("Skipping non-dict Consensus result: %s", type(raw).__name__)
+                continue
+            # Validate required fields per OpenAPI QueryResult spec
+            missing_required = [
+                f for f in _REQUIRED_QUERY_RESULT_FIELDS if f not in raw or raw[f] is None
+            ]
+            if missing_required:
+                logger.debug(
+                    "Consensus paper has missing spec-required fields: %s",
+                    ", ".join(missing_required),
+                )
             try:
                 papers.append(self._normalize(raw))
             except (KeyError, TypeError, ValueError) as exc:
@@ -204,16 +252,42 @@ class ConsensusSearchProvider(PaperSearchProvider):
 
         req = urllib.request.Request(url, headers=headers, method="GET")
 
-        try:
-            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
-                body = resp.read().decode("utf-8")
-                return json.loads(body)  # type: ignore[no-any-return]
-        except urllib.error.HTTPError as e:
+        def _do_request() -> dict[str, Any]:
             try:
-                detail = e.read().decode("utf-8", errors="replace")[:500]
+                with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                    raw = resp.read().decode("utf-8")
+                    return json.loads(raw)  # type: ignore[no-any-return]
+            except urllib.error.HTTPError as e:
+                if e.code == 429:
+                    raise  # let retry_with_backoff handle 429
+                try:
+                    raw_body = e.read().decode("utf-8", errors="replace")[:500]
+                except (OSError, ConnectionError):
+                    raw_body = ""
+                if e.code == 422:
+                    # Parse HTTPValidationError per OpenAPI spec
+                    try:
+                        validation = json.loads(raw_body)
+                        errors = validation.get("detail", [])
+                        msgs = [
+                            f"{'.'.join(str(loc) for loc in v.get('loc', []))}: {v.get('msg', '')}"
+                            for v in errors
+                        ]
+                        detail = "; ".join(msgs) if msgs else raw_body
+                    except (json.JSONDecodeError, KeyError, TypeError):
+                        detail = raw_body
+                    raise ValueError(f"Consensus API validation error (422): {detail}") from e
+                raise RuntimeError(f"Consensus API HTTP {e.code}: {raw_body}") from e
+
+        try:
+            return retry_with_backoff(_do_request)
+        except urllib.error.HTTPError as e:
+            # 429 exhausted retries — convert to RuntimeError
+            try:
+                raw_body = e.read().decode("utf-8", errors="replace")[:500]
             except (OSError, ConnectionError):
-                detail = "(no response body)"
-            raise RuntimeError(f"Consensus API HTTP {e.code}: {detail}") from e
+                raw_body = ""
+            raise RuntimeError(f"Consensus API HTTP {e.code}: {raw_body}") from e
         except TimeoutError as e:
             raise TimeoutError(f"Consensus API request timed out after {self._timeout}s") from e
         except urllib.error.URLError as e:
@@ -270,7 +344,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
         # Extract extra Consensus-specific fields (per OpenAPI spec)
         extra_fields: dict[str, Any] = {}
         if raw.get("study_type"):
-            if raw["study_type"] in VALID_STUDY_TYPES:
+            if raw["study_type"] in _VALID_STUDY_TYPES:
                 extra_fields["study_type"] = raw["study_type"]
             else:
                 extra_fields["study_type"] = raw["study_type"]

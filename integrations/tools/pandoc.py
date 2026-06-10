@@ -194,6 +194,8 @@ class PandocRenderer(ToolWrapper):
     def _resolve_formats(artifacts: dict[str, Any]) -> list[str]:
         """Determine which formats to render from artifacts."""
         formats = artifacts.get("output_formats")
+        if isinstance(formats, str):
+            formats = [f.strip() for f in formats.split(",")]
         if formats and isinstance(formats, list):
             return [f for f in formats if f in SUPPORTED_FORMATS]
         return DEFAULT_FORMATS

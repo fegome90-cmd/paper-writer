@@ -25,6 +25,8 @@ def validate_section_structure(
         List of finding dicts for missing sections. Core sections
         produce errors; recommended sections produce warnings.
     """
+    if existing_sections is None:
+        return []
     findings: list[dict[str, Any]] = []
     existing_lower = {s.lower() for s in existing_sections}
 

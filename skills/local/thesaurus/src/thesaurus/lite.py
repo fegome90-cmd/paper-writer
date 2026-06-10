@@ -231,14 +231,30 @@ class LiteSemanticStore(SemanticStore):
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
             row = conn.execute("SELECT value FROM meta WHERE key = 'last_import'").fetchone()
             last_import = row[0] if row else ""
+            source = self._detect_source(conn)
             return {
                 "concept_count": count,
                 "last_import": last_import or "Never",
                 "profile": "lite",
                 "manifest_sha256": self._get_manifest_sha(),
+                "source": source,
             }
         finally:
             conn.close()
+
+    def _detect_source(self, conn: sqlite3.Connection) -> str:
+        manifest_path = self._db_path.parent / "vocabulary" / "manifest.json"
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if manifest.get("source"):
+                    return manifest["source"]
+            except (json.JSONDecodeError, OSError):
+                pass
+        row = conn.execute(
+            "SELECT source FROM concepts WHERE source != '' LIMIT 1"
+        ).fetchone()
+        return row["source"] if row else ""
 
     def stats(self) -> dict:
         conn = self._connect()

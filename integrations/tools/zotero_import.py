@@ -129,11 +129,11 @@ class ZoteroImporter(ToolWrapper):
         target_path = Path(target_bib)
         if not target_path.is_absolute():
             target_path = repo_root / target_path
-            
+
         target_path = target_path.resolve()
         if target_path.is_dir():
             target_path = target_path / "references.bib"
-        
+
         if not target_path.is_relative_to(repo_root):
             return ValidatorResult(
                 validator="zotero-import",
@@ -150,12 +150,21 @@ class ZoteroImporter(ToolWrapper):
             )
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         incremental = artifacts.get("incremental", False)
         if incremental and target_path.exists():
-            with open(target_path, "a", encoding="utf-8") as tf:
-                with open(source_path, "r", encoding="utf-8") as sf:
-                    tf.write("\n" + sf.read())
+            source_content = source_path.read_text(encoding="utf-8", errors="replace")
+            target_content = target_path.read_text(encoding="utf-8", errors="replace")
+
+            # Deduplicate: remove target entries whose keys appear in source
+            source_keys = set(entries.keys())
+            deduped = ZoteroImporter._remove_entries_by_keys(target_content, source_keys)
+
+            merged = deduped
+            if merged and not merged.endswith("\n"):
+                merged += "\n"
+            merged += source_content
+            target_path.write_text(merged, encoding="utf-8")
         else:
             shutil.copy2(source_path, target_path)
 
@@ -172,6 +181,63 @@ class ZoteroImporter(ToolWrapper):
             findings=findings,
             artifacts_checked=[source_bib, str(target_path)],
         )
+
+    @staticmethod
+    def _remove_entries_by_keys(content: str, keys_to_remove: set[str]) -> str:
+        """Remove BibTeX entries whose citation keys match *keys_to_remove*.
+
+        Uses brace-depth-aware scanning so nested braces in field values
+        are handled correctly.  Meta-entries (@string, @comment, @preamble)
+        are preserved unconditionally.
+        """
+        import re as _re
+
+        _META_TYPES = frozenset({"string", "comment", "preamble"})
+        pattern = _re.compile(r"@(\w+)\s*([\{\(])", _re.IGNORECASE)
+
+        chunks: list[str] = []
+        last_pos = 0
+        search_pos = 0
+
+        while search_pos < len(content):
+            m = pattern.search(content, search_pos)
+            if not m:
+                break
+            if m.group(1).lower() in _META_TYPES:
+                search_pos = m.end()
+                continue
+
+            start = m.end()
+            depth = 1
+            pos = start
+            open_char = m.group(2)
+            close_char = "}" if open_char == "{" else ")"
+
+            while pos < len(content) and depth > 0:
+                if content[pos] == "\\" and pos + 1 < len(content):
+                    pos += 2
+                    continue
+                if content[pos] == open_char:
+                    depth += 1
+                elif content[pos] == close_char:
+                    depth -= 1
+                pos += 1
+
+            if depth != 0:
+                search_pos = start
+                continue
+
+            search_pos = pos
+            entry_body = content[start : pos - 1]
+            comma_pos = entry_body.find(",")
+            key = entry_body[:comma_pos].strip() if comma_pos != -1 else entry_body.strip()
+
+            if key in keys_to_remove:
+                chunks.append(content[last_pos : m.start()])
+                last_pos = pos
+
+        chunks.append(content[last_pos:])
+        return "".join(chunks)
 
     @staticmethod
     def _parse_bib(content: str) -> tuple[dict[str, dict[str, str]], dict[str, str]]:
@@ -193,7 +259,7 @@ class ZoteroImporter(ToolWrapper):
             pos = start
             open_char = m.group(2)
             close_char = "}" if open_char == "{" else ")"
-            
+
             while pos < len(content) and depth > 0:
                 # Skip escaped characters to avoid depth desync
                 if content[pos] == "\\" and pos + 1 < len(content):
@@ -272,7 +338,7 @@ class ZoteroImporter(ToolWrapper):
                     bpos = vp
                 else:
                     break
-            
+
             entries[key] = fields
             entry_types[key] = m.group(1)
 
