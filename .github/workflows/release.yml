@@ -88,7 +88,7 @@ jobs:
 
       - name: Audit dependencies
         run: |
-          uv export --frozen --no-dev --output-file requirements-release.txt
+          uv export --frozen --no-dev --no-emit-project --output-file requirements-release.txt
           uvx pip-audit@2.10.1 -r requirements-release.txt
 
       - name: Upload workflow artifact
