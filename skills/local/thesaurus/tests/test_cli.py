@@ -2,12 +2,13 @@
 
 import json
 import os
+import typing
 from types import SimpleNamespace
 
 import pytest
 
 
-def test_cmd_import_success(tmp_path, sample_concepts):
+def test_cmd_import_success(tmp_path: typing.Any, sample_concepts: typing.Any) -> None:
     """_cmd_import loads concepts from valid JSONL."""
     from thesaurus.cli import _cmd_import
 
@@ -44,7 +45,7 @@ def test_cmd_import_success(tmp_path, sample_concepts):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_import_file_not_found(capsys):
+def test_cmd_import_file_not_found(capsys: typing.Any) -> None:
     """_cmd_import exits with error for missing file."""
     from thesaurus.cli import _cmd_import
 
@@ -55,7 +56,7 @@ def test_cmd_import_file_not_found(capsys):
     assert "not found" in capsys.readouterr().err.lower()
 
 
-def test_cmd_search(tmp_thesaurus, sample_concepts):
+def test_cmd_search(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """_cmd_search returns results for matching query."""
     from thesaurus.cli import _cmd_search
 
@@ -72,7 +73,7 @@ def test_cmd_search(tmp_thesaurus, sample_concepts):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_search_no_results(tmp_thesaurus, capsys):
+def test_cmd_search_no_results(tmp_thesaurus: typing.Any, capsys: typing.Any) -> None:
     """_cmd_search prints 'No concepts found' for empty results."""
     from thesaurus.cli import _cmd_search
 
@@ -90,7 +91,7 @@ def test_cmd_search_no_results(tmp_thesaurus, capsys):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_list(tmp_thesaurus, sample_concepts):
+def test_cmd_list(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """_cmd_list prints concepts."""
     from thesaurus.cli import _cmd_list
 
@@ -107,7 +108,7 @@ def test_cmd_list(tmp_thesaurus, sample_concepts):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_list_empty(tmp_thesaurus, capsys):
+def test_cmd_list_empty(tmp_thesaurus: typing.Any, capsys: typing.Any) -> None:
     """_cmd_list prints 'No concepts found' when empty."""
     from thesaurus.cli import _cmd_list
 
@@ -125,7 +126,7 @@ def test_cmd_list_empty(tmp_thesaurus, capsys):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_audit(tmp_thesaurus, sample_concepts):
+def test_cmd_audit(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """_cmd_audit prints audit info."""
     from thesaurus.cli import _cmd_audit
 
@@ -142,7 +143,7 @@ def test_cmd_audit(tmp_thesaurus, sample_concepts):
             os.environ["PAPER_THESAURUS_DB"] = old_db
 
 
-def test_cmd_rebuild(tmp_thesaurus, sample_concepts):
+def test_cmd_rebuild(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """_cmd_rebuild recreates the database."""
     from thesaurus.cli import _cmd_rebuild
 

@@ -1,13 +1,14 @@
 """Tests for JSONL format validation."""
 
 import json
+import typing
 
 import pytest
 
 from thesaurus.mesh_loader import load_jsonl
 
 
-def test_missing_required_field_skipped_with_error(tmp_path):
+def test_missing_required_field_skipped_with_error(tmp_path: typing.Any) -> None:
     """Missing 'id' field raises ValueError."""
     jsonl = tmp_path / "no_id.jsonl"
     jsonl.write_text(json.dumps({"preferred_label": "Test"}) + "\n", encoding="utf-8")
@@ -16,14 +17,14 @@ def test_missing_required_field_skipped_with_error(tmp_path):
         load_jsonl(jsonl)
 
 
-def test_empty_file(tmp_path):
+def test_empty_file(tmp_path: typing.Any) -> None:
     """Empty JSONL file returns empty list."""
     jsonl = tmp_path / "empty.jsonl"
     jsonl.write_text("", encoding="utf-8")
     assert load_jsonl(jsonl) == []
 
 
-def test_blank_lines_skipped(tmp_path):
+def test_blank_lines_skipped(tmp_path: typing.Any) -> None:
     """Blank lines in JSONL are skipped."""
     jsonl = tmp_path / "blanks.jsonl"
     lines = [

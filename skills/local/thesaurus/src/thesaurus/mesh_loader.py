@@ -2,9 +2,10 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 
-def load_jsonl(file_path: str | Path) -> list[dict]:
+def load_jsonl(file_path: str | Path) -> list[dict[str, Any]]:
     """Parse a JSONL file into a list of concept dicts.
 
     Each line must be valid JSON with at least 'id' and 'preferred_label' fields.
@@ -72,7 +73,7 @@ def validate_jsonl_readable(file_path: str | Path) -> None:
             if i >= 1:
                 break
 
-    non_blank = [l for l in lines if l]
+    non_blank = [line for line in lines if line]
     if not non_blank:
         raise ValueError("JSONL file is empty (no non-blank lines)")
 

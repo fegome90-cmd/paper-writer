@@ -1,12 +1,13 @@
 """Shared fixtures for thesaurus tests."""
 
 import json
+import typing
 
 import pytest
 
 
 @pytest.fixture
-def tmp_thesaurus(tmp_path):
+def tmp_thesaurus(tmp_path: typing.Any) -> typing.Any:
     """Create a temporary thesaurus store with sample data."""
     db_path = tmp_path / "thesaurus.db"
     from thesaurus.lite import LiteSemanticStore
@@ -16,7 +17,7 @@ def tmp_thesaurus(tmp_path):
 
 
 @pytest.fixture
-def sample_concepts():
+def sample_concepts() -> typing.Any:
     """Return a list of sample concept dicts."""
     return [
         {
@@ -53,7 +54,7 @@ def sample_concepts():
 
 
 @pytest.fixture
-def sample_jsonl(tmp_path, sample_concepts):
+def sample_jsonl(tmp_path: typing.Any, sample_concepts: typing.Any) -> typing.Any:
     """Write sample concepts to a JSONL file and return the path."""
     jsonl_path = tmp_path / "sample.jsonl"
     lines = []
@@ -67,7 +68,7 @@ def sample_jsonl(tmp_path, sample_concepts):
 
 
 @pytest.fixture
-def sample_manifest(tmp_path, sample_jsonl):
+def sample_manifest(tmp_path: typing.Any, sample_jsonl: typing.Any) -> typing.Any:
     """Create a valid manifest.json for the sample JSONL."""
     import hashlib
 

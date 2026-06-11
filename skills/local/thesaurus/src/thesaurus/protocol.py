@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -16,7 +17,7 @@ class SemanticStore(ABC):
     """Abstract base class for biomedical concept stores."""
 
     @abstractmethod
-    def search(self, query: str, limit: int = 20) -> list[dict]:
+    def search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         """Return matching concepts with match_type metadata.
 
         Returns list of dicts with keys: id, preferred_label, match_type, notation.
@@ -25,17 +26,17 @@ class SemanticStore(ABC):
         ...
 
     @abstractmethod
-    def add_concept(self, concept: dict) -> None:
+    def add_concept(self, concept: dict[str, Any]) -> None:
         """Insert or replace a single concept."""
         ...
 
     @abstractmethod
-    def list_concepts(self, offset: int = 0, limit: int = 50) -> list[dict]:
+    def list_concepts(self, offset: int = 0, limit: int = 50) -> list[dict[str, Any]]:
         """List concepts with pagination."""
         ...
 
     @abstractmethod
-    def import_concepts(self, concepts: list[dict]) -> int:
+    def import_concepts(self, concepts: list[dict[str, Any]]) -> int:
         """Import pre-validated concept dicts.
 
         Uses INSERT OR REPLACE for duplicate IDs.
@@ -45,12 +46,12 @@ class SemanticStore(ABC):
         ...
 
     @abstractmethod
-    def audit(self) -> dict:
+    def audit(self) -> dict[str, Any]:
         """Return audit info: concept_count, last_import, profile, manifest_sha256."""
         ...
 
     @abstractmethod
-    def stats(self) -> dict:
+    def stats(self) -> dict[str, Any]:
         """Return stats: total_concepts, fts5_enabled, db_size_bytes."""
         ...
 

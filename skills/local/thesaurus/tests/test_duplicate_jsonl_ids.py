@@ -1,11 +1,12 @@
 """Tests for duplicate IDs within single JSONL file."""
 
 import json
+import typing
 
 from thesaurus.mesh_loader import load_jsonl
 
 
-def test_duplicate_ids_parsed_both_lines(tmp_path):
+def test_duplicate_ids_parsed_both_lines(tmp_path: typing.Any) -> None:
     """Both lines with duplicate IDs are parsed (INSERT OR REPLACE handles at DB level)."""
     jsonl = tmp_path / "dupes.jsonl"
     lines = [
@@ -20,7 +21,7 @@ def test_duplicate_ids_parsed_both_lines(tmp_path):
     assert concepts[-1]["preferred_label"] == "Second"
 
 
-def test_duplicate_ids_last_write_wins_on_import(tmp_thesaurus):
+def test_duplicate_ids_last_write_wins_on_import(tmp_thesaurus: typing.Any) -> None:
     """Import with duplicate IDs: last-write-wins via INSERT OR REPLACE."""
     concepts1 = [
         {

@@ -1,7 +1,6 @@
 """LiteSemanticStore — SQLite+FTS5 implementation of SemanticStore."""
 
 import json
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -48,7 +47,9 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
 
         # Insert new FTS entry
         conn.execute(
-            "INSERT INTO concepts_fts (id, preferred_label, notation, alt_labels) VALUES (?, ?, ?, ?)",
+            """INSERT INTO concepts_fts
+               (id, preferred_label, notation, alt_labels)
+               VALUES (?, ?, ?, ?)""",
             (concept["id"], concept["preferred_label"], concept.get("notation", ""), alt_str),
         )
 
@@ -74,7 +75,8 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         conn = self._connect()
         try:
             conn.execute("PRAGMA foreign_keys = ON")
-            with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
                 self._upsert_fts(conn, concept)
                 conn.execute(
                     """
@@ -105,9 +107,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     )
 
                 # Relations
-                conn.execute(
-                    "DELETE FROM concept_relations WHERE concept_id = ?", (concept["id"],)
-                )
+                conn.execute("DELETE FROM concept_relations WHERE concept_id = ?", (concept["id"],))
                 for rel_type in ["broader", "narrower", "related"]:
                     val = concept.get(rel_type, "")
                     if not val:
@@ -115,9 +115,15 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     targets = [t.strip() for t in val.split(",") if t.strip()]
                     for target in targets:
                         conn.execute(
-                            "INSERT INTO concept_relations (concept_id, target_id, relation_type) VALUES (?, ?, ?)",
+                            """INSERT INTO concept_relations
+                               (concept_id, target_id, relation_type)
+                               VALUES (?, ?, ?)""",
                             (concept["id"], target, rel_type),
                         )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
         finally:
             conn.close()
 
@@ -126,7 +132,8 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         conn = self._connect()
         try:
             conn.execute("PRAGMA foreign_keys = ON")
-            with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
                 for concept in concepts:
                     self._upsert_fts(conn, concept)
                     conn.execute(
@@ -166,7 +173,9 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                         targets = [t.strip() for t in val.split(",") if t.strip()]
                         for target in targets:
                             conn.execute(
-                                "INSERT INTO concept_relations (concept_id, target_id, relation_type) VALUES (?, ?, ?)",
+                                """INSERT INTO concept_relations
+                                   (concept_id, target_id, relation_type)
+                                   VALUES (?, ?, ?)""",
                                 (concept["id"], target, rel_type),
                             )
                 # Update last_import timestamp
@@ -174,6 +183,10 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     "INSERT OR REPLACE INTO meta (key, value) "
                     "VALUES ('last_import', datetime('now'))"
                 )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
             return len(concepts)
         finally:
             conn.close()
@@ -215,24 +228,38 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     )
                 return results
             except sqlite3.OperationalError:
-                like_pattern = f"%{query.replace('%', '\\%').replace('_', '\\_')}%"
+                escaped_query = query.replace("%", r"\%").replace("_", r"\_")
+                like_pattern = f"%{escaped_query}%"
                 rows = conn.execute(
                     """SELECT c.id, c.preferred_label, c.notation,
-                              GROUP_CONCAT(a.label) as alt_labels_str
+                              COALESCE(
+                                (
+                                  SELECT json_group_array(label)
+                                  FROM alt_labels
+                                  WHERE concept_id = c.id
+                                ),
+                                '[]'
+                              ) as alt_labels_str
                        FROM concepts c
-                       LEFT JOIN alt_labels a ON c.id = a.concept_id
-                       WHERE c.preferred_label LIKE ? ESCAPE '\\' OR c.notation LIKE ? ESCAPE '\\'
-                          OR a.label LIKE ? ESCAPE '\\'
-                       GROUP BY c.id
+                       WHERE c.preferred_label LIKE ? ESCAPE '\\'
+                          OR c.notation LIKE ? ESCAPE '\\'
+                          OR EXISTS(
+                            SELECT 1
+                            FROM alt_labels a
+                            WHERE a.concept_id = c.id
+                              AND a.label LIKE ? ESCAPE '\\'
+                          )
                        LIMIT ?""",
                     (like_pattern, like_pattern, like_pattern, limit),
                 ).fetchall()
                 results = []
                 for row in rows:
                     match_type = "preferred_label"
-                    if (
-                        query.lower() in (row["alt_labels_str"] or "").lower()
-                        and query.lower() not in row["preferred_label"].lower()
+                    alt_list = json.loads(row["alt_labels_str"])
+                    query_lower = query.lower()
+                    preferred_lower = row["preferred_label"].lower()
+                    if any(query_lower in alt.lower() for alt in alt_list) and (
+                        query_lower not in preferred_lower
                     ):
                         match_type = "synonym"
                     results.append(
@@ -254,10 +281,32 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         try:
             rows = conn.execute(
                 """SELECT c.id, c.preferred_label, c.notation, c.source,
-                          COALESCE((SELECT json_group_array(label) FROM alt_labels WHERE concept_id = c.id), '[]') as alt_labels,
-                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'broader') as broader,
-                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'narrower') as narrower,
-                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'related') as related
+                          COALESCE(
+                            (
+                              SELECT json_group_array(label)
+                              FROM alt_labels
+                              WHERE concept_id = c.id
+                            ),
+                            '[]'
+                          ) as alt_labels,
+                          (
+                            SELECT GROUP_CONCAT(target_id, ',')
+                            FROM concept_relations
+                            WHERE concept_id = c.id
+                              AND relation_type = 'broader'
+                          ) as broader,
+                          (
+                            SELECT GROUP_CONCAT(target_id, ',')
+                            FROM concept_relations
+                            WHERE concept_id = c.id
+                              AND relation_type = 'narrower'
+                          ) as narrower,
+                          (
+                            SELECT GROUP_CONCAT(target_id, ',')
+                            FROM concept_relations
+                            WHERE concept_id = c.id
+                              AND relation_type = 'related'
+                          ) as related
                    FROM concepts c
                    ORDER BY c.preferred_label
                    LIMIT ? OFFSET ?""",
@@ -267,7 +316,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                 {
                     "id": row["id"],
                     "preferred_label": row["preferred_label"],
-                    "alt_labels": row["alt_labels"],
+                    "alt_labels": json.loads(row["alt_labels"]),
                     "broader": row["broader"] or "",
                     "narrower": row["narrower"] or "",
                     "related": row["related"] or "",
@@ -331,8 +380,6 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         Creates a staging DB, migrates and imports into it, then atomically
         swaps it with the live DB. If anything fails, the live DB is preserved.
         """
-        import errno
-        import shutil
 
         workspace = self._db_path.parent
         manifest_path = workspace / "vocabulary" / "manifest.json"
@@ -369,19 +416,23 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                 staging_store = self.__class__(str(staging_path))
                 staging_store.import_concepts(concepts)
 
-            # Atomic swap: rename staging to live (same filesystem = atomic)
+            # Atomic swap: use SQLite Backup API (handles WAL, locks, and cross-device)
+            live_conn = sqlite3.connect(str(self._db_path))
+            staging_conn = sqlite3.connect(str(staging_path))
             try:
-                os.rename(str(staging_path), str(self._db_path))
-            except OSError as exc:
-                if exc.errno == errno.EXDEV:
-                    # Cross-device: fallback to copy+delete
-                    shutil.copy2(str(staging_path), str(self._db_path))
-                    os.remove(str(staging_path))
-                else:
-                    raise
+                staging_conn.backup(live_conn)
+            finally:
+                staging_conn.close()
+                live_conn.close()
+
+            # Cleanup staging
+            for ext in ["", "-wal", "-shm"]:
+                Path(str(staging_path) + ext).unlink(missing_ok=True)
+
         except Exception as e:
             # On any failure, clean up staging and preserve live DB
-            staging_path.unlink(missing_ok=True)
+            for ext in ["", "-wal", "-shm"]:
+                Path(str(staging_path) + ext).unlink(missing_ok=True)
             from thesaurus.errors import RebuildError
 
             raise RebuildError(f"Atomic rebuild failed: {e}") from e

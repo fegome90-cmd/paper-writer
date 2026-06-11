@@ -2,13 +2,14 @@
 
 import hashlib
 from pathlib import Path
+from typing import Any, cast
 
 
 class ManifestError(Exception):
     """Raised when manifest validation fails."""
 
 
-def load_manifest(manifest_path: str | Path) -> dict:
+def load_manifest(manifest_path: str | Path) -> dict[str, Any]:
     """Load a manifest.json file.
 
     Args:
@@ -27,12 +28,12 @@ def load_manifest(manifest_path: str | Path) -> dict:
         raise ManifestError(f"Manifest not found: {path}")
 
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
     except json.JSONDecodeError as e:
         raise ManifestError(f"Invalid JSON in manifest: {e}") from e
 
 
-def validate_manifest(manifest: dict, jsonl_path: str | Path) -> None:
+def validate_manifest(manifest: dict[str, Any], jsonl_path: str | Path) -> None:
     """Validate manifest against the JSONL file.
 
     Checks:

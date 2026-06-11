@@ -1,5 +1,6 @@
 """CLI direct-call functions for paper thesaurus commands."""
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -10,7 +11,7 @@ def _get_db_path() -> str | None:
     return os.environ.get("PAPER_THESAURUS_DB")
 
 
-def _cmd_import(args) -> None:
+def _cmd_import(args: argparse.Namespace) -> None:
     """Handle paper thesaurus import."""
     from thesaurus.factory import create_store
     from thesaurus.manifest import ManifestError, load_manifest, validate_manifest
@@ -42,7 +43,7 @@ def _cmd_import(args) -> None:
         sys.exit(1)
 
 
-def _cmd_search(args) -> None:
+def _cmd_search(args: argparse.Namespace) -> None:
     """Handle paper thesaurus search."""
     from thesaurus.factory import create_store
 
@@ -57,7 +58,7 @@ def _cmd_search(args) -> None:
         print(f"  [{r['match_type']}] {r['preferred_label']} ({r['id']})")
 
 
-def _cmd_list(args) -> None:
+def _cmd_list(args: argparse.Namespace) -> None:
     """Handle paper thesaurus list."""
     from thesaurus.factory import create_store
 
@@ -75,7 +76,7 @@ def _cmd_list(args) -> None:
         print(f"  {r['preferred_label']}{notation} ({r['id']})")
 
 
-def _cmd_audit(args) -> None:
+def _cmd_audit(args: argparse.Namespace) -> None:
     """Handle paper thesaurus audit."""
     from thesaurus.audit import format_audit
     from thesaurus.factory import create_store
@@ -84,7 +85,7 @@ def _cmd_audit(args) -> None:
     print(format_audit(store))
 
 
-def _cmd_rebuild(args) -> None:
+def _cmd_rebuild(args: argparse.Namespace) -> None:
     """Handle paper thesaurus rebuild."""
     from thesaurus.factory import create_store
 

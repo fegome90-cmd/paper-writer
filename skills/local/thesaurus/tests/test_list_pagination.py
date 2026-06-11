@@ -1,7 +1,9 @@
 """Tests for list pagination and empty store."""
 
+import typing
 
-def test_list_pagination(tmp_thesaurus):
+
+def test_list_pagination(tmp_thesaurus: typing.Any) -> None:
     """List returns ≤limit per page, offset works."""
     concepts = [
         {
@@ -30,13 +32,13 @@ def test_list_pagination(tmp_thesaurus):
     assert ids1.isdisjoint(ids2)
 
 
-def test_list_empty_store(tmp_thesaurus):
+def test_list_empty_store(tmp_thesaurus: typing.Any) -> None:
     """List on empty store returns empty list."""
     results = tmp_thesaurus.list_concepts()
     assert results == []
 
 
-def test_list_default_limit(tmp_thesaurus):
+def test_list_default_limit(tmp_thesaurus: typing.Any) -> None:
     """List default limit is 50."""
     concepts = [
         {

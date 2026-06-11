@@ -1,6 +1,7 @@
 """Tests for error paths: malformed JSONL, missing manifest, corrupt DB, etc."""
 
 import json
+import typing
 
 import pytest
 
@@ -8,7 +9,7 @@ from thesaurus.manifest import ManifestError, load_manifest, validate_manifest
 from thesaurus.mesh_loader import load_jsonl
 
 
-def test_malformed_json_exits_with_error(tmp_path):
+def test_malformed_json_exits_with_error(tmp_path: typing.Any) -> None:
     """Malformed JSON in JSONL raises ValueError with line number."""
     jsonl = tmp_path / "bad.jsonl"
     jsonl.write_text('{"id": "C1", "preferred_label": "A"}\n{bad json}\n', encoding="utf-8")
@@ -17,7 +18,7 @@ def test_malformed_json_exits_with_error(tmp_path):
         load_jsonl(jsonl)
 
 
-def test_missing_required_field_raises(tmp_path):
+def test_missing_required_field_raises(tmp_path: typing.Any) -> None:
     """Missing 'preferred_label' raises ValueError with line number."""
     jsonl = tmp_path / "missing.jsonl"
     jsonl.write_text('{"id": "C1"}\n', encoding="utf-8")
@@ -26,13 +27,13 @@ def test_missing_required_field_raises(tmp_path):
         load_jsonl(jsonl)
 
 
-def test_missing_manifest_raises(tmp_path):
+def test_missing_manifest_raises(tmp_path: typing.Any) -> None:
     """Loading non-existent manifest raises ManifestError."""
     with pytest.raises(ManifestError, match="not found"):
         load_manifest(tmp_path / "nonexistent.json")
 
 
-def test_sha256_mismatch_raises(tmp_path):
+def test_sha256_mismatch_raises(tmp_path: typing.Any) -> None:
     """Manifest with wrong SHA256 raises ManifestError."""
     jsonl = tmp_path / "data.jsonl"
     jsonl.write_text('{"id": "C1", "preferred_label": "Test"}\n', encoding="utf-8")
@@ -42,7 +43,7 @@ def test_sha256_mismatch_raises(tmp_path):
         validate_manifest(manifest, jsonl)
 
 
-def test_concept_count_mismatch_raises(tmp_path):
+def test_concept_count_mismatch_raises(tmp_path: typing.Any) -> None:
     """Manifest with wrong concept_count raises ManifestError."""
     jsonl = tmp_path / "data.jsonl"
     jsonl.write_text('{"id": "C1", "preferred_label": "Test"}\n', encoding="utf-8")
@@ -55,7 +56,7 @@ def test_concept_count_mismatch_raises(tmp_path):
         validate_manifest(manifest, jsonl)
 
 
-def test_empty_jsonl(tmp_path):
+def test_empty_jsonl(tmp_path: typing.Any) -> None:
     """Empty JSONL file returns empty list."""
     jsonl = tmp_path / "empty.jsonl"
     jsonl.write_text("", encoding="utf-8")
@@ -63,7 +64,7 @@ def test_empty_jsonl(tmp_path):
     assert result == []
 
 
-def test_empty_jsonl_readable_raises(tmp_path):
+def test_empty_jsonl_readable_raises(tmp_path: typing.Any) -> None:
     """validate_jsonl_readable raises on empty file."""
     from thesaurus.mesh_loader import validate_jsonl_readable
 
@@ -73,7 +74,7 @@ def test_empty_jsonl_readable_raises(tmp_path):
         validate_jsonl_readable(jsonl)
 
 
-def test_duplicate_ids_last_write_wins(tmp_path):
+def test_duplicate_ids_last_write_wins(tmp_path: typing.Any) -> None:
     """Duplicate IDs within file: last-write-wins."""
     jsonl = tmp_path / "dupes.jsonl"
     lines = [

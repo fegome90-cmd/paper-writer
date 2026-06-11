@@ -9,6 +9,7 @@ BEFORE deleting the DB, at lite.py:291. These tests confirm that behavior.
 
 import hashlib
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ from thesaurus.lite import LiteSemanticStore
 from thesaurus.manifest import ManifestError
 
 
-def _make_concept(i: int) -> dict:
+def _make_concept(i: int) -> dict[str, typing.Any]:
     return {
         "id": f"TEST{i:04d}",
         "preferred_label": f"Test Concept {i}",
@@ -30,7 +31,7 @@ def _make_concept(i: int) -> dict:
     }
 
 
-def _write_jsonl(path: Path, concepts: list[dict]) -> bytes:
+def _write_jsonl(path: Path, concepts: list[dict[str, typing.Any]]) -> bytes:
     lines = [json.dumps(c, ensure_ascii=False) for c in concepts]
     content = "\n".join(lines).encode("utf-8")
     path.write_bytes(content)
@@ -70,7 +71,7 @@ def _setup_workspace(workspace: Path, num_concepts: int = 3) -> Path:
 class TestRebuildValidatesManifestBeforeProceeding:
     """Rebuild succeeds when manifest is valid."""
 
-    def test_rebuild_succeeds_with_valid_manifest(self, tmp_path):
+    def test_rebuild_succeeds_with_valid_manifest(self, tmp_path: typing.Any) -> None:
         db_path = _setup_workspace(tmp_path, num_concepts=3)
         store = LiteSemanticStore(db_path=str(db_path))
 
@@ -81,7 +82,7 @@ class TestRebuildValidatesManifestBeforeProceeding:
 class TestRebuildDetectsTamperedJSONL:
     """Rebuild rejects JSONL whose checksum doesn't match manifest."""
 
-    def test_tampered_jsonl_raises_manifest_error(self, tmp_path):
+    def test_tampered_jsonl_raises_manifest_error(self, tmp_path: typing.Any) -> None:
         db_path = _setup_workspace(tmp_path, num_concepts=3)
 
         jsonl_path = tmp_path / "vocabulary" / "test.jsonl"
@@ -98,7 +99,7 @@ class TestRebuildDetectsTamperedJSONL:
 class TestRebuildDetectsWrongConceptCount:
     """Rebuild rejects manifest with incorrect concept_count."""
 
-    def test_wrong_concept_count_raises_manifest_error(self, tmp_path):
+    def test_wrong_concept_count_raises_manifest_error(self, tmp_path: typing.Any) -> None:
         vocab_dir = tmp_path / "vocabulary"
         vocab_dir.mkdir(parents=True, exist_ok=True)
 
@@ -119,7 +120,7 @@ class TestRebuildDetectsWrongConceptCount:
 class TestRebuildPreservesDBOnTamper:
     """Rebuild does NOT replace DB when JSONL is tampered."""
 
-    def test_original_db_preserved_after_tamper(self, tmp_path):
+    def test_original_db_preserved_after_tamper(self, tmp_path: typing.Any) -> None:
         db_path = _setup_workspace(tmp_path, num_concepts=3)
         store = LiteSemanticStore(db_path=str(db_path))
 

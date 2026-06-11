@@ -1,9 +1,11 @@
 """Tests for SemanticStore protocol invariants and capabilities."""
 
+import typing
+
 from thesaurus.protocol import StorageCapabilities
 
 
-def test_capabilities_immutability():
+def test_capabilities_immutability() -> None:
     """StorageCapabilities is frozen."""
     caps = StorageCapabilities()
     assert caps.vector_search is False
@@ -15,21 +17,21 @@ def test_capabilities_immutability():
         pass  # Expected — frozen dataclass
 
 
-def test_concept_count_after_import(tmp_thesaurus, sample_concepts):
+def test_concept_count_after_import(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """concept_count reflects actual store size."""
     assert tmp_thesaurus.concept_count == 0
     tmp_thesaurus.import_concepts(sample_concepts)
     assert tmp_thesaurus.concept_count == len(sample_concepts)
 
 
-def test_capabilities_lite_store(tmp_thesaurus):
+def test_capabilities_lite_store(tmp_thesaurus: typing.Any) -> None:
     """Lite store reports correct capabilities."""
     caps = tmp_thesaurus.capabilities
     assert caps.full_text is True
     assert caps.vector_search is False
 
 
-def test_invalid_profile_raises():
+def test_invalid_profile_raises() -> None:
     """Unknown profile raises ValueError."""
     import os
 

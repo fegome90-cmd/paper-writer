@@ -1,7 +1,9 @@
 """Audit report writer for thesaurus store."""
 
+from thesaurus.protocol import SemanticStore
 
-def format_audit(store) -> str:
+
+def format_audit(store: SemanticStore) -> str:
     """Format audit output as human-readable text.
 
     Args:

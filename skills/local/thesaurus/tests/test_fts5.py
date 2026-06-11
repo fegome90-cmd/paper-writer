@@ -1,9 +1,10 @@
 """Tests for FTS5 search and match_type behavior."""
 
 import json
+import typing
 
 
-def test_search_preferred_label(tmp_thesaurus, sample_concepts):
+def test_search_preferred_label(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """Search matches preferred_label."""
     tmp_thesaurus.import_concepts(sample_concepts)
     results = tmp_thesaurus.search("Asthma")
@@ -11,7 +12,9 @@ def test_search_preferred_label(tmp_thesaurus, sample_concepts):
     assert any(r["preferred_label"] == "Asthma" for r in results)
 
 
-def test_search_alt_labels_as_synonym(tmp_thesaurus, sample_concepts):
+def test_search_alt_labels_as_synonym(
+    tmp_thesaurus: typing.Any, sample_concepts: typing.Any
+) -> None:
     """Search matches alt_labels with match_type='synonym'."""
     tmp_thesaurus.import_concepts(sample_concepts)
     results = tmp_thesaurus.search("Bronchial Asthma")
@@ -21,14 +24,14 @@ def test_search_alt_labels_as_synonym(tmp_thesaurus, sample_concepts):
     assert asthm_results[0]["match_type"] == "synonym"
 
 
-def test_search_no_results(tmp_thesaurus, sample_concepts):
+def test_search_no_results(tmp_thesaurus: typing.Any, sample_concepts: typing.Any) -> None:
     """Search returns empty list for unmatched query."""
     tmp_thesaurus.import_concepts(sample_concepts)
     results = tmp_thesaurus.search("xyznonexistent")
     assert results == []
 
 
-def test_search_match_type_priority(tmp_thesaurus):
+def test_search_match_type_priority(tmp_thesaurus: typing.Any) -> None:
     """When concept matches both preferred_label and alt_labels, preferred wins."""
     concepts = [
         {
@@ -49,7 +52,7 @@ def test_search_match_type_priority(tmp_thesaurus):
     assert results[0]["match_type"] == "preferred_label"
 
 
-def test_search_limit(tmp_thesaurus):
+def test_search_limit(tmp_thesaurus: typing.Any) -> None:
     """Search respects limit parameter."""
     concepts = [
         {

@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+import typing
 from pathlib import Path
 
 from thesaurus.lite import LiteSemanticStore
@@ -26,7 +27,7 @@ def _write_manifest(workspace: Path, jsonl_path: Path) -> Path:
     return manifest_path
 
 
-def _write_jsonl(workspace: Path, concepts: list[dict]) -> Path:
+def _write_jsonl(workspace: Path, concepts: list[dict[str, typing.Any]]) -> Path:
     """Write concepts to a JSONL file."""
     vocab = workspace / "vocabulary"
     vocab.mkdir(parents=True, exist_ok=True)
@@ -36,7 +37,7 @@ def _write_jsonl(workspace: Path, concepts: list[dict]) -> Path:
     return jsonl_path
 
 
-def test_rebuild_with_manifest(tmp_path):
+def test_rebuild_with_manifest(tmp_path: typing.Any) -> None:
     """Rebuild with valid manifest re-imports from JSONL."""
     concepts = [
         {
@@ -63,7 +64,7 @@ def test_rebuild_with_manifest(tmp_path):
     assert store.concept_count == 1
 
 
-def test_rebuild_with_no_manifest_preserves_data(tmp_path):
+def test_rebuild_with_no_manifest_preserves_data(tmp_path: typing.Any) -> None:
     """Rebuild with no manifest is a no-op — data preserved."""
     db_path = tmp_path / "thesaurus.db"
     store = LiteSemanticStore(db_path=str(db_path))
@@ -87,7 +88,7 @@ def test_rebuild_with_no_manifest_preserves_data(tmp_path):
     assert store.concept_count == 1  # Data preserved!
 
 
-def test_rebuild_creates_fresh_db(tmp_path):
+def test_rebuild_creates_fresh_db(tmp_path: typing.Any) -> None:
     """Rebuild with manifest deletes old DB and creates fresh one."""
     concepts = [
         {
@@ -117,7 +118,7 @@ def test_rebuild_creates_fresh_db(tmp_path):
     conn.close()
 
 
-def test_rebuild_from_corrupt_db(tmp_path):
+def test_rebuild_from_corrupt_db(tmp_path: typing.Any) -> None:
     """Rebuild with manifest handles corrupt DB file."""
     concepts = [
         {
@@ -154,7 +155,7 @@ def test_rebuild_from_corrupt_db(tmp_path):
     conn.close()
 
 
-def test_rebuild_rejects_corrupt_manifest(tmp_path):
+def test_rebuild_rejects_corrupt_manifest(tmp_path: typing.Any) -> None:
     """Rebuild with wrong SHA256 in manifest raises ManifestError."""
     from thesaurus.manifest import ManifestError
 
@@ -187,6 +188,7 @@ def test_rebuild_rejects_corrupt_manifest(tmp_path):
 
     try:
         store.rebuild()
-        assert False, "Should have raised ManifestError"
     except ManifestError:
         pass  # Expected
+    else:
+        raise AssertionError("Should have raised ManifestError")

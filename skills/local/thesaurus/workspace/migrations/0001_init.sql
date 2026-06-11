@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     applied_at TEXT NOT NULL
 );
 
--- FTS5 virtual table (standalone — no content sync, we manage inserts manually)
 CREATE VIRTUAL TABLE IF NOT EXISTS concepts_fts USING fts5(
     id UNINDEXED,
     preferred_label,

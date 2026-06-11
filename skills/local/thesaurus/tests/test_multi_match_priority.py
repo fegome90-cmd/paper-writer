@@ -1,7 +1,9 @@
 """Tests for match_type priority when multiple fields match."""
 
+import typing
 
-def test_preferred_label_wins_over_notation(tmp_thesaurus):
+
+def test_preferred_label_wins_over_notation(tmp_thesaurus: typing.Any) -> None:
     """When query matches both preferred_label and notation, preferred_label wins."""
     concepts = [
         {
