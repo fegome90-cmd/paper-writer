@@ -246,6 +246,10 @@ class FilesystemActionRunner(ActionRunner):
                     artifacts.append(str(raw_results_path))
                 artifacts.extend(result.artifacts)
             else:
+                # DEPRECATED: Mock path only reachable when skill_adapters
+                # is explicitly empty. OrchestratorBuilder always wires
+                # real adapters. This fallback exists for backward compat
+                # with test-only configurations.
                 plan_file = self._resolve_run("search/search_plan.json")
                 with open(plan_file, "w", encoding="utf-8") as f:
                     f.write('{"query": "mock search", "date": "2026-05-24"}')
@@ -274,6 +278,7 @@ class FilesystemActionRunner(ActionRunner):
                 self._check_result(result, "screen")
                 artifacts.extend(result.artifacts)
             else:
+                # DEPRECATED: Mock path — see search mock comment above.
                 evidence_file = self._resolve_run("search/screened_evidence.json")
                 with open(evidence_file, "w", encoding="utf-8") as f:
                     f.write(
