@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -27,8 +28,8 @@ def run(args: list[str], *, expect_exit: int = 0, cwd: Path | None = None) -> tu
         cwd=cwd or REPO,
         env={
             **__import__("os").environ,
-            "ZOTERO_USER_ID": "20772197",
-            "ZOTERO_API_KEY": "REDACTED_ZOTERO_API_KEY",
+            "ZOTERO_USER_ID": os.environ.get("ZOTERO_USER_ID", ""),
+            "ZOTERO_API_KEY": os.environ.get("ZOTERO_API_KEY", ""),
             "ZOTERO_LIBRARY_TYPE": "user",
         },
     )
