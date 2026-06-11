@@ -78,7 +78,8 @@ class TestProviderFailureNoMockData:
         with pytest.raises(RuntimeError, match="Provider exploded"):
             runner.run_action("search", {"query": "cancer immunotherapy"})
 
-        outputs_dir = tmp_path / "outputs" / "runs" / "test-run"
+        # Search generated a fresh run_id before the error
+        outputs_dir = tmp_path / "outputs" / "runs" / runner.run_id
         assert outputs_dir.exists()
 
         search_dir = outputs_dir / "search"
@@ -159,7 +160,8 @@ class TestMockPathOnlyWithoutAdapters:
 
         _artifacts = runner.run_action("search", {"query": "test query"})
 
-        outputs_dir = tmp_path / "outputs" / "runs" / "test-run"
+        # Search generates a fresh run_id, use runner.run_id
+        outputs_dir = tmp_path / "outputs" / "runs" / runner.run_id
         raw_results = outputs_dir / "search" / "raw_results.json"
         assert raw_results.exists(), "Mock raw_results.json must be written"
 
@@ -181,7 +183,7 @@ class TestMockPathOnlyWithoutAdapters:
 
         runner.run_action("search", {"query": "test"})
 
-        raw_results = tmp_path / "outputs" / "runs" / "test-run" / "search" / "raw_results.json"
+        raw_results = tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json"
         assert raw_results.exists()
         content = json.loads(raw_results.read_text(encoding="utf-8"))
         assert content[0]["title"] == MOCK_PAPER_TITLE
@@ -199,7 +201,8 @@ class TestMockPathOnlyWithoutAdapters:
 
         assert not (tmp_path / "raw_results.json").exists()
         assert not (tmp_path / "outputs" / "raw_results.json").exists()
-        assert (tmp_path / "outputs" / "runs" / "test-run" / "search" / "raw_results.json").exists()
+        # Search generates a fresh run_id
+        assert (tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json").exists()
 
 
 class TestOrchestratorBuilderAlwaysWiresAdapters:

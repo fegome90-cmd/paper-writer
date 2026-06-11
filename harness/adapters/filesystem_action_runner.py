@@ -103,6 +103,16 @@ class FilesystemActionRunner(ActionRunner):
             args = {}
         artifacts: list[str] = []
 
+        # Search commands always create a fresh run to avoid overwriting
+        # previous search results. Other commands reuse the stored run_id.
+        if command in ("search", "chain"):
+            self._run_id = datetime.datetime.now().strftime("%Y%m%dT%H%M%S.%f")
+            # Update .run_id so subsequent commands (screen, draft, etc.)
+            # follow the latest search results.
+            run_id_file = self._resolve("outputs/.run_id")
+            if run_id_file.exists():
+                run_id_file.write_text(self._run_id, encoding="utf-8")
+
         if command == "init":
             dirs = [
                 "templates",
@@ -272,6 +282,9 @@ class FilesystemActionRunner(ActionRunner):
                 artifacts.append(str(evidence_file))
 
         elif command == "chain":
+            # Chain reads from previous search run (via latest symlink)
+            # but writes to its own fresh run directory.
+            latest_search = self._resolve("outputs/latest/search")
             search_dir = self._resolve_run("search")
             search_dir.mkdir(parents=True, exist_ok=True)
 
@@ -281,7 +294,7 @@ class FilesystemActionRunner(ActionRunner):
                 result = adapter.execute(
                     command="chain",
                     inputs={
-                        "search_dir": str(search_dir),
+                        "search_dir": str(latest_search if latest_search.exists() else search_dir),
                         "output_dir": str(search_dir),
                         "query": args.get("query", ""),
                         "max_rounds": args.get("max_rounds", 2),

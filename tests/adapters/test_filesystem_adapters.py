@@ -88,8 +88,10 @@ def test_action_runner_search(tmp_path: Path) -> None:
     artifacts = runner.run_action("search", {})
 
     assert len(artifacts) == 2
-    plan_path = _run_path(tmp_path, "search", "search_plan.json")
-    results_path = _run_path(tmp_path, "search", "raw_results.json")
+    # Search generates a fresh run_id, so use runner.run_id instead of RUN_ID
+    run_dir = tmp_path / "outputs" / "runs" / runner.run_id
+    plan_path = run_dir / "search" / "search_plan.json"
+    results_path = run_dir / "search" / "raw_results.json"
     assert plan_path.is_file()
     assert results_path.is_file()
 
@@ -186,7 +188,8 @@ def test_action_runner_chain(tmp_path: Path) -> None:
 
     # Without adapter — falls through (no artifacts, search dir created)
     runner.run_action("chain", {})
-    search_dir = _run_path(tmp_path, "search")
+    # Chain generates a fresh run_id, so use runner.run_id
+    search_dir = tmp_path / "outputs" / "runs" / runner.run_id / "search"
     assert search_dir.is_dir()
 
 
