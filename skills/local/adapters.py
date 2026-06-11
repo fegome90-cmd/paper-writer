@@ -676,7 +676,7 @@ _MODELING_KEYWORDS = frozenset(
         "simulation",
         "computational model",
         "in silico",
-        "predicted",
+        "prediction model",
         "machine learning",
         "deep learning",
         "neural network",
@@ -745,6 +745,10 @@ def _classify_epistemic(paper: dict[str, Any]) -> str:
     for kw in _MODELING_KEYWORDS:
         if kw in text:
             return "modeled"
+
+    # Word-boundary check for "predict" stem (avoids "unpredicted" false positive)
+    if re.search(r"\bpredict(?:ed|ion|ive|or)?\b", text):
+        return "modeled"
 
     # Observational detection
     for kw in _OBSERVATIONAL_KEYWORDS:
