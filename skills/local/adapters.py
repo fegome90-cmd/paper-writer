@@ -220,6 +220,9 @@ class LiteratureSearchAdapter(SkillAdapter):
             output_dir=output_dir,
             raw_papers=raw_papers,
             weights_phase=weights_phase,
+            year_min=inputs.get("year_min"),
+            year_max=inputs.get("year_max"),
+            sources=inputs.get("sources"),
         )
 
         # Academic mode: write search_plan.json with declared search window
@@ -265,8 +268,9 @@ class LiteratureSearchAdapter(SkillAdapter):
         """
 
         # Build screening_records for ALL papers (included + excluded)
-        # We only have included records from evidence_data; full excluded
-        # tracking will come when search.py is enriched (PR2 future).
+        # NOTE: Currently only included records are enriched.
+        # Excluded record tracking requires passing raw_results.json
+        # excluded list from search.py:screen() — tracked as architectural debt.
 
         screening_records: list[dict[str, Any]] = []
         included_records = evidence_data.get("evidence", [])
@@ -283,7 +287,7 @@ class LiteratureSearchAdapter(SkillAdapter):
                         {
                             "stage": "title_abstract",
                             "decision": "proceed",
-                            "reason": "Title and abstract match query",
+                            "reason": "Included based on tier (title/abstract matching not yet verified)",
                         },
                         {
                             "stage": "full_text",

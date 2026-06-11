@@ -31,6 +31,10 @@ def search(
     output_dir: Path,
     raw_papers: list[dict[str, Any]] | None = None,
     weights_phase: str = "balanced",
+    *,
+    year_min: int | None = None,
+    year_max: int | None = None,
+    sources: list[str] | None = None,
 ) -> dict[str, Any]:
     """Execute search pipeline: deduplicate → score → classify → write artifacts.
 
@@ -45,6 +49,9 @@ def search(
                     If None, only a search plan is written.
         weights_phase: Scoring phase preset (balanced, problem_definition,
                        intervention_design, outcome_selection).
+        year_min: Minimum publication year filter (from CLI --year-min).
+        year_max: Maximum publication year filter (from CLI --year-max).
+        sources: Database sources used (from provider provenance).
 
     Returns:
         Dict with 'artifacts' list of created file paths.
@@ -52,14 +59,18 @@ def search(
     output_dir.mkdir(parents=True, exist_ok=True)
     artifacts: list[str] = []
 
-    # 1. Write search plan
+    # 1. Write search plan — derive criteria from actual parameters
+    effective_year_min = year_min or (date.today().year - 5)
+    effective_year_max = year_max or date.today().year
+    effective_sources = sources or ["PubMed", "Embase", "CINAHL", "Semantic Scholar"]
+
     search_plan = {
         "query": query,
         "date": date.today().isoformat(),
         "strategy": "systematic_keyword_search",
-        "databases": ["PubMed", "Embase", "CINAHL", "Semantic Scholar"],
+        "databases": effective_sources,
         "inclusion_criteria": [
-            "Published between 2019 and 2024",
+            f"Published between {effective_year_min} and {effective_year_max}",
             "Peer-reviewed",
             "English language",
             f"Related to: {query}",
@@ -234,7 +245,7 @@ def screen(
     # Build PRISMA 2020 flow data from source provenance and tier screening
     source_counts: dict[str, int] = {}
     for p in all_papers:
-        src = p.get("source", "unknown")
+        src = p.get("source_platform") or p.get("source", "unknown")
         source_counts[src] = source_counts.get(src, 0) + 1
 
     # Count exclusions by reason
@@ -275,7 +286,7 @@ def screen(
         "total_raw": len(all_papers),
         "total_screened": len(screened),
         "min_tier": min_tier,
-        "inclusion_criteria": [f"tier <= {min_tier}", "has title", "has DOI"],
+        "inclusion_criteria": [f"tier <= {min_tier}"],  # Only tier is enforced; "has title"/"has DOI" are aspirational
         "prisma_flow": prisma_flow,
         "evidence": screened,
     }
