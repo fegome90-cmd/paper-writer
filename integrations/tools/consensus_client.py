@@ -233,8 +233,7 @@ class ConsensusSearchProvider(PaperSearchProvider):
                 sjr = int(filters["sjr_max"])
             except (ValueError, TypeError) as exc:
                 raise ValueError(
-                    f"sjr_max must be an integer 1-4 (spec constraint), "
-                    f"got {filters['sjr_max']!r}"
+                    f"sjr_max must be an integer 1-4 (spec constraint), got {filters['sjr_max']!r}"
                 ) from exc
             if not (1 <= sjr <= 4):
                 raise ValueError(f"sjr_max must be between 1 and 4 (spec constraint), got {sjr}")
