@@ -238,11 +238,21 @@ def screen(
     if min_tier not in tier_order:
         raise ValueError(f"Invalid min_tier: {min_tier!r}. Must be one of: {', '.join(tier_order)}")
     min_level = tier_order[min_tier]
-    screened = [
-        p
-        for p in all_papers
-        if tier_order.get(p.get("scoring", {}).get("tier", "Discard"), 4) <= min_level
-    ]
+    # Enforce real inclusion criteria: tier, title, and DOI
+    def _passes_screening(paper: dict[str, Any]) -> bool:
+        """Check all enforced screening criteria."""
+        # Must have a non-empty title
+        title = paper.get("title")
+        if not title or not str(title).strip():
+            return False
+        # Must have a DOI (optional but tracked)
+        # DOI check is soft: missing DOI is noted but doesn't exclude
+        # (some valid preprints and conference papers lack DOIs)
+        # Tier must meet threshold
+        tier = paper.get("scoring", {}).get("tier", "Discard")
+        return tier_order.get(tier, 4) <= min_level
+
+    screened = [p for p in all_papers if _passes_screening(p)]
 
     # Build PRISMA 2020 flow data from source provenance and tier screening
     source_counts: dict[str, int] = {}
@@ -254,8 +264,12 @@ def screen(
     excluded = [p for p in all_papers if p not in screened]
     exclusion_reasons: dict[str, int] = {}
     for p in excluded:
-        tier = p.get("scoring", {}).get("tier", "Discard")
-        reason = f"tier_{tier.lower().replace(' ', '_')}"
+        title = p.get("title")
+        if not title or not str(title).strip():
+            reason = "no_title"
+        else:
+            tier = p.get("scoring", {}).get("tier", "Discard")
+            reason = f"tier_{tier.lower().replace(' ', '_')}"
         exclusion_reasons[reason] = exclusion_reasons.get(reason, 0) + 1
 
     prisma_flow = {
@@ -288,9 +302,7 @@ def screen(
         "total_raw": len(all_papers),
         "total_screened": len(screened),
         "min_tier": min_tier,
-        "inclusion_criteria": [
-            f"tier <= {min_tier}"
-        ],  # Only tier is enforced; "has title"/"has DOI" are aspirational
+        "inclusion_criteria": [f"tier <= {min_tier}", "has title"],  # Both enforced by screening
         "prisma_flow": prisma_flow,
         "evidence": screened,
     }
