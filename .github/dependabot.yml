@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+
+  - package-ecosystem: pip
+    directory: "/skills/local/thesaurus"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "thesaurus"]
+
+  - package-ecosystem: pip
+    directory: "/skills/local/mesh-import"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "mesh-import"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]

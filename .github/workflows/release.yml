@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Validate tag matches pyproject version
+        if: github.event_name == 'push'
+        run: |
+          VERSION=$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          PY
+          )
+          test "v${VERSION}" = "${GITHUB_REF_NAME}"
+
+      - name: Install dependencies
+        run: uv sync --dev --frozen
+
+      - name: Run fast regression tests
+        env:
+          PAPER_SEARCH_PROVIDER: fixture
+        run: uv run pytest tests/ -m "not e2e" --tb=short
+
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Smoke install wheel
+        run: |
+          uv venv /tmp/paper-writer-release --python 3.12
+          uv pip install \
+            --python /tmp/paper-writer-release/bin/python \
+            dist/*.whl
+          /tmp/paper-writer-release/bin/paper --help
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-writer-${{ github.ref_name }}
+          path: dist/
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/* \
+            --verify-tag \
+            --generate-notes

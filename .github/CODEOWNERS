@@ -1,0 +1,5 @@
+# CI/CD and security-sensitive paths require explicit review.
+# Workflows can access repository secrets and permissions.
+/.github/workflows/ @fegome90-cmd
+/.github/dependabot.yml @fegome90-cmd
+/skills/local/thesaurus/workspace/migrations/ @fegome90-cmd

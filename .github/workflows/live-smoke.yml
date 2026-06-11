@@ -1,0 +1,47 @@
+name: Live integrations smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_zotero:
+        description: "Run Zotero CRUD smoke tests"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  zotero-live:
+    name: Zotero live smoke
+    if: inputs.run_zotero
+    runs-on: ubuntu-latest
+    environment: live-integrations
+
+    env:
+      RUN_LIVE_ZOTERO_TESTS: "1"
+      PAPER_SEARCH_PROVIDER: fixture
+      ZOTERO_USER_ID: ${{ secrets.ZOTERO_USER_ID }}
+      ZOTERO_API_KEY: ${{ secrets.ZOTERO_API_KEY }}
+      ZOTERO_LIBRARY_TYPE: user
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev --frozen
+
+      - name: Run CLI live smoke
+        run: uv run python scripts/test_pipeline_e2e.py
+
+      - name: Run Zotero integration tests
+        run: uv run pytest tests/integrations/ -k zotero --tb=short
