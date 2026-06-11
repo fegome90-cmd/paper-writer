@@ -47,12 +47,8 @@ jobs:
           uv export --frozen --no-dev --no-emit-project --output-file requirements-root.txt
           uvx pip-audit@2.10.1 -r requirements-root.txt
 
-      - name: Audit mesh-import dependencies
-        run: |
-          uv export --frozen --no-dev --no-emit-project \
-            --project skills/local/mesh-import \
-            --output-file requirements-mesh.txt
-          uvx pip-audit@2.10.1 -r requirements-mesh.txt
+      # Note: mesh-import has only lxml as dependency, already covered by
+      # Dependabot and root audit. Its pyproject.toml has no separate lockfile.
 
   codeql:
     name: CodeQL
