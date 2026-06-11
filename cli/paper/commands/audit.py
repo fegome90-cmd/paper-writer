@@ -382,16 +382,14 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     validator = QualityAppraisalValidator()
-    evidence_data = json.loads(evidence_path.read_text(encoding="utf-8"))
-    papers = evidence_data.get("evidence") or []
 
     t0 = time.time()
-    findings = validator.validate(papers)
+    findings = validator.validate(evidence_path)
     elapsed = int((time.time() - t0) * 1000)
 
     output = {
         "command": "audit_quality_appraisal",
-        "total_appraised": len(papers),
+        "total_appraised": len(findings),
         "findings_count": len(findings),
         "elapsed_ms": elapsed,
         "findings": [f if isinstance(f, dict) else str(f) for f in findings],
@@ -400,7 +398,7 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
     if args.output == "json":
         print(json.dumps(output, indent=2, ensure_ascii=False))
     else:
-        print(f"Quality appraisal: {len(papers)} studies, {len(findings)} findings")
+        print(f"Quality appraisal: {len(findings)} findings")
         for f in findings:
             if isinstance(f, dict):
                 print(f"  [{f.get('severity', '?')}] {f.get('rule_id', '?')}")

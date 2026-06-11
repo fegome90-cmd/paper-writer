@@ -8,10 +8,7 @@ version = "0.1.0"
 description = "Scientific search, drafting, validation, and rendering pipeline."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "mcp[cli]>=1,<2",
-    "pyyaml>=6.0.1",
-]
+dependencies = ["mcp[cli]>=1,<2", "pyyaml>=6.0.1"]
 
 # Trifecta is an OPTIONAL external tool for code traceability.
 # It is NOT bundled with paper-writer.
@@ -78,7 +75,15 @@ ignore_missing_imports = true
 # NOTE: Do not run `mypy .` — the repo directory name "paper-writer" contains
 # a hyphen and mypy rejects it as a package. Run with explicit package list:
 #   mypy harness/ cli/ validators/ integrations/ verification/
-exclude = ["^(paper-writer|tests)/"]
+exclude = [
+  "^(paper-writer|tests)/",
+  # Sub-projects with their own pyproject.toml — typecheck separately
+  "^skills/local/thesaurus/",
+  "^skills/local/mesh-import/",
+  "^skills/local/science-bundle/scienceskillscommon/",
+  # Legacy science-bundle scripts — no type annotations, not part of core pipeline
+  "^skills/local/science-bundle/",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -1,4 +1,4 @@
-"""Migration runner — wraps SQL in transactions with rollback."""
+"""Migration runner — sequential SQL execution with version tracking."""
 
 import sqlite3
 from pathlib import Path
@@ -57,6 +57,9 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
     statements = [s.strip() for s in sql.split(";") if s.strip()]
     # Disable FK checks during migration: v1 data may have integrity issues.
     conn.execute("PRAGMA foreign_keys = OFF")
+    # WARNING: SQLite DDL (CREATE TABLE, CREATE INDEX) is auto-committed and CANNOT
+    # be rolled back. The `with conn:` block only protects DML (INSERT, UPDATE, DELETE).
+    # If a DDL statement fails mid-migration, earlier schema changes persist.
     with conn:
         for stmt in statements:
             conn.execute(stmt)
