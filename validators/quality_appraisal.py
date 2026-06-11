@@ -267,7 +267,7 @@ class QualityAppraisalValidator:
         return {
             "title": paper.get("title") or "",
             "doi": paper.get("doi") or "",
-            "year": paper.get("year"),
+            "year": paper.get("year") or 0,
             "venue": paper.get("venue", ""),
             "scores": scores,
             "weighted_score": round(weighted, 2),
@@ -347,6 +347,16 @@ class QualityAppraisalValidator:
         # Write appraisal table if output path provided
         if output_path:
             output_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_stats: dict[str, Any] = {
+                "high": ratings.count("high"),
+                "moderate": ratings.count("moderate"),
+                "low": ratings.count("low"),
+                "very_low": ratings.count("very_low"),
+            }
+            if appraisals:
+                summary_stats["mean_score"] = round(
+                    sum(a["weighted_score"] for a in appraisals) / len(appraisals), 2
+                )
             output_path.write_text(
                 json.dumps(
                     {
@@ -361,15 +371,7 @@ class QualityAppraisalValidator:
                             },
                         },
                         "appraisals": appraisals,
-                        "summary": {
-                            "high": ratings.count("high"),
-                            "moderate": ratings.count("moderate"),
-                            "low": ratings.count("low"),
-                            "very_low": ratings.count("very_low"),
-                            "mean_score": round(
-                                sum(a["weighted_score"] for a in appraisals) / len(appraisals), 2
-                            ),
-                        },
+                        "summary": summary_stats,
                     },
                     indent=2,
                     ensure_ascii=False,
