@@ -66,6 +66,12 @@ uv run mypy harness/ cli/ validators/ integrations/ verification/ parsers/ engin
 # Full verification (lint + typecheck + test)
 make verify
 
+# One-time repository bootstrap (security, branch rules, environments)
+make setup-github
+
+# After a real PR has completed CI, enforce exact required checks
+make setup-github-checks
+
 # Smoke test the CLI
 uv run paper --help
 uv run paper doctor
@@ -108,11 +114,11 @@ uv run paper doctor
 
 4. **`_scratch/` and `tools/` are excluded from ruff** — these are scratch space and external tooling, not part of the main codebase.
 
-5. **`.envrc` contains secrets** — Zotero API key is in `.envrc` (direnv). Never commit `.env` files. The `.envrc` is tracked for convenience but should not contain real secrets in shared repos.
+5. **`.envrc` may contain local secrets** and is gitignored. Create .envrc locally from .env values; never commit secrets.
 
 6. **Test organization mirrors source** — `tests/` has subdirectories matching source modules (`tests/cli/`, `tests/harness/`, `tests/validators/`, etc.). The `tests/harness/mocks.py` file contains shared test doubles.
 
-7. **`outputs/` is partially gitignored** — `outputs/state.yaml` and `outputs/manifest.yaml` are tracked; `outputs/drafts/`, `outputs/render/`, `outputs/search/`, and `outputs/logs/` are gitignored.
+7. **`outputs/` runtime artifacts are ignored** — only `outputs/review_config.yaml` is tracked as project configuration.
 
 8. **Journal presets** — stored in `templates/journals/<name>/preset.yaml`. Use `paper init --preset nature` to load a preset.
 
