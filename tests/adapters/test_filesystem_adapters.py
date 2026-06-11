@@ -84,10 +84,35 @@ def test_action_runner_init(tmp_path: Path) -> None:
 
 
 def test_action_runner_search(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+    import json
+    from harness.ports.skill_adapter import SkillAdapter, SkillResult
+
+    class _SearchAdapter(SkillAdapter):
+        @property
+        def name(self) -> str:
+            return "literature-search"
+        def execute(self, command, inputs, context):
+            out = Path(inputs.get("output_dir", ""))
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "raw_results.json").write_text(
+                json.dumps([{"title": "Test", "doi": "10.1/test"}])
+            )
+            (out / "search_plan.json").write_text(
+                json.dumps({"query": inputs.get("query", "")})
+            )
+            return SkillResult(
+                adapter=self.name, status="pass", summary="ok",
+                artifacts=[str(out / "raw_results.json"), str(out / "search_plan.json")],
+                gate_changes={},
+            )
+
+    runner = FilesystemActionRunner(
+        tmp_path, run_id=RUN_ID,
+        skill_adapters={"literature_search": _SearchAdapter()},
+    )
     artifacts = runner.run_action("search", {})
 
-    assert len(artifacts) == 2
+    assert len(artifacts) >= 2
     # Search generates a fresh run_id, so use runner.run_id instead of RUN_ID
     run_dir = tmp_path / "outputs" / "runs" / runner.run_id
     plan_path = run_dir / "search" / "search_plan.json"
@@ -97,10 +122,31 @@ def test_action_runner_search(tmp_path: Path) -> None:
 
 
 def test_action_runner_screen(tmp_path: Path) -> None:
-    runner = FilesystemActionRunner(tmp_path, run_id=RUN_ID)
+    from harness.ports.skill_adapter import SkillAdapter, SkillResult
+    import json
+
+    class _ScreenAdapter(SkillAdapter):
+        @property
+        def name(self) -> str:
+            return "literature-search"
+        def execute(self, command, inputs, context):
+            out = Path(inputs.get("output_dir", ""))
+            out.mkdir(parents=True, exist_ok=True)
+            (out / "screened_evidence.json").write_text(
+                json.dumps({"evidence": [], "total_raw": 0, "total_screened": 0})
+            )
+            return SkillResult(
+                adapter=self.name, status="pass", summary="ok",
+                artifacts=[str(out / "screened_evidence.json")], gate_changes={},
+            )
+
+    runner = FilesystemActionRunner(
+        tmp_path, run_id=RUN_ID,
+        skill_adapters={"literature_search": _ScreenAdapter()},
+    )
     artifacts = runner.run_action("screen", {})
 
-    assert len(artifacts) == 1
+    assert len(artifacts) >= 1
     evidence_path = _run_path(tmp_path, "search", "screened_evidence.json")
     assert evidence_path.is_file()
 

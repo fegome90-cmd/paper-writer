@@ -312,19 +312,12 @@ class FilesystemActionRunner(ActionRunner):
                     artifacts.append(str(raw_results_path))
                 artifacts.extend(result.artifacts)
             else:
-                # DEPRECATED: Mock path only reachable when skill_adapters
-                # is explicitly empty. OrchestratorBuilder always wires
-                # real adapters. This fallback exists for backward compat
-                # with test-only configurations.
-                plan_file = self._resolve_run("search/search_plan.json")
-                with open(plan_file, "w", encoding="utf-8") as f:
-                    f.write('{"query": "mock search", "date": "2026-05-24"}')
-
-                results_file = self._resolve_run("search/raw_results.json")
-                with open(results_file, "w", encoding="utf-8") as f:
-                    f.write('[{"title": "Mock Paper 1", "doi": "10.1000/xyz123"}]')
-
-                artifacts.extend([str(plan_file), str(results_file)])
+                raise ValueError(
+                    "No literature_search adapter configured. "
+                    "OrchestratorBuilder wires real adapters automatically. "
+                    "Constructing FilesystemActionRunner with empty skill_adapters "
+                    "is not supported for production use."
+                )
 
         elif command == "screen":
             search_dir = self._resolve_run("search")
@@ -344,13 +337,10 @@ class FilesystemActionRunner(ActionRunner):
                 self._check_result(result, "screen")
                 artifacts.extend(result.artifacts)
             else:
-                # DEPRECATED: Mock path — see search mock comment above.
-                evidence_file = self._resolve_run("search/screened_evidence.json")
-                with open(evidence_file, "w", encoding="utf-8") as f:
-                    f.write(
-                        '[{"title": "Mock Paper 1", "doi": "10.1000/xyz123", "screened": true}]'
-                    )
-                artifacts.append(str(evidence_file))
+                raise ValueError(
+                    "No literature_search adapter configured for screen. "
+                    "OrchestratorBuilder wires real adapters automatically."
+                )
 
         elif command == "chain":
             # Chain reads from previous search run (via latest symlink)
@@ -633,13 +623,9 @@ class FilesystemActionRunner(ActionRunner):
             if not isinstance(metadata, dict):
                 return
             metadata["status"] = "blocked"
-            metadata["blocked_at"] = datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ).isoformat()
+            metadata["blocked_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
             metadata["blockers"] = blockers[:10]
-            run_yaml.write_text(
-                yaml.dump(metadata, default_flow_style=False), encoding="utf-8"
-            )
+            run_yaml.write_text(yaml.dump(metadata, default_flow_style=False), encoding="utf-8")
         except OSError:
             pass  # Non-critical: metadata is best-effort
 

@@ -145,12 +145,12 @@ class TestProviderFailureNoMockData:
                     assert MOCK_PAPER_DOI not in content
 
 
-class TestMockPathOnlyWithoutAdapters:
-    """Mock data IS written when runner has no adapters — but only then."""
+class TestNoAdaptersRaisesValueError:
+    """Runner without adapters raises ValueError instead of writing fake data."""
 
-    def test_no_adapters_writes_mock_data(self, tmp_path):
+    def test_no_adapters_raises_on_search(self, tmp_path):
         """When FilesystemActionRunner is built without skill_adapters,
-        the mock fallback path at lines 225-234 executes."""
+        search raises ValueError instead of writing fake data."""
         runner = FilesystemActionRunner(
             repo_path=tmp_path,
             skill_adapters=None,
@@ -158,22 +158,16 @@ class TestMockPathOnlyWithoutAdapters:
         )
         runner.run_action("init", {})
 
-        _artifacts = runner.run_action("search", {"query": "test query"})
+        with pytest.raises(ValueError, match="No literature_search adapter configured"):
+            runner.run_action("search", {"query": "test query"})
 
-        # Search generates a fresh run_id, use runner.run_id
+        # No fake data written
         outputs_dir = tmp_path / "outputs" / "runs" / runner.run_id
         raw_results = outputs_dir / "search" / "raw_results.json"
-        assert raw_results.exists(), "Mock raw_results.json must be written"
+        assert not raw_results.exists()
 
-        content = json.loads(raw_results.read_text(encoding="utf-8"))
-        assert len(content) == 1
-        assert content[0]["title"] == MOCK_PAPER_TITLE
-        assert content[0]["doi"] == MOCK_PAPER_DOI
-
-        assert any("raw_results.json" in a for a in _artifacts)
-
-    def test_empty_dict_writes_mock_data(self, tmp_path):
-        """Even with an empty dict (not None), no adapter is found."""
+    def test_empty_dict_raises_on_search(self, tmp_path):
+        """Even with an empty dict (not None), no adapter is found and search raises."""
         runner = FilesystemActionRunner(
             repo_path=tmp_path,
             skill_adapters={},
@@ -181,30 +175,23 @@ class TestMockPathOnlyWithoutAdapters:
         )
         runner.run_action("init", {})
 
-        runner.run_action("search", {"query": "test"})
+        with pytest.raises(ValueError, match="No literature_search adapter configured"):
+            runner.run_action("search", {"query": "test"})
 
-        raw_results = tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json"
-        assert raw_results.exists()
-        content = json.loads(raw_results.read_text(encoding="utf-8"))
-        assert content[0]["title"] == MOCK_PAPER_TITLE
-
-    def test_mock_data_only_in_run_dir_not_root(self, tmp_path):
-        """Mock data is written under outputs/runs/{run_id}/, NOT directly
-        under outputs/ or the repo root."""
+    def test_no_fake_data_anywhere_after_error(self, tmp_path):
+        """After ValueError, no fake data exists anywhere in the project."""
         runner = FilesystemActionRunner(
             repo_path=tmp_path,
             skill_adapters=None,
             run_id="test-run",
         )
         runner.run_action("init", {})
-        runner.run_action("search", {"query": "test"})
+
+        with pytest.raises(ValueError):
+            runner.run_action("search", {"query": "test"})
 
         assert not (tmp_path / "raw_results.json").exists()
         assert not (tmp_path / "outputs" / "raw_results.json").exists()
-        # Search generates a fresh run_id
-        assert (
-            tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json"
-        ).exists()
 
 
 class TestOrchestratorBuilderAlwaysWiresAdapters:
