@@ -183,20 +183,33 @@ def _build_search_results(search_dir: Path) -> str:
 
 
 def _build_quality_appraisal(search_dir: Path) -> str:
-    """Build quality appraisal section."""
+    """Build quality appraisal section.
+
+    When a quality_appraisal.json exists, derive the method description
+    from the actual appraisal data (dimensions, weights, results).
+    When no appraisal file exists, state honestly that appraisal was
+    not performed — do NOT declare a method that was never executed.
+    """
     appraisal = _load_json(search_dir / "quality_appraisal.json")
 
     lines = ["## 4. Quality Appraisal\n"]
 
-    lines.append("**Method:** Weighted 5-dimension scoring\n")
-    lines.append("| Dimension | Weight | Description |\n|---|---|---|\n")
-    lines.append("| Venue reputation | 0.20 | Top-tier conference/journal |\n")
-    lines.append("| Citation impact | 0.25 | Community validation proxy |\n")
-    lines.append("| Methodology rigor | 0.25 | Experimental design signals |\n")
-    lines.append("| Reproducibility | 0.15 | Open code/data availability |\n")
-    lines.append("| Recency | 0.15 | Recent studies reflect current state |\n")
-
     if appraisal:
+        # Derive method from appraisal metadata when available
+        method = appraisal.get("method", {})
+        dimensions = method.get("dimensions", None)
+
+        if dimensions:
+            lines.append("**Method:** Weighted multi-dimension scoring\n")
+            lines.append("| Dimension | Weight | Description |\n|---|---|---|\n")
+            for dim_name, dim_info in dimensions.items():
+                label = dim_name.replace("_", " ").title()
+                weight = dim_info.get("weight", "N/A")
+                desc = dim_info.get("description", "")
+                lines.append(f"| {label} | {weight} | {desc} |\n")
+        else:
+            lines.append("**Method:** Quality appraisal performed.\n")
+
         summary = appraisal.get("summary", {})
         lines.append("\n**Results:**\n")
         lines.append(f"- Total appraised: {appraisal.get('total_appraised', 'N/A')}\n")
@@ -206,7 +219,11 @@ def _build_quality_appraisal(search_dir: Path) -> str:
         lines.append(f"- Very low quality: {summary.get('very_low', 0)}\n")
         lines.append(f"- Mean weighted score: {summary.get('mean_score', 'N/A')}\n")
     else:
-        lines.append("\n*Quality appraisal data not yet generated.*\n")
+        lines.append(
+            "*Quality appraisal was not performed for this review. "
+            "If appraisal is planned, the reviewer should declare the "
+            "method, dimensions, and scoring criteria before execution.*\n"
+        )
 
     return "\n".join(lines) + "\n"
 

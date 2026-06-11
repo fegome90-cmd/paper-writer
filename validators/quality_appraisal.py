@@ -351,6 +351,15 @@ class QualityAppraisalValidator:
                 json.dumps(
                     {
                         "total_appraised": len(appraisals),
+                        "method": {
+                            "dimensions": {
+                                name: {
+                                    "weight": info["weight"],
+                                    "description": info["description"],
+                                }
+                                for name, info in self.DIMENSIONS.items()
+                            },
+                        },
                         "appraisals": appraisals,
                         "summary": {
                             "high": ratings.count("high"),

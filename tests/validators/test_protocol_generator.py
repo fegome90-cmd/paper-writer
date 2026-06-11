@@ -78,9 +78,33 @@ def _setup_search_dir(tmp_path: Path) -> Path:
     }
     (search_dir / "screened_evidence.json").write_text(json.dumps(evidence))
 
-    # quality_appraisal.json
+    # quality_appraisal.json (matches QualityAppraisalValidator.validate output)
     appraisal = {
         "total_appraised": 8,
+        "method": {
+            "dimensions": {
+                "venue_reputation": {
+                    "weight": 0.20,
+                    "description": "Venue reputation (top-tier conference/journal)",
+                },
+                "citation_impact": {
+                    "weight": 0.25,
+                    "description": "Citation impact (community validation proxy)",
+                },
+                "methodology_rigor": {
+                    "weight": 0.25,
+                    "description": "Methodology rigor (experimental design clarity)",
+                },
+                "reproducibility": {
+                    "weight": 0.15,
+                    "description": "Reproducibility (open code/data availability)",
+                },
+                "recency": {
+                    "weight": 0.15,
+                    "description": "Recency (recent studies reflect current state)",
+                },
+            },
+        },
         "summary": {
             "high": 3,
             "moderate": 3,
