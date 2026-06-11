@@ -1,7 +1,6 @@
 import sqlite3
 
 import pytest
-
 from mesh_import.store import ChecksumMismatchError, MeshStore
 
 

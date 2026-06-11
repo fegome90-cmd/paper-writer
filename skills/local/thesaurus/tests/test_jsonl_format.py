@@ -4,7 +4,6 @@ import json
 import typing
 
 import pytest
-
 from thesaurus.mesh_loader import load_jsonl
 
 

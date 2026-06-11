@@ -66,11 +66,11 @@ def test_duplicate_ui_detected():
     conn = sqlite3.connect(":memory:")
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("CREATE TABLE mesh_descriptor (descriptor_ui TEXT, descriptor_name TEXT)")
-    conn.execute("CREATE TABLE mesh_concept (concept_ui TEXT, descriptor_ui TEXT, concept_name TEXT, is_preferred INTEGER DEFAULT 0)")  # noqa: E501
-    conn.execute("CREATE TABLE mesh_term (term_ui TEXT, concept_ui TEXT, term_text TEXT, normalized_text TEXT, descriptor_name TEXT, is_preferred INTEGER DEFAULT 0)")  # noqa: E501
-    conn.execute("CREATE TABLE mesh_tree_node (tree_number TEXT, descriptor_ui TEXT, parent_tree_number TEXT)")  # noqa: E501
+    conn.execute("CREATE TABLE mesh_concept (concept_ui TEXT, descriptor_ui TEXT, concept_name TEXT, is_preferred INTEGER DEFAULT 0)")
+    conn.execute("CREATE TABLE mesh_term (term_ui TEXT, concept_ui TEXT, term_text TEXT, normalized_text TEXT, descriptor_name TEXT, is_preferred INTEGER DEFAULT 0)")
+    conn.execute("CREATE TABLE mesh_tree_node (tree_number TEXT, descriptor_ui TEXT, parent_tree_number TEXT)")
     conn.execute("CREATE TABLE mesh_descriptor_tree (descriptor_ui TEXT, tree_number TEXT)")
-    conn.execute("CREATE TABLE mesh_concept_relation (source_concept_ui TEXT, target_concept_ui TEXT, relation_type TEXT)")  # noqa: E501
+    conn.execute("CREATE TABLE mesh_concept_relation (source_concept_ui TEXT, target_concept_ui TEXT, relation_type TEXT)")
     conn.execute("INSERT INTO mesh_descriptor VALUES ('D001', 'First')")
     conn.execute("INSERT INTO mesh_descriptor VALUES ('D001', 'Duplicate')")
 
@@ -211,6 +211,6 @@ def test_non_contiguous_tree_numbers_ok(tmp_path):
     conn.close()
 
     gap_warnings = [
-        w for w in warnings if "gap" in w.lower() or "contiguous" in w.lower() or "missing" in w.lower() and "A02" in w
+        w for w in warnings if "gap" in w.lower() or "contiguous" in w.lower() or ("missing" in w.lower() and "A02" in w)
     ]
     assert len(gap_warnings) == 0, f"Gaps in TreeNumbers should not produce warnings: {gap_warnings}"

@@ -4,7 +4,6 @@ import json
 import typing
 
 import pytest
-
 from thesaurus.manifest import ManifestError, load_manifest, validate_manifest
 from thesaurus.mesh_loader import load_jsonl
 

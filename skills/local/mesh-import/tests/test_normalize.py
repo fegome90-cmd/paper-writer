@@ -1,5 +1,4 @@
 import pytest
-
 from mesh_import.normalize import normalize_text
 
 

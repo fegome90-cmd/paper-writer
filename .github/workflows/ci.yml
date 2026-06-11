@@ -42,12 +42,10 @@ jobs:
         run: uv run ruff check scripts/ --config pyproject.toml
 
       - name: Ruff — thesaurus
-        working-directory: skills/local/thesaurus
-        run: uv run --project "${{ github.workspace }}" ruff check src/ tests/
+        run: uv run ruff check --config pyproject.toml skills/local/thesaurus/src/ skills/local/thesaurus/tests/
 
       - name: Ruff — MeSH import
-        working-directory: skills/local/mesh-import
-        run: uv run --project "${{ github.workspace }}" ruff check src/ tests/
+        run: uv run ruff check --config pyproject.toml skills/local/mesh-import/src/ skills/local/mesh-import/tests/
 
       - name: Mypy
         run: >

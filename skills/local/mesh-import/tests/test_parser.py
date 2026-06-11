@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 from lxml import etree
-
 from mesh_import.parser import parse_descriptor_xml
 
 FIXTURES = Path(__file__).parent / "fixtures"

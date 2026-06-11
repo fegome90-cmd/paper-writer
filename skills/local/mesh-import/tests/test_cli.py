@@ -2,7 +2,6 @@ import argparse
 import json
 
 import pytest
-
 from mesh_import.cli import _cmd_expand, _cmd_import, _cmd_resolve
 
 

@@ -13,7 +13,6 @@ import typing
 from pathlib import Path
 
 import pytest
-
 from thesaurus.lite import LiteSemanticStore
 from thesaurus.manifest import ManifestError
 

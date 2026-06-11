@@ -4,7 +4,6 @@ import typing
 from unittest.mock import patch
 
 import pytest
-
 from thesaurus.errors import RebuildError
 from thesaurus.lite import LiteSemanticStore
 
