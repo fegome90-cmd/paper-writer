@@ -31,11 +31,6 @@ def _get_version() -> str:
 
 
 MAX_ASCENDING_DEPTH = 20
-DEFAULT_SEARCH_QUERY = "systematic literature review"
-DEFAULT_SEARCH_QUERY_NOTICE = (
-    "[--] No --query supplied; using compatibility fallback query for provider-backed search."
-)
-
 
 # ------------------------------------------------------------------
 # Zotero CLI handlers
