@@ -11,7 +11,6 @@ This test verifies three code paths:
 3. OrchestratorBuilder ALWAYS wires "literature_search" adapter
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest

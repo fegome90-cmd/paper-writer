@@ -201,7 +201,7 @@ def test_cli_search_with_query_uses_provider(
         main()
     assert exc_info.value.code == 0
 
-    captured = capsys.readouterr()
+    capsys.readouterr()
     assert (tmp_path / "outputs" / "latest" / "search" / "search_plan.json").is_file()
     assert (tmp_path / "outputs" / "latest" / "search" / "raw_results.json").is_file()
 

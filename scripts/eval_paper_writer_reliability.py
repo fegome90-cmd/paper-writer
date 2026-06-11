@@ -14,7 +14,6 @@ import gzip
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -39,17 +38,13 @@ def _log(msg: str) -> None:
 def _gs01_provider_failure_fail_closed(tmp: Path) -> tuple[bool, str]:
     """GS-01: Provider failure must be fail-closed — no fictitious output."""
     from harness.ports.paper_search_provider import (
-        NormalizedPaper,
         PaperSearchProvider,
-        SearchProvenance,
-        SearchProviderResult,
     )
 
     class ExplodingProvider(PaperSearchProvider):
         def search(self, query: str, *, sources=None, limit=20, **kw):
             raise RuntimeError("Network unreachable")
 
-    from harness.ports.skill_adapter import SkillResult
     from skills.local.adapters import LiteratureSearchAdapter
 
     adapter = LiteratureSearchAdapter()
@@ -61,7 +56,7 @@ def _gs01_provider_failure_fail_closed(tmp: Path) -> tuple[bool, str]:
     psp_mod.create_search_provider = lambda *a, **k: ExplodingProvider()
 
     try:
-        result = adapter.execute(
+        adapter.execute(
             "search",
             {"query": "test query", "output_dir": str(output_dir)},
             {},
@@ -109,6 +104,7 @@ def _gs02_search_filters_preserved(tmp: Path) -> tuple[bool, str]:
             )
 
     from unittest.mock import patch
+
     import harness.ports.paper_search_provider as psp_mod
 
     output_dir = tmp / "gs02" / "search"
@@ -239,7 +235,7 @@ def _gs03_dedup_keeps_richer(tmp: Path) -> tuple[bool, str]:
     if "Deep Learning for Radiology Updated" not in titles:
         return False, f"Richer paper B not in results: {titles}"
 
-    paper_b_result = [p for p in result if p.doi == "10.1234/radio2024"][0]
+    paper_b_result = next(p for p in result if p.doi == "10.1234/radio2024")
     if paper_b_result.abstract == "":
         return False, "Richer paper B was replaced by poorer version (empty abstract)"
     if paper_b_result.citations_count != 42:
@@ -252,8 +248,8 @@ def _gs03_dedup_keeps_richer(tmp: Path) -> tuple[bool, str]:
 
 def _gs04_manifest_tampering_fails_closed(tmp: Path) -> tuple[bool, str]:
     """GS-04: Manifest+JSONL tampering detected, no silent rebuild."""
-    from thesaurus.manifest import load_manifest, validate_manifest, ManifestError
     from thesaurus.lite import LiteSemanticStore
+    from thesaurus.manifest import ManifestError, load_manifest, validate_manifest
 
     vocab_dir = tmp / "gs04" / "vocabulary"
     vocab_dir.mkdir(parents=True)
@@ -348,7 +344,7 @@ def _gs05_synthetic_sample_distinguishable(tmp: Path) -> tuple[bool, str]:
         if source in ("synthetic", "mesh", "decs", "local"):
             return True, f"Sample clearly labeled as source='{source}'"
 
-    first = json.loads(listed[0].get("alt_labels", "[]")) if isinstance(listed[0].get("alt_labels"), str) else listed[0].get("alt_labels", [])
+    json.loads(listed[0].get("alt_labels", "[]")) if isinstance(listed[0].get("alt_labels"), str) else listed[0].get("alt_labels", [])
     sources = {c.get("source", "") for c in listed}
     return False, f"No recognizable source label in {sources}"
 
@@ -552,7 +548,7 @@ def _gs06_mesh_xml_deterministic(tmp: Path) -> tuple[bool, str]:
     if sha_a != sha_b:
         return False, f"Same input produced different checksums: {sha_a} vs {sha_b}"
 
-    cal = [r for r in records if r["id"] == "D000001"][0]
+    cal = next(r for r in records if r["id"] == "D000001")
     if "A-23187" not in cal["alt_labels"]:
         return False, f"Alt term 'A-23187' missing: {cal['alt_labels']}"
     if "Antibiotic A-23187" not in cal["alt_labels"]:
@@ -562,7 +558,7 @@ def _gs06_mesh_xml_deterministic(tmp: Path) -> tuple[bool, str]:
     if "D03.438.221.173" not in cal["tree_numbers"]:
         return False, f"Tree number D03.438.221.173 not preserved: {cal['tree_numbers']}"
 
-    ais = [r for r in records if r["id"] == "D000002"][0]
+    ais = next(r for r in records if r["id"] == "D000002")
     if "AIS" not in ais["alt_labels"]:
         return False, f"Alt term 'AIS' missing: {ais['alt_labels']}"
     if "Injury Severity Score" not in ais["alt_labels"]:
@@ -602,7 +598,7 @@ def _gs07_mesh_gzip_fixture(tmp: Path) -> tuple[bool, str]:
     if len(records_plain) != len(records_gz):
         return False, f"Descriptor count mismatch: plain={len(records_plain)}, gz={len(records_gz)}"
 
-    for rp, rg in zip(records_plain, records_gz):
+    for rp, rg in zip(records_plain, records_gz, strict=False):
         if rp != rg:
             return False, f"Record mismatch for {rp['id']}: plain={rp}, gz={rg}"
 

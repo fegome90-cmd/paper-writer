@@ -145,7 +145,6 @@ class TestRunMetadata:
         runner2 = _runner_with_adapter(tmp_path)
         runner2.run_action("search", {"query": "test"})
         _complete(runner2)
-        search_id = runner2.run_id
 
         runner3 = _runner_with_adapter(tmp_path)
         runner3.run_action("screen", {})
@@ -183,7 +182,6 @@ class TestRunMetadata:
         runner = FilesystemActionRunner(tmp_path)
         runner.run_action("init", {})
         _complete(runner)
-        init_id = runner.run_id
 
         runner2 = _runner_with_adapter(tmp_path)
         runner2.run_action("search", {"query": "test"})

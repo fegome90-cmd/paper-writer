@@ -8,7 +8,14 @@ the wheel will be broken for installed-package usage.
 from pathlib import Path
 from typing import Any
 
-import tomllib
+import pytest
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    pytest.skip(  # type: ignore[call-arg]
+        "tomllib requires Python 3.11+", allow_module_level=True
+    )
 
 PYPROJECT = Path("pyproject.toml")
 
