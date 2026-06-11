@@ -57,7 +57,7 @@ jobs:
           /tmp/paper-writer-release/bin/paper --help
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: paper-writer-${{ github.ref_name }}
           path: dist/
