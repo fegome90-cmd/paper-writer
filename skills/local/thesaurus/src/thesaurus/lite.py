@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from thesaurus.migration import run_migration
-from thesaurus.protocol import SemanticStore
+from thesaurus.protocol import SemanticStore, StorageCapabilities
 
 _DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "workspace"
 _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "thesaurus.db"
@@ -37,10 +37,19 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         """Insert or replace a concept in the FTS5 index."""
         # Delete existing FTS entry if any
         conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept["id"],))
+
+        alt_labels = concept.get("alt_labels", [])
+        if isinstance(alt_labels, str):
+            try:
+                alt_labels = json.loads(alt_labels)
+            except (json.JSONDecodeError, TypeError):
+                alt_labels = []
+        alt_str = " ".join(alt_labels)
+
         # Insert new FTS entry
         conn.execute(
-            "INSERT INTO concepts_fts (id, preferred_label, notation) VALUES (?, ?, ?)",
-            (concept["id"], concept["preferred_label"], concept.get("notation", "")),
+            "INSERT INTO concepts_fts (id, preferred_label, notation, alt_labels) VALUES (?, ?, ?, ?)",
+            (concept["id"], concept["preferred_label"], concept.get("notation", ""), alt_str),
         )
 
     @property
@@ -57,34 +66,58 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
             conn.close()
 
     def add_concept(self, concept: dict[str, Any]) -> None:
-        """Add or replace a single concept. Transactional via context manager."""
-        # Normalize alt_labels: accept list or JSON string
-        alt_labels = concept.get("alt_labels", "[]")
-        if isinstance(alt_labels, list):
-            alt_labels = json.dumps(alt_labels)
+        """Add or replace a single concept against normalized schema.
 
+        Writes to concepts table, then inserts alt_labels and
+        concept_relations rows for broader/narrower/related.
+        """
         conn = self._connect()
         try:
+            conn.execute("PRAGMA foreign_keys = ON")
             with conn:
                 self._upsert_fts(conn, concept)
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO concepts
-                      (id, preferred_label, alt_labels,
-                       broader, narrower, related, notation, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                      (id, preferred_label, notation, source)
+                    VALUES (?, ?, ?, ?)
                     """,
                     (
                         concept["id"],
                         concept["preferred_label"],
-                        alt_labels,
-                        concept.get("broader", ""),
-                        concept.get("narrower", ""),
-                        concept.get("related", ""),
                         concept.get("notation", ""),
                         concept.get("source", ""),
                     ),
                 )
+
+                # Alt labels
+                conn.execute("DELETE FROM alt_labels WHERE concept_id = ?", (concept["id"],))
+                alt_labels = concept.get("alt_labels", [])
+                if isinstance(alt_labels, str):
+                    try:
+                        alt_labels = json.loads(alt_labels)
+                    except (json.JSONDecodeError, TypeError):
+                        alt_labels = []
+                for label in alt_labels:
+                    conn.execute(
+                        "INSERT INTO alt_labels (concept_id, label) VALUES (?, ?)",
+                        (concept["id"], label),
+                    )
+
+                # Relations
+                conn.execute(
+                    "DELETE FROM concept_relations WHERE concept_id = ?", (concept["id"],)
+                )
+                for rel_type in ["broader", "narrower", "related"]:
+                    val = concept.get(rel_type, "")
+                    if not val:
+                        continue
+                    targets = [t.strip() for t in val.split(",") if t.strip()]
+                    for target in targets:
+                        conn.execute(
+                            "INSERT INTO concept_relations (concept_id, target_id, relation_type) VALUES (?, ?, ?)",
+                            (concept["id"], target, rel_type),
+                        )
         finally:
             conn.close()
 
@@ -92,32 +125,50 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         """Import pre-validated concept dicts. Transactional with INSERT OR REPLACE."""
         conn = self._connect()
         try:
+            conn.execute("PRAGMA foreign_keys = ON")
             with conn:
                 for concept in concepts:
-                    # Normalize alt_labels: accept list or JSON string
-                    alt_labels = concept.get("alt_labels", "[]")
-                    if isinstance(alt_labels, list):
-                        alt_labels = json.dumps(alt_labels)
-
                     self._upsert_fts(conn, concept)
                     conn.execute(
                         """
                         INSERT OR REPLACE INTO concepts
-                          (id, preferred_label, alt_labels,
-                           broader, narrower, related, notation, source)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                          (id, preferred_label, notation, source)
+                        VALUES (?, ?, ?, ?)
                         """,
                         (
                             concept["id"],
                             concept["preferred_label"],
-                            alt_labels,
-                            concept.get("broader", ""),
-                            concept.get("narrower", ""),
-                            concept.get("related", ""),
                             concept.get("notation", ""),
                             concept.get("source", ""),
                         ),
                     )
+
+                    conn.execute("DELETE FROM alt_labels WHERE concept_id = ?", (concept["id"],))
+                    alt_labels = concept.get("alt_labels", [])
+                    if isinstance(alt_labels, str):
+                        try:
+                            alt_labels = json.loads(alt_labels)
+                        except (json.JSONDecodeError, TypeError):
+                            alt_labels = []
+                    for label in alt_labels:
+                        conn.execute(
+                            "INSERT INTO alt_labels (concept_id, label) VALUES (?, ?)",
+                            (concept["id"], label),
+                        )
+
+                    conn.execute(
+                        "DELETE FROM concept_relations WHERE concept_id = ?", (concept["id"],)
+                    )
+                    for rel_type in ["broader", "narrower", "related"]:
+                        val = concept.get(rel_type, "")
+                        if not val:
+                            continue
+                        targets = [t.strip() for t in val.split(",") if t.strip()]
+                        for target in targets:
+                            conn.execute(
+                                "INSERT INTO concept_relations (concept_id, target_id, relation_type) VALUES (?, ?, ?)",
+                                (concept["id"], target, rel_type),
+                            )
                 # Update last_import timestamp
                 conn.execute(
                     "INSERT OR REPLACE INTO meta (key, value) "
@@ -128,23 +179,17 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
             conn.close()
 
     def search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
-        """Search concepts via FTS5 + JSON alt_labels parsing."""
+        """Search concepts via FTS5 + LIKE fallback."""
         limit = max(0, limit)
-
-        # Guard: empty or whitespace-only queries return nothing
         if not query or not query.strip():
             return []
 
         conn = self._connect()
         try:
-            # FTS5 search on preferred_label + notation.
-            # Wrap query in double quotes so FTS5 treats user input as a
-            # literal phrase, preventing operator injection (AND, OR, NOT, *).
             fts_query = '"' + query.replace('"', '""') + '"'
-            fts_results: dict[str, dict[str, Any]] = {}
             try:
                 rows = conn.execute(
-                    """SELECT id, preferred_label, notation,
+                    """SELECT id, preferred_label, notation, alt_labels,
                               rank
                        FROM concepts_fts
                        WHERE concepts_fts MATCH ?
@@ -152,51 +197,53 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                        LIMIT ?""",
                     (fts_query, limit),
                 ).fetchall()
+                results = []
                 for row in rows:
-                    fts_results[row["id"]] = {
-                        "id": row["id"],
-                        "preferred_label": row["preferred_label"],
-                        "match_type": "preferred_label",
-                        "notation": row["notation"],
-                    }
+                    match_type = "preferred_label"
+                    if (
+                        query.lower() in (row["alt_labels"] or "").lower()
+                        and query.lower() not in row["preferred_label"].lower()
+                    ):
+                        match_type = "synonym"
+                    results.append(
+                        {
+                            "id": row["id"],
+                            "preferred_label": row["preferred_label"],
+                            "match_type": match_type,
+                            "notation": row["notation"],
+                        }
+                    )
+                return results
             except sqlite3.OperationalError:
-                # Any FTS5 error (syntax, unterminated string, etc.) —
-                # skip FTS results entirely, LIKE fallback handles it.
-                pass
-
-            # Also search alt_labels (JSON column) for synonym matches
-            escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            like_pattern = f"%{escaped}%"
-            alt_rows = conn.execute(
-                "SELECT id, preferred_label, alt_labels, notation "
-                "FROM concepts WHERE alt_labels LIKE ? ESCAPE '\\'",
-                (like_pattern,),
-            ).fetchall()
-
-            results = list(fts_results.values())
-            seen_ids = {r["id"] for r in results}
-
-            for row in alt_rows:
-                if row["id"] not in seen_ids:
-                    # Check if query matches any alt_label
-                    try:
-                        alt_list = json.loads(row["alt_labels"])
-                    except (json.JSONDecodeError, TypeError):
-                        alt_list = []
-
-                    matched = any(query.lower() in alt.lower() for alt in alt_list)
-                    if matched:
-                        results.append(
-                            {
-                                "id": row["id"],
-                                "preferred_label": row["preferred_label"],
-                                "match_type": "synonym",
-                                "notation": row["notation"],
-                            }
-                        )
-                        seen_ids.add(row["id"])
-
-            return results[:limit]
+                like_pattern = f"%{query.replace('%', '\\%').replace('_', '\\_')}%"
+                rows = conn.execute(
+                    """SELECT c.id, c.preferred_label, c.notation,
+                              GROUP_CONCAT(a.label) as alt_labels_str
+                       FROM concepts c
+                       LEFT JOIN alt_labels a ON c.id = a.concept_id
+                       WHERE c.preferred_label LIKE ? ESCAPE '\\' OR c.notation LIKE ? ESCAPE '\\'
+                          OR a.label LIKE ? ESCAPE '\\'
+                       GROUP BY c.id
+                       LIMIT ?""",
+                    (like_pattern, like_pattern, like_pattern, limit),
+                ).fetchall()
+                results = []
+                for row in rows:
+                    match_type = "preferred_label"
+                    if (
+                        query.lower() in (row["alt_labels_str"] or "").lower()
+                        and query.lower() not in row["preferred_label"].lower()
+                    ):
+                        match_type = "synonym"
+                    results.append(
+                        {
+                            "id": row["id"],
+                            "preferred_label": row["preferred_label"],
+                            "match_type": match_type,
+                            "notation": row["notation"],
+                        }
+                    )
+                return results
         finally:
             conn.close()
 
@@ -206,9 +253,14 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         conn = self._connect()
         try:
             rows = conn.execute(
-                "SELECT id, preferred_label, alt_labels, "
-                "broader, narrower, related, notation, source "
-                "FROM concepts ORDER BY preferred_label LIMIT ? OFFSET ?",
+                """SELECT c.id, c.preferred_label, c.notation, c.source,
+                          COALESCE((SELECT json_group_array(label) FROM alt_labels WHERE concept_id = c.id), '[]') as alt_labels,
+                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'broader') as broader,
+                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'narrower') as narrower,
+                          (SELECT GROUP_CONCAT(target_id, ',') FROM concept_relations WHERE concept_id = c.id AND relation_type = 'related') as related
+                   FROM concepts c
+                   ORDER BY c.preferred_label
+                   LIMIT ? OFFSET ?""",
                 (limit, offset),
             ).fetchall()
             return [
@@ -216,9 +268,9 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     "id": row["id"],
                     "preferred_label": row["preferred_label"],
                     "alt_labels": row["alt_labels"],
-                    "broader": row["broader"],
-                    "narrower": row["narrower"],
-                    "related": row["related"],
+                    "broader": row["broader"] or "",
+                    "narrower": row["narrower"] or "",
+                    "related": row["related"] or "",
                     "notation": row["notation"],
                     "source": row["source"],
                 }
@@ -254,24 +306,14 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     return str(source)
             except (json.JSONDecodeError, OSError):
                 pass
-        row = conn.execute(
-            "SELECT source FROM concepts WHERE source != '' LIMIT 1"
-        ).fetchone()
+        row = conn.execute("SELECT source FROM concepts WHERE source != '' LIMIT 1").fetchone()
         return row["source"] if row else ""
 
     def stats(self) -> dict[str, Any]:
         conn = self._connect()
         try:
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
-            # Count total alt_labels across all concepts
-            total_alt = 0
-            rows = conn.execute("SELECT alt_labels FROM concepts").fetchall()
-            for row in rows:
-                try:
-                    alts = json.loads(row["alt_labels"]) if row["alt_labels"] else []
-                    total_alt += len(alts)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+            total_alt = conn.execute("SELECT COUNT(*) FROM alt_labels").fetchone()[0]
             db_size = self._db_path.stat().st_size if self._db_path.exists() else 0
             return {
                 "total_concepts": count,
@@ -337,10 +379,12 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     os.remove(str(staging_path))
                 else:
                     raise
-        except Exception:
+        except Exception as e:
             # On any failure, clean up staging and preserve live DB
             staging_path.unlink(missing_ok=True)
-            raise
+            from thesaurus.errors import RebuildError
+
+            raise RebuildError(f"Atomic rebuild failed: {e}") from e
 
     def _get_manifest_sha(self) -> str:
         """Get SHA256 of manifest file."""
