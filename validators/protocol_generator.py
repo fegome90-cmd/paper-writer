@@ -151,9 +151,9 @@ def _build_search_results(search_dir: Path) -> str:
         lines.append("### Identification\n")
         lines.append("| Source | Count |\n|---|---|\n")
         lines.append(
-            f"| Database results (backward chaining) | {ident.get('database_results', 0)} |\n"
+            f"| Database results | {ident.get('database_results', 0)} |\n"
         )
-        lines.append(f"| Other sources (forward chaining) | {ident.get('other_sources', 0)} |\n")
+        lines.append(f"| Other sources | {ident.get('other_sources', 0)} |\n")
         lines.append(f"| Seed papers | {ident.get('seed_papers', 0)} |\n")
         lines.append(f"| **Total identified** | **{ident.get('total_identified', 0)}** |\n")
         lines.append(f"| Duplicates removed | {ident.get('duplicates_removed', 0)} |\n")
@@ -237,18 +237,38 @@ def _build_data_extraction(search_dir: Path) -> str:
 
 
 def _build_synthesis_method(search_dir: Path) -> str:
-    """Build synthesis method section."""
+    """Build synthesis section from actual pipeline metadata."""
     evidence = _load_json(search_dir / "screened_evidence.json")
+    raw = _load_json(search_dir / "raw_results.json")
 
     lines = ["## 6. Synthesis Method\n"]
 
     if evidence:
         total = evidence.get("total_screened", 0)
         lines.append(f"**Included studies:** {total}\n")
-        lines.append("**Approach:** Narrative synthesis with structured evidence tables.\n")
+
+        # Derive scoring info from raw_results metadata
+        weights = raw.get("weights_phase", "unknown") if raw else "unknown"
+        lines.append(f"**Scoring weights phase:** {weights}\n")
+
+        # Derive quality appraisal availability
+        has_quality = (search_dir / "quality_appraisal.json").exists()
+        if has_quality:
+            lines.append("**Quality appraisal:** Performed. See Section 4.\n")
+        else:
+            lines.append("**Quality appraisal:** Not performed.\n")
+
+        # Describe pipeline tooling honestly
         lines.append(
-            "**Tooling:** Automated pipeline (search → chain → screen → export). "
-            "Scoring via domain-adapted CS engine with balanced weights.\n"
+            "**Tooling:** Automated pipeline (search → screen → export). "
+            "See sections above for actual databases, criteria, and filters applied.\n"
+        )
+
+        # Warn about unverified claims
+        lines.append(
+            "> **Note:** Synthesis approach (narrative, meta-analysis, etc.) "
+            "must be declared by the reviewer. This protocol documents the "
+            "search and screening process, not the analytical framework.\n"
         )
     else:
         lines.append("*No synthesis data available.*\n")

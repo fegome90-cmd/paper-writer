@@ -533,7 +533,10 @@ class FilesystemActionRunner(ActionRunner):
                     protocol_file.write_text(protocol_md, encoding="utf-8")
                     artifacts.append(str(protocol_file))
             except (ValueError, OSError) as e:
-                logger.warning("Protocol generation failed: %s", e)
+                raise ValueError(
+                    f"Protocol generation failed: {e}. "
+                    f"Check search_dir has valid metadata files."
+                ) from e
 
         elif command == "export_bib":
             search_dir = self._resolve_run("search")
