@@ -158,6 +158,12 @@ class ZoteroImporter(ToolWrapper):
 
             # Deduplicate: remove target entries whose keys appear in source
             source_keys = set(entries.keys())
+            if not source_keys:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "No citation keys parsed from source BibTeX; skipping dedup."
+                )
             deduped = ZoteroImporter._remove_entries_by_keys(target_content, source_keys)
 
             merged = deduped

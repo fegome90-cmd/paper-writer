@@ -205,25 +205,33 @@ def _cmd_zotero_update(args: Any) -> None:
         raise SystemExit(1) from None
 
     try:
-        # Always fetch current item for version and data
-        current = client.get_item(args.key)
-        current_data = current.get("data", current) if isinstance(current, dict) else current
-
-        # Resolve version: explicit arg > auto-detect from item
         version = args.version
-        if version is None:
-            version = current.get("version") if isinstance(current, dict) else None
-            if version is None and isinstance(current_data, dict):
-                version = current_data.get("version")
+
+        if args.partial:
+            # PATCH: only send changed fields. Skip GET if version is known.
+            if version is None:
+                current = client.get_item(args.key)
+                version = current.get("version") if isinstance(current, dict) else None
+                if version is None:
+                    d = current.get("data", {}) if isinstance(current, dict) else {}
+                    version = d.get("version") if isinstance(d, dict) else None
+                if version is None:
+                    print("Error: could not determine version. Use --version.", file=sys.stderr)
+                    raise SystemExit(1) from None
+            headers = client.partial_update_item(args.key, changes, version=version)
+        else:
+            # PUT: must send complete item data. Fetch current, merge changes.
+            current = client.get_item(args.key)
+            current_data = current.get("data", current) if isinstance(current, dict) else current
+
+            if version is None:
+                version = current.get("version") if isinstance(current, dict) else None
+                if version is None and isinstance(current_data, dict):
+                    version = current_data.get("version")
             if version is None:
                 print("Error: could not determine item version. Use --version.", file=sys.stderr)
                 raise SystemExit(1) from None
 
-        if args.partial:
-            # PATCH: only send changed fields
-            headers = client.partial_update_item(args.key, changes, version=version)
-        else:
-            # PUT: must send complete item data. Merge user changes into current data.
             if not isinstance(current_data, dict):
                 print("Error: could not extract item data for update", file=sys.stderr)
                 raise SystemExit(1) from None
@@ -262,7 +270,18 @@ def _cmd_zotero_delete(args: Any) -> None:
                         "Error: could not determine item version. Use --version.", file=sys.stderr
                     )
                     raise SystemExit(1) from None
-            client.delete_item(args.keys[0], version=version)
+            try:
+                client.delete_item(args.keys[0], version=version)
+            except ZoteroError as exc:
+                if "412" in str(exc) and args.version is None:
+                    # Race: item was modified since auto-detect. Retry once.
+                    item = client.get_item(args.keys[0])
+                    version = item.get("version") or item.get("data", {}).get("version")
+                    if version is None:
+                        raise
+                    client.delete_item(args.keys[0], version=version)
+                else:
+                    raise
             print(f"Deleted {args.keys[0]} (version {version})")
         else:
             # Batch: require library version

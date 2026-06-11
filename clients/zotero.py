@@ -757,9 +757,11 @@ class ZoteroClient:
                     first = next(iter(successful.values()))
                     if isinstance(first, dict):
                         key = first.get("key", "")
-                        if isinstance(key, str):
+                        if isinstance(key, str) and key:
+                            _validate_key(key, "attachment_key")
                             return key
-                    if isinstance(first, str):
+                    if isinstance(first, str) and first:
+                        _validate_key(first, "attachment_key")
                         return first
             raise ZoteroError("Failed to create attachment: no successful key returned")
         raise ZoteroError("Failed to get attachment template")
