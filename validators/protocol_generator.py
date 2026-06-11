@@ -248,7 +248,7 @@ def _build_synthesis_method(search_dir: Path) -> str:
         lines.append(f"**Included studies:** {total}\n")
 
         # Derive scoring info from raw_results metadata
-        weights = raw.get("weights_phase", "unknown") if raw else "unknown"
+        weights = raw.get("weights", {}).get("phase", "unknown") if raw else "unknown"
         lines.append(f"**Scoring weights phase:** {weights}\n")
 
         # Derive quality appraisal availability

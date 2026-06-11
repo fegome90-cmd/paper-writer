@@ -128,7 +128,10 @@ check("export-bib", ["--project", str(TMP), "export-bib"])
 
 # --- Phase 5: import bib ---
 print("\n--- Phase 5: import bib ---")
-check("import bib", ["--project", str(TMP), "import", "bib", "--from-zotero"])
+if os.environ.get("RUN_LIVE_ZOTERO_TESTS") == "1":
+    check("import bib", ["--project", str(TMP), "import", "bib", "--from-zotero"])
+else:
+    print("  SKIP import bib --from-zotero (set RUN_LIVE_ZOTERO_TESTS=1 to run)")
 
 # --- Phase 6: lint ---
 print("\n--- Phase 6: lint ---")

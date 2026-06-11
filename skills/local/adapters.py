@@ -215,6 +215,13 @@ class LiteratureSearchAdapter(SkillAdapter):
                 encoding="utf-8",
             )
 
+        # Derive real sources from provider provenance when available.
+        # This ensures the search plan reflects actual databases queried
+        # rather than hardcoded defaults.
+        effective_sources = inputs.get("sources")
+        if not effective_sources and raw_payload.get("provenance", {}).get("sources"):
+            effective_sources = raw_payload["provenance"]["sources"]
+
         result = search_module.search(
             query=query,
             output_dir=output_dir,
@@ -222,7 +229,7 @@ class LiteratureSearchAdapter(SkillAdapter):
             weights_phase=weights_phase,
             year_min=inputs.get("year_min"),
             year_max=inputs.get("year_max"),
-            sources=inputs.get("sources"),
+            sources=effective_sources,
         )
 
         # Academic mode: write search_plan.json with declared search window
