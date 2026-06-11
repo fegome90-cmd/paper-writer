@@ -432,6 +432,12 @@ def deduplicate(
                             _existing = unique_papers[prev_idx]
                             if not _existing.get("doi") and not _existing.get("pmid"):
                                 unique_papers[prev_idx] = paper
+                                # Register the richer paper's DOI/PMID so
+                                # subsequent duplicates are caught
+                                if doi:
+                                    seen_dois[doi] = prev_idx
+                                if pmid:
+                                    seen_pmids[pmid] = prev_idx
                                 log.append(
                                     {
                                         **_title_log,
@@ -473,6 +479,12 @@ def deduplicate(
                         ):
                             # Replace weaker paper with richer one
                             unique_papers[prev_idx] = paper
+                            # Register the richer paper's DOI/PMID so
+                            # subsequent duplicates are caught
+                            if doi:
+                                seen_dois[doi] = prev_idx
+                            if pmid:
+                                seen_pmids[pmid] = prev_idx
                             log.append(
                                 {
                                     **_title_log,
@@ -498,7 +510,9 @@ def deduplicate(
             else:
                 # No match in any bucket → unique paper
                 unique_papers.append(paper)
-                entry = (idx, title_lower, title_len, word_set)
+                # Store the unique_papers index (not the original paper idx)
+                # so bucket lookups index into unique_papers correctly
+                entry = (len(unique_papers) - 1, title_lower, title_len, word_set)
                 bucket_key = title_len // _BUCKET_SZ
                 if bucket_key <= _MAX_BUCKET:
                     buckets[bucket_key].append(entry)
