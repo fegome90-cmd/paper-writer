@@ -170,9 +170,10 @@ class ConsensusSearchProvider(PaperSearchProvider):
                 f for f in _REQUIRED_QUERY_RESULT_FIELDS if f not in raw or raw[f] is None
             ]
             if missing_required:
-                logger.debug(
-                    "Consensus paper has missing spec-required fields: %s",
+                logger.warning(
+                    "Consensus paper missing spec-required fields: %s — %s",
                     ", ".join(missing_required),
+                    raw.get("title", "<no title>"),
                 )
             try:
                 papers.append(self._normalize(raw))
@@ -217,13 +218,24 @@ class ConsensusSearchProvider(PaperSearchProvider):
         if filters.get("year_max"):
             params["year_max"] = str(filters["year_max"])
         if filters.get("study_types"):
-            params["study_types"] = filters["study_types"]
+            study_val = filters["study_types"]
+            # Consensus API expects comma-separated string, not repeated keys
+            if isinstance(study_val, list):
+                params["study_types"] = ",".join(str(v) for v in study_val)
+            else:
+                params["study_types"] = str(study_val)
         if filters.get("human"):
             params["human"] = "true"
         if filters.get("sample_size_min"):
             params["sample_size_min"] = str(filters["sample_size_min"])
         if filters.get("sjr_max") is not None:
-            sjr = int(filters["sjr_max"])
+            try:
+                sjr = int(filters["sjr_max"])
+            except (ValueError, TypeError) as exc:
+                raise ValueError(
+                    f"sjr_max must be an integer 1-4 (spec constraint), "
+                    f"got {filters['sjr_max']!r}"
+                ) from exc
             if not (1 <= sjr <= 4):
                 raise ValueError(f"sjr_max must be between 1 and 4 (spec constraint), got {sjr}")
             params["sjr_max"] = str(sjr)
