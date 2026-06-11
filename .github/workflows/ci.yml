@@ -23,20 +23,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
 
       - name: Install dependencies
         run: uv sync --dev --frozen
 
-      - name: Ruff
+      - name: Ruff — root
         run: uv run ruff check .
+
+      - name: Ruff — scripts
+        run: uv run ruff check scripts/ --config pyproject.toml
+
+      - name: Ruff — thesaurus
+        working-directory: skills/local/thesaurus
+        run: uv run ruff check src/ tests/
+
+      - name: Ruff — MeSH import
+        working-directory: skills/local/mesh-import
+        run: uv run ruff check src/ tests/
 
       - name: Mypy
         run: >
@@ -51,20 +62,25 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.12", "3.13"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
           cache-suffix: py-${{ matrix.python-version }}
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
+
+      - name: Verify interpreter
+        run: uv run python --version
 
       - name: Install dependencies
         run: uv sync --dev --frozen
@@ -79,7 +95,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: core-test-results-${{ matrix.python-version }}
           path: test-results/
@@ -90,12 +106,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
 
@@ -117,12 +133,12 @@ jobs:
     needs: [quality, tests-core, local-skills]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
 
@@ -143,12 +159,12 @@ jobs:
     needs: [quality, tests-core, local-skills, offline-e2e]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
 
@@ -163,8 +179,22 @@ jobs:
             dist/*.whl
           /tmp/paper-writer-smoke/bin/paper --help
 
+      - name: Verify wheel contains runtime assets
+        run: |
+          python - <<'PY'
+          import zipfile, sys
+          whl = [f for f in __import__("os").listdir("dist") if f.endswith(".whl")][0]
+          with zipfile.ZipFile(f"dist/{whl}") as z:
+            names = z.namelist()
+          for required in ["rules/", "schemas/", "templates/", "styles/"]:
+            found = [n for n in names if n.startswith(required)]
+            assert found, f"Wheel missing {required} — found {len(found)} entries"
+            print(f"  ✓ {required} ({len(found)} entries)")
+          print("Wheel asset verification passed")
+          PY
+
       - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: paper-writer-dist
           path: dist/

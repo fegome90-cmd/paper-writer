@@ -18,7 +18,7 @@ dependencies = ["mcp[cli]>=1,<2", "pyyaml>=6.0.1"]
 paper = "cli.paper.main:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0.0", "ruff>=0.3.0", "mypy>=1.9.0", "types-pyyaml>=6.0.12.12"]
+dev = ["pytest>=8.0.0", "ruff>=0.3.0", "mypy>=1.9.0", "types-pyyaml>=6.0.12.12", "tomli>=2.0.0; python_version < '3.11'"]
 
 [tool.setuptools.packages.find]
 include = [
@@ -61,8 +61,17 @@ package = true
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["_scratch", "tools", "scripts", "skills/local/thesaurus", "skills/local/mesh-import", "skills/local/science-bundle"]
+extend-exclude = [
+  "_scratch",
+  "tools",
+  "skills/local/thesaurus",
+  "skills/local/mesh-import",
+  "skills/local/science-bundle",
+]
 target-version = "py310"
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/**" = ["E501"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "C4", "RUF"]

@@ -23,13 +23,19 @@ pytestmark = pytest.mark.skipif(
 
 class TestZoteroRealIntegration:
     def test_local_api_collections(self) -> None:
-        config = ZoteroConfig(user_id="20772197", local_mode=True)
+        import os
+
+        user_id = os.environ.get("ZOTERO_USER_ID", "0")
+        config = ZoteroConfig(user_id=user_id, local_mode=True)
         client = ZoteroClient(config=config)
         collections = client.fetch_collections()
         assert isinstance(collections, list)
 
     def test_local_api_fetch_bibtex(self) -> None:
-        config = ZoteroConfig(user_id="20772197", local_mode=True)
+        import os
+
+        user_id = os.environ.get("ZOTERO_USER_ID", "0")
+        config = ZoteroConfig(user_id=user_id, local_mode=True)
         client = ZoteroClient(config=config)
         bib = client.fetch_bibtex()
         assert isinstance(bib, str)
