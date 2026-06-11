@@ -375,17 +375,21 @@ class FilesystemActionRunner(ActionRunner):
             adapter = self._skill_adapters.get("literature_search")
             if adapter:
                 cache_dir = args.get("cache_dir")
+                chain_inputs: dict[str, Any] = {
+                    "search_dir": str(latest_search if latest_search.exists() else search_dir),
+                    "output_dir": str(search_dir),
+                    "query": args.get("query", ""),
+                    "max_rounds": args.get("max_rounds", 2),
+                    "max_papers": args.get("max_papers", 80),
+                    "relevance_threshold": args.get("relevance_threshold", 0.25),
+                    "cache_dir": cache_dir,
+                }
+                # Propagate review config (mode, search_window, amendments)
+                # same as search/screen for academic mode consistency
+                chain_inputs.update(self._review_config_fields())
                 result = adapter.execute(
                     command="chain",
-                    inputs={
-                        "search_dir": str(latest_search if latest_search.exists() else search_dir),
-                        "output_dir": str(search_dir),
-                        "query": args.get("query", ""),
-                        "max_rounds": args.get("max_rounds", 2),
-                        "max_papers": args.get("max_papers", 80),
-                        "relevance_threshold": args.get("relevance_threshold", 0.25),
-                        "cache_dir": cache_dir,
-                    },
+                    inputs=chain_inputs,
                     context={"cwd": str(self.repo_path)},
                 )
                 self._check_result(result, "chain")
@@ -534,8 +538,7 @@ class FilesystemActionRunner(ActionRunner):
                     artifacts.append(str(protocol_file))
             except (ValueError, OSError) as e:
                 raise ValueError(
-                    f"Protocol generation failed: {e}. "
-                    f"Check search_dir has valid metadata files."
+                    f"Protocol generation failed: {e}. Check search_dir has valid metadata files."
                 ) from e
 
         elif command == "export_bib":
