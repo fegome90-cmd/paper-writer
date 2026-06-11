@@ -85,6 +85,7 @@ def test_action_runner_init(tmp_path: Path) -> None:
 
 def test_action_runner_search(tmp_path: Path) -> None:
     import json
+
     from harness.ports.skill_adapter import SkillAdapter, SkillResult
 
     class _SearchAdapter(SkillAdapter):
@@ -122,8 +123,9 @@ def test_action_runner_search(tmp_path: Path) -> None:
 
 
 def test_action_runner_screen(tmp_path: Path) -> None:
-    from harness.ports.skill_adapter import SkillAdapter, SkillResult
     import json
+
+    from harness.ports.skill_adapter import SkillAdapter, SkillResult
 
     class _ScreenAdapter(SkillAdapter):
         @property
