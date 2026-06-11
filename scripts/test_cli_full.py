@@ -31,6 +31,7 @@ def run(args: list[str], *, expect_exit: int = 0, cwd: Path | None = None) -> tu
             "ZOTERO_USER_ID": os.environ.get("ZOTERO_USER_ID", ""),
             "ZOTERO_API_KEY": os.environ.get("ZOTERO_API_KEY", ""),
             "ZOTERO_LIBRARY_TYPE": "user",
+            "PAPER_SEARCH_PROVIDER": os.environ.get("PAPER_SEARCH_PROVIDER", "fixture"),
         },
     )
     return result.stdout.strip(), result.stderr.strip(), result.returncode
@@ -151,48 +152,51 @@ test(
     expect_in="version",
 )
 
-# Create, get, update, delete cycle
-with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-    json.dump([{"itemType": "book", "title": "CLI Full Test", "date": "2026"}], f)
-    create_file = f.name
+# Create, get, update, delete cycle (requires RUN_LIVE_ZOTERO_TESTS=1)
+if os.environ.get("RUN_LIVE_ZOTERO_TESTS") == "1":
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump([{"itemType": "book", "title": "CLI Full Test", "date": "2026"}], f)
+        create_file = f.name
 
-stdout, _, _ = run(["zotero", "create", create_file])
-key = ""
-if "Created: 1" in stdout:
-    # Extract key
-    for line in stdout.split("\n"):
-        stripped = line.strip()
-        if stripped and stripped[0] in "23456789ABCDEFGH":
-            candidate = stripped.split(":")[0].strip()
-            if len(candidate) == 8:
-                key = candidate
-                break
+    stdout, _, _ = run(["zotero", "create", create_file])
+    key = ""
+    if "Created: 1" in stdout:
+        # Extract key
+        for line in stdout.split("\n"):
+            stripped = line.strip()
+            if stripped and stripped[0] in "23456789ABCDEFGH":
+                candidate = stripped.split(":")[0].strip()
+                if len(candidate) == 8:
+                    key = candidate
+                    break
 
-    if key and len(key) == 8:
-        test("zotero get live", ["zotero", "get", key], expect_in="CLI Full Test")
-        test("zotero get --json", ["zotero", "get", key, "--json"], expect_in="key")
+        if key and len(key) == 8:
+            test("zotero get live", ["zotero", "get", key], expect_in="CLI Full Test")
+            test("zotero get --json", ["zotero", "get", key, "--json"], expect_in="key")
 
-        # Partial update
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f2:
-            json.dump({"title": "CLI Full Test Updated"}, f2)
-            update_file = f2.name
-        test(
-            "zotero update partial",
-            ["zotero", "update", key, update_file, "--partial"],
-            expect_in="Updated",
-        )
+            # Partial update
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f2:
+                json.dump({"title": "CLI Full Test Updated"}, f2)
+                update_file = f2.name
+            test(
+                "zotero update partial",
+                ["zotero", "update", key, update_file, "--partial"],
+                expect_in="Updated",
+            )
 
-        # Full update
-        test("zotero update full", ["zotero", "update", key, update_file], expect_in="Updated")
+            # Full update
+            test("zotero update full", ["zotero", "update", key, update_file], expect_in="Updated")
 
-        # Delete
-        test("zotero delete auto-version", ["zotero", "delete", key], expect_in="Deleted")
+            # Delete (with --yes to skip confirmation)
+            test("zotero delete auto-version", ["zotero", "delete", key, "--yes"], expect_in="Deleted")
+        else:
+            print(f"  SKIP create cycle (key={key!r})")
+            skipped += 1
     else:
-        print(f"  SKIP create cycle (key={key!r})")
+        print(f"  SKIP create cycle (create failed: {stdout[:100]})")
         skipped += 1
 else:
-    print(f"  SKIP create cycle (create failed: {stdout[:100]})")
-    skipped += 1
+    print("  SKIP zotero CRUD cycle (set RUN_LIVE_ZOTERO_TESTS=1 to run)")
 
 # =========================================================================
 print("\n" + "=" * 60)
