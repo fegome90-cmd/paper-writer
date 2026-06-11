@@ -238,6 +238,7 @@ def screen(
     if min_tier not in tier_order:
         raise ValueError(f"Invalid min_tier: {min_tier!r}. Must be one of: {', '.join(tier_order)}")
     min_level = tier_order[min_tier]
+
     # Enforce real inclusion criteria: tier, title, and DOI
     def _passes_screening(paper: dict[str, Any]) -> bool:
         """Check all enforced screening criteria."""
@@ -312,8 +313,12 @@ def screen(
                 "doi": p.get("doi", ""),
                 "tier": p.get("scoring", {}).get("tier", "Discard"),
                 "exclusion_reason": (
-                    "no_title" if not (p.get("title") and str(p.get("title", "")).strip())
-                    else f"tier_{p.get('scoring', {}).get('tier', 'Discard').lower().replace(' ', '_')}"
+                    "no_title"
+                    if not (p.get("title") and str(p.get("title", "")).strip())
+                    else (
+                        "tier_"
+                        + p.get("scoring", {}).get("tier", "Discard").lower().replace(" ", "_")
+                    )
                 ),
             }
             for p in excluded

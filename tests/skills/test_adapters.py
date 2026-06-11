@@ -60,7 +60,7 @@ class TestLiteratureSearchAdapter:
                 command="search",
                 inputs={"query": "voice disorders", "output_dir": str(output_dir)},
                 context={},
-        )
+            )
 
         assert result.status == "pass"
         # Provider generates scored papers

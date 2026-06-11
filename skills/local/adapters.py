@@ -312,7 +312,9 @@ class LiteratureSearchAdapter(SkillAdapter):
                     "included": False,
                     "screening_history": [
                         {
-                            "stage": "title_abstract" if reason == "no_title" else "tier_classification",
+                            "stage": "title_abstract"
+                            if reason == "no_title"
+                            else "tier_classification",
                             "decision": "excluded",
                             "reason": reason,
                         },
