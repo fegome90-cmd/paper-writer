@@ -1,18 +1,18 @@
 # Schema version: 1.0
-stage: rendered
+stage: validating
 gates:
   bib_normalized: true
-  citations_resolved: true
+  citations_resolved: false
   outline_drafted: true
   ready_for_delivery: false
   refs_validated: true
-  render_passed: true
+  render_passed: false
   repo_initialized: true
-  reporting_passed: true
+  reporting_passed: false
   screened_evidence: true
   search_completed: true
   sections_completed: true
-  style_passed: true
-  citation_verified: true
-  ethics_passed: true
+  style_passed: false
+  citation_verified: false
+  ethics_passed: false
   bib_imported: false
