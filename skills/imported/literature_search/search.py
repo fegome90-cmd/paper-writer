@@ -301,10 +301,23 @@ def screen(
         "date": raw_data.get("date", ""),
         "total_raw": len(all_papers),
         "total_screened": len(screened),
+        "total_excluded": len(excluded),
         "min_tier": min_tier,
         "inclusion_criteria": [f"tier <= {min_tier}", "has title"],  # Both enforced by screening
         "prisma_flow": prisma_flow,
         "evidence": screened,
+        "excluded": [
+            {
+                "title": p.get("title", ""),
+                "doi": p.get("doi", ""),
+                "tier": p.get("scoring", {}).get("tier", "Discard"),
+                "exclusion_reason": (
+                    "no_title" if not (p.get("title") and str(p.get("title", "")).strip())
+                    else f"tier_{p.get('scoring', {}).get('tier', 'Discard').lower().replace(' ', '_')}"
+                ),
+            }
+            for p in excluded
+        ],
     }
     evidence_path = output_dir / "screened_evidence.json"
     evidence_path.write_text(

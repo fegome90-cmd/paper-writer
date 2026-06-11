@@ -268,12 +268,9 @@ class LiteratureSearchAdapter(SkillAdapter):
         """
 
         # Build screening_records for ALL papers (included + excluded)
-        # NOTE: Currently only included records are enriched.
-        # Excluded record tracking requires passing raw_results.json
-        # excluded list from search.py:screen() — tracked as architectural debt.
-
         screening_records: list[dict[str, Any]] = []
         included_records = evidence_data.get("evidence", [])
+        excluded_records = evidence_data.get("excluded", [])
 
         for rec in included_records:
             tier = rec.get("scoring", {}).get("tier", min_tier)
@@ -287,12 +284,12 @@ class LiteratureSearchAdapter(SkillAdapter):
                         {
                             "stage": "title_abstract",
                             "decision": "proceed",
-                            "reason": "Included based on tier (title/abstract matching not yet verified)",
+                            "reason": "Has title, passed title check",
                         },
                         {
-                            "stage": "full_text",
+                            "stage": "tier_classification",
                             "decision": "included",
-                            "reason": f"Tier classification: {tier} meets threshold {min_tier}",
+                            "reason": f"Tier {tier} meets threshold {min_tier}",
                         },
                     ],
                 }
@@ -303,6 +300,25 @@ class LiteratureSearchAdapter(SkillAdapter):
             rec["epistemic_classification"] = _classify_epistemic(rec)
             rec["screening_stage"] = "included"
             rec["exclusion_reason"] = None
+
+        # Add excluded records with real reasons
+        for rec in excluded_records:
+            record_id = rec.get("doi") or rec.get("title", "unknown")
+            reason = rec.get("exclusion_reason", "unknown")
+
+            screening_records.append(
+                {
+                    "record_id": record_id,
+                    "included": False,
+                    "screening_history": [
+                        {
+                            "stage": "title_abstract" if reason == "no_title" else "tier_classification",
+                            "decision": "excluded",
+                            "reason": reason,
+                        },
+                    ],
+                }
+            )
 
         evidence_data["screening_records"] = screening_records
         return evidence_data
