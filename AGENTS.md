@@ -13,7 +13,7 @@ Verified in this repo on 2026-06-11:
 
 - Setup dev env: `make init`
 - Run tests: `make test`
-- Lint: `make ruff check .`
+- Lint: `make lint`
 - Type-check: `make typecheck` (or `uv run mypy harness/ cli/ validators/ integrations/ verification/ parsers/ engine/ rules/ schemas/ skills/`)
 - Full verification: `make verify`
 - Real-material validation: `make validate CASE=verification/local-data/<case>.local.yaml`

@@ -58,7 +58,7 @@ configure_security() {
 	body=$(jq -n '{
     security_and_analysis: {
       secret_scanning: { status: "enabled" },
-      push_protection:  { status: "enabled" }
+      secret_scanning_push_protection: { status: "enabled" }
     }
   }')
 
@@ -71,19 +71,19 @@ configure_security() {
 	# Verify the settings actually took effect from the PATCH response
 	local scanning push
 	scanning=$(echo "$response" | jq -r '.security_and_analysis.secret_scanning.status // "QUERY FAILED"')
-	push=$(echo "$response" | jq -r '.security_and_analysis.push_protection.status // "QUERY FAILED"')
+	push=$(echo "$response" | jq -r '.security_and_analysis.secret_scanning_push_protection.status // "QUERY FAILED"')
 
 	if [ "$scanning" != "enabled" ]; then
-		printf "  WARN: secret_scanning is '%s' after PATCH (org-level config may override)\n" "$scanning"
-	else
-		printf "  OK: Secret scanning enabled\n"
+		printf "  ERROR: secret_scanning is '%s' after PATCH\n" "$scanning" >&2
+		return 1
 	fi
+	printf "  OK: Secret scanning enabled\n"
 
 	if [ "$push" != "enabled" ]; then
-		printf "  WARN: push_protection is '%s' after PATCH (org-level config may override)\n" "$push"
-	else
-		printf "  OK: Push protection enabled\n"
+		printf "  ERROR: secret_scanning_push_protection is '%s' after PATCH\n" "$push" >&2
+		return 1
 	fi
+	printf "  OK: Push protection enabled\n"
 }
 
 # ---------------------------------------------------------------------------
@@ -288,16 +288,26 @@ verify_configuration() {
 	printf "\n=== Verification ===\n"
 	local verify_errors=0
 
-	# Ruleset
-	local rule_count
-	rule_count=$(gh api "repos/${REPO}/rulesets?includes_parents=false" \
-		--jq '[.[] | select(.name=="main-branch-protection") | .rules | length] | .[0]' 2>&1) || {
-		printf "  Ruleset: QUERY FAILED (%s)\n" "$rule_count"
+	# Ruleset — fetch individual ruleset for accurate rule count
+	local ruleset_id rule_count
+	ruleset_id=$(gh api "repos/${REPO}/rulesets?includes_parent=false" \
+		--jq '.[] | select(.name=="main-branch-protection" and .source_type=="Repository") | .id' 2>&1) || {
+		printf "  Ruleset: QUERY FAILED (%s)\n" "$ruleset_id"
 		verify_errors=$((verify_errors + 1))
-		rule_count=""
+		ruleset_id=""
 	}
-	if [ -n "$rule_count" ]; then
-		printf "  Ruleset: main-branch-protection (active, %s rules)\n" "$rule_count"
+	if [ -z "$ruleset_id" ]; then
+		printf "  Ruleset: main-branch-protection NOT found\n" >&2
+		verify_errors=$((verify_errors + 1))
+	else
+		rule_count=$(gh api "repos/${REPO}/rulesets/${ruleset_id}" --jq '.rules | length' 2>&1) || {
+			printf "  Ruleset: failed to query rules (%s)\n" "$rule_count"
+			verify_errors=$((verify_errors + 1))
+			rule_count=""
+		}
+		if [ -n "$rule_count" ]; then
+			printf "  Ruleset: main-branch-protection (active, %s rules)\n" "$rule_count"
+		fi
 	fi
 
 	# Environment
@@ -311,21 +321,23 @@ verify_configuration() {
 		printf "  Environment: live-integrations confirmed\n"
 	fi
 
-	# Secrets (only report those actually set)
-	local secret_list=()
-	if [ -n "${ZOTERO_USER_ID:-}" ]; then
-		secret_list+=("ZOTERO_USER_ID")
-	fi
-	if [ -n "${ZOTERO_API_KEY:-}" ]; then
-		secret_list+=("ZOTERO_API_KEY")
-	fi
-	if [ ${#secret_list[@]} -gt 0 ]; then
-		printf "  Secrets: %s\n" "$(
-			IFS=,
-			echo "${secret_list[*]}"
-		)"
+	# Secrets — verify against GitHub, not just local env
+	local remote_secrets
+	remote_secrets=$(gh secret list \
+		--repo "${REPO}" \
+		--env live-integrations \
+		--json name \
+		--jq '.[].name' 2>/dev/null) || true
+	if [ -n "$remote_secrets" ]; then
+		for required in ZOTERO_USER_ID ZOTERO_API_KEY; do
+			if echo "$remote_secrets" | grep -qxF "$required"; then
+				printf "  Secret: %s confirmed\n" "$required"
+			else
+				printf "  WARN: Secret %s not configured\n" "$required" >&2
+			fi
+		done
 	else
-		printf "  Secrets: none set (ZOTERO_USER_ID and ZOTERO_API_KEY not in environment)\n"
+		printf "  Secrets: could not verify remote secrets\n"
 	fi
 
 	if [ "$verify_errors" -gt 0 ]; then
