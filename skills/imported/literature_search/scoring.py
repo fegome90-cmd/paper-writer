@@ -423,11 +423,9 @@ def deduplicate(
                     )
                     if short == 0 or (short * 200) < (short + long) * _t100:
                         continue
-                    # Fast word-set pre-filter (stop-word filtered).
-                    # Require ≥3 shared significant words.
-                    if _len(word_set & pws) < 3:
-                        continue
-                    # Exact match short-circuit
+                    # Exact match short-circuit (before word-set filter
+                    # so short titles with <3 significant words are still
+                    # caught — e.g. "Paper A" has only 1 significant word)
                     if title_lower == ptl:
                         # If current paper has DOI/PMID and previous doesn't, replace
                         if (doi or pmid) and prev_idx < len(unique_papers):
@@ -453,6 +451,10 @@ def deduplicate(
                             }
                         )
                         break
+                    # Fast word-set pre-filter (stop-word filtered).
+                    # Require ≥3 shared significant words.
+                    if _len(word_set & pws) < 3:
+                        continue
                     # Reuse one SequenceMatcher; quick_ratio() first
                     sm.set_seqs(title_lower, ptl)
                     if sm.quick_ratio() < threshold:
