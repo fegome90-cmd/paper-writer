@@ -192,8 +192,9 @@ class TestRuntimeErrorPropagation:
             args={"query": "test query"},
         )
 
-        with pytest.raises(RuntimeError, match="Provider connection failed"):
-            orchestrator.execute(request)
+        result = orchestrator.execute(request)
+        assert result.success is False
+        assert any("Provider connection failed" in b for b in result.blockers)
 
     def test_runtime_error_propagates_through_action_runner(
         self,

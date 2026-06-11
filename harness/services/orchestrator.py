@@ -192,7 +192,7 @@ class Orchestrator:
 
             artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
-        except (ValueError, StateManagerError, DomainStateError, OSError) as e:
+        except (ValueError, RuntimeError, StateManagerError, DomainStateError, OSError) as e:
             msg = f"Action failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "run_core_action", "status": "failed", "error": msg})
