@@ -113,8 +113,12 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if not path.exists():
         print(f"ERROR: manifest not found: {path}", file=sys.stderr)
         sys.exit(2)
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
+
+    if not isinstance(data, dict):
+        print(f"ERROR: manifest is empty or not a YAML mapping: {path}", file=sys.stderr)
+        sys.exit(2)
 
     missing = REQUIRED_FIELDS - set(data.keys())
     if missing:
@@ -878,8 +882,10 @@ def generate_report(result: ValidationResult) -> str:
 def load_manifest_checklist(manifest_path: str) -> list[str]:
     """Extract manual review checklist items from manifest."""
     try:
-        with open(manifest_path) as f:
+        with open(manifest_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            return []
         items = data.get("manual_review", {}).get("checklist", [])
         if isinstance(items, list):
             return [i if isinstance(i, str) else i.get("item", str(i)) for i in items]
