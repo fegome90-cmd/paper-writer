@@ -43,11 +43,11 @@ jobs:
 
       - name: Ruff — thesaurus
         working-directory: skills/local/thesaurus
-        run: uv run ruff check src/ tests/
+        run: uv run --project "${{ github.workspace }}" ruff check src/ tests/
 
       - name: Ruff — MeSH import
         working-directory: skills/local/mesh-import
-        run: uv run ruff check src/ tests/
+        run: uv run --project "${{ github.workspace }}" ruff check src/ tests/
 
       - name: Mypy
         run: >
