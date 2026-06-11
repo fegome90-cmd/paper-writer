@@ -204,6 +204,11 @@ def _cmd_zotero_update(args: Any) -> None:
         print(f"Error reading {args.file}: {exc}", file=sys.stderr)
         raise SystemExit(1) from None
 
+    # Dry-run: show what would be updated without executing
+    if args.dry_run:
+        print(f"[DRY RUN] Would update {args.key} with {len(changes)} field(s): {', '.join(changes.keys())}")
+        return
+
     try:
         version = args.version
 
@@ -257,6 +262,23 @@ def _cmd_zotero_delete(args: Any) -> None:
     if err:
         print(f"Error: {err}", file=sys.stderr)
         raise SystemExit(1) from None
+
+    # Dry-run: show what would be deleted without executing
+    if args.dry_run:
+        print(f"[DRY RUN] Would delete {len(args.keys)} item(s): {', '.join(args.keys)}")
+        return
+
+    # Confirmation prompt unless --yes
+    if not args.yes:
+        count = len(args.keys)
+        items = f"{count} items" if count > 1 else args.keys[0]
+        try:
+            response = input(f"Delete {items}? [y/N] ")
+        except EOFError:
+            response = "n"
+        if response.lower() not in ("y", "yes"):
+            print("Cancelled.")
+            return
 
     try:
         if len(args.keys) == 1:
@@ -843,6 +865,9 @@ def main() -> None:
         "--version", type=int, default=None, help="Current item version. Auto-detected if omitted."
     )
     zotero_update.add_argument("--partial", action="store_true", help="Partial update (PATCH).")
+    zotero_update.add_argument(
+        "--dry-run", action="store_true", help="Show what would be updated without executing."
+    )
     zotero_update.set_defaults(func=_cmd_zotero_update)
 
     # zotero delete
@@ -853,6 +878,12 @@ def main() -> None:
         type=int,
         default=None,
         help="Current item/library version. Auto-detected if omitted.",
+    )
+    zotero_delete.add_argument(
+        "--dry-run", action="store_true", help="Show what would be deleted without executing."
+    )
+    zotero_delete.add_argument(
+        "--yes", "-y", action="store_true", help="Skip confirmation prompt."
     )
     zotero_delete.set_defaults(func=_cmd_zotero_delete)
 
