@@ -121,6 +121,26 @@ class FilesystemActionRunner(ActionRunner):
             metadata["parent_run_id"] = parent_run_id
         run_yaml.write_text(yaml.dump(metadata, default_flow_style=False), encoding="utf-8")
 
+    def _review_config_fields(self) -> dict[str, Any]:
+        """Read mode, search_window, amendments from review_config.yaml."""
+        config_path = self._resolve("outputs/review_config.yaml")
+        if not config_path.exists():
+            return {}
+        try:
+            data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                return {}
+        except OSError:
+            return {}
+        fields: dict[str, Any] = {}
+        if "mode" in data:
+            fields["mode"] = data["mode"]
+        if "search_window" in data:
+            fields["search_window"] = data["search_window"]
+        if "amendments" in data:
+            fields["amendments"] = data["amendments"]
+        return fields
+
     def _complete_run(self, artifacts: list[str]) -> None:
         """Mark current run as completed, appending new artifacts."""
         run_dir = self._resolve(f"outputs/runs/{self.run_id}")
@@ -297,6 +317,8 @@ class FilesystemActionRunner(ActionRunner):
                 for key in SEARCH_FILTER_KEYS:
                     if key in args and args[key] is not None:
                         inputs[key] = args[key]
+                # Propagate review config (mode, search_window, amendments)
+                inputs.update(self._review_config_fields())
                 result = adapter.execute(
                     command="search",
                     inputs=inputs,
@@ -331,6 +353,7 @@ class FilesystemActionRunner(ActionRunner):
                         "search_dir": str(search_dir),
                         "output_dir": str(search_dir),
                         "min_tier": args.get("min_tier", "Tier 3"),
+                        **self._review_config_fields(),
                     },
                     context={"cwd": str(self.repo_path)},
                 )
