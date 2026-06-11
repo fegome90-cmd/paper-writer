@@ -77,19 +77,11 @@ skills/local/thesaurus/src/thesaurus/_ctx/
 
 # =============================================================================
 # Generated pipeline outputs
-# Only outputs/state.yaml and outputs/manifest.yaml are tracked intentionally.
+# Only outputs/review_config.yaml is tracked (project config, not runtime).
+# state.yaml and manifest.yaml are runtime state — never tracked.
 # =============================================================================
-outputs/drafts/
-outputs/logs/
-outputs/render/
-outputs/search/
-outputs/runs/
-outputs/.run_id
-outputs/latest
-outputs/*.html
-outputs/*.md
-!outputs/manifest.yaml
-!outputs/state.yaml
+outputs/
+!outputs/review_config.yaml
 
 # =============================================================================
 # SQLite databases
