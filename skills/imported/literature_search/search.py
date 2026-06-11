@@ -71,9 +71,11 @@ def search(
         "databases": effective_sources,
         "inclusion_criteria": [
             f"Published between {effective_year_min} and {effective_year_max}",
-            "Peer-reviewed",
-            "English language",
             f"Related to: {query}",
+        ],
+        "aspirational_criteria": [
+            "Peer-reviewed (not enforced by pipeline)",
+            "English language (not enforced by pipeline)",
         ],
         "weights_phase": weights_phase,
     }
@@ -286,7 +288,9 @@ def screen(
         "total_raw": len(all_papers),
         "total_screened": len(screened),
         "min_tier": min_tier,
-        "inclusion_criteria": [f"tier <= {min_tier}"],  # Only tier is enforced; "has title"/"has DOI" are aspirational
+        "inclusion_criteria": [
+            f"tier <= {min_tier}"
+        ],  # Only tier is enforced; "has title"/"has DOI" are aspirational
         "prisma_flow": prisma_flow,
         "evidence": screened,
     }
