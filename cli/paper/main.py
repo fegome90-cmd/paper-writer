@@ -42,12 +42,15 @@ DEFAULT_SEARCH_QUERY_NOTICE = (
 # ------------------------------------------------------------------
 
 
-def _zotero_client() -> tuple[Any, str | None]:
+def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
     """Build ZoteroClient from env. Returns (client, error_msg)."""
     from clients.zotero import ZoteroClient, ZoteroConfig
 
     try:
         config = ZoteroConfig.from_env()
+        if local:
+            import dataclasses
+            config = dataclasses.replace(config, local_mode=True)
     except KeyError as exc:
         return None, str(exc).strip("'")
     return ZoteroClient(config=config), None
@@ -56,7 +59,7 @@ def _zotero_client() -> tuple[Any, str | None]:
 def _cmd_zotero_collections(args: Any) -> None:
     from clients.zotero import ZoteroError
 
-    client, err = _zotero_client()
+    client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
         print(f"Error: {err}", file=sys.stderr)
         raise SystemExit(1) from None
@@ -260,14 +263,17 @@ def _cmd_zotero_update(args: Any) -> None:
 def _cmd_zotero_delete(args: Any) -> None:
     from clients.zotero import ZoteroError
 
-    client, err = _zotero_client()
+    client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
         print(f"Error: {err}", file=sys.stderr)
         raise SystemExit(1) from None
 
     # Dry-run: show what would be deleted without executing
     if args.dry_run:
+        is_local = client.config.local_mode if hasattr(client, "config") else False
+        base_url = "http://localhost:23119/api" if is_local else "https://api.zotero.org"
         print(f"[DRY RUN] Would delete {len(args.keys)} item(s): {', '.join(args.keys)}")
+        print(f"[DRY RUN] Target: {base_url}")
         return
 
     # Confirmation prompt unless --yes
@@ -818,6 +824,9 @@ def main() -> None:
 
     # paper zotero
     zotero_parser = subparsers.add_parser("zotero", help="Zotero library operations.")
+    zotero_parser.add_argument(
+        "--local", action="store_true", help="Use local Zotero (ZOTERO_LOCAL=true) instead of cloud API."
+    )
     zotero_sub = zotero_parser.add_subparsers(dest="subcommand", required=True)
 
     # zotero collections
