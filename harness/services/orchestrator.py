@@ -196,6 +196,12 @@ class Orchestrator:
             msg = f"Action failed: {e}"
             blockers.append(msg)
             steps.append({"step_id": "run_core_action", "status": "failed", "error": msg})
+            # Mark run metadata as failed (best-effort)
+            if hasattr(self.action_runner, "_mark_run_failed"):
+                try:
+                    self.action_runner._mark_run_failed(msg)
+                except OSError:
+                    pass
             fail_result = self._build_fail_result(result, steps, blockers, warnings)
             self._write_command_log_best_effort(request, fail_result)
             return fail_result

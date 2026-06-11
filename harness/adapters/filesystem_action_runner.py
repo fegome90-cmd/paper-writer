@@ -98,20 +98,86 @@ class FilesystemActionRunner(ActionRunner):
             )
             raise ValueError(error_msg)
 
+    # ── Run metadata (lineage + status) ───────────────────────────────
+
+    def _write_run_yaml(
+        self,
+        command: str,
+        parent_run_id: str | None = None,
+        status: str = "running",
+    ) -> None:
+        """Write run.yaml metadata to current run directory."""
+        run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+        run_dir.mkdir(parents=True, exist_ok=True)
+        run_yaml = run_dir / "run.yaml"
+        metadata = {
+            "run_id": self.run_id,
+            "command": command,
+            "created_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            "status": status,
+            "artifacts": [],
+        }
+        if parent_run_id:
+            metadata["parent_run_id"] = parent_run_id
+        run_yaml.write_text(yaml.dump(metadata, default_flow_style=False), encoding="utf-8")
+
+    def _complete_run(self, artifacts: list[str]) -> None:
+        """Mark current run as completed, appending new artifacts."""
+        run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+        run_yaml = run_dir / "run.yaml"
+        if not run_yaml.exists():
+            return
+        metadata = yaml.safe_load(run_yaml.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict):
+            return
+        metadata["status"] = "completed"
+        metadata["completed_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        # Append new artifacts to existing list (deduplicated)
+        existing = metadata.get("artifacts") or []
+        combined = list(dict.fromkeys(existing + artifacts))
+        metadata["artifacts"] = combined
+        run_yaml.write_text(yaml.dump(metadata, default_flow_style=False), encoding="utf-8")
+
+    def _fail_run(self, error: str) -> None:
+        """Mark current run as failed with error message."""
+        run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+        run_yaml = run_dir / "run.yaml"
+        if not run_yaml.exists():
+            return
+        metadata = yaml.safe_load(run_yaml.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict):
+            return
+        metadata["status"] = "failed"
+        metadata["failed_at"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        metadata["error"] = error[:500]
+        run_yaml.write_text(yaml.dump(metadata, default_flow_style=False), encoding="utf-8")
+
     def run_action(self, command: str, args: dict[str, Any]) -> list[str]:
         if args is None:
             args = {}
         artifacts: list[str] = []
 
-        # Search commands always create a fresh run to avoid overwriting
-        # previous search results. Other commands reuse the stored run_id.
+        # Capture parent run_id before search/chain creates a new one
+        parent_run_id: str | None = None
         if command in ("search", "chain"):
+            parent_run_id = self.run_id  # Store before overwriting
             self._run_id = datetime.datetime.now().strftime("%Y%m%dT%H%M%S.%f")
             # Update .run_id so subsequent commands (screen, draft, etc.)
             # follow the latest search results.
             run_id_file = self._resolve("outputs/.run_id")
             if run_id_file.exists():
                 run_id_file.write_text(self._run_id, encoding="utf-8")
+
+        # Write run metadata at start of every command.
+        # For search/chain (new runs): always write.
+        # For other commands (reusing existing run): only if no run.yaml exists.
+        try:
+            run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+            run_yaml_path = run_dir / "run.yaml"
+            if command in ("search", "chain") or not run_yaml_path.exists():
+                self._write_run_yaml(command, parent_run_id=parent_run_id)
+        except OSError:
+            pass  # Non-critical: metadata is best-effort
 
         if command == "init":
             dirs = [
@@ -528,7 +594,23 @@ class FilesystemActionRunner(ActionRunner):
         else:
             raise ValueError(f"Unknown action command: '{command}'")
 
+        # Mark run as completed with artifact list
+        try:
+            self._complete_run(artifacts)
+        except OSError:
+            pass  # Non-critical: metadata is best-effort
+
         return artifacts
+
+    def _mark_run_failed(self, error: str) -> None:
+        """Public interface for orchestrator to mark run as failed.
+
+        Called by Orchestrator when run_action raises an exception.
+        """
+        try:
+            self._fail_run(error)
+        except OSError:
+            pass
 
     def write_command_log(self, command: str, payload: dict[str, Any]) -> str:
         """Persist a structured command log entry as YAML."""
