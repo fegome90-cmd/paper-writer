@@ -594,13 +594,20 @@ class FilesystemActionRunner(ActionRunner):
         else:
             raise ValueError(f"Unknown action command: '{command}'")
 
-        # Mark run as completed with artifact list
+        # NOTE: Run completion is now the orchestrator's responsibility.
+        # _complete_run is NOT called here. The orchestrator calls
+        # _mark_run_completed() after successful gate evaluation.
+        return artifacts
+
+    def _mark_run_completed(self, artifacts: list[str]) -> None:
+        """Public interface for orchestrator to mark run as completed.
+
+        Called by Orchestrator AFTER successful gate evaluation.
+        """
         try:
             self._complete_run(artifacts)
         except OSError:
             pass  # Non-critical: metadata is best-effort
-
-        return artifacts
 
     def _mark_run_failed(self, error: str) -> None:
         """Public interface for orchestrator to mark run as failed.
@@ -611,6 +618,30 @@ class FilesystemActionRunner(ActionRunner):
             self._fail_run(error)
         except OSError:
             pass
+
+    def _mark_run_blocked(self, blockers: list[str]) -> None:
+        """Public interface for orchestrator to mark run as blocked.
+
+        Called by Orchestrator when action succeeds but gates fail.
+        """
+        run_dir = self._resolve(f"outputs/runs/{self.run_id}")
+        run_yaml = run_dir / "run.yaml"
+        if not run_yaml.exists():
+            return
+        try:
+            metadata = yaml.safe_load(run_yaml.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict):
+                return
+            metadata["status"] = "blocked"
+            metadata["blocked_at"] = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat()
+            metadata["blockers"] = blockers[:10]
+            run_yaml.write_text(
+                yaml.dump(metadata, default_flow_style=False), encoding="utf-8"
+            )
+        except OSError:
+            pass  # Non-critical: metadata is best-effort
 
     def write_command_log(self, command: str, payload: dict[str, Any]) -> str:
         """Persist a structured command log entry as YAML."""

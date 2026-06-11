@@ -253,6 +253,12 @@ class Orchestrator:
             # is not a command failure)
             any_failed = any(v.status == "fail" for v in gate_verdicts)
             if any_failed and request.failure_policy == "stop_on_error" and not is_draft:
+                # Mark run as blocked (action succeeded, gates failed)
+                if hasattr(self.action_runner, "_mark_run_blocked"):
+                    try:
+                        self.action_runner._mark_run_blocked(blockers)
+                    except OSError:
+                        pass
                 fail_result = self._build_fail_result(
                     result, steps, blockers, warnings, artifacts, gate_changes
                 )
@@ -280,6 +286,13 @@ class Orchestrator:
                 steps.append({"step_id": "emit_manifest", "status": "succeeded"})
 
             steps.append({"step_id": "persist_state", "status": "succeeded"})
+
+            # Mark run as completed AFTER successful gate evaluation
+            if hasattr(self.action_runner, "_mark_run_completed"):
+                try:
+                    self.action_runner._mark_run_completed(artifacts)
+                except OSError:
+                    pass  # Non-critical: metadata is best-effort
 
         except (ValueError, StateManagerError, DomainStateError) as e:
             msg = f"Verification/Persistence failed: {e}"
