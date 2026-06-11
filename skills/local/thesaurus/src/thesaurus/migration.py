@@ -7,7 +7,9 @@ from pathlib import Path
 def run_migration(db_path: str | Path, sql_dir: str | Path | None = None) -> None:
     """Run all .sql migration files against the database.
 
-    Each migration runs in a single transaction. On failure, full rollback.
+    DDL statements are committed immediately by SQLite and cannot be rolled back.
+    DML statements run in implicit transactions. On DML failure, inserts are
+    rolled back but schema changes persist.
 
     Args:
         db_path: Path to the SQLite database file.
@@ -23,6 +25,7 @@ def run_migration(db_path: str | Path, sql_dir: str | Path | None = None) -> Non
     conn = sqlite3.connect(str(db_path))
     try:
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
 
         sql_files = sorted(sql_dir.glob("*.sql"))
         for sql_file in sql_files:
@@ -52,6 +55,8 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
     # NOTE: This split-by-semicolon is safe only for DDL migrations (no string literals
     # or comments containing semicolons). Do not use for arbitrary SQL with user data.
     statements = [s.strip() for s in sql.split(";") if s.strip()]
+    # Disable FK checks during migration: v1 data may have integrity issues.
+    conn.execute("PRAGMA foreign_keys = OFF")
     with conn:
         for stmt in statements:
             conn.execute(stmt)
@@ -59,3 +64,4 @@ def _run_single_migration(conn: sqlite3.Connection, sql_file: Path) -> None:
             "INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
             (version,),
         )
+    conn.execute("PRAGMA foreign_keys = ON")

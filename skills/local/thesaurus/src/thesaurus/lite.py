@@ -29,6 +29,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         """Open a connection with WAL mode."""
         conn = sqlite3.connect(str(self._db_path))
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -37,7 +38,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         # Delete existing FTS entry if any
         conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept["id"],))
 
-        alt_labels = concept.get("alt_labels", [])
+        alt_labels = concept.get("alt_labels") or []
         if isinstance(alt_labels, str):
             try:
                 alt_labels = json.loads(alt_labels)
@@ -74,7 +75,6 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         """
         conn = self._connect()
         try:
-            conn.execute("PRAGMA foreign_keys = ON")
             conn.execute("BEGIN IMMEDIATE")
             try:
                 self._upsert_fts(conn, concept)
@@ -94,7 +94,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
 
                 # Alt labels
                 conn.execute("DELETE FROM alt_labels WHERE concept_id = ?", (concept["id"],))
-                alt_labels = concept.get("alt_labels", [])
+                alt_labels = concept.get("alt_labels") or []
                 if isinstance(alt_labels, str):
                     try:
                         alt_labels = json.loads(alt_labels)
@@ -131,7 +131,6 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
         """Import pre-validated concept dicts. Transactional with INSERT OR REPLACE."""
         conn = self._connect()
         try:
-            conn.execute("PRAGMA foreign_keys = ON")
             conn.execute("BEGIN IMMEDIATE")
             try:
                 for concept in concepts:
@@ -151,7 +150,7 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
                     )
 
                     conn.execute("DELETE FROM alt_labels WHERE concept_id = ?", (concept["id"],))
-                    alt_labels = concept.get("alt_labels", [])
+                    alt_labels = concept.get("alt_labels") or []
                     if isinstance(alt_labels, str):
                         try:
                             alt_labels = json.loads(alt_labels)
