@@ -169,3 +169,8 @@ gemini-autoresearch/
 # Audit artifacts (local system audit results, not for public repo)
 # =============================================================================
 audit_artifacts/
+
+# =============================================================================
+# Vendor data — large XML dumps (download separately)
+# =============================================================================
+data/vendor/mesh/*/desc*.xml
