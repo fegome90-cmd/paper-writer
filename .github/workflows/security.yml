@@ -45,13 +45,13 @@ jobs:
       - name: Audit root dependencies
         run: |
           uv export --frozen --no-dev --output-file requirements-root.txt
-          uvx pip-audit@0.9.0 -r requirements-root.txt
+          uvx pip-audit@2.10.1 -r requirements-root.txt
 
       - name: Audit mesh-import dependencies
         working-directory: skills/local/mesh-import
         run: |
           uv export --frozen --no-dev --output-file requirements-mesh.txt
-          uvx pip-audit@0.9.0 -r requirements-mesh.txt
+          uvx pip-audit@2.10.1 -r requirements-mesh.txt
 
   codeql:
     name: CodeQL

@@ -89,7 +89,7 @@ jobs:
       - name: Audit dependencies
         run: |
           uv export --frozen --no-dev --output-file requirements-release.txt
-          uvx pip-audit@0.9.0 -r requirements-release.txt
+          uvx pip-audit@2.10.1 -r requirements-release.txt
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
