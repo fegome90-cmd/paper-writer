@@ -369,10 +369,16 @@ class CitationVerifyValidator:
         if len(segments) < 2:
             return CitationVerifyValidator._clean_title_segment(text)
 
-        # First segment is usually authors (contains commas, et al., &, year)
+        # First segment is usually authors (contains commas, et al., &, year,
+        # or is collapsed initials like "AB" from "A. B.")
         first = segments[0]
         looks_like_authors = bool(
-            re.search(r"et\s*al|,\s*[A-Z]\b|[A-Z][a-z]+,|\d{4}|&|[A-Z][a-z]+\s+[A-Z]$", first)
+            re.search(
+                r"et\s*al|,\s*[A-Z]\b|[A-Z][a-z]+,|\d{4}|&|[A-Z][a-z]+\s+[A-Z]$",
+                first,
+            )
+            # Collapsed initials: 2-5 uppercase letters only (e.g. "ABC" from "A. B. C.")
+            or (first.isalpha() and first.isupper() and 2 <= len(first) <= 5)
         )
 
         if looks_like_authors and len(segments) >= 2:
