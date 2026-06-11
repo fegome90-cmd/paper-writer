@@ -59,6 +59,7 @@ def _write_outline(tmp_path: Path) -> None:
     outline_file.write_text(MINIMAL_OUTLINE, encoding="utf-8")
 
 
+@pytest.mark.e2e
 def test_cli_full_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

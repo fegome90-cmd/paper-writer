@@ -594,6 +594,7 @@ class TestR2BugHuntFixes:
         """R2-BH3: CLI rejects invalid chain parameters."""
         import subprocess
 
+        repo_root = str(Path(__file__).resolve().parent.parent.parent)
         for args, expected_error in [
             ("--max-rounds 0", "--max-rounds"),
             ("--max-rounds -1", "--max-rounds"),
@@ -607,7 +608,7 @@ class TestR2BugHuntFixes:
                 ["uv", "run", "python", "-m", "cli.paper.main", "chain", *args.split()],
                 capture_output=True,
                 text=True,
-                cwd="/Users/felipe_gonzalez/Developer/paper-writer",
+                cwd=repo_root,
                 timeout=30,
             )
             assert result.returncode != 0, f"Expected failure for {args}"
