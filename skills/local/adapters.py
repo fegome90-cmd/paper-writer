@@ -119,6 +119,14 @@ class LiteratureSearchAdapter(SkillAdapter):
                 raw_papers = json.loads(raw_papers)
             except (json.JSONDecodeError, ValueError):
                 raw_papers = json.loads(Path(raw_papers).read_text(encoding="utf-8"))
+            if not isinstance(raw_papers, list):
+                return SkillResult(
+                    adapter=self.name,
+                    status="fail",
+                    summary=f"raw_papers must be a JSON array, got {type(raw_papers).__name__}",
+                    artifacts=[],
+                    gate_changes={},
+                )
 
         # If no raw_papers provided, fetch from provider
         if raw_papers is None:
@@ -512,7 +520,9 @@ class LiteratureSearchAdapter(SkillAdapter):
         bib_path.parent.mkdir(parents=True, exist_ok=True)
         bib_path.write_text(bibtex_str, encoding="utf-8")
 
-        entry_count = bibtex_str.count("@")
+        import re as _re
+
+        entry_count = len(_re.findall(r"^@\w+\{", bibtex_str, _re.MULTILINE))
         return SkillResult(
             adapter=self.name,
             status="pass",
@@ -658,7 +668,6 @@ _PROTOCOL_KEYWORDS = frozenset(
         "study design",
         "planned",
         "proposed",
-        "phase i",
         "registered",
     }
 )
@@ -691,6 +700,8 @@ def _classify_scope(paper: dict[str, Any]) -> str:
     Returns one of: core, adjacent, horizon_scan, protocol_only.
     Default is 'core' for papers that pass screening.
     """
+    import re
+
     title = paper.get("title", "").lower()
     abstract = paper.get("abstract", "").lower()
     text = f"{title} {abstract}"
@@ -699,6 +710,10 @@ def _classify_scope(paper: dict[str, Any]) -> str:
     for kw in _PROTOCOL_KEYWORDS:
         if kw in text:
             return "protocol_only"
+
+    # Phase I specifically (word boundary prevents matching "phase ii" / "phase iii")
+    if re.search(r"\bphase\s+i\b", text):
+        return "protocol_only"
 
     # Default included papers are 'core' — they passed screening
     return "core"
@@ -711,6 +726,8 @@ def _classify_epistemic(paper: dict[str, Any]) -> str:
     synthesizer_inference, local_hypothesis.
     Default is 'observed' for empirical papers.
     """
+    import re
+
     title = paper.get("title", "").lower()
     abstract = paper.get("abstract", "").lower()
     text = f"{title} {abstract}"
@@ -719,6 +736,10 @@ def _classify_epistemic(paper: dict[str, Any]) -> str:
     for kw in _PROTOCOL_KEYWORDS:
         if kw in text:
             return "protocol"
+
+    # Phase I specifically (word boundary prevents matching "phase ii" / "phase iii")
+    if re.search(r"\bphase\s+i\b", text):
+        return "protocol"
 
     # Modeling detection
     for kw in _MODELING_KEYWORDS:
