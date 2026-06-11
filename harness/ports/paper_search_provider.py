@@ -474,6 +474,14 @@ def create_search_provider(
     mode = os.environ.get("PAPER_SEARCH_PROVIDER", "fixture").lower()
 
     if mode == "fixture":
+        import sys as _sys
+
+        _sys.stderr.write(
+            "\n⚠️  WARNING: PAPER_SEARCH_PROVIDER=fixture — using simulated data, "
+            "not real literature.\n"
+            "   Set PAPER_SEARCH_PROVIDER=consensus or PAPER_SEARCH_PROVIDER=mcp "
+            "for real papers.\n\n"
+        )
         return FixturePaperSearchProvider(fixture_path=fixture_path)
 
     if mode == "mcp":

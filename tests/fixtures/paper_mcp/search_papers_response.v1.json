@@ -3,44 +3,70 @@
     {
       "id": "2301.00001v2",
       "title": "Attention Is All You Need: A Systematic Review of Transformer Architectures",
-      "authors": ["Maria Garcia", "Wei Zhang", "Aisha Patel", "Carlos Silva", "Yuki Tanaka"],
+      "authors": [
+        "Maria Garcia",
+        "Wei Zhang",
+        "Aisha Patel",
+        "Carlos Silva",
+        "Yuki Tanaka"
+      ],
       "abstract": "We present a systematic review of transformer architectures applied to natural language processing tasks. Our analysis covers 150 papers published between 2017 and 2023, evaluating attention mechanisms, positional encodings, and scaling laws across benchmarks including GLUE, SuperGLUE, and MMLU.",
       "published": "2023-01-15T09:00:00.000Z",
       "source": "arxiv",
       "doi": "10.1234/arxiv.2301.00001",
       "pdfUrl": "https://arxiv.org/pdf/2301.00001v2",
       "url": "https://arxiv.org/abs/2301.00001v2",
-      "categories": ["cs.CL", "cs.AI"],
-      "fullTextAvailable": true
+      "categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "fullTextAvailable": true,
+      "tier": "Tier 2"
     },
     {
       "id": "W4390012345",
       "title": "Clinical Decision Support Systems Using Deep Learning: A Meta-Analysis",
-      "authors": ["John Smith", "Priya Sharma"],
+      "authors": [
+        "John Smith",
+        "Priya Sharma"
+      ],
       "abstract": "",
       "published": "2022-06-20T00:00:00.000Z",
       "source": "openalex",
       "doi": "https://doi.org/10.1016/j.jbi.2022.104123",
       "pdfUrl": "https://publisher.com/article/104123.pdf",
       "url": "https://doi.org/10.1016/j.jbi.2022.104123",
-      "categories": ["Medicine", "Computer Science"],
+      "categories": [
+        "Medicine",
+        "Computer Science"
+      ],
       "fullTextAvailable": false,
-      "citations": 342
+      "citations": 342,
+      "tier": "Tier 2"
     },
     {
       "id": "38912345",
       "title": "Neural Network Approaches to Protein Structure Prediction",
-      "authors": ["Anna Kowalski"],
+      "authors": [
+        "Anna Kowalski"
+      ],
       "abstract": "Protein structure prediction has been revolutionized by deep learning approaches. This review covers AlphaFold, RoseTTAFold, and ESMFold methodologies.",
       "published": "2024-03-10T03:00:00.000Z",
       "source": "pubmed",
       "doi": "10.1038/s41586-024-07890",
-      "url": "https://pubmed.ncbi.nlm.nih.gov/38912345/"
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38912345/",
+      "tier": "Tier 2"
     },
     {
       "id": "2301.00001v2",
       "title": "Attention Is All You Need: A Systematic Review of Transformer Architectures",
-      "authors": ["M. Garcia", "W. Zhang", "A. Patel", "C. Silva", "Y. Tanaka"],
+      "authors": [
+        "M. Garcia",
+        "W. Zhang",
+        "A. Patel",
+        "C. Silva",
+        "Y. Tanaka"
+      ],
       "abstract": "We present a systematic review of transformer architectures applied to natural language processing tasks. Duplicate entry from a different source.",
       "published": "2023-01-15T09:00:00.000Z",
       "source": "openalex",
@@ -49,20 +75,35 @@
       "url": "https://openalex.org/W1234567890",
       "citations": 87,
       "extraField": "should be preserved",
-      "novelData": {"nested": true}
+      "novelData": {
+        "nested": true
+      },
+      "tier": "Tier 2"
     },
     {
       "id": "2302.99999v1",
       "title": "Reinforcement Learning for Robotic Manipulation: Benchmark Results",
-      "authors": ["Hassan Ahmed", "Li Mei", "Sofia Rossi", "James O'Brien", "Kenji Nakamura", "Fatima Al-Rashid"],
+      "authors": [
+        "Hassan Ahmed",
+        "Li Mei",
+        "Sofia Rossi",
+        "James O'Brien",
+        "Kenji Nakamura",
+        "Fatima Al-Rashid"
+      ],
       "abstract": null,
       "published": "2024-11-01T14:30:00.000Z",
       "source": "arxiv",
-      "url": "https://arxiv.org/abs/2302.99999v1"
+      "url": "https://arxiv.org/abs/2302.99999v1",
+      "tier": "Tier 2"
     }
   ],
   "total": 1523,
-  "sources": ["arxiv", "openalex", "pubmed"],
+  "sources": [
+    "arxiv",
+    "openalex",
+    "pubmed"
+  ],
   "totalBySource": {
     "arxiv": 612,
     "openalex": 503,

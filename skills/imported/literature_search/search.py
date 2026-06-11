@@ -339,12 +339,12 @@ def papers_to_bibtex(papers: list[dict[str, Any]]) -> str:
     entries: list[str] = []
 
     for paper in papers:
-        title = paper.get("title", "").strip()
+        title = (paper.get("title") or "").strip()
         year = paper.get("year")
-        doi = paper.get("doi", "").strip()
-        authors = paper.get("authors", "").strip()
-        venue = paper.get("venue", "").strip()
-        arxiv_id = paper.get("arxiv_id", "").strip()
+        doi = (paper.get("doi") or "").strip()
+        authors = (paper.get("authors") or "").strip()
+        venue = (paper.get("venue") or "").strip()
+        arxiv_id = (paper.get("arxiv_id") or "").strip()
 
         if not title or not year:
             continue
