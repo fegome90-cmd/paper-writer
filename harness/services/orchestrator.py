@@ -189,6 +189,12 @@ class Orchestrator:
                 self.state_manager.reset_downstream_gates("draft")
             elif request.command in ("import_bib", "zotero_sync"):
                 self.state_manager.reset_downstream_gates("bib")
+            elif request.command in ("search",):
+                search_idx = ManuscriptState.STAGE_ORDER.index("search")
+                current_idx = ManuscriptState.STAGE_ORDER.index(stage_before)
+                if current_idx > search_idx:
+                    self.state_manager.reset_downstream_gates("search")
+                    stage_before = self.state_manager.load_state()["stage"]
 
             artifacts.extend(action_artifacts)
             steps.append({"step_id": "run_core_action", "status": "succeeded"})
@@ -271,8 +277,13 @@ class Orchestrator:
             if all_passed or is_draft:
                 next_stage = self._get_next_stage(request.command, stage_before)
                 if next_stage:
-                    self.state_manager.set_stage(next_stage)
-                    result.stage_after = next_stage
+                    target_idx = ManuscriptState.STAGE_ORDER.index(next_stage)
+                    current_idx = ManuscriptState.STAGE_ORDER.index(stage_before)
+                    if target_idx > current_idx:
+                        self.state_manager.set_stage(next_stage)
+                        result.stage_after = next_stage
+                    else:
+                        result.stage_after = stage_before
                 else:
                     result.stage_after = stage_before
             else:

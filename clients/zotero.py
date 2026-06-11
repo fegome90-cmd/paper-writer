@@ -76,6 +76,64 @@ class ZoteroConfig:
     local_mode: bool = False  # True → localhost:23119/api/
     bbt_local: bool = False  # True → Better BibTeX pull endpoint
 
+    def validate(self) -> None:
+        """Validate Zotero API credentials with a lightweight probe.
+
+        Performs a single GET to ``/users/{user_id}/items?limit=1``.
+        Raises ``ZoteroUnavailableError`` on any failure; returns silently on success.
+        """
+        if self.local_mode or self.bbt_local:
+            # local_mode: probe Zotero's local HTTP server to confirm it's reachable.
+            # bbt_local: skip — BBT is a plugin that may not expose a stable endpoint.
+            if self.local_mode:
+                local_url = f"http://localhost:23119/api/users/{self.user_id}/items?limit=1"
+                local_req = urllib.request.Request(
+                    local_url, headers={"Zotero-API-Version": "3"}
+                )
+                try:
+                    with urllib.request.urlopen(local_req, timeout=3):
+                        pass
+                except (urllib.error.URLError, OSError) as exc:
+                    raise ZoteroUnavailableError(
+                        "Could not reach local Zotero at localhost:23119 — "
+                        "ensure Zotero desktop is running with local API enabled."
+                    ) from exc
+            return
+        url = f"{ZOTERO_API_BASE}/users/{self.user_id}/items?limit=1"
+        headers: dict[str, str] = {"Zotero-API-Version": "3"}
+        if self.api_key:
+            headers["Zotero-API-Key"] = self.api_key
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT):
+                pass
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                raise ZoteroUnavailableError(
+                    "API key is missing or unrecognized. "
+                    "Set ZOTERO_API_KEY in your environment."
+                ) from e
+            if e.code == 403:
+                raise ZoteroUnavailableError(
+                    "API key is invalid or expired. "
+                    "Generate a new key at https://www.zotero.org/settings/keys"
+                ) from e
+            if e.code == 429:
+                raise ZoteroUnavailableError(
+                    "Zotero API rate limit reached — try again in a moment"
+                ) from e
+            if e.code >= 500:
+                raise ZoteroUnavailableError(
+                    "Zotero server error — try again later"
+                ) from e
+            raise ZoteroUnavailableError(
+                f"Zotero HTTP {e.code}: {e.reason}"
+            ) from e
+        except (urllib.error.URLError, OSError) as e:
+            raise ZoteroUnavailableError(
+                "Could not reach Zotero API — check network connection"
+            ) from e
+
     @staticmethod
     def from_env(bbt_local_override: bool = False) -> ZoteroConfig:
         """Build config from environment variables.

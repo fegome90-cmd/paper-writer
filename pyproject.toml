@@ -18,7 +18,13 @@ dependencies = ["mcp[cli]>=1,<2", "pyyaml>=6.0.1"]
 paper = "cli.paper.main:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0.0", "ruff>=0.3.0", "mypy>=1.9.0", "types-pyyaml>=6.0.12.12", "tomli>=2.0.0; python_version < '3.11'"]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.3.0",
+  "mypy>=1.9.0",
+  "types-pyyaml>=6.0.12.12",
+  "tomli>=2.0.0; python_version < '3.11'",
+]
 
 [tool.setuptools.packages.find]
 include = [

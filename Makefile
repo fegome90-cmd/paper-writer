@@ -1,4 +1,4 @@
-.PHONY: init test lint typecheck verify validate clean
+.PHONY: init test lint typecheck verify validate validate-dry-run clean setup-github setup-github-checks
 
 .venv:
 	uv venv
@@ -26,6 +26,13 @@ validate:
 
 validate-dry-run:
 	.venv/bin/python verification/run_real_validation.py --dry-run $${CASE}
+
+setup-github:
+	@./scripts/setup-github.sh
+
+# Usage: CHECKS_SHA=<sha> make setup-github-checks
+setup-github-checks:
+	@CHECKS_SHA="$${CHECKS_SHA}" ENFORCE_CHECKS=1 ./scripts/setup-github.sh
 
 clean:
 	rm -rf .venv .mypy_cache .pytest_cache .ruff_cache build dist *.egg-info
