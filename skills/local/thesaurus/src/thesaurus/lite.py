@@ -1,21 +1,23 @@
 """LiteSemanticStore — SQLite+FTS5 implementation of SemanticStore."""
 
 import json
+import os
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from thesaurus.migration import run_migration
-from thesaurus.protocol import SemanticStore, StorageCapabilities
+from thesaurus.protocol import SemanticStore
 
 _DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "workspace"
 _DEFAULT_DB_PATH = _DEFAULT_DB_DIR / "thesaurus.db"
 _MIGRATIONS_DIR = _DEFAULT_DB_DIR / "migrations"
 
 
-class LiteSemanticStore(SemanticStore):
+class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
     """SQLite + FTS5 concept store."""
 
-    def __init__(self, db_path: str | None = None) -> None:
+    def __init__(self, db_path: str | Path | None = None) -> None:
         self._db_path = Path(db_path) if db_path else _DEFAULT_DB_PATH
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_schema()
@@ -31,7 +33,7 @@ class LiteSemanticStore(SemanticStore):
         conn.row_factory = sqlite3.Row
         return conn
 
-    def _upsert_fts(self, conn: sqlite3.Connection, concept: dict) -> None:
+    def _upsert_fts(self, conn: sqlite3.Connection, concept: dict[str, Any]) -> None:
         """Insert or replace a concept in the FTS5 index."""
         # Delete existing FTS entry if any
         conn.execute("DELETE FROM concepts_fts WHERE id = ?", (concept["id"],))
@@ -50,11 +52,11 @@ class LiteSemanticStore(SemanticStore):
         conn = self._connect()
         try:
             row = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()
-            return row[0]
+            return int(row[0])
         finally:
             conn.close()
 
-    def add_concept(self, concept: dict) -> None:
+    def add_concept(self, concept: dict[str, Any]) -> None:
         """Add or replace a single concept. Transactional via context manager."""
         # Normalize alt_labels: accept list or JSON string
         alt_labels = concept.get("alt_labels", "[]")
@@ -86,7 +88,7 @@ class LiteSemanticStore(SemanticStore):
         finally:
             conn.close()
 
-    def import_concepts(self, concepts: list[dict]) -> int:
+    def import_concepts(self, concepts: list[dict[str, Any]]) -> int:
         """Import pre-validated concept dicts. Transactional with INSERT OR REPLACE."""
         conn = self._connect()
         try:
@@ -125,7 +127,7 @@ class LiteSemanticStore(SemanticStore):
         finally:
             conn.close()
 
-    def search(self, query: str, limit: int = 20) -> list[dict]:
+    def search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         """Search concepts via FTS5 + JSON alt_labels parsing."""
         limit = max(0, limit)
 
@@ -139,7 +141,7 @@ class LiteSemanticStore(SemanticStore):
             # Wrap query in double quotes so FTS5 treats user input as a
             # literal phrase, preventing operator injection (AND, OR, NOT, *).
             fts_query = '"' + query.replace('"', '""') + '"'
-            fts_results: dict[str, dict] = {}
+            fts_results: dict[str, dict[str, Any]] = {}
             try:
                 rows = conn.execute(
                     """SELECT id, preferred_label, notation,
@@ -198,7 +200,7 @@ class LiteSemanticStore(SemanticStore):
         finally:
             conn.close()
 
-    def list_concepts(self, offset: int = 0, limit: int = 50) -> list[dict]:
+    def list_concepts(self, offset: int = 0, limit: int = 50) -> list[dict[str, Any]]:
         offset = max(0, offset)
         limit = max(0, limit)
         conn = self._connect()
@@ -225,7 +227,7 @@ class LiteSemanticStore(SemanticStore):
         finally:
             conn.close()
 
-    def audit(self) -> dict:
+    def audit(self) -> dict[str, Any]:
         conn = self._connect()
         try:
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
@@ -247,8 +249,9 @@ class LiteSemanticStore(SemanticStore):
         if manifest_path.exists():
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                if manifest.get("source"):
-                    return manifest["source"]
+                source = manifest.get("source")
+                if source:
+                    return str(source)
             except (json.JSONDecodeError, OSError):
                 pass
         row = conn.execute(
@@ -256,7 +259,7 @@ class LiteSemanticStore(SemanticStore):
         ).fetchone()
         return row["source"] if row else ""
 
-    def stats(self) -> dict:
+    def stats(self) -> dict[str, Any]:
         conn = self._connect()
         try:
             count = conn.execute("SELECT COUNT(*) FROM concepts").fetchone()[0]
@@ -280,12 +283,15 @@ class LiteSemanticStore(SemanticStore):
             conn.close()
 
     def rebuild(self) -> None:
-        """Delete DB, run migration, re-import from JSONL. Idempotent.
+        """Rebuild DB from JSONL using atomic swap.
 
-        Validates manifest (SHA256 + concept_count) BEFORE deleting
-        the existing DB.  If no manifest exists, this is a no-op —
-        the current DB is preserved.
+        Validates manifest (SHA256 + concept_count) before touching anything.
+        Creates a staging DB, migrates and imports into it, then atomically
+        swaps it with the live DB. If anything fails, the live DB is preserved.
         """
+        import errno
+        import shutil
+
         workspace = self._db_path.parent
         manifest_path = workspace / "vocabulary" / "manifest.json"
 
@@ -306,15 +312,35 @@ class LiteSemanticStore(SemanticStore):
 
         validate_manifest(manifest, jsonl_path)  # Raises ManifestError on mismatch
 
-        # Only now is it safe to delete and recreate
-        self._db_path.unlink(missing_ok=True)
-        run_migration(self._db_path, sql_dir=_MIGRATIONS_DIR)
+        # Build staging DB alongside the live one
+        staging_path = self._db_path.with_suffix(".staging.db")
+        staging_path.unlink(missing_ok=True)
 
-        from thesaurus.mesh_loader import load_jsonl
+        try:
+            run_migration(staging_path, sql_dir=_MIGRATIONS_DIR)
 
-        concepts = load_jsonl(jsonl_path)
-        if concepts:
-            self.import_concepts(concepts)
+            from thesaurus.mesh_loader import load_jsonl
+
+            concepts = load_jsonl(jsonl_path)
+            if concepts:
+                # Import into staging DB
+                staging_store = self.__class__(str(staging_path))
+                staging_store.import_concepts(concepts)
+
+            # Atomic swap: rename staging to live (same filesystem = atomic)
+            try:
+                os.rename(str(staging_path), str(self._db_path))
+            except OSError as exc:
+                if exc.errno == errno.EXDEV:
+                    # Cross-device: fallback to copy+delete
+                    shutil.copy2(str(staging_path), str(self._db_path))
+                    os.remove(str(staging_path))
+                else:
+                    raise
+        except Exception:
+            # On any failure, clean up staging and preserve live DB
+            staging_path.unlink(missing_ok=True)
+            raise
 
     def _get_manifest_sha(self) -> str:
         """Get SHA256 of manifest file."""
