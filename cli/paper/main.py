@@ -206,7 +206,9 @@ def _cmd_zotero_update(args: Any) -> None:
 
     # Dry-run: show what would be updated without executing
     if args.dry_run:
-        print(f"[DRY RUN] Would update {args.key} with {len(changes)} field(s): {', '.join(changes.keys())}")
+        print(
+            f"[DRY RUN] Would update {args.key} with {len(changes)} field(s): {', '.join(changes.keys())}"
+        )
         return
 
     try:
@@ -882,9 +884,7 @@ def main() -> None:
     zotero_delete.add_argument(
         "--dry-run", action="store_true", help="Show what would be deleted without executing."
     )
-    zotero_delete.add_argument(
-        "--yes", "-y", action="store_true", help="Skip confirmation prompt."
-    )
+    zotero_delete.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt.")
     zotero_delete.set_defaults(func=_cmd_zotero_delete)
 
     # zotero upload
@@ -1013,9 +1013,10 @@ def main() -> None:
                 "end_year": args.search_window_end,
             }
     elif cmd_name == "search":
-        if args.query is None:
-            print(DEFAULT_SEARCH_QUERY_NOTICE)
-        orch_args["query"] = args.query or DEFAULT_SEARCH_QUERY
+        if not args.query or not args.query.strip():
+            print("Error: --query is required. Provide a research query.", file=sys.stderr)
+            raise SystemExit(1) from None
+        orch_args["query"] = args.query
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
         # Forward Consensus/academic filter params to provider

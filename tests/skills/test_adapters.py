@@ -53,10 +53,13 @@ class TestLiteratureSearchAdapter:
         adapter = LiteratureSearchAdapter()
         output_dir = tmp_path / "outputs" / "search"
 
-        result = adapter.execute(
-            command="search",
-            inputs={"query": "voice disorders", "output_dir": str(output_dir)},
-            context={},
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"PAPER_SEARCH_PROVIDER": "fixture"}):
+            result = adapter.execute(
+                command="search",
+                inputs={"query": "voice disorders", "output_dir": str(output_dir)},
+                context={},
         )
 
         assert result.status == "pass"

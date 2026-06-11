@@ -155,17 +155,16 @@ def test_cli_maps_commands_to_orchestrator_request(
     assert request.context["cwd"] == str(tmp_path)
 
 
-def test_cli_search_without_query_forwards_non_empty_compatibility_query(
+def test_cli_search_without_query_is_rejected(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    request = _capture_request(tmp_path, monkeypatch, ["paper", "search"])
-
-    assert request.command == "search"
-    assert request.failure_policy == "stop_on_error"
-    assert "query" in request.args
-    assert isinstance(request.args["query"], str)
-    assert request.args["query"].strip()
+    """Search without --query must fail, not silently use a default."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["paper", "search"])
+    with pytest.raises(SystemExit) as exc_info:
+        cli_main.main()
+    assert exc_info.value.code == 1
 
 
 def test_cli_exits_with_orchestrator_exit_code(

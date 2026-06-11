@@ -202,7 +202,9 @@ class TestMockPathOnlyWithoutAdapters:
         assert not (tmp_path / "raw_results.json").exists()
         assert not (tmp_path / "outputs" / "raw_results.json").exists()
         # Search generates a fresh run_id
-        assert (tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json").exists()
+        assert (
+            tmp_path / "outputs" / "runs" / runner.run_id / "search" / "raw_results.json"
+        ).exists()
 
 
 class TestOrchestratorBuilderAlwaysWiresAdapters:

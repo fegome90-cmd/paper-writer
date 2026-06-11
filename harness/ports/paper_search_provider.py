@@ -465,13 +465,20 @@ def create_search_provider(
     """Create the appropriate provider based on PAPER_SEARCH_PROVIDER env var.
 
     Modes:
-        - "fixture": deterministic test data (default)
+        - "fixture": deterministic test data (must be explicitly set)
         - "mcp": real MCP server via SDK
         - "consensus": Consensus REST API (200M+ peer-reviewed papers)
 
-    Never falls back silently. In MCP/Consensus mode, failures are visible errors.
+    Never falls back silently. Provider must be explicitly set via env var.
     """
-    mode = os.environ.get("PAPER_SEARCH_PROVIDER", "fixture").lower()
+    mode = os.environ.get("PAPER_SEARCH_PROVIDER", "").lower()
+
+    if not mode:
+        raise ValueError(
+            "PAPER_SEARCH_PROVIDER is not set. "
+            "Explicitly set to 'fixture', 'mcp', or 'consensus'. "
+            "Example: PAPER_SEARCH_PROVIDER=consensus"
+        )
 
     if mode == "fixture":
         import sys as _sys

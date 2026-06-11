@@ -66,6 +66,7 @@ def test_cli_full_pipeline(
 
     # 1. Init
     monkeypatch.setattr(sys, "argv", ["paper", "init"])
+    monkeypatch.setenv("PAPER_SEARCH_PROVIDER", "fixture")
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 0
@@ -79,7 +80,7 @@ def test_cli_full_pipeline(
     _write_test_content(tmp_path)
 
     # 2. Search
-    monkeypatch.setattr(sys, "argv", ["paper", "search"])
+    monkeypatch.setattr(sys, "argv", ["paper", "search", "--query", "test query"])
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 0
@@ -182,10 +183,12 @@ def test_cli_full_pipeline(
     assert "ready_for_delivery" in captured.out
 
 
-def test_cli_search_without_query_uses_visible_compatibility_fallback(
+def test_cli_search_with_query_uses_provider(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Search with explicit --query uses provider (fixture mode for test)."""
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PAPER_SEARCH_PROVIDER", "fixture")
 
     monkeypatch.setattr(sys, "argv", ["paper", "init"])
     with pytest.raises(SystemExit) as exc_info:
@@ -193,13 +196,12 @@ def test_cli_search_without_query_uses_visible_compatibility_fallback(
     assert exc_info.value.code == 0
     capsys.readouterr()
 
-    monkeypatch.setattr(sys, "argv", ["paper", "search"])
+    monkeypatch.setattr(sys, "argv", ["paper", "search", "--query", "test query"])
     with pytest.raises(SystemExit) as exc_info:
         main()
     assert exc_info.value.code == 0
 
     captured = capsys.readouterr()
-    assert "compatibility fallback query" in captured.out
     assert (tmp_path / "outputs" / "latest" / "search" / "search_plan.json").is_file()
     assert (tmp_path / "outputs" / "latest" / "search" / "raw_results.json").is_file()
 

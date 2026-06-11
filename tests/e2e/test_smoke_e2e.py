@@ -26,7 +26,7 @@ pytestmark = pytest.mark.e2e
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # Use sys.executable for portability across venv setups (local + CI)
 CLI_CMD = [sys.executable, "-m", "cli.paper.main"]
-ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
+ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT), "PAPER_SEARCH_PROVIDER": "fixture"}
 
 # Minimal valid .bib with DOI
 VALID_BIB = (
@@ -82,7 +82,7 @@ def _setup_to_validating(project: Path) -> None:
     r = _run(CLI_CMD + ["import", "bib", bib_path], project)
     assert r.returncode == 0, f"import bib failed: {r.stdout}"
 
-    r = _run(CLI_CMD + ["search"], project)
+    r = _run(CLI_CMD + ["search", "--query", "machine learning"], project)
     assert r.returncode == 0, f"search failed: {r.stdout}"
 
     r = _run(CLI_CMD + ["screen"], project)
@@ -172,7 +172,7 @@ class TestE2ESearchAndScreen:
         bib_path = _write_bib(project)
         _run(CLI_CMD + ["import", "bib", bib_path], project)
 
-        result = _run(CLI_CMD + ["search"], project)
+        result = _run(CLI_CMD + ["search", "--query", "machine learning"], project)
         assert result.returncode == 0
         assert (project / "outputs" / "latest" / "search" / "search_plan.json").exists()
 
@@ -180,7 +180,7 @@ class TestE2ESearchAndScreen:
         _run(CLI_CMD + ["init"], project)
         bib_path = _write_bib(project)
         _run(CLI_CMD + ["import", "bib", bib_path], project)
-        _run(CLI_CMD + ["search"], project)
+        _run(CLI_CMD + ["search", "--query", "machine learning"], project)
 
         result = _run(CLI_CMD + ["screen"], project)
         assert result.returncode == 0
@@ -192,7 +192,7 @@ class TestE2EDrafting:
 
     def test_draft_outline(self, project: Path) -> None:
         _run(CLI_CMD + ["init"], project)
-        _run(CLI_CMD + ["search"], project)
+        _run(CLI_CMD + ["search", "--query", "machine learning"], project)
         _run(CLI_CMD + ["screen"], project)
 
         result = _run(CLI_CMD + ["draft", "outline"], project)
@@ -201,7 +201,7 @@ class TestE2EDrafting:
 
     def test_draft_section(self, project: Path) -> None:
         _run(CLI_CMD + ["init"], project)
-        _run(CLI_CMD + ["search"], project)
+        _run(CLI_CMD + ["search", "--query", "machine learning"], project)
         _run(CLI_CMD + ["screen"], project)
         _run(CLI_CMD + ["draft", "outline"], project)
 

@@ -350,12 +350,13 @@ class TestDeduplication:
 class TestProviderSelection:
     """PAPER_SEARCH_PROVIDER env var controls which provider is created."""
 
-    def test_fixture_mode_default(self) -> None:
+    def test_no_provider_raises(self) -> None:
+        """Without PAPER_SEARCH_PROVIDER set, must fail closed."""
         with patch.dict("os.environ", {}, clear=False):
             if "PAPER_SEARCH_PROVIDER" in os.environ:
                 del os.environ["PAPER_SEARCH_PROVIDER"]
-            provider = create_search_provider()
-            assert isinstance(provider, FixturePaperSearchProvider)
+            with pytest.raises(ValueError, match="PAPER_SEARCH_PROVIDER is not set"):
+                create_search_provider()
 
     def test_fixture_mode_explicit(self) -> None:
         with patch.dict("os.environ", {"PAPER_SEARCH_PROVIDER": "fixture"}):

@@ -14,7 +14,7 @@ pytestmark = pytest.mark.e2e
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLI_CMD = [sys.executable, "-m", "cli.paper.main"]
-ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
+ENV = {**os.environ, "PYTHONPATH": str(REPO_ROOT), "PAPER_SEARCH_PROVIDER": "fixture"}
 
 
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -33,7 +33,7 @@ def _setup_to_screen(project: Path) -> None:
     r = _run([*CLI_CMD, "init"], project)
     assert r.returncode == 0, f"init failed: {r.stdout}"
 
-    r = _run([*CLI_CMD, "search"], project)
+    r = _run([*CLI_CMD, "search", "--query", "machine learning"], project)
     assert r.returncode == 0, f"search failed: {r.stdout}"
 
     r = _run([*CLI_CMD, "screen"], project)
