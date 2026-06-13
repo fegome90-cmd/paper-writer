@@ -61,6 +61,19 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Project root directory (default: auto-detect from CWD).",
     )
+    parser.add_argument(
+        "--output-format",
+        dest="output_format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format: text (default) or json. Rejected by text-only commands.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        default=False,
+        help="Suppress progress info and warnings (results/JSON/errors always shown).",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # paper init

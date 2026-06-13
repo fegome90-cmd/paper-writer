@@ -30,6 +30,13 @@ from harness.services.orchestrator_builder import build_orchestrator_dependencie
 
 def execute(args: Any) -> int:
     """Route parsed args to Phase 0 callback or pipeline dispatch. Returns exit code."""
+    # Wire the output contract (P2.5.1): configure emit_* channels from root flags.
+    # effective_output_format resolves subcommand --output override vs root --output-format.
+    output.configure(
+        quiet=getattr(args, "quiet", False),
+        output_format=output.effective_output_format(args),
+    )
+
     # Phase 0 commands — run directly via func callback
     func = getattr(args, "func", None)
     if func is not None:
