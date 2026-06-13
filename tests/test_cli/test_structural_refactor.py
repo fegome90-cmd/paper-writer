@@ -132,9 +132,9 @@ def test_audit_ethics_has_single_dispatch_path() -> None:
     # ethics MUST have a func callback set
     assert hasattr(ethics_parser, "_defaults"), "ethics parser has no defaults"
     assert "func" in ethics_parser._defaults, "ethics parser has no func callback"
-    assert (
-        ethics_parser._defaults["func"].__name__ == "_cmd_audit_ethics"
-    ), f"Expected _cmd_audit_ethics, got {ethics_parser._defaults['func'].__name__}"
+    assert ethics_parser._defaults["func"].__name__ == "_cmd_audit_ethics", (
+        f"Expected _cmd_audit_ethics, got {ethics_parser._defaults['func'].__name__}"
+    )
 
 
 def test_import_bib_routes_source_to_import_bib() -> None:
@@ -267,9 +267,9 @@ def test_mesh_unavailable_fallback_has_install_instructions() -> None:
                         # may use "mesh_subcommand" — that's a cross-PR task to reconcile.
                         # For PR1, we accept whichever path runs.
                         valid_dests = {"subcommand", "mesh_subcommand"}
-                        assert (
-                            sub_action.dest in valid_dests
-                        ), f"Expected dest in {valid_dests}, got dest='{sub_action.dest}'"
+                        assert sub_action.dest in valid_dests, (
+                            f"Expected dest in {valid_dests}, got dest='{sub_action.dest}'"
+                        )
                         return
 
     pytest.fail("Could not find mesh subparser to verify")
