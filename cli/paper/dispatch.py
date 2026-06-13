@@ -21,10 +21,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from cli.paper import output
 from cli.paper.errors import UserInputError
-from cli.paper.output import emit_info, emit_result
 from cli.paper.project import resolve_project_root
-from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
+from harness.services.orchestrator import Orchestrator, OrchestratorRequest
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
 
 
@@ -176,41 +176,5 @@ def execute(args: Any) -> int:
     )
     result = orchestrator.execute(request)
 
-    _print_summary(result)
+    output.summary(result)
     return result.exit_code
-
-
-def _print_summary(result: OrchestratorResult) -> None:
-    """Outputs status-oriented console logs."""
-    for step in result.steps:
-        status = step.get("status")
-        step_id = step.get("step_id")
-        error = step.get("error")
-
-        if status == "succeeded":
-            emit_info(f"[ok] Step: {step_id}")
-        elif status == "failed":
-            emit_info(f"[!!] Step: {step_id} - FAILED")
-            if error:
-                emit_info(f"     Error: {error}")
-        else:
-            emit_info(f"[--] Step: {step_id} - {status.upper() if status else 'UNKNOWN'}")
-
-    if result.success:
-        emit_result(
-            f"\nSuccess: Stage progressed from '{result.stage_before}' to '{result.stage_after}'."
-        )
-    else:
-        emit_result("\nPipeline Blocked:")
-        for blocker in result.blockers:
-            emit_result(f"  - {blocker}")
-
-    if result.warnings:
-        emit_info("\nWarnings:")
-        for warning in result.warnings:
-            emit_info(f"  - {warning}")
-
-    if result.artifacts:
-        emit_result("\nArtifacts:")
-        for artifact in result.artifacts:
-            emit_result(f"  - {artifact}")
