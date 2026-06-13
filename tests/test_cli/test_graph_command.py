@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
-from cli.paper.errors import UserInputError
+from cli.paper.errors import ExternalServiceError, UserInputError
 
 
 def _make_trace_args(
@@ -29,12 +29,11 @@ def _make_trace_args(
 
 
 class TestCmdTraceCallers:
-    def test_trifecta_not_enabled_exits_1(self) -> None:
-        """Trifecta disabled → error."""
+    def test_trifecta_not_enabled_raises_external_service_error(self) -> None:
+        """Trifecta disabled → ExternalServiceError (exit 3)."""
         with patch("clients.trifecta.get_trifecta_client", return_value=None):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ExternalServiceError):
                 _cmd_trace(_make_trace_args())
-            assert exc.value.code == 1
 
     def test_callers_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """callers action produces JSON."""
@@ -49,15 +48,14 @@ class TestCmdTraceCallers:
         assert len(data) == 1
         assert data[0]["symbol_name"] == "caller1"
 
-    def test_callers_failure_exits_1(self) -> None:
-        """callers failure → exit 1."""
+    def test_callers_failure_raises_external_service_error(self) -> None:
+        """callers failure → ExternalServiceError (exit 3)."""
         mock_client = MagicMock()
         mock_result = MagicMock(success=False, error="not found")
         mock_client.find_callers.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ExternalServiceError):
                 _cmd_trace(_make_trace_args(action="callers"))
-            assert exc.value.code == 1
 
     def test_callers_text_output_with_data(self, capsys: pytest.CaptureFixture[str]) -> None:
         """callers text output shows callers list."""
@@ -118,15 +116,14 @@ class TestCmdTraceCallees:
         out = capsys.readouterr().out
         assert "No callees found" in out
 
-    def test_callees_failure_exits_1(self) -> None:
-        """callees failure → exit 1."""
+    def test_callees_failure_raises_external_service_error(self) -> None:
+        """callees failure → ExternalServiceError (exit 3)."""
         mock_client = MagicMock()
         mock_result = MagicMock(success=False, error="unavailable")
         mock_client.find_callees.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ExternalServiceError):
                 _cmd_trace(_make_trace_args(action="callees"))
-            assert exc.value.code == 1
 
 
 class TestCmdTracePath:
@@ -161,12 +158,12 @@ class TestCmdTracePath:
 
 
 class TestCmdGraphOverview:
-    def test_trifecta_not_enabled_exits_1(self) -> None:
+    def test_trifecta_not_enabled_raises_external_service_error(self) -> None:
+        """Trifecta disabled → ExternalServiceError (exit 3)."""
         args = argparse.Namespace(output="json")
         with patch("clients.trifecta.get_trifecta_client", return_value=None):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ExternalServiceError):
                 _cmd_graph_overview(args)
-            assert exc.value.code == 1
 
     def test_overview_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         args = argparse.Namespace(output="json")
@@ -191,12 +188,12 @@ class TestCmdGraphOverview:
         assert data["node_count"] == 100
         assert data["orphan_count"] == 5
 
-    def test_overview_failure_exits_1(self) -> None:
+    def test_overview_failure_raises_external_service_error(self) -> None:
+        """overview failure → ExternalServiceError (exit 3)."""
         args = argparse.Namespace(output="json")
         mock_client = MagicMock()
         mock_result = MagicMock(success=False, error="unavailable")
         mock_client.find_overview.return_value = mock_result
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ExternalServiceError):
                 _cmd_graph_overview(args)
-            assert exc.value.code == 1

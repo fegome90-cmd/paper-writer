@@ -2,9 +2,8 @@
 
 import argparse
 import json
-import sys
 
-from cli.paper.errors import UserInputError
+from cli.paper.errors import ExternalServiceError, UserInputError
 
 
 def _cmd_trace(args: argparse.Namespace) -> None:
@@ -16,11 +15,9 @@ def _cmd_trace(args: argparse.Namespace) -> None:
 
     client = get_trifecta_client()
     if client is None:
-        print(
-            "Trifecta not enabled. Set MCP_TRIFECTA_MODE=real to use code tracing.",
-            file=sys.stderr,
+        raise ExternalServiceError(
+            "Trifecta not enabled. Set MCP_TRIFECTA_MODE=real to use code tracing."
         )
-        sys.exit(1)
 
     action = args.action
     symbol = args.symbol
@@ -28,8 +25,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
     if action == "callers":
         result = client.find_callers(symbol, depth=args.depth)
         if not result.success:
-            print(f"Error: {result.error}", file=sys.stderr)
-            sys.exit(1)
+            raise ExternalServiceError(str(result.error))
         if args.output == "json":
             print(json.dumps(result.data, indent=2, ensure_ascii=False))
         else:
@@ -45,8 +41,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
     elif action == "callees":
         result = client.find_callees(symbol)
         if not result.success:
-            print(f"Error: {result.error}", file=sys.stderr)
-            sys.exit(1)
+            raise ExternalServiceError(str(result.error))
         if args.output == "json":
             print(json.dumps(result.data, indent=2, ensure_ascii=False))
         else:
@@ -64,8 +59,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
             raise UserInputError("--to SYMBOL required for path action")
         result = client.find_path(symbol, args.to_symbol)
         if not result.success:
-            print(f"Error: {result.error}", file=sys.stderr)
-            sys.exit(1)
+            raise ExternalServiceError(str(result.error))
         if args.output == "json":
             print(json.dumps(result.data, indent=2, ensure_ascii=False))
         else:
@@ -85,16 +79,13 @@ def _cmd_graph_overview(args: argparse.Namespace) -> None:
 
     client = get_trifecta_client()
     if client is None:
-        print(
-            "Trifecta not enabled. Set MCP_TRIFECTA_MODE=real to use graph overview.",
-            file=sys.stderr,
+        raise ExternalServiceError(
+            "Trifecta not enabled. Set MCP_TRIFECTA_MODE=real to use graph overview."
         )
-        sys.exit(1)
 
     result = client.find_overview()
     if not result.success:
-        print(f"Error: {result.error}", file=sys.stderr)
-        sys.exit(1)
+        raise ExternalServiceError(str(result.error))
 
     data = result.data
     if args.output == "json":
