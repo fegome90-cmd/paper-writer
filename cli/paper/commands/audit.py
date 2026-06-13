@@ -1,12 +1,12 @@
 """Audit subcommand handlers for paper CLI."""
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
 
 from cli.paper.errors import UserInputError
+from cli.paper.output import emit_json, emit_result
 
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
@@ -58,9 +58,9 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
         print(f"Warning: result missing schema fields: {missing}", file=sys.stderr)
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
-        print(format_terminal(findings))
+        emit_result(format_terminal(findings))
 
 
 def _cmd_audit_claims(args: argparse.Namespace) -> None:
@@ -82,11 +82,11 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
     result = build_claims_report(manuscript, candidates, elapsed, rules_loaded=len(validator.rules))
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
         from engine.formatter import format_claims_output
 
-        print(format_claims_output(result))
+        emit_result(format_claims_output(result))
 
 
 def _cmd_audit_citations(args: argparse.Namespace) -> None:
@@ -128,9 +128,9 @@ def _cmd_audit_citations(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
-        print(format_terminal(findings))
+        emit_result(format_terminal(findings))
 
     if any(f.get("severity") == "P0" for f in findings):
         sys.exit(1)
@@ -168,9 +168,9 @@ def _cmd_audit_ethics(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
-        print(format_terminal(findings))
+        emit_result(format_terminal(findings))
 
     if any(f.get("severity") == "P0" for f in findings):
         sys.exit(1)
@@ -215,9 +215,9 @@ def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
-        print(format_terminal(findings))
+        emit_result(format_terminal(findings))
 
     # Fail-closed: exit code 1 if P0 findings
     if any(f.get("severity") == "P0" for f in findings):
@@ -258,7 +258,7 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        emit_json(output)
     else:
         print(output["summary"])
         if report.findings:
@@ -322,7 +322,7 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        emit_json(output)
     else:
         print(f"Claim-evidence factuality audit: {len(findings)} findings")
         if findings:
@@ -351,7 +351,7 @@ def _cmd_audit_tables(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        emit_json(output)
     else:
         if findings:
             print(f"Table/figure validation: {len(findings)} issues")
@@ -390,7 +390,7 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
     }
 
     if args.output == "json":
-        print(json.dumps(output, indent=2, ensure_ascii=False))
+        emit_json(output)
     else:
         print(f"Quality appraisal: {len(findings)} findings")
         for f in findings:
