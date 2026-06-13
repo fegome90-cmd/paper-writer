@@ -16,6 +16,7 @@ from cli.paper.commands.audit import (
     _cmd_audit_tables,
     _cmd_audit_writing_quality,
 )
+from cli.paper.commands.doctor import register_doctor
 from cli.paper.commands.gate import _cmd_gate_method
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
 from cli.paper.commands.mesh import register_mesh
@@ -477,17 +478,7 @@ def main() -> None:
     subparsers.add_parser("verify", help="Run final verification check.")
 
     # paper doctor
-    doc_parser = subparsers.add_parser("doctor", help="Check environment and report tool status.")
-    doc_parser.add_argument(
-        "--live",
-        action="store_true",
-        help="Perform live connectivity checks on the search provider.",
-    )
-    doc_parser.add_argument(
-        "--live-search-probe",
-        action="store_true",
-        help="Perform live connection checks AND execute a search probe.",
-    )
+    register_doctor(subparsers)
 
     # paper thesaurus (lazy — module may not be installed)
     register_thesaurus(subparsers)
@@ -502,27 +493,6 @@ def main() -> None:
     if func is not None:
         func(args)
         return
-
-    # paper doctor — runs directly, exits directly
-    if args.command == "doctor":
-        from harness.services.doctor import (
-            check_all_tools,
-            check_internal_capabilities,
-            format_doctor_report,
-        )
-
-        repo_path = resolve_project_root(args.project, Path.cwd())
-        tools = check_all_tools()
-        caps = check_internal_capabilities(repo_path)
-        print(format_doctor_report(tools, caps))
-
-        if getattr(args, "live", False) or getattr(args, "live_search_probe", False):
-            print()
-            from harness.services.doctor import run_live_checks
-
-            print(run_live_checks(run_search_probe=getattr(args, "live_search_probe", False)))
-
-        sys.exit(0)
 
     # Map parsed arguments to OrchestratorRequest
     cmd_name = args.command
