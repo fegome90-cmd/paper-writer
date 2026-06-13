@@ -1,12 +1,12 @@
 """Gate subcommand handlers for paper CLI."""
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
 
 from cli.paper.errors import UserInputError
+from cli.paper.output import emit_json, emit_result
 
 
 def _cmd_gate_method(args: argparse.Namespace) -> None:
@@ -32,9 +32,9 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
     result["metadata"]["execution_time_ms"] = elapsed
 
     if args.output == "json":
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        emit_json(result)
     else:
-        print(format_gate_result(result))
+        emit_result(format_gate_result(result))
 
     # Fail-closed: exit code 1 if gate blocked
     if not result.get("gate_passed", True):
