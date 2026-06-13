@@ -2,7 +2,7 @@
 
 Extracted from main.py in PR1 of cli-structural-refactoring.
 Contains the if/elif dispatch block, review_config injection,
-orchestrator construction, and _print_summary.
+orchestrator construction, and summary rendering (delegated to output.summary).
 
 NOTE: P1.7.1-P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP) were
 deferred to a follow-up PR. The if/elif dispatch pattern is preserved
