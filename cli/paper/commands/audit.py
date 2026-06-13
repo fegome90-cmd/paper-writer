@@ -260,15 +260,15 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
     if args.output == "json":
         emit_json(output)
     else:
-        print(output["summary"])
+        emit_result(str(output["summary"]))
         if report.findings:
-            print()
+            emit_result("")
             for finding in report.findings:
-                print(f"  {finding.file_rel}::{finding.symbol_name} ({finding.orphan_type})")
+                emit_result(f"  {finding.file_rel}::{finding.symbol_name} ({finding.orphan_type})")
         if dep_report.findings:
-            print(f"\n{dep_report.summary()}")
+            emit_result(f"\n{dep_report.summary()}")
             for hub in dep_report.findings:
-                print(
+                emit_result(
                     f"  {hub.file_rel}::{hub.symbol_name} "
                     f"(in_degree={hub.in_degree}, {hub.risk_reason})"
                 )
@@ -324,11 +324,11 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
     if args.output == "json":
         emit_json(output)
     else:
-        print(f"Claim-evidence factuality audit: {len(findings)} findings")
+        emit_result(f"Claim-evidence factuality audit: {len(findings)} findings")
         if findings:
             for f in findings:
                 ov = f["evidence"]["overlap_ratio"]
-                print(f"  [{ov:.0%}] {f['evidence']['claim_snippet'][:80]}")
+                emit_result(f"  [{ov:.0%}] {f['evidence']['claim_snippet'][:80]}")
 
     sys.exit(1 if findings else 0)
 
@@ -354,11 +354,11 @@ def _cmd_audit_tables(args: argparse.Namespace) -> None:
         emit_json(output)
     else:
         if findings:
-            print(f"Table/figure validation: {len(findings)} issues")
+            emit_result(f"Table/figure validation: {len(findings)} issues")
             for f in findings:
-                print(f"  [{f['severity']}] {f['rule_id']}: {f['message']}")
+                emit_result(f"  [{f['severity']}] {f['rule_id']}: {f['message']}")
         else:
-            print("Table/figure validation: all checks passed")
+            emit_result("Table/figure validation: all checks passed")
 
     sys.exit(1 if findings else 0)
 
@@ -392,9 +392,9 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
     if args.output == "json":
         emit_json(output)
     else:
-        print(f"Quality appraisal: {len(findings)} findings")
+        emit_result(f"Quality appraisal: {len(findings)} findings")
         for f in findings:
             if isinstance(f, dict):
-                print(f"  [{f.get('severity', '?')}] {f.get('rule_id', '?')}")
+                emit_result(f"  [{f.get('severity', '?')}] {f.get('rule_id', '?')}")
 
     sys.exit(1 if findings else 0)

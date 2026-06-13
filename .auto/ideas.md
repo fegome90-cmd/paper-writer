@@ -35,7 +35,7 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - Check which are result vs info/stderr before migrating
 
 ### doctor.py (3 prints)
-- Scan for result vs info categorization
+- ✅ DONE (commit ddab360): 3 stdout RESULT prints -> emit_result. doctor.py now 0 raw print().
 
 ### dispatch.py stdout result prints
 - ✅ DONE (commit 2323772): migrated 5 RESULT prints (Success/Pipeline-Blocked/blockers/Artifacts) to emit_result. Deferred 6 info/warning prints (4 step-progress + 2 warning) — spec says emit_info/emit_warning=stderr but current=stdout=stream change.
@@ -52,10 +52,12 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - BLOCKED: write a --quiet integration test FIRST, then migrate these (currently 6 in zotero + 2 audit stderr + 3 output.py stderr)
 
 ## Floor Analysis (current)
+- **GREP-AXIS SATURATED at honest floor 31** (no more byte-identical migrations possible)
 - output.py contract itself: 5 print() (irreducible — the channel implementations)
-- output.py 3 stderr prints in emit_info/emit_warning/emit_error (irreducible)
-- deferred behavior-sensitive (stdout->stderr stream change): dispatch 6 + zotero 6 + audit 2 = 14 prints
-- realistic floor WITHOUT --quiet wiring: ~29 (output.py 8 + doctor 3 + deferred 14 + misc)
+- audit.py: 14 (6 stderr warning/Note + 8 multi-line text sequences in code_health/factuality/tables/quality_appraisal)
+- dispatch.py: 6 (4 step-info + 2 warning — spec says emit_info/emit_warning=stderr, current=stdout=stream change)
+- zotero.py: 6 (1 stderr FAILED + 4 dry-run info + 1 Cancelled)
+- realistic floor WITHOUT --quiet wiring: 31 (current = floor reached)
 - realistic floor WITH --quiet wiring (full PR2 spec): ~8-10 (just output.py contract)
 
 ## Next Major Step (NOT a grep optimization — deliberate refactor)
@@ -74,3 +76,9 @@ This is a multi-file behavior change = should confirm with user before scope.
 - gate.py: 2 stdout prints -> emit_json/emit_result (commit 11f82cb, print_calls 60->58)
 - zotero.py: 19 safe stdout result prints -> emit_json/emit_result (commit 7b2a237, print_calls 58->39)
 - dispatch.py: 5 RESULT prints -> emit_result (commit 2323772, print_calls 39->34)
+- doctor.py: 3 RESULT prints -> emit_result (commit ddab360, print_calls 34->31)
+
+## Output-contract RESULT migration COMPLETE
+- All stdout RESULT prints in audit/graph/gate/zotero/dispatch/doctor now use emit_json/emit_result.
+- Grep-axis saturated. Only deferred behavior-sensitive prints + output.py contract remain.
+- Next HONEST step = spec'd --quiet wiring refactor (see below), which is PR2 completion = deliberate scope decision.
