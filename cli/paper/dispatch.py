@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.paper.errors import UserInputError
-from cli.paper.output import emit_result
+from cli.paper.output import emit_info, emit_result
 from cli.paper.project import resolve_project_root
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
@@ -188,13 +188,13 @@ def _print_summary(result: OrchestratorResult) -> None:
         error = step.get("error")
 
         if status == "succeeded":
-            print(f"[ok] Step: {step_id}")
+            emit_info(f"[ok] Step: {step_id}")
         elif status == "failed":
-            print(f"[!!] Step: {step_id} - FAILED")
+            emit_info(f"[!!] Step: {step_id} - FAILED")
             if error:
-                print(f"     Error: {error}")
+                emit_info(f"     Error: {error}")
         else:
-            print(f"[--] Step: {step_id} - {status.upper() if status else 'UNKNOWN'}")
+            emit_info(f"[--] Step: {step_id} - {status.upper() if status else 'UNKNOWN'}")
 
     if result.success:
         emit_result(
@@ -206,9 +206,9 @@ def _print_summary(result: OrchestratorResult) -> None:
             emit_result(f"  - {blocker}")
 
     if result.warnings:
-        print("\nWarnings:")
+        emit_info("\nWarnings:")
         for warning in result.warnings:
-            print(f"  - {warning}")
+            emit_info(f"  - {warning}")
 
     if result.artifacts:
         emit_result("\nArtifacts:")

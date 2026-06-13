@@ -72,7 +72,7 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "[ok] Step: load_state" in captured.out
+    assert "[ok] Step: load_state" in captured.err
     assert "Success: Stage progressed" in captured.out
     assert (tmp_path / "outputs" / "state.yaml").is_file()
     assert (tmp_path / "templates" / "manuscript.qmd").is_file()
@@ -86,7 +86,7 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "[ok] Step: verify_gate_search_completed" in captured.out
+    assert "[ok] Step: verify_gate_search_completed" in captured.err
 
     # 3. Screen
     monkeypatch.setattr(sys, "argv", ["paper", "screen"])
@@ -94,7 +94,7 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "[ok] Step: verify_gate_screened_evidence" in captured.out
+    assert "[ok] Step: verify_gate_screened_evidence" in captured.err
 
     # 4. Draft outline
     monkeypatch.setattr(sys, "argv", ["paper", "draft", "outline"])
@@ -102,7 +102,7 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "[ok] Step: verify_gate_outline_drafted" in captured.out
+    assert "[ok] Step: verify_gate_outline_drafted" in captured.err
     # Overwrite with clean outline referencing only bib-resolvable keys
     _write_outline(tmp_path)
 
@@ -513,7 +513,7 @@ class TestCLINegativePaths:
 
         orig_build = orchestrator_builder.build_orchestrator_dependencies
 
-        def mock_build(*args, **kwargs):
+        def mock_build(*args: Any, **kwargs: Any) -> Any:
             deps = orig_build(*args, **kwargs)
             # Replace zotero_sync wrapper with one that always passes
             mock_wrappers = dict(deps.wrappers)

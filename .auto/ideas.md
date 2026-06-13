@@ -51,18 +51,18 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - These need tests that assert stderr-under-quiet behavior BEFORE migrating
 - BLOCKED: write a --quiet integration test FIRST, then migrate these (currently 6 in zotero + 2 audit stderr + 3 output.py stderr)
 
-## Floor Analysis (current) — CORRECTED
-- **Honest grep floor = 19** (previous claim of 31 was premature — over-deferred audit text prints)
+## Floor Analysis (current) — FINAL, grep-axis genuinely exhausted at 16
+- **GENUINE floor = 16** (corrected twice: 31 -> 19 -> 16, both prior were premature deferrals)
 - output.py contract itself: 5 print() (irreducible — the channel implementations)
-- audit.py: 2 stderr (Warning line 58 + Note line 277) — emit_warning/emit_info, --quiet-sensitive
-- dispatch.py: 6 (4 step-info + 2 warning — spec says emit_info/emit_warning=stderr, current=stdout=stream change)
-- zotero.py: 6 (1 stderr FAILED where emit_warning adds 'Warning:' prefix=NOT byte-identical + 4 dry-run info + 1 Cancelled)
-- Going below 19 requires spec'd --quiet wiring (stream changes + test updates) = PR2 completion, NOT grep optimization
+- dispatch.py: 6 (4 step-info [ok]/[!!]/Error/[--] + Warnings header + warning) — STDOUT, spec wants stderr=STREAM CHANGE
+- zotero.py: 5 (4 [DRY RUN] + 1 Cancelled) — STDOUT, spec wants stderr=STREAM CHANGE
+- ALL 11 non-contract prints are genuine stdout->stderr stream changes observable regardless of --quiet
+- Going below 16 REQUIRES the spec'd --quiet wiring refactor = PR2 completion, NOT grep optimization
 
-## LESSON: premature saturation
-- Iteration 6 (doctor.py) wrongly claimed grep-axis saturated at 31 by deferring audit.py text-branch prints as 'multi-line needs care'
-- Those were byte-identical emit_result migrations (loops/multi-statement, not behavior-sensitive)
-- ALWAYS verify 'deferred' prints are truly behavior-sensitive (stream/format/--quiet change), not just more numerous
+## Why prior floors were wrong (lesson)
+- Claimed 31: lazily deferred audit.py text-branch prints as 'multi-line needs care' (were byte-identical emit_result)
+- Claimed 19: deferred 3 stderr prints as '--quiet-sensitive' (but --quiet not wired, so byte-identical now; suppression is desired end-state not regression)
+- RULE: a print is deferred ONLY if migrating changes observable output (stream stdout->stderr, text, or suppression) RIGHT NOW. Hypothetical-future behavior is not a deferral reason.
 
 ## Next Major Step (NOT a grep optimization — deliberate refactor)
 To drop print_calls below ~29 HONESTLY, must wire --quiet per design.md:775-813:
@@ -78,7 +78,7 @@ This is a multi-file behavior change = should confirm with user before scope.
 - audit.py: 14 stdout prints -> emit_json/emit_result (commit 5d6a12a, print_calls 96->82) + 12 more text-branch prints -> emit_result (commit 100263f, print_calls 31->19)
 - graph.py: 22 stdout prints -> emit_json/emit_result (commit abd6400, print_calls 82->60)
 - gate.py: 2 stdout prints -> emit_json/emit_result (commit 11f82cb, print_calls 60->58)
-- zotero.py: 19 safe stdout result prints -> emit_json/emit_result (commit 7b2a237, print_calls 58->39)
+- zotero.py: 19 safe stdout result prints -> emit_json/emit_result (commit 7b2a237, print_calls 58->39) + 1 stderr FAILED -> emit_info (commit ffff848)
 - dispatch.py: 5 RESULT prints -> emit_result (commit 2323772, print_calls 39->34)
 - doctor.py: 3 RESULT prints -> emit_result (commit ddab360, print_calls 34->31)
 
