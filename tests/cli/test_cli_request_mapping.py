@@ -160,12 +160,13 @@ def test_cli_search_without_query_is_rejected(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Search without --query must fail, not silently use a default."""
+    """Search without --query must fail with UserInputError (exit 2)."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", ["paper", "search"])
     with pytest.raises(SystemExit) as exc_info:
         cli_main.main()
-    assert exc_info.value.code == 1
+    # PR2: UserInputError -> exit 2 (was exit 1)
+    assert exc_info.value.code == 2
 
 
 def test_cli_exits_with_orchestrator_exit_code(

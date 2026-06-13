@@ -81,12 +81,13 @@ class TestResolveProjectRoot:
         assert result == deep
 
     def test_invalid_flag_path_exits(self, tmp_path: Path) -> None:
-        """REQ-PR-03: non-existent flag path → SystemExit(1)."""
+        """REQ-PR-03: non-existent flag path -> UserInputError (PR2: exit 2)."""
+        from cli.paper.errors import UserInputError
         from cli.paper.main import resolve_project_root
 
-        with pytest.raises(SystemExit) as exc_info:
+        # PR2: resolve_project_root raises UserInputError instead of SystemExit(1).
+        with pytest.raises(UserInputError):
             resolve_project_root(tmp_path / "nonexistent", tmp_path)
-        assert exc_info.value.code == 1
 
 
 # ── get_project_asset ────────────────────────────────────────────────

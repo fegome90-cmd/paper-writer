@@ -11,10 +11,10 @@ will replace the if/elif in a follow-up iteration within PR1.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any
 
+from cli.paper.errors import UserInputError
 from cli.paper.project import resolve_project_root
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
@@ -46,8 +46,7 @@ def execute(args: Any) -> int:
             }
     elif cmd_name == "search":
         if not args.query or not args.query.strip():
-            print("Error: --query is required. Provide a research query.", file=sys.stderr)
-            raise SystemExit(1) from None
+            raise UserInputError("--query is required. Provide a research query.")
         orch_args["query"] = args.query
         if args.raw_papers:
             orch_args["raw_papers"] = args.raw_papers
@@ -80,10 +79,7 @@ def execute(args: Any) -> int:
                 f"--relevance-threshold must be 0<val≤1, got {args.relevance_threshold}"
             )
         if _chain_errors:
-            print("Chain parameter validation error:", file=sys.stderr)
-            for e in _chain_errors:
-                print(f"  - {e}", file=sys.stderr)
-            sys.exit(1)
+            raise UserInputError("Chain parameter validation error: " + "; ".join(_chain_errors))
         orch_args["max_rounds"] = args.max_rounds
         orch_args["max_papers"] = args.max_papers
         orch_args["relevance_threshold"] = args.relevance_threshold
@@ -127,11 +123,9 @@ def execute(args: Any) -> int:
     elif cmd_name == "import":
         if sub_name == "bib":
             if not args.source and not args.from_zotero:
-                sys.stderr.write(
-                    "Error: Must specify source .bib file or "
-                    "use --from-zotero to sync from Zotero.\n"
+                raise UserInputError(
+                    "Must specify source .bib file or use --from-zotero to sync from Zotero."
                 )
-                sys.exit(1)
             orch_command = "zotero_sync" if args.from_zotero else "import_bib"
             orch_args["source_bib"] = args.source or ""
             orch_args["target_bib"] = args.target
