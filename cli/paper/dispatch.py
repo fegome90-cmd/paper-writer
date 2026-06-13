@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.paper.errors import UserInputError
+from cli.paper.output import emit_result
 from cli.paper.project import resolve_project_root
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
@@ -196,13 +197,13 @@ def _print_summary(result: OrchestratorResult) -> None:
             print(f"[--] Step: {step_id} - {status.upper() if status else 'UNKNOWN'}")
 
     if result.success:
-        print(
+        emit_result(
             f"\nSuccess: Stage progressed from '{result.stage_before}' to '{result.stage_after}'."
         )
     else:
-        print("\nPipeline Blocked:")
+        emit_result("\nPipeline Blocked:")
         for blocker in result.blockers:
-            print(f"  - {blocker}")
+            emit_result(f"  - {blocker}")
 
     if result.warnings:
         print("\nWarnings:")
@@ -210,6 +211,6 @@ def _print_summary(result: OrchestratorResult) -> None:
             print(f"  - {warning}")
 
     if result.artifacts:
-        print("\nArtifacts:")
+        emit_result("\nArtifacts:")
         for artifact in result.artifacts:
-            print(f"  - {artifact}")
+            emit_result(f"  - {artifact}")

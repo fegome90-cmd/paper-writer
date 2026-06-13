@@ -27,16 +27,15 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 ### gate.py stdout prints
 - ✅ DONE (commit 11f82cb): print(json.dumps)->emit_json + print(format_gate_result)->emit_result.
 
-### zotero.py stdout prints (24 total — NEXT TARGET, needs per-pattern care)
-- RISK: uses aliased `import json as _json` (4 occurrences) + legacy `--json` flag (dest=output_json)
-- SAFE JSON pattern (4x): `print(_json.dumps(X, indent=2, ensure_ascii=False))` -> `emit_json(X)`
-  at lines 66, 90, 152 + template. emit_json wraps to_json_value (identity for primitives).
-- SAFE stderr (1x): line 137 `print(..., file=sys.stderr)` FAILED -> emit_warning
-  BUT emit_warning respects --quiet = behavior change, defer until --quiet test exists.
-- MIXED text prints (~19x): result lines (collections/search counts, status) vs progress/info.
-  Per-line verification needed: dry-run prefix prints are info (emit_info, --quiet sensitive),
-  status/result lines are emit_result. Do NOT blind-bulk-replace.
-- zotero also still has `import json` and `sys` at module scope — check if dead after migration.
+### zotero.py stdout prints (24 total)
+- ✅ DONE (commit 7b2a237): migrated 19 safe stdout result prints (3 emit_json + 16 emit_result). Deferred 6 behavior-sensitive: 1 stderr FAILED, 4 [DRY RUN] info, 1 Cancelled.
+
+### dispatch.py stdout result prints (NEXT TARGET)
+- ~11 prints; `_print_summary` has stdout result lines -> emit_result
+- Check which are result vs info/stderr before migrating
+
+### doctor.py (3 prints)
+- Scan for result vs info categorization
 
 ### dispatch.py / other handlers
 - Scan for remaining stdout result prints
@@ -46,9 +45,17 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - `print(f"Note: ...", file=sys.stderr)` -> emit_info (respects --quiet)
 - Multi-line text sequences -> emit_result per line (verbose, needs care)
 - These need tests that assert stderr-under-quiet behavior BEFORE migrating
+- BLOCKED: write a --quiet integration test FIRST, then migrate these (currently 6 in zotero + 2 audit stderr + 3 output.py stderr)
+
+## Floor Analysis (current)
+- output.py contract itself: 5 print() (irreducible — the channel implementations)
+- output.py 3 stderr prints in emit_info/emit_warning/emit_error (irreducible)
+- deferred behavior-sensitive: ~11 prints (zotero 6, audit stderr 2, dispatch/doctor TBD)
+- realistic floor: ~25-30
 
 ## Completed
 
 - audit.py: 14 stdout prints -> emit_json/emit_result (commit 5d6a12a, print_calls 96->82)
 - graph.py: 22 stdout prints -> emit_json/emit_result (commit abd6400, print_calls 82->60)
 - gate.py: 2 stdout prints -> emit_json/emit_result (commit 11f82cb, print_calls 60->58)
+- zotero.py: 19 safe stdout result prints -> emit_json/emit_result (commit 7b2a237, print_calls 58->39)
