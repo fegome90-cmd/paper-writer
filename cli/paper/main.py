@@ -30,6 +30,14 @@ def main() -> None:
     except ExternalServiceError as exc:
         emit_error(str(exc))
         sys.exit(3)
+    except Exception as exc:
+        # XR6-compliant catch-all: unexpected errors exit 1 (NEVER 3 — must not be
+        # misclassified as external). Clean message, no raw traceback.
+        # Typed exceptions above are caught first; SystemExit/KeyboardInterrupt are
+        # BaseException and not swallowed here. Traceback suppression is intentional;
+        # a --verbose traceback hook is deferred to Sprint 3 (runtime.py).
+        emit_error(f"Internal error: {exc}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
