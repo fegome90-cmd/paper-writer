@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from cli.paper.errors import ExternalServiceError, UserInputError
+
 
 def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
     """Build ZoteroClient from env. Returns (client, error_msg)."""
@@ -32,8 +34,7 @@ def _cmd_zotero_collections(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         collections = client.fetch_collections()
         for c in collections:
@@ -42,8 +43,7 @@ def _cmd_zotero_collections(args: Any) -> None:
             print(f"{prefix}{c['key']}: {c['name']}")
         print(f"\n{len(collections)} collection(s)")
     except ZoteroError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_search(args: Any) -> None:
@@ -53,8 +53,7 @@ def _cmd_zotero_search(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         results = client.search_items(
             args.query,
@@ -74,8 +73,7 @@ def _cmd_zotero_search(args: Any) -> None:
             print(f"  {key}  {year:>4}  {item_type:<20}  {title}")
         print(f"\n{len(results)} result(s)")
     except ZoteroError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_get(args: Any) -> None:
@@ -85,8 +83,7 @@ def _cmd_zotero_get(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         item = client.get_item(args.key)
         if args.output_json:
@@ -98,8 +95,7 @@ def _cmd_zotero_get(args: Any) -> None:
                 if k not in ("key", "version", "itemType") and v:
                     print(f"  {k}: {v}")
     except (ZoteroError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_create(args: Any) -> None:
@@ -109,13 +105,11 @@ def _cmd_zotero_create(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         items = _json.loads(Path(args.file).read_text(encoding="utf-8"))
     except (_json.JSONDecodeError, FileNotFoundError) as exc:
-        print(f"Error reading {args.file}: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(f"Error reading {args.file}: {exc}") from exc
 
     if not isinstance(items, list):
         items = [items]
@@ -142,8 +136,7 @@ def _cmd_zotero_create(args: Any) -> None:
         for idx, info in failed.items():
             print(f"  FAILED [{idx}]: {info}", file=sys.stderr)
     except ZoteroError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_template(args: Any) -> None:
@@ -153,14 +146,12 @@ def _cmd_zotero_template(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         template = client.get_item_template(args.item_type)
         print(_json.dumps(template, indent=2, ensure_ascii=False))
     except ZoteroError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_update(args: Any) -> None:
@@ -170,13 +161,11 @@ def _cmd_zotero_update(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
     try:
         changes = _json.loads(Path(args.file).read_text(encoding="utf-8"))
     except (_json.JSONDecodeError, FileNotFoundError) as exc:
-        print(f"Error reading {args.file}: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(f"Error reading {args.file}: {exc}") from exc
 
     # Dry-run: show what would be updated without executing
     if args.dry_run:
@@ -201,8 +190,8 @@ def _cmd_zotero_update(args: Any) -> None:
                     d = current.get("data", {}) if isinstance(current, dict) else {}
                     version = d.get("version") if isinstance(d, dict) else None
                 if version is None:
-                    print("Error: could not determine version. Use --version.", file=sys.stderr)
-                    raise SystemExit(1) from None
+                    raise UserInputError("Could not determine version. Use --version.")
+                    # print removed
             headers = client.partial_update_item(args.key, changes, version=version)
         else:
             # PUT: must send complete item data. Fetch current, merge changes.
@@ -214,12 +203,11 @@ def _cmd_zotero_update(args: Any) -> None:
                 if version is None and isinstance(current_data, dict):
                     version = current_data.get("version")
             if version is None:
-                print("Error: could not determine item version. Use --version.", file=sys.stderr)
-                raise SystemExit(1) from None
+                raise UserInputError("Could not determine version. Use --version.")
+                # print removed
 
             if not isinstance(current_data, dict):
-                print("Error: could not extract item data for update", file=sys.stderr)
-                raise SystemExit(1) from None
+                raise UserInputError("Could not extract item data for update")
             # Merge: user data overwrites current fields
             merged = {**current_data, **changes}
             merged["key"] = args.key
@@ -231,8 +219,7 @@ def _cmd_zotero_update(args: Any) -> None:
         new_version = headers.get("Last-Modified-Version", "?")
         print(f"Updated {args.key} → version {new_version}")
     except (ZoteroError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_delete(args: Any) -> None:
@@ -240,8 +227,7 @@ def _cmd_zotero_delete(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
 
     # Dry-run: show what would be deleted without executing
     if args.dry_run:
@@ -271,10 +257,7 @@ def _cmd_zotero_delete(args: Any) -> None:
                 item = client.get_item(args.keys[0])
                 version = item.get("version") or item.get("data", {}).get("version")
                 if version is None:
-                    print(
-                        "Error: could not determine item version. Use --version.", file=sys.stderr
-                    )
-                    raise SystemExit(1) from None
+                    raise UserInputError("Could not determine item version. Use --version.")
             try:
                 client.delete_item(args.keys[0], version=version)
             except ZoteroError as exc:
@@ -291,16 +274,11 @@ def _cmd_zotero_delete(args: Any) -> None:
         else:
             # Batch: require library version
             if args.version is None:
-                print(
-                    "Error: --version (library version) is required for batch delete.",
-                    file=sys.stderr,
-                )
-                raise SystemExit(1) from None
+                raise UserInputError("--version (library version) is required for batch delete.")
             client.delete_items(args.keys, library_version=args.version)
             print(f"Deleted {len(args.keys)} items")
     except (ZoteroError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_upload(args: Any) -> None:
@@ -308,8 +286,7 @@ def _cmd_zotero_upload(args: Any) -> None:
 
     client, err = _zotero_client(local=getattr(args, "local", False))
     if err:
-        print(f"Error: {err}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise UserInputError(err)
 
     try:
         result = client.upload_file(
@@ -326,8 +303,7 @@ def _cmd_zotero_upload(args: Any) -> None:
         else:
             print(f"  {result.get('message', 'File already exists')}")
     except (ZoteroError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+        raise ExternalServiceError(str(exc)) from exc
 
 
 def register_zotero(subparsers: Any) -> None:
