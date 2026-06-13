@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from cli.paper import dispatch as cli_dispatch
 from cli.paper import main as cli_main
 from harness.services.orchestrator import OrchestratorRequest, OrchestratorResult
 
@@ -33,7 +34,7 @@ def _capture_request(
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(sys, "argv", argv)
-    monkeypatch.setattr(cli_main, "Orchestrator", FakeOrchestrator)
+    monkeypatch.setattr(cli_dispatch, "Orchestrator", FakeOrchestrator)
 
     with pytest.raises(SystemExit) as exc_info:
         cli_main.main()

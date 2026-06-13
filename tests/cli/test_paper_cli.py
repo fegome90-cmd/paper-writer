@@ -523,7 +523,7 @@ class TestCLINegativePaths:
         import dataclasses
         import types
 
-        monkeypatch.setattr("cli.paper.main.build_orchestrator_dependencies", mock_build)
+        monkeypatch.setattr("cli.paper.dispatch.build_orchestrator_dependencies", mock_build)
 
         monkeypatch.setattr(
             sys,
