@@ -18,6 +18,8 @@ from cli.paper.commands.audit import (
 )
 from cli.paper.commands.gate import _cmd_gate_method
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
+from cli.paper.commands.mesh import register_mesh
+from cli.paper.commands.thesaurus import register_thesaurus
 from cli.paper.commands.zotero import register_zotero
 from cli.paper.project import MAX_ASCENDING_DEPTH, resolve_project_root  # noqa: F401
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
@@ -488,73 +490,10 @@ def main() -> None:
     )
 
     # paper thesaurus (lazy — module may not be installed)
-    _thesaurus_available = False
-    try:
-        from thesaurus.cli import _cmd_audit, _cmd_import, _cmd_list, _cmd_rebuild, _cmd_search
-
-        _thesaurus_available = True
-    except ImportError:
-
-        def _cmd_unavailable(args: Any) -> None:
-            print(
-                "Error: thesaurus module not installed. "
-                "Install with: cd skills/local/thesaurus && uv pip install -e .",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        _cmd_import = _cmd_search = _cmd_list = _cmd_audit = _cmd_rebuild = _cmd_unavailable
-
-    thesaurus_parser = subparsers.add_parser(
-        "thesaurus", help="Biomedical concept normalization (MeSH/DeCS)."
-    )
-    thesaurus_sub = thesaurus_parser.add_subparsers(dest="subcommand", required=True)
-
-    thesaurus_import = thesaurus_sub.add_parser("import", help="Import concepts from JSONL.")
-    thesaurus_import.add_argument("file", help="Path to JSONL file.")
-    thesaurus_import.set_defaults(func=_cmd_import)
-
-    thesaurus_search = thesaurus_sub.add_parser("search", help="Search concepts.")
-    thesaurus_search.add_argument("query", help="Search query.")
-    thesaurus_search.add_argument("--limit", type=int, default=20, help="Max results (default 20).")
-    thesaurus_search.set_defaults(func=_cmd_search)
-
-    thesaurus_list = thesaurus_sub.add_parser("list", help="List loaded concepts.")
-    thesaurus_list.add_argument("--offset", type=int, default=0, help="Offset for pagination.")
-    thesaurus_list.add_argument("--limit", type=int, default=50, help="Max results (default 50).")
-    thesaurus_list.set_defaults(func=_cmd_list)
-
-    thesaurus_audit = thesaurus_sub.add_parser("audit", help="Show thesaurus audit info.")
-    thesaurus_audit.set_defaults(func=_cmd_audit)
-
-    thesaurus_rebuild = thesaurus_sub.add_parser("rebuild", help="Rebuild DB from JSONL.")
-    thesaurus_rebuild.set_defaults(func=_cmd_rebuild)
+    register_thesaurus(subparsers)
 
     # paper mesh (lazy — module may not be installed)
-    try:
-        from mesh_import.cli import register as _register_mesh
-
-        _register_mesh(subparsers)
-    except ImportError:
-
-        def _cmd_mesh_unavailable(args: Any) -> None:
-            print(
-                "Error: mesh-import module not installed. "
-                "Install with: cd skills/local/mesh-import && uv pip install -e .",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        mesh_parser = subparsers.add_parser("mesh", help="MeSH vocabulary import and lookup.")
-        mesh_sub = mesh_parser.add_subparsers(dest="mesh_subcommand", required=True)
-        mesh_fallback = mesh_sub.add_parser("import")
-        mesh_fallback.set_defaults(func=_cmd_mesh_unavailable)
-        mesh_resolve_fb = mesh_sub.add_parser("resolve")
-        mesh_resolve_fb.set_defaults(func=_cmd_mesh_unavailable)
-        mesh_expand_fb = mesh_sub.add_parser("expand")
-        mesh_expand_fb.set_defaults(func=_cmd_mesh_unavailable)
-        mesh_export_fb = mesh_sub.add_parser("export")
-        mesh_export_fb.set_defaults(func=_cmd_mesh_unavailable)
+    register_mesh(subparsers)
 
     args = parser.parse_args()
 
