@@ -16,7 +16,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
+from datetime import date, datetime
+from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
 if TYPE_CHECKING:
@@ -153,5 +156,13 @@ def to_json_value(value: object) -> JSONValue:
                 raise TypeError(f"JSON object key must be str, got {type(key).__name__}")
             result[key] = to_json_value(item)
         return result
-    # Path, Enum, dataclass, datetime -> extend per concrete schema
+    # Path, Enum, dataclass, datetime -> explicit normalization (NO default=str per spec S9)
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, Enum):
+        return to_json_value(value.value)
+    if is_dataclass(value) and not isinstance(value, type):
+        return to_json_value(asdict(value))
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
     raise TypeError(f"No JSON normalization defined for {type(value).__name__}")
