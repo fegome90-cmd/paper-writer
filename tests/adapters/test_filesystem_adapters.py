@@ -92,23 +92,25 @@ def test_action_runner_search(tmp_path: Path) -> None:
         @property
         def name(self) -> str:
             return "literature-search"
+
         def execute(self, command, inputs, context):
             out = Path(inputs.get("output_dir", ""))
             out.mkdir(parents=True, exist_ok=True)
             (out / "raw_results.json").write_text(
                 json.dumps([{"title": "Test", "doi": "10.1/test"}])
             )
-            (out / "search_plan.json").write_text(
-                json.dumps({"query": inputs.get("query", "")})
-            )
+            (out / "search_plan.json").write_text(json.dumps({"query": inputs.get("query", "")}))
             return SkillResult(
-                adapter=self.name, status="pass", summary="ok",
+                adapter=self.name,
+                status="pass",
+                summary="ok",
                 artifacts=[str(out / "raw_results.json"), str(out / "search_plan.json")],
                 gate_changes={},
             )
 
     runner = FilesystemActionRunner(
-        tmp_path, run_id=RUN_ID,
+        tmp_path,
+        run_id=RUN_ID,
         skill_adapters={"literature_search": _SearchAdapter()},
     )
     artifacts = runner.run_action("search", {})
@@ -131,6 +133,7 @@ def test_action_runner_screen(tmp_path: Path) -> None:
         @property
         def name(self) -> str:
             return "literature-search"
+
         def execute(self, command, inputs, context):
             out = Path(inputs.get("output_dir", ""))
             out.mkdir(parents=True, exist_ok=True)
@@ -138,12 +141,16 @@ def test_action_runner_screen(tmp_path: Path) -> None:
                 json.dumps({"evidence": [], "total_raw": 0, "total_screened": 0})
             )
             return SkillResult(
-                adapter=self.name, status="pass", summary="ok",
-                artifacts=[str(out / "screened_evidence.json")], gate_changes={},
+                adapter=self.name,
+                status="pass",
+                summary="ok",
+                artifacts=[str(out / "screened_evidence.json")],
+                gate_changes={},
             )
 
     runner = FilesystemActionRunner(
-        tmp_path, run_id=RUN_ID,
+        tmp_path,
+        run_id=RUN_ID,
         skill_adapters={"literature_search": _ScreenAdapter()},
     )
     artifacts = runner.run_action("screen", {})

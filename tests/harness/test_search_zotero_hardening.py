@@ -41,7 +41,9 @@ def _create_orchestrator() -> tuple[
     return orch, repo, checker, action_runner
 
 
-def _create_orchestrator_at_stage(stage: str) -> tuple[
+def _create_orchestrator_at_stage(
+    stage: str,
+) -> tuple[
     Orchestrator,
     InMemoryStateRepository,
 ]:
@@ -82,9 +84,7 @@ class TestVerifyStageGuard:
         wrappers = create_mock_wrappers()
         orch = Orchestrator(Path("/mock_root"), manager, checker, action_runner, wrappers)
 
-        result = orch.execute(
-            OrchestratorRequest("search", "screen", "stop_on_error")
-        )
+        result = orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
 
         assert result.success is True
         assert result.stage_before == "validating"
@@ -100,9 +100,7 @@ class TestVerifyStageGuard:
         """Normal forward transition (search at search stage) still works."""
         orch, _repo = _create_orchestrator_at_stage("search")
 
-        result = orch.execute(
-            OrchestratorRequest("search", "screen", "stop_on_error")
-        )
+        result = orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
 
         assert result.success is True
         assert result.stage_after == "screen"
@@ -119,9 +117,7 @@ class TestVerifyStageGuard:
         wrappers = create_mock_wrappers()
         orch = Orchestrator(Path("/mock_root"), manager, checker, action_runner, wrappers)
 
-        result = orch.execute(
-            OrchestratorRequest("search", "screen", "stop_on_error")
-        )
+        result = orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
 
         assert result.success is True
         assert result.stage_before == "rendered"
@@ -229,9 +225,7 @@ class TestIntegrationSearchRerun:
         orch.execute(OrchestratorRequest("init", "search", "stop_on_error"))
         orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
         orch.execute(OrchestratorRequest("screen", "outline", "stop_on_error"))
-        orch.execute(
-            OrchestratorRequest("draft_outline", "drafting", "stop_on_error")
-        )
+        orch.execute(OrchestratorRequest("draft_outline", "drafting", "stop_on_error"))
         for section in ["introduction", "methods", "results", "discussion"]:
             orch.execute(
                 OrchestratorRequest(
@@ -248,9 +242,7 @@ class TestIntegrationSearchRerun:
         orch.state_manager.set_gate("citations_resolved", True)
         orch.state_manager.set_gate("style_passed", True)
 
-        result = orch.execute(
-            OrchestratorRequest("search", "screen", "stop_on_error")
-        )
+        result = orch.execute(OrchestratorRequest("search", "screen", "stop_on_error"))
 
         assert result.success is True
         assert result.stage_before == "validating"
@@ -289,7 +281,6 @@ class TestDotEnvExample:
             line = line.strip()
             if "=" in line and not line.startswith("#"):
                 _, _, value = line.partition("=")
-                assert (
-                    value in ("", "user", "false")
-                    or value.startswith("your_")
-                ), f"Potential secret in .env.example: {line}"
+                assert value in ("", "user", "false") or value.startswith("your_"), (
+                    f"Potential secret in .env.example: {line}"
+                )

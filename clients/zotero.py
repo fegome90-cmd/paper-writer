@@ -87,9 +87,7 @@ class ZoteroConfig:
             # bbt_local: skip — BBT is a plugin that may not expose a stable endpoint.
             if self.local_mode:
                 local_url = f"http://localhost:23119/api/users/{self.user_id}/items?limit=1"
-                local_req = urllib.request.Request(
-                    local_url, headers={"Zotero-API-Version": "3"}
-                )
+                local_req = urllib.request.Request(local_url, headers={"Zotero-API-Version": "3"})
                 try:
                     with urllib.request.urlopen(local_req, timeout=3):
                         pass
@@ -110,8 +108,7 @@ class ZoteroConfig:
         except urllib.error.HTTPError as e:
             if e.code == 401:
                 raise ZoteroUnavailableError(
-                    "API key is missing or unrecognized. "
-                    "Set ZOTERO_API_KEY in your environment."
+                    "API key is missing or unrecognized. Set ZOTERO_API_KEY in your environment."
                 ) from e
             if e.code == 403:
                 raise ZoteroUnavailableError(
@@ -123,12 +120,8 @@ class ZoteroConfig:
                     "Zotero API rate limit reached — try again in a moment"
                 ) from e
             if e.code >= 500:
-                raise ZoteroUnavailableError(
-                    "Zotero server error — try again later"
-                ) from e
-            raise ZoteroUnavailableError(
-                f"Zotero HTTP {e.code}: {e.reason}"
-            ) from e
+                raise ZoteroUnavailableError("Zotero server error — try again later") from e
+            raise ZoteroUnavailableError(f"Zotero HTTP {e.code}: {e.reason}") from e
         except (urllib.error.URLError, OSError) as e:
             raise ZoteroUnavailableError(
                 "Could not reach Zotero API — check network connection"

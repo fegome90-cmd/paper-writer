@@ -502,6 +502,12 @@ def create_search_provider(
 
         return ConsensusSearchProvider()
 
+    if mode == "consensus_mcp_remote":
+        from integrations.tools.consensus_mcp_client import ConsensusRemoteMcpSearchProvider
+
+        return ConsensusRemoteMcpSearchProvider()
+
     raise ValueError(
-        f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. Must be 'fixture', 'mcp', or 'consensus'."
+        f"Unknown PAPER_SEARCH_PROVIDER: {mode!r}. "
+        "Must be 'fixture', 'mcp', 'consensus', or 'consensus_mcp_remote'."
     )

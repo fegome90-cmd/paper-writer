@@ -59,8 +59,9 @@ class TestDoctorInternalCaps:
         (journals_dir / "preset.yaml").write_text("name: nature")
 
         caps = check_internal_capabilities(tmp_path)
-        # Thesaurus DB is optional — only check non-thesaurus caps
-        non_optional = [c for c in caps if c.name != "thesaurus"]
+        # Thesaurus DB and search provider are optional/external.
+        # Only check non-thesaurus/provider caps.
+        non_optional = [c for c in caps if c.name not in ("thesaurus", "search-provider")]
         assert all(c.installed for c in non_optional)
 
     def test_empty_repo(self, tmp_path: Path) -> None:

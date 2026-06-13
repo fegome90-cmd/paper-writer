@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # --- Primary metric: main.py line count (lower = better) ---
-MAIN_LINES=$(wc -l < cli/paper/main.py | tr -d ' ')
+MAIN_LINES=$(wc -l <cli/paper/main.py | tr -d ' ')
 echo "METRIC main_py_lines=$MAIN_LINES"
 
 # --- Secondary: module decomposition ---
@@ -18,16 +18,16 @@ RAW=$(uv run pytest tests/cli/ tests/test_cli/ tests/autoresearch/test_multi_pro
 FAILED=$(echo "$RAW" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1 || echo 0)
 # If no summary line, count F chars in the dot-progress line
 if [ "$FAILED" = "0" ]; then
-  SUMMARY=$(echo "$RAW" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1 || echo 0)
-  if [ "$SUMMARY" = "0" ]; then
-    DOTLINE=$(echo "$RAW" | tr -cd '.F' | head -c 5000)
-    FAILED=$(echo "$DOTLINE" | tr -cd 'F' | wc -c | tr -d ' ')
-    PASSED=$(echo "$DOTLINE" | tr -cd '.' | wc -c | tr -d ' ')
-  else
-    PASSED="$SUMMARY"
-  fi
+	SUMMARY=$(echo "$RAW" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1 || echo 0)
+	if [ "$SUMMARY" = "0" ]; then
+		DOTLINE=$(echo "$RAW" | tr -cd '.F' | head -c 5000)
+		FAILED=$(echo "$DOTLINE" | tr -cd 'F' | wc -c | tr -d ' ')
+		PASSED=$(echo "$DOTLINE" | tr -cd '.' | wc -c | tr -d ' ')
+	else
+		PASSED="$SUMMARY"
+	fi
 else
-  PASSED=$(echo "$RAW" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1 || echo 0)
+	PASSED=$(echo "$RAW" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1 || echo 0)
 fi
 echo "METRIC test_failures=$FAILED"
 echo "METRIC test_passed=$PASSED"

@@ -18,9 +18,7 @@ class _MinimalSearchAdapter(SkillAdapter):
     def name(self) -> str:
         return "literature-search"
 
-    def execute(
-        self, command: str, inputs: dict, context: dict
-    ) -> SkillResult:
+    def execute(self, command: str, inputs: dict, context: dict) -> SkillResult:
         output_dir = inputs.get("output_dir", "")
         if command == "search":
             out = Path(output_dir)
@@ -28,12 +26,13 @@ class _MinimalSearchAdapter(SkillAdapter):
             (out / "raw_results.json").write_text(
                 json.dumps([{"title": "Test", "doi": "10.1/test"}])
             )
-            (out / "search_plan.json").write_text(
-                json.dumps({"query": inputs.get("query", "")})
-            )
+            (out / "search_plan.json").write_text(json.dumps({"query": inputs.get("query", "")}))
             return SkillResult(
-                adapter=self.name, status="pass", summary="ok",
-                artifacts=[str(out / "raw_results.json")], gate_changes={},
+                adapter=self.name,
+                status="pass",
+                summary="ok",
+                artifacts=[str(out / "raw_results.json")],
+                gate_changes={},
             )
         if command == "screen":
             out = Path(output_dir)
@@ -42,12 +41,18 @@ class _MinimalSearchAdapter(SkillAdapter):
                 json.dumps({"evidence": [], "total_raw": 0, "total_screened": 0})
             )
             return SkillResult(
-                adapter=self.name, status="pass", summary="ok",
-                artifacts=[str(out / "screened_evidence.json")], gate_changes={},
+                adapter=self.name,
+                status="pass",
+                summary="ok",
+                artifacts=[str(out / "screened_evidence.json")],
+                gate_changes={},
             )
         return SkillResult(
-            adapter=self.name, status="pass", summary="ok",
-            artifacts=[], gate_changes={},
+            adapter=self.name,
+            status="pass",
+            summary="ok",
+            artifacts=[],
+            gate_changes={},
         )
 
 

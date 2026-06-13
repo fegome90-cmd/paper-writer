@@ -359,9 +359,9 @@ class TestCompleteForwardingChain:
             args=orch_args,
         )
 
-        assert all(
-            key in request.args for key in SEARCH_FILTER_KEYS
-        ), "Filters lost in OrchestratorRequest"
+        assert all(key in request.args for key in SEARCH_FILTER_KEYS), (
+            "Filters lost in OrchestratorRequest"
+        )
 
         runner.run_action("search", request.args)
 
@@ -394,11 +394,22 @@ class TestCompleteForwardingChain:
             )
 
 
-EXPECTED_FILTER_KEYS = frozenset({
-    "year_min", "year_max", "study_types", "human", "sample_size_min",
-    "sjr_max", "duration_min", "duration_max", "exclude_preprints",
-    "publisher_name", "clinical_guideline", "medical_mode",
-})
+EXPECTED_FILTER_KEYS = frozenset(
+    {
+        "year_min",
+        "year_max",
+        "study_types",
+        "human",
+        "sample_size_min",
+        "sjr_max",
+        "duration_min",
+        "duration_max",
+        "exclude_preprints",
+        "publisher_name",
+        "clinical_guideline",
+        "medical_mode",
+    }
+)
 
 
 def test_canonical_key_count_matches_expected() -> None:

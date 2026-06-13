@@ -1,0 +1,129 @@
+language: "en-US"
+tone_instructions: "Be concise, technical, and evidence-based. Avoid praise, poems, and noise."
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: false
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 2
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+      - "DO NOT MERGE"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "github-actions[bot]"
+
+  path_filters:
+    - "!outputs/**"
+    - "!_scratch/**"
+    - "!_ctx/**"
+    - "!audit_artifacts/**"
+    - "!data/vendor/**"
+    - "!paper_writer.egg-info/**"
+    - "!**/__pycache__/**"
+    - "!**/.mypy_cache/**"
+    - "!**/.pytest_cache/**"
+    - "!**/.ruff_cache/**"
+
+  path_instructions:
+    - path: "**/*.py"
+      instructions: >
+        Prioritize correctness, testability, and the repository architecture.
+        Method gates must fail closed. Orchestrator work should go through
+        ToolWrapper ports, and tool wrappers should return ValidatorResult.
+        Do not recommend direct subprocess orchestration when an existing port
+        or wrapper should be used.
+    - path: ".github/workflows/**"
+      instructions: >
+        GitHub Actions should remain pinned to immutable SHA references, use
+        least-privilege permissions, and avoid checks that are unsupported for
+        this personal repository. Keep CI practical and low-noise.
+    - path: "docs/**"
+      instructions: >
+        Check documentation against current code and Makefile behavior. If docs
+        and code disagree, trust current code first and flag the drift.
+
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: "Use a concise conventional-commit-style PR title."
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
+    docstrings:
+      mode: "off"
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+
+  tools:
+    ruff:
+      enabled: true
+    shellcheck:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 180000
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+
+chat:
+  art: false
+  auto_reply: false
+  allow_non_org_members: false
+
+knowledge_base:
+  web_search:
+    enabled: false
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "CLAUDE.md"
+  learnings:
+    scope: "local"
+  issues:
+    scope: "local"
+  pull_requests:
+    scope: "local"
+  mcp:
+    usage: "disabled"
+
+issue_enrichment:
+  auto_enrich:
+    enabled: false

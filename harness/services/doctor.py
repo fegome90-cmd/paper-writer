@@ -168,6 +168,54 @@ def check_internal_capabilities(repo_path: Path) -> list[ToolStatus]:
         )
     )
 
+    # Check search provider configuration
+    import os
+
+    provider_name = os.environ.get("PAPER_SEARCH_PROVIDER", "").lower()
+    provider_status = "missing"
+    degraded_msg = ""
+    version_str = "unconfigured"
+
+    if provider_name:
+        provider_status = "configured"
+        version_str = provider_name
+
+        if provider_name == "consensus_mcp_remote":
+            try:
+                import mcp  # noqa: F401
+                from mcp.client.streamable_http import streamable_http_client  # noqa: F401
+
+                has_mcp = True
+            except ImportError:
+                has_mcp = False
+
+            api_key = os.environ.get("CONSENSUS_MCP_API_KEY", "")
+            auth_mode = "Bearer token" if api_key else "Anonymous (3 papers limit)"
+
+            if not has_mcp:
+                provider_status = "degraded"
+                degraded_msg = (
+                    "DEGRADED: 'mcp' Python package missing or outdated. Install: pip install mcp"
+                )
+            else:
+                url = os.environ.get("CONSENSUS_MCP_URL", "https://mcp.consensus.app/mcp")
+                version_str = f"consensus_mcp_remote (url: {url}, auth: {auth_mode})"
+    else:
+        degraded_msg = (
+            "DEGRADED: PAPER_SEARCH_PROVIDER is not set. "
+            "Set to 'fixture', 'mcp', 'consensus', or 'consensus_mcp_remote'."
+        )
+
+    caps.append(
+        ToolStatus(
+            name="search-provider",
+            installed=(provider_status != "degraded" and provider_status != "missing"),
+            version=version_str,
+            required_for=["Academic paper search"],
+            degraded_message=degraded_msg,
+        )
+    )
+
     return caps
 
 
@@ -239,3 +287,102 @@ def _install_hint(name: str) -> str:
         "bibtex-tidy": "npm install -g bibtex-tidy",
     }
     return hints.get(name, f"Install {name} via your package manager")
+
+
+def run_live_checks(run_search_probe: bool = False) -> str:
+    """Run live remote connection checks for the active search provider."""
+    import os
+
+    provider_name = os.environ.get("PAPER_SEARCH_PROVIDER", "").lower()
+    if not provider_name:
+        return "LIVE CHECKS SKIPPED: No active search provider set."
+
+    lines = ["LIVE CONNECTIVITY CHECKS", "-" * 40]
+
+    if provider_name == "consensus_mcp_remote":
+        url = os.environ.get("CONSENSUS_MCP_URL", "https://mcp.consensus.app/mcp")
+        api_key = os.environ.get("CONSENSUS_MCP_API_KEY", "")
+        lines.append(f"Target URL: {url}")
+        lines.append(f"Auth Mode: {'Bearer token (masked)' if api_key else 'Anonymous'}")
+
+        try:
+            import asyncio
+
+            import httpx
+            from mcp.client.session import ClientSession
+            from mcp.client.streamable_http import streamable_http_client
+
+            async def _check() -> list[str]:
+                results = []
+                headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+                results.append("1. Attempting connection via Streamable HTTP...")
+                async with httpx.AsyncClient(headers=headers) as http_client:
+                    async with streamable_http_client(url, http_client=http_client) as streams:
+                        read_stream, write_stream = streams[0], streams[1]
+                        results.append("   [OK] Connected to Streamable HTTP stream.")
+                        results.append("2. Starting Client Session...")
+                        async with ClientSession(read_stream, write_stream) as session:
+                            results.append("3. Initializing and negotiating capabilities...")
+                            init_result = await asyncio.wait_for(session.initialize(), timeout=10)
+                            results.append(
+                                f"   [OK] Negotiated: name={init_result.serverInfo.name}, "
+                                f"version={init_result.serverInfo.version}"
+                            )
+
+                            results.append("4. Querying tool list...")
+                            tools_list = await session.list_tools()
+                            tool_names = [t.name for t in tools_list.tools]
+                            results.append(f"   [OK] Available tools: {', '.join(tool_names)}")
+
+                            if "search" not in tool_names:
+                                results.append(
+                                    "   [ERROR] 'search' tool is missing from exposed tools."
+                                )
+                            elif run_search_probe:
+                                results.append("5. Invoking safe minimal query search probe...")
+                                try:
+                                    await asyncio.wait_for(
+                                        session.call_tool(
+                                            "search",
+                                            arguments={
+                                                "query": "effects of exercise on depression",
+                                                "limit": 1,
+                                            },
+                                        ),
+                                        timeout=10,
+                                    )
+                                    results.append("   [OK] Minimal query search probe succeeded.")
+                                except Exception as exc:
+                                    results.append(f"   [ERROR] search probe failed: {exc}")
+                return results
+
+            # Run in loop
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(asyncio.run, _check())
+                    check_results = future.result(timeout=25)
+            else:
+                check_results = asyncio.run(_check())
+
+            lines.extend(check_results)
+            lines.append("\nALL LIVE CHECKS COMPLETED.")
+        except Exception as exc:
+            lines.append(f"   [CRITICAL FAIL] Connectivity test failed: {exc}")
+
+    elif provider_name == "consensus":
+        lines.append("Active provider is Consensus REST. Live connectivity is REST-based.")
+        lines.append("REST connectivity checked by smoke test suite. Skipping live check here.")
+    else:
+        lines.append(
+            f"Live diagnostics not implemented/required for provider mode: {provider_name}"
+        )
+
+    return "\n".join(lines)

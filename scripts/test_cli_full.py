@@ -188,7 +188,11 @@ if os.environ.get("RUN_LIVE_ZOTERO_TESTS") == "1":
             test("zotero update full", ["zotero", "update", key, update_file], expect_in="Updated")
 
             # Delete (with --yes to skip confirmation)
-            test("zotero delete auto-version", ["zotero", "delete", key, "--yes"], expect_in="Deleted")
+            test(
+                "zotero delete auto-version",
+                ["zotero", "delete", key, "--yes"],
+                expect_in="Deleted",
+            )
         else:
             print(f"  SKIP create cycle (key={key!r})")
             skipped += 1

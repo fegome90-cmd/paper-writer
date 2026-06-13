@@ -52,6 +52,7 @@ def _gs01_provider_failure_fail_closed(tmp: Path) -> tuple[bool, str]:
     output_dir.mkdir(parents=True)
 
     import harness.ports.paper_search_provider as psp_mod
+
     orig_factory = psp_mod.create_search_provider
     psp_mod.create_search_provider = lambda *a, **k: ExplodingProvider()
 
@@ -241,7 +242,10 @@ def _gs03_dedup_keeps_richer(tmp: Path) -> tuple[bool, str]:
     if paper_b_result.citations_count != 42:
         return False, f"Richer paper B lost citations_count: {paper_b_result.citations_count}"
     if len(paper_b_result.defaulted_fields) != 0:
-        return False, f"Richer paper B should have no defaults, got: {paper_b_result.defaulted_fields}"
+        return (
+            False,
+            f"Richer paper B should have no defaults, got: {paper_b_result.defaulted_fields}",
+        )
 
     return True, "Dedup keeps 2 papers, richer B preserved with full metadata"
 
@@ -329,7 +333,9 @@ def _gs05_synthetic_sample_distinguishable(tmp: Path) -> tuple[bool, str]:
     db_path = tmp / "gs05" / "thesaurus.db"
     store = LiteSemanticStore(db_path=str(db_path))
 
-    sample_path = REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "sample.jsonl"
+    sample_path = (
+        REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "sample.jsonl"
+    )
     if not sample_path.exists():
         return False, "sample.jsonl not found in workspace"
 
@@ -344,7 +350,9 @@ def _gs05_synthetic_sample_distinguishable(tmp: Path) -> tuple[bool, str]:
         if source in ("synthetic", "mesh", "decs", "local"):
             return True, f"Sample clearly labeled as source='{source}'"
 
-    json.loads(listed[0].get("alt_labels", "[]")) if isinstance(listed[0].get("alt_labels"), str) else listed[0].get("alt_labels", [])
+    json.loads(listed[0].get("alt_labels", "[]")) if isinstance(
+        listed[0].get("alt_labels"), str
+    ) else listed[0].get("alt_labels", [])
     sources = {c.get("source", "") for c in listed}
     return False, f"No recognizable source label in {sources}"
 
@@ -618,11 +626,15 @@ def _run_regression_tests() -> tuple[int, int]:
         return 0, 0
 
     cmd = [
-        sys.executable, "-m", "pytest",
+        sys.executable,
+        "-m",
+        "pytest",
         *existing,
-        "-x", "-q",
+        "-x",
+        "-q",
         "--tb=no",
-        "-o", "addopts=",
+        "-o",
+        "addopts=",
     ]
 
     env = os.environ.copy()
@@ -661,7 +673,9 @@ def _run_regression_tests() -> tuple[int, int]:
 
 def _check_mesh_fixture_import(tmp: Path) -> bool:
     """Check that the real mesh.jsonl fixture can be imported into thesaurus."""
-    mesh_jsonl = REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "mesh.jsonl"
+    mesh_jsonl = (
+        REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "mesh.jsonl"
+    )
     if not mesh_jsonl.exists():
         return False
 
@@ -720,11 +734,22 @@ def main() -> None:
 
         _log("Checking manifest validation ...")
         manifest_ok = False
-        manifest_path = REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "manifest.json"
-        mesh_jsonl_path = REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "mesh.jsonl"
+        manifest_path = (
+            REPO_ROOT
+            / "skills"
+            / "local"
+            / "thesaurus"
+            / "workspace"
+            / "vocabulary"
+            / "manifest.json"
+        )
+        mesh_jsonl_path = (
+            REPO_ROOT / "skills" / "local" / "thesaurus" / "workspace" / "vocabulary" / "mesh.jsonl"
+        )
         if manifest_path.exists() and mesh_jsonl_path.exists():
             try:
                 from thesaurus.manifest import load_manifest, validate_manifest
+
                 m = load_manifest(manifest_path)
                 validate_manifest(m, mesh_jsonl_path)
                 manifest_ok = True
@@ -739,7 +764,9 @@ def main() -> None:
         _log(f"  MeSH import: {'OK' if mesh_import_ok else 'FAIL'}")
 
         forbidden = 0
-        prod_fixture = REPO_ROOT / "tests" / "fixtures" / "paper_mcp" / "search_papers_response.v1.json"
+        prod_fixture = (
+            REPO_ROOT / "tests" / "fixtures" / "paper_mcp" / "search_papers_response.v1.json"
+        )
         if prod_fixture.exists():
             content = prod_fixture.read_text(encoding="utf-8")
             if "10.1000/xyz123" in content or "Mock Paper" in content:

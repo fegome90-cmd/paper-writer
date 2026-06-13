@@ -18,6 +18,7 @@ from cli.paper.commands.audit import (
 )
 from cli.paper.commands.gate import _cmd_gate_method
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
+from cli.paper.project import MAX_ASCENDING_DEPTH, resolve_project_root  # noqa: F401
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest, OrchestratorResult
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
 
@@ -29,8 +30,6 @@ def _get_version() -> str:
     except importlib.metadata.PackageNotFoundError:
         return "0.0.0-dev"
 
-
-MAX_ASCENDING_DEPTH = 20
 
 # ------------------------------------------------------------------
 # Zotero CLI handlers
@@ -353,37 +352,6 @@ def _cmd_zotero_upload(args: Any) -> None:
     except (ZoteroError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1) from None
-
-
-def resolve_project_root(explicit_path: Path | None, cwd: Path) -> Path:
-    """Resolve project root. Priority: flag → ascending search → CWD.
-
-    Ascending search resolves symlinks via Path.resolve() before
-    checking for outputs/state.yaml to prevent symlink injection.
-    """
-    if explicit_path is not None:
-        resolved = explicit_path.resolve()
-        if not resolved.is_dir():
-            print(
-                f"Error: Project path does not exist: {explicit_path}",
-                file=sys.stderr,
-            )
-            raise SystemExit(1) from None
-        return resolved
-
-    # Ascending search for outputs/state.yaml (innermost match)
-    candidate = cwd.resolve()
-    for _ in range(MAX_ASCENDING_DEPTH):
-        marker = candidate / "outputs" / "state.yaml"
-        if marker.is_file():
-            return candidate
-        parent = candidate.parent
-        if parent == candidate:
-            break  # filesystem root
-        candidate = parent
-
-    # Fallback: CWD
-    return cwd.resolve()
 
 
 def main() -> None:
@@ -914,7 +882,17 @@ def main() -> None:
     subparsers.add_parser("verify", help="Run final verification check.")
 
     # paper doctor
-    subparsers.add_parser("doctor", help="Check environment and report tool status.")
+    doc_parser = subparsers.add_parser("doctor", help="Check environment and report tool status.")
+    doc_parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Perform live connectivity checks on the search provider.",
+    )
+    doc_parser.add_argument(
+        "--live-search-probe",
+        action="store_true",
+        help="Perform live connection checks AND execute a search probe.",
+    )
 
     # paper thesaurus (lazy — module may not be installed)
     _thesaurus_available = False
@@ -1005,6 +983,13 @@ def main() -> None:
         tools = check_all_tools()
         caps = check_internal_capabilities(repo_path)
         print(format_doctor_report(tools, caps))
+
+        if getattr(args, "live", False) or getattr(args, "live_search_probe", False):
+            print()
+            from harness.services.doctor import run_live_checks
+
+            print(run_live_checks(run_search_probe=getattr(args, "live_search_probe", False)))
+
         sys.exit(0)
 
     # Map parsed arguments to OrchestratorRequest
