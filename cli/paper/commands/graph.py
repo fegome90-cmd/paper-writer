@@ -1,9 +1,9 @@
 """Graph/tracing subcommand handlers for paper CLI."""
 
 import argparse
-import json
 
 from cli.paper.errors import ExternalServiceError, UserInputError
+from cli.paper.output import emit_json, emit_result
 
 
 def _cmd_trace(args: argparse.Namespace) -> None:
@@ -27,32 +27,32 @@ def _cmd_trace(args: argparse.Namespace) -> None:
         if not result.success:
             raise ExternalServiceError(str(result.error))
         if args.output == "json":
-            print(json.dumps(result.data, indent=2, ensure_ascii=False))
+            emit_json(result.data)
         else:
             if not result.data:
-                print(f"No callers found for: {symbol}")
+                emit_result(f"No callers found for: {symbol}")
             else:
-                print(f"Callers of {symbol} (depth={args.depth}):")
+                emit_result(f"Callers of {symbol} (depth={args.depth}):")
                 for caller in result.data:
                     name = caller.get("symbol_name", caller.get("qualified_name", "?"))
                     file_rel = caller.get("file_rel", "?")
-                    print(f"  {file_rel}::{name}")
+                    emit_result(f"  {file_rel}::{name}")
 
     elif action == "callees":
         result = client.find_callees(symbol)
         if not result.success:
             raise ExternalServiceError(str(result.error))
         if args.output == "json":
-            print(json.dumps(result.data, indent=2, ensure_ascii=False))
+            emit_json(result.data)
         else:
             if not result.data:
-                print(f"No callees found for: {symbol}")
+                emit_result(f"No callees found for: {symbol}")
             else:
-                print(f"Callees of {symbol}:")
+                emit_result(f"Callees of {symbol}:")
                 for callee in result.data:
                     name = callee.get("symbol_name", callee.get("qualified_name", "?"))
                     file_rel = callee.get("file_rel", "?")
-                    print(f"  {file_rel}::{name}")
+                    emit_result(f"  {file_rel}::{name}")
 
     elif action == "path":
         if not args.to_symbol:
@@ -61,15 +61,15 @@ def _cmd_trace(args: argparse.Namespace) -> None:
         if not result.success:
             raise ExternalServiceError(str(result.error))
         if args.output == "json":
-            print(json.dumps(result.data, indent=2, ensure_ascii=False))
+            emit_json(result.data)
         else:
             data = result.data
             if data.get("path_exists") or data.get("path"):
-                print(f"Path from {symbol} to {args.to_symbol}:")
+                emit_result(f"Path from {symbol} to {args.to_symbol}:")
                 for hop in data.get("path") or []:
-                    print(f"  → {hop}")
+                    emit_result(f"  → {hop}")
             else:
-                print(f"No path found from {symbol} to {args.to_symbol}")
+                emit_result(f"No path found from {symbol} to {args.to_symbol}")
 
 
 def _cmd_graph_overview(args: argparse.Namespace) -> None:
@@ -89,19 +89,19 @@ def _cmd_graph_overview(args: argparse.Namespace) -> None:
 
     data = result.data
     if args.output == "json":
-        print(json.dumps(data, indent=2, ensure_ascii=False))
+        emit_json(data)
     else:
-        print("Graph Overview")
-        print(f"  Nodes: {data.get('node_count', '?')}")
-        print(f"  Edges: {data.get('edge_count', '?')}")
-        print(f"  Cycles (calls): {data.get('calls_cycles', '?')}")
-        print(f"  Cycles (imports): {data.get('imports_cycles', '?')}")
-        print(f"  Cycles (inherits): {data.get('inherits_cycles', '?')}")
-        print(f"  Orphans: {data.get('orphan_count', '?')}")
+        emit_result("Graph Overview")
+        emit_result(f"  Nodes: {data.get('node_count', '?')}")
+        emit_result(f"  Edges: {data.get('edge_count', '?')}")
+        emit_result(f"  Cycles (calls): {data.get('calls_cycles', '?')}")
+        emit_result(f"  Cycles (imports): {data.get('imports_cycles', '?')}")
+        emit_result(f"  Cycles (inherits): {data.get('inherits_cycles', '?')}")
+        emit_result(f"  Orphans: {data.get('orphan_count', '?')}")
         top_hubs = data.get("top_hubs") or []
         if top_hubs:
-            print("  Top Hubs:")
+            emit_result("  Top Hubs:")
             for hub in top_hubs[:5]:
                 name = hub.get("symbol_name", hub.get("qualified_name", "?"))
                 in_deg = hub.get("in_degree", "?")
-                print(f"    {name} (in_degree={in_deg})")
+                emit_result(f"    {name} (in_degree={in_deg})")
