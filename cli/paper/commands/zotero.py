@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from cli.paper.errors import ExternalServiceError, UserInputError
+from cli.paper.output import emit_json, emit_result
 
 
 def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
@@ -40,14 +41,13 @@ def _cmd_zotero_collections(args: Any) -> None:
         for c in collections:
             parent = c.get("parentCollection", False)
             prefix = "  " if parent else ""
-            print(f"{prefix}{c['key']}: {c['name']}")
-        print(f"\n{len(collections)} collection(s)")
+            emit_result(f"{prefix}{c['key']}: {c['name']}")
+        emit_result(f"\n{len(collections)} collection(s)")
     except ZoteroError as exc:
         raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_search(args: Any) -> None:
-    import json as _json
 
     from clients.zotero import ZoteroError
 
@@ -63,21 +63,20 @@ def _cmd_zotero_search(args: Any) -> None:
             limit=args.limit,
         )
         if args.output_json:
-            print(_json.dumps(results, indent=2, ensure_ascii=False))
+            emit_json(results)
             return
         for item in results:
             key = item.get("key", "?")
             title = item.get("title", "(no title)")
             year = item.get("date", "")[:4] if item.get("date") else ""
             item_type = item.get("itemType", "")
-            print(f"  {key}  {year:>4}  {item_type:<20}  {title}")
-        print(f"\n{len(results)} result(s)")
+            emit_result(f"  {key}  {year:>4}  {item_type:<20}  {title}")
+        emit_result(f"\n{len(results)} result(s)")
     except ZoteroError as exc:
         raise ExternalServiceError(str(exc)) from exc
 
 
 def _cmd_zotero_get(args: Any) -> None:
-    import json as _json
 
     from clients.zotero import ZoteroError
 
@@ -87,13 +86,13 @@ def _cmd_zotero_get(args: Any) -> None:
     try:
         item = client.get_item(args.key)
         if args.output_json:
-            print(_json.dumps(item, indent=2, ensure_ascii=False))
+            emit_json(item)
             return
         data = item.get("data", item) if isinstance(item, dict) else item
         if isinstance(data, dict):
             for k, v in data.items():
                 if k not in ("key", "version", "itemType") and v:
-                    print(f"  {k}: {v}")
+                    emit_result(f"  {k}: {v}")
     except (ZoteroError, ValueError) as exc:
         raise ExternalServiceError(str(exc)) from exc
 
@@ -127,12 +126,14 @@ def _cmd_zotero_create(args: Any) -> None:
         successful = result.get("successful") or {}
         failed = result.get("failed") or {}
         unchanged = result.get("unchanged") or {}
-        print(f"Created: {len(successful)}, Unchanged: {len(unchanged)}, Failed: {len(failed)}")
+        emit_result(
+            f"Created: {len(successful)}, Unchanged: {len(unchanged)}, Failed: {len(failed)}"
+        )
         for idx, item_data in successful.items():
             if isinstance(item_data, dict):
-                print(f"  {item_data.get('key', '?')}: {item_data.get('title', 'ok')}")
+                emit_result(f"  {item_data.get('key', '?')}: {item_data.get('title', 'ok')}")
             else:
-                print(f"  [{idx}]: {item_data}")
+                emit_result(f"  [{idx}]: {item_data}")
         for idx, info in failed.items():
             print(f"  FAILED [{idx}]: {info}", file=sys.stderr)
     except ZoteroError as exc:
@@ -140,7 +141,6 @@ def _cmd_zotero_create(args: Any) -> None:
 
 
 def _cmd_zotero_template(args: Any) -> None:
-    import json as _json
 
     from clients.zotero import ZoteroError
 
@@ -149,7 +149,7 @@ def _cmd_zotero_template(args: Any) -> None:
         raise UserInputError(err)
     try:
         template = client.get_item_template(args.item_type)
-        print(_json.dumps(template, indent=2, ensure_ascii=False))
+        emit_json(template)
     except ZoteroError as exc:
         raise ExternalServiceError(str(exc)) from exc
 
@@ -217,7 +217,7 @@ def _cmd_zotero_update(args: Any) -> None:
                 merged.pop(readonly_field, None)
             headers = client.update_item(args.key, merged, version=version)
         new_version = headers.get("Last-Modified-Version", "?")
-        print(f"Updated {args.key} → version {new_version}")
+        emit_result(f"Updated {args.key} → version {new_version}")
     except (ZoteroError, ValueError) as exc:
         raise ExternalServiceError(str(exc)) from exc
 
@@ -270,13 +270,13 @@ def _cmd_zotero_delete(args: Any) -> None:
                     client.delete_item(args.keys[0], version=version)
                 else:
                     raise
-            print(f"Deleted {args.keys[0]} (version {version})")
+            emit_result(f"Deleted {args.keys[0]} (version {version})")
         else:
             # Batch: require library version
             if args.version is None:
                 raise UserInputError("--version (library version) is required for batch delete.")
             client.delete_items(args.keys, library_version=args.version)
-            print(f"Deleted {len(args.keys)} items")
+            emit_result(f"Deleted {len(args.keys)} items")
     except (ZoteroError, ValueError) as exc:
         raise ExternalServiceError(str(exc)) from exc
 
@@ -295,13 +295,13 @@ def _cmd_zotero_upload(args: Any) -> None:
             existing_md5=args.existing_md5,
             force_update=args.force,
         )
-        print(f"Status: {result.get('status')}")
+        emit_result(f"Status: {result.get('status')}")
         if result.get("status") == "uploaded":
-            print(f"  File: {result.get('filename')}")
-            print(f"  Size: {result.get('size')} bytes")
-            print(f"  MD5:  {result.get('md5')}")
+            emit_result(f"  File: {result.get('filename')}")
+            emit_result(f"  Size: {result.get('size')} bytes")
+            emit_result(f"  MD5:  {result.get('md5')}")
         else:
-            print(f"  {result.get('message', 'File already exists')}")
+            emit_result(f"  {result.get('message', 'File already exists')}")
     except (ZoteroError, ValueError) as exc:
         raise ExternalServiceError(str(exc)) from exc
 

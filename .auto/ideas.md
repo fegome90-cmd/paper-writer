@@ -24,13 +24,19 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - graph.py needs `from cli.paper.output import emit_json, emit_result` added
 - NOTE: graph.py was just migrated to ExternalServiceError; its stdout prints are clean wins
 
-### zotero.py stdout prints
-- Check for `print(json.dumps(...))` stdout result patterns -> emit_json
-- Zotero has a legacy `--json` flag; verify output semantics before migrating
-
 ### gate.py stdout prints
-- `print(json.dumps(result, indent=2, ensure_ascii=False))` -> emit_json
-- `print(format_gate_result(result))` -> emit_result
+- ✅ DONE (commit 11f82cb): print(json.dumps)->emit_json + print(format_gate_result)->emit_result.
+
+### zotero.py stdout prints (24 total — NEXT TARGET, needs per-pattern care)
+- RISK: uses aliased `import json as _json` (4 occurrences) + legacy `--json` flag (dest=output_json)
+- SAFE JSON pattern (4x): `print(_json.dumps(X, indent=2, ensure_ascii=False))` -> `emit_json(X)`
+  at lines 66, 90, 152 + template. emit_json wraps to_json_value (identity for primitives).
+- SAFE stderr (1x): line 137 `print(..., file=sys.stderr)` FAILED -> emit_warning
+  BUT emit_warning respects --quiet = behavior change, defer until --quiet test exists.
+- MIXED text prints (~19x): result lines (collections/search counts, status) vs progress/info.
+  Per-line verification needed: dry-run prefix prints are info (emit_info, --quiet sensitive),
+  status/result lines are emit_result. Do NOT blind-bulk-replace.
+- zotero also still has `import json` and `sys` at module scope — check if dead after migration.
 
 ### dispatch.py / other handlers
 - Scan for remaining stdout result prints
@@ -44,3 +50,5 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 ## Completed
 
 - audit.py: 14 stdout prints -> emit_json/emit_result (commit 5d6a12a, print_calls 96->82)
+- graph.py: 22 stdout prints -> emit_json/emit_result (commit abd6400, print_calls 82->60)
+- gate.py: 2 stdout prints -> emit_json/emit_result (commit 11f82cb, print_calls 60->58)
