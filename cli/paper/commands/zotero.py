@@ -170,11 +170,11 @@ def _cmd_zotero_update(args: Any) -> None:
     if args.dry_run:
         is_local = client.config.local_mode if hasattr(client, "config") else False
         base_url = "http://localhost:23119/api" if is_local else "https://api.zotero.org"
-        print(
+        emit_result(
             "[DRY RUN] Would update "
             f"{args.key} with {len(changes)} field(s): {', '.join(changes.keys())}"
         )
-        print(f"[DRY RUN] Target: {base_url}")
+        emit_result(f"[DRY RUN] Target: {base_url}")
         return
 
     try:
@@ -232,8 +232,8 @@ def _cmd_zotero_delete(args: Any) -> None:
     if args.dry_run:
         is_local = client.config.local_mode if hasattr(client, "config") else False
         base_url = "http://localhost:23119/api" if is_local else "https://api.zotero.org"
-        print(f"[DRY RUN] Would delete {len(args.keys)} item(s): {', '.join(args.keys)}")
-        print(f"[DRY RUN] Target: {base_url}")
+        emit_result(f"[DRY RUN] Would delete {len(args.keys)} item(s): {', '.join(args.keys)}")
+        emit_result(f"[DRY RUN] Target: {base_url}")
         return
 
     # Confirmation prompt unless --yes
@@ -245,7 +245,7 @@ def _cmd_zotero_delete(args: Any) -> None:
         except EOFError:
             response = "n"
         if response.lower() not in ("y", "yes"):
-            print("Cancelled.")
+            emit_result("Cancelled.")
             return
 
     try:
