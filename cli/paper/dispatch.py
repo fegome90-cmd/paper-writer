@@ -5,7 +5,7 @@ Contains the if/elif dispatch block, review_config injection,
 orchestrator construction, and _print_summary.
 
 PR1 preserves the if/elif dispatch pattern verbatim.
-P1.7.1–P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP)
+P1.7.1-P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP)
 will replace the if/elif in a follow-up iteration within PR1.
 """
 
