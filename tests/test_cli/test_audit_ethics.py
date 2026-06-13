@@ -125,4 +125,4 @@ class TestAuditEthicsCLI:
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
         )
-        assert result.returncode == 1
+        assert result.returncode == 2

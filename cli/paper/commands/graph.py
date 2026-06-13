@@ -4,6 +4,8 @@ import argparse
 import json
 import sys
 
+from cli.paper.errors import UserInputError
+
 
 def _cmd_trace(args: argparse.Namespace) -> None:
     """Trace a symbol's callers, callees, or call path using Trifecta.
@@ -59,8 +61,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
 
     elif action == "path":
         if not args.to_symbol:
-            print("Error: --to SYMBOL required for path action", file=sys.stderr)
-            sys.exit(1)
+            raise UserInputError("--to SYMBOL required for path action")
         result = client.find_path(symbol, args.to_symbol)
         if not result.success:
             print(f"Error: {result.error}", file=sys.stderr)

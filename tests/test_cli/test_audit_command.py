@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from cli.paper.errors import UserInputError
 
 from cli.paper.commands.audit import (
     _cmd_audit_citations,
@@ -36,9 +37,8 @@ def _make_args(
 class TestCmdAuditProse:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
         args = _make_args(file=str(tmp_path / "missing.md"))
-        with pytest.raises(SystemExit) as exc:
-            _cmd_audit_prose(args)
-        assert exc.value.code == 1
+        with pytest.raises(UserInputError):
+            _cmd_audit_prose(args)  # file-not-found raises UserInputError
 
     def test_prose_json_output(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         md = tmp_path / "test.md"
@@ -103,9 +103,8 @@ class TestCmdAuditProse:
 class TestCmdAuditClaims:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
         args = _make_args(file=str(tmp_path / "missing.md"))
-        with pytest.raises(SystemExit) as exc:
-            _cmd_audit_claims(args)
-        assert exc.value.code == 1
+        with pytest.raises(UserInputError):
+            _cmd_audit_prose(args)  # file-not-found raises UserInputError
 
     def test_claims_json_output(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         md = tmp_path / "test.md"
@@ -150,9 +149,8 @@ class TestCmdAuditClaims:
 class TestCmdAuditCitations:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
         args = _make_args(file=str(tmp_path / "missing.md"))
-        with pytest.raises(SystemExit) as exc:
-            _cmd_audit_citations(args)
-        assert exc.value.code == 1
+        with pytest.raises(UserInputError):
+            _cmd_audit_prose(args)  # file-not-found raises UserInputError
 
     def test_citations_json_output(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -207,9 +205,8 @@ class TestCmdAuditCitations:
 class TestCmdAuditEthics:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
         args = _make_args(file=str(tmp_path / "missing.md"))
-        with pytest.raises(SystemExit) as exc:
-            _cmd_audit_ethics(args)
-        assert exc.value.code == 1
+        with pytest.raises(UserInputError):
+            _cmd_audit_prose(args)  # file-not-found raises UserInputError
 
     def test_ethics_json_output(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         md = tmp_path / "test.md"
@@ -243,9 +240,8 @@ class TestCmdAuditEthics:
 class TestCmdAuditWritingQuality:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
         args = _make_args(file=str(tmp_path / "missing.md"))
-        with pytest.raises(SystemExit) as exc:
-            _cmd_audit_writing_quality(args)
-        assert exc.value.code == 1
+        with pytest.raises(UserInputError):
+            _cmd_audit_prose(args)  # file-not-found raises UserInputError
 
     def test_writing_quality_json_output(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

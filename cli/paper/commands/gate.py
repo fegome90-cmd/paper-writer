@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from cli.paper.errors import UserInputError
+
 
 def _cmd_gate_method(args: argparse.Namespace) -> None:
     """Run methodological gate (Phase 0)."""
@@ -15,8 +17,7 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)

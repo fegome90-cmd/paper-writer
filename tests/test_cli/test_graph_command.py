@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
+from cli.paper.errors import UserInputError
 
 
 def _make_trace_args(
@@ -130,12 +131,11 @@ class TestCmdTraceCallees:
 
 class TestCmdTracePath:
     def test_path_missing_to_symbol_exits_1(self) -> None:
-        """path action without --to → exit 1."""
+        """path action without --to raises UserInputError."""
         mock_client = MagicMock()
         with patch("clients.trifecta.get_trifecta_client", return_value=mock_client):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(UserInputError):
                 _cmd_trace(_make_trace_args(action="path", to_symbol=None))
-            assert exc.value.code == 1
 
     def test_path_json_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """path action produces JSON."""

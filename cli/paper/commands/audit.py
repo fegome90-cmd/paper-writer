@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from cli.paper.errors import UserInputError
+
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
     """Run prose analysis (Phase 0)."""
@@ -15,8 +17,7 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)
@@ -70,8 +71,7 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)
@@ -98,8 +98,7 @@ def _cmd_audit_citations(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)
@@ -146,8 +145,7 @@ def _cmd_audit_ethics(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)
@@ -187,8 +185,7 @@ def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
 
     path = Path(args.file)
     if not path.is_file():
-        print(f"Error: File not found: {args.file}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"File not found: {args.file}")
 
     t0 = time.time()
     manuscript = ManuscriptParser().parse(path)
@@ -293,13 +290,11 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
 
     evidence_path = Path(args.evidence)
     if not evidence_path.exists():
-        print(f"Error: evidence file not found: {evidence_path}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"Evidence file not found: {evidence_path}")
 
     manuscript_path = Path(args.file)
     if not manuscript_path.exists():
-        print(f"Error: manuscript not found: {manuscript_path}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"Manuscript not found: {manuscript_path}")
 
     validator = ClaimEvidenceValidator(
         evidence_path=evidence_path,
@@ -378,8 +373,7 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
 
     evidence_path = Path(args.evidence)
     if not evidence_path.exists():
-        print(f"Error: evidence file not found: {evidence_path}", file=sys.stderr)
-        sys.exit(1)
+        raise UserInputError(f"Evidence file not found: {evidence_path}")
 
     validator = QualityAppraisalValidator()
 

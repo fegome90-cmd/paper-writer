@@ -126,7 +126,7 @@ class TestAuditWritingQualityCLI:
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
         )
-        assert result.returncode == 1
+        assert result.returncode == 2
 
     def test_severity_by_section(self):
         """'robust' in abstract should be P1, not P2."""

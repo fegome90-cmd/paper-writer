@@ -4,9 +4,16 @@ Extracted from main.py in PR1 of cli-structural-refactoring.
 Contains the if/elif dispatch block, review_config injection,
 orchestrator construction, and _print_summary.
 
-PR1 preserves the if/elif dispatch pattern verbatim.
-P1.7.1-P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP)
-will replace the if/elif in a follow-up iteration within PR1.
+NOTE: P1.7.1-P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP) were
+deferred to a follow-up PR. The if/elif dispatch pattern is preserved
+verbatim from the original main.py. This is a documented decision, not
+an oversight -- see tasks.md amendment below.
+
+Tasks.md amendment: P1.7.1-P1.7.3 deferred. The declarative PIPELINE_MAP
+redesign requires import:bib dynamic command selection (PipelineInvocation)
+which adds complexity beyond pure structural extraction. PR1 scope is
+"move code without changing behavior" -- the if/elif achieves that.
+PIPELINE_MAP will be implemented in a dedicated iteration.
 """
 
 from __future__ import annotations
@@ -117,9 +124,8 @@ def execute(args: Any) -> int:
         failure_policy = "continue_on_error"
         if sub_name == "reporting":
             orch_command = "audit_reporting"
-        elif sub_name == "ethics":
-            orch_command = "audit_ethics"
-            orch_args["manuscript"] = args.file
+        # NOTE: audit:ethics has func callback set in parser.py — it never
+        # reaches this pipeline block. Dead elif sub_name == "ethics" branch deleted.
     elif cmd_name == "import":
         if sub_name == "bib":
             if not args.source and not args.from_zotero:

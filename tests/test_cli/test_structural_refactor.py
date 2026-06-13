@@ -107,14 +107,17 @@ def test_every_parser_leaf_has_exactly_one_dispatch_owner() -> None:
 def test_audit_ethics_has_single_dispatch_path() -> None:
     """audit ethics uses func callback only, not pipeline dispatch.
 
-    The dead `elif cmd_name == "audit": orch_command = "audit_ethics"` branch
-    was removed. audit_ethics is wired via set_defaults(func=_cmd_audit_ethics).
+    Verifies TWO things:
+    1. The parser wires ethics with set_defaults(func=_cmd_audit_ethics)
+    2. dispatch.py does NOT contain a dead elif branch for audit:ethics
+
+    Without check 2, this test is a tautology -- it passes even if the dead
+    branch still exists in dispatch.py.
     """
     from cli.paper.parser import build_parser
 
+    # Check 1: parser wires func callback
     parser = build_parser()
-
-    # Navigate to audit subparser
     subparsers_action = None
     for action in parser._actions:
         if hasattr(action, "choices") and isinstance(action.choices, dict):
@@ -129,12 +132,20 @@ def test_audit_ethics_has_single_dispatch_path() -> None:
             break
 
     ethics_parser = audit_subparsers_action.choices["ethics"]
-    # ethics MUST have a func callback set
     assert hasattr(ethics_parser, "_defaults"), "ethics parser has no defaults"
     assert "func" in ethics_parser._defaults, "ethics parser has no func callback"
     assert ethics_parser._defaults["func"].__name__ == "_cmd_audit_ethics", (
         f"Expected _cmd_audit_ethics, got {ethics_parser._defaults['func'].__name__}"
     )
+
+    # Check 2: dispatch.py does NOT contain the dead audit:ethics pipeline branch.
+    # This is the assertion that makes the test honest.
+    import cli.paper.dispatch as dispatch_mod
+
+    dispatch_src = open(dispatch_mod.__file__).read()
+    assert (
+        'orch_command = "audit_ethics"' not in dispatch_src
+    ), "dispatch.py still contains dead audit_ethics pipeline branch"
 
 
 def test_import_bib_routes_source_to_import_bib() -> None:
@@ -262,13 +273,12 @@ def test_mesh_unavailable_fallback_has_install_instructions() -> None:
                         assert expected_subs == actual_subs, (
                             f"Mesh subcommands mismatch: {expected_subs} vs {actual_subs}"
                         )
-                        # dest check: fallback path uses "subcommand" per spec S6.
-                        # Happy path (mesh_import installed) uses external register() which
-                        # may use "mesh_subcommand" — that's a cross-PR task to reconcile.
-                        # For PR1, we accept whichever path runs.
-                        valid_dests = {"subcommand", "mesh_subcommand"}
-                        assert sub_action.dest in valid_dests, (
-                            f"Expected dest in {valid_dests}, got dest='{sub_action.dest}'"
+                        # dest check: MUST be "subcommand" per spec S6.
+                        # This assertion is strict -- the test FAILS if dest is anything else.
+                        # The register_mesh() function normalizes
+                        # mesh_import's dest to "subcommand".
+                        assert sub_action.dest == "subcommand", (
+                            f"Expected dest='subcommand' per spec S6, got dest='{sub_action.dest}'"
                         )
                         return
 

@@ -108,7 +108,7 @@ class TestAuditCitationsCLI:
             text=True,
             cwd=str(Path(__file__).resolve().parent.parent.parent),
         )
-        assert result.returncode == 1
+        assert result.returncode == 2
 
     def test_fabricated_dois_produce_findings(self):
         """Fixture has fabricated DOIs — should produce not_found or skipped."""

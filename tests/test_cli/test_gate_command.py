@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from cli.paper.commands.gate import _cmd_gate_method
+from cli.paper.errors import UserInputError
 
 
 def _make_gate_args(
@@ -30,11 +31,10 @@ def _make_gate_args(
 
 class TestCmdGateMethod:
     def test_file_not_found_exits_1(self, tmp_path: Path) -> None:
-        """Missing file causes exit 1."""
+        """Missing file raises UserInputError (PR2: exit 2)."""
         args = _make_gate_args(file=str(tmp_path / "nonexistent.md"))
-        with pytest.raises(SystemExit) as exc_info:
+        with pytest.raises(UserInputError):
             _cmd_gate_method(args)
-        assert exc_info.value.code == 1
 
     def test_gate_passed_exits_0(self, tmp_path: Path) -> None:
         """Gate passed produces JSON and exits normally (no SystemExit)."""

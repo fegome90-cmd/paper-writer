@@ -7,8 +7,9 @@ is installed, _cmd_unavailable fallback with install instructions when not.
 
 from __future__ import annotations
 
-import sys
 from typing import Any
+
+from cli.paper.errors import UserInputError
 
 
 def register_thesaurus(subparsers: Any) -> None:
@@ -18,12 +19,10 @@ def register_thesaurus(subparsers: Any) -> None:
     except ImportError:
 
         def _cmd_unavailable(args: Any) -> None:
-            print(
-                "Error: thesaurus module not installed. "
-                "Install with: cd skills/local/thesaurus && uv pip install -e .",
-                file=sys.stderr,
+            raise UserInputError(
+                "thesaurus module not installed. "
+                "Install with: cd skills/local/thesaurus && uv pip install -e ."
             )
-            sys.exit(1)
 
         _cmd_import = _cmd_search = _cmd_list = _cmd_audit = _cmd_rebuild = _cmd_unavailable
 
