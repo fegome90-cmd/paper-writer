@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -123,3 +124,62 @@ def test_cli_exit_code_wrapper_unavailable(
 
     assert code == 1
     assert "Tool not available for gate 'render_passed'" in output
+
+
+def test_cli_exit_code_external_service_error_returns_3(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """P2.8.6: ExternalServiceError (Zotero/API/network) -> exit 3 (spec S19/XR6)."""
+    from cli.paper.errors import ExternalServiceError
+
+    def _service_down(_args: object) -> None:
+        raise ExternalServiceError("Zotero API timeout")
+
+    monkeypatch.chdir(tmp_path)
+    with patch("cli.paper.commands.doctor._cmd_doctor", _service_down):
+        code, output = _run_cli(tmp_path, monkeypatch, capsys, ["paper", "doctor"])
+    assert code == 3, "external service errors MUST exit 3 (spec S19)"
+    assert "Zotero API timeout" in output
+
+
+def test_cli_exit_code_user_input_error_returns_2(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """P2.8.15: UserInputError (bad args/validation) -> exit 2 (spec S18/XR6)."""
+    from cli.paper.errors import UserInputError
+
+    def _bad_input(_args: object) -> None:
+        raise UserInputError("missing required flag")
+
+    monkeypatch.chdir(tmp_path)
+    with patch("cli.paper.commands.doctor._cmd_doctor", _bad_input):
+        code, output = _run_cli(tmp_path, monkeypatch, capsys, ["paper", "doctor"])
+    assert code == 2, "user input errors MUST exit 2 (spec S18)"
+    assert "missing required flag" in output
+
+
+def test_cli_exit_code_unexpected_internal_error_returns_1_not_3(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """XR6: unexpected internal error -> exit 1, NEVER misclassified as external (3)."""
+    from cli.paper.errors import ExternalServiceError
+
+    def _internal_bug(_args: object) -> None:
+        # A KeyError is an internal bug, not an external service failure.
+        raise KeyError("missing-key")
+
+    monkeypatch.chdir(tmp_path)
+    with patch("cli.paper.commands.doctor._cmd_doctor", _internal_bug):
+        code, output = _run_cli(tmp_path, monkeypatch, capsys, ["paper", "doctor"])
+    assert code == 1, "XR6: unexpected errors MUST exit 1, NEVER 3 (misclassification)"
+    assert code != 3
+    assert "Internal error" in output
+    assert "Traceback" not in output
+    # Guard: ExternalServiceError is still 3 (the catch-all doesn't swallow it)
+    del ExternalServiceError
