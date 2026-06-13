@@ -120,8 +120,10 @@ verification/reports/
 
 # =============================================================================
 # Other agent tooling (openspec, .fork, .gemini, .qoder, etc.)
+# Planning/spec artifacts are intentionally NOT tracked (convention).
 # =============================================================================
 openspec/
+docs/superpowers/
 .fork/
 .qoder/
 .gemini/
