@@ -18,7 +18,9 @@ MODULES=$(ls cli/paper/*.py cli/paper/commands/*.py 2>/dev/null | wc -l | tr -d 
 echo "METRIC cli_module_count=$MODULES"
 
 # --- Secondary: fast correctness — cli + project tests ---
-RAW=$(uv run pytest tests/cli/ tests/test_cli/ tests/autoresearch/test_multi_project.py -q --no-header --tb=line 2>/dev/null || true)
+# Exclude e2e tests (need Pandoc/real I/O) per AGENTS.md gotcha #4 and
+# the -m "not e2e" convention used by CI (commit 80c8083 marked them).
+RAW=$(uv run pytest tests/cli/ tests/test_cli/ tests/autoresearch/test_multi_project.py -q --no-header -m "not e2e" --tb=line 2>/dev/null || true)
 FAILED=$(echo "$RAW" | grep -oE '[0-9]+ failed' | grep -oE '[0-9]+' | head -1 || echo 0)
 if [ "$FAILED" = "0" ]; then
 	SUMMARY=$(echo "$RAW" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1 || echo 0)
