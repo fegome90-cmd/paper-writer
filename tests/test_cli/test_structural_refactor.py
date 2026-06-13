@@ -143,9 +143,9 @@ def test_audit_ethics_has_single_dispatch_path() -> None:
     import cli.paper.dispatch as dispatch_mod
 
     dispatch_src = open(dispatch_mod.__file__).read()
-    assert (
-        'orch_command = "audit_ethics"' not in dispatch_src
-    ), "dispatch.py still contains dead audit_ethics pipeline branch"
+    assert 'orch_command = "audit_ethics"' not in dispatch_src, (
+        "dispatch.py still contains dead audit_ethics pipeline branch"
+    )
 
 
 def test_import_bib_routes_source_to_import_bib() -> None:
