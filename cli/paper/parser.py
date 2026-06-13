@@ -1,0 +1,485 @@
+"""Argument parser construction for paper CLI.
+
+Extracted from main.py in PR1 of cli-structural-refactoring.
+This module imports handler function references from commands/ for
+set_defaults(func=...) wiring. Domain dependencies (harness, clients,
+validators) are NOT imported here — they live inside handler bodies (lazy).
+
+Per spec S2: imports ONLY argparse, os, Path, typing, and handler references
+from commands/ at module scope.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.metadata
+import os
+from pathlib import Path
+
+from cli.paper.commands.audit import (
+    _cmd_audit_citations,
+    _cmd_audit_claims,
+    _cmd_audit_code_health,
+    _cmd_audit_ethics,
+    _cmd_audit_factuality,
+    _cmd_audit_prose,
+    _cmd_audit_quality_appraisal,
+    _cmd_audit_tables,
+    _cmd_audit_writing_quality,
+)
+from cli.paper.commands.doctor import register_doctor
+from cli.paper.commands.gate import _cmd_gate_method
+from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
+from cli.paper.commands.mesh import register_mesh
+from cli.paper.commands.thesaurus import register_thesaurus
+from cli.paper.commands.zotero import register_zotero
+
+
+def _get_version() -> str:
+    """Get package version from metadata."""
+    try:
+        return importlib.metadata.version("paper-writer")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.0.0-dev"
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build and return the fully configured argument parser."""
+    parser = argparse.ArgumentParser(
+        description="paper CLI - Single entrypoint for scientific drafting CI/CD pipeline."
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=_get_version(),
+    )
+    parser.add_argument(
+        "--project",
+        "-C",
+        default=None,
+        type=Path,
+        help="Project root directory (default: auto-detect from CWD).",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # paper init
+    init_parser = subparsers.add_parser("init", help="Initialize repository and state.")
+    init_parser.add_argument(
+        "--preset",
+        default=None,
+        help="Journal preset name (e.g. 'nature'). Loads from templates/journals/<name>/.",
+    )
+    init_parser.add_argument(
+        "--mode",
+        choices=["rapid", "academic"],
+        default="rapid",
+        help="Review mode: 'rapid' (default) or 'academic' for full evidence curation.",
+    )
+    init_parser.add_argument(
+        "--search-window-start",
+        type=int,
+        default=None,
+        help="Academic mode: start year for search window.",
+    )
+    init_parser.add_argument(
+        "--search-window-end",
+        type=int,
+        default=None,
+        help="Academic mode: end year for search window.",
+    )
+
+    # paper search
+    search_parser = subparsers.add_parser("search", help="Execute scientific literature search.")
+    search_parser.add_argument(
+        "--query",
+        default=None,
+        help="Research query to use for provider-backed search.",
+    )
+    search_parser.add_argument(
+        "--raw-papers",
+        help="Path to JSON file containing raw paper candidates.",
+    )
+    search_parser.add_argument(
+        "--year-min",
+        type=int,
+        default=None,
+        help="Exclude papers published before this year.",
+    )
+    search_parser.add_argument(
+        "--year-max",
+        type=int,
+        default=None,
+        help="Exclude papers published after this year.",
+    )
+    search_parser.add_argument(
+        "--study-types",
+        nargs="*",
+        default=None,
+        help="Only include these study types (e.g. 'rct' 'systematic review').",
+    )
+    search_parser.add_argument(
+        "--human",
+        action="store_true",
+        default=False,
+        help="Only include human studies.",
+    )
+    search_parser.add_argument(
+        "--sample-size-min",
+        type=int,
+        default=None,
+        help="Exclude studies with fewer participants.",
+    )
+    search_parser.add_argument(
+        "--sjr-max",
+        type=int,
+        default=None,
+        help="Exclude journals in lesser quartiles (1=best, 4=worst).",
+    )
+    search_parser.add_argument(
+        "--duration-min",
+        type=int,
+        default=None,
+        help="Minimum study duration in days.",
+    )
+    search_parser.add_argument(
+        "--duration-max",
+        type=int,
+        default=None,
+        help="Maximum study duration in days.",
+    )
+    search_parser.add_argument(
+        "--exclude-preprints",
+        action="store_true",
+        default=False,
+        help="Only include peer-reviewed papers.",
+    )
+    search_parser.add_argument(
+        "--publisher-name",
+        default=None,
+        help="Comma-separated publisher names to filter by.",
+    )
+    search_parser.add_argument(
+        "--clinical-guideline",
+        action="store_true",
+        default=False,
+        help="Filter to papers classified as clinical guidelines.",
+    )
+    search_parser.add_argument(
+        "--medical-mode",
+        action="store_true",
+        default=False,
+        help="Filter to top medical journals and guidelines.",
+    )
+
+    # paper chain
+    chain_parser = subparsers.add_parser(
+        "chain",
+        help="Expand corpus via Semantic Scholar citation chaining.",
+    )
+    chain_parser.add_argument(
+        "--max-rounds",
+        type=int,
+        default=2,
+        help="Maximum chaining iterations (default: 2).",
+    )
+    chain_parser.add_argument(
+        "--max-papers",
+        type=int,
+        default=80,
+        help="Stop when corpus reaches this size (default: 80).",
+    )
+    chain_parser.add_argument(
+        "--relevance-threshold",
+        type=float,
+        default=0.15,
+        help=(
+            "Minimum relevance score to include"
+            " (default: 0.15, auto-lowered for highly-cited papers)."
+        ),
+    )
+    chain_parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable API response caching.",
+    )
+
+    # paper screen
+    screen_parser = subparsers.add_parser("screen", help="Screen search results to evidence set.")
+    screen_parser.add_argument(
+        "--min-tier",
+        default=os.environ.get("PAPER_SCREEN_MIN_TIER", "Tier 3"),
+        help="Minimum tier to include (Tier 1, Tier 2, Tier 3, Discard). "
+        "Default: Tier 3. Env: PAPER_SCREEN_MIN_TIER.",
+    )
+
+    # paper export-bib
+    export_bib_parser = subparsers.add_parser(
+        "export-bib", help="Export screened papers to BibTeX."
+    )
+    export_bib_parser.add_argument(
+        "--bib-path",
+        default="templates/references.bib",
+        help="Output BibTeX file path.",
+    )
+
+    # paper draft
+    draft_parser = subparsers.add_parser("draft", help="Draft outline or sections.")
+    draft_sub = draft_parser.add_subparsers(dest="subcommand", required=True)
+    draft_sub.add_parser("outline", help="Draft outline.")
+    sec_parser = draft_sub.add_parser("section", help="Draft section.")
+    sec_parser.add_argument(
+        "name",
+        help=(
+            "Section name"
+            " (abstract, introduction, literature_review,"
+            " methods, results, discussion, conclusion)"
+        ),
+    )
+    draft_sub.add_parser(
+        "all", help="Draft all sections in dependency order with cross-section context."
+    )
+
+    # paper protocol
+    protocol_parser = subparsers.add_parser(
+        "protocol", help="Generate reproducibility protocol from pipeline metadata."
+    )
+    protocol_parser.add_argument(
+        "--search-dir", required=True, help="Path to search output directory"
+    )
+    protocol_parser.add_argument(
+        "--output", "-o", default=None, help="Output file path (default: stdout)"
+    )
+    protocol_parser.add_argument(
+        "--project-name", default="paper-writer", help="Project name for header"
+    )
+
+    # paper lint
+    lint_parser = subparsers.add_parser("lint", help="Lint bibliography or style.")
+    lint_sub = lint_parser.add_subparsers(dest="subcommand", required=True)
+    lint_sub.add_parser("bib", help="Lint and normalize references.bib.")
+    lint_sub.add_parser("style", help="Lint styling rules.")
+
+    # paper check
+    check_parser = subparsers.add_parser(
+        "check", help="Check citations and references consistency."
+    )
+    check_sub = check_parser.add_subparsers(dest="subcommand", required=True)
+    check_sub.add_parser("refs", help="Check inline citations against references.bib.")
+
+    # paper audit
+    audit_parser = subparsers.add_parser("audit", help="Audit manuscript quality.")
+    audit_sub = audit_parser.add_subparsers(dest="subcommand", required=True)
+    audit_sub.add_parser("reporting", help="Audit manuscript against reporting checklists.")
+    audit_prose = audit_sub.add_parser("prose", help="Analyze scientific prose quality (Phase 0).")
+    audit_prose.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_prose.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_prose.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
+    audit_prose.set_defaults(func=_cmd_audit_prose)
+    audit_claims = audit_sub.add_parser("claims", help="Detect claim candidates (Phase 0).")
+    audit_claims.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_claims.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_claims.add_argument(
+        "--whitelist", "-w", action="append", default=[], help="Terms to skip"
+    )
+    audit_claims.set_defaults(func=_cmd_audit_claims)
+    audit_code_health = audit_sub.add_parser(
+        "code-health",
+        help="Audit code health (dead code, unused methods) via Trifecta graph.",
+    )
+    audit_code_health.add_argument(
+        "--output", "-o", choices=["terminal", "json"], default="terminal"
+    )
+    audit_code_health.set_defaults(func=_cmd_audit_code_health)
+    audit_citations = audit_sub.add_parser(
+        "citations", help="Verify citations against Crossref + Semantic Scholar."
+    )
+    audit_citations.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_citations.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_citations.add_argument(
+        "--offline", action="store_true", help="Skip API calls (offline mode)"
+    )
+    audit_citations.set_defaults(func=_cmd_audit_citations)
+    audit_ethics = audit_sub.add_parser("ethics", help="Check AI disclosure compliance.")
+    audit_ethics.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_ethics.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_ethics.set_defaults(func=_cmd_audit_ethics)
+    audit_wq = audit_sub.add_parser("writing-quality", help="Detect AI-typical writing patterns.")
+    audit_wq.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    audit_wq.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_wq.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
+    audit_wq.set_defaults(func=_cmd_audit_writing_quality)
+    audit_fact = audit_sub.add_parser(
+        "factuality", help="Check claim-evidence factual accuracy via keyword overlap."
+    )
+    audit_fact.add_argument("file", help="Path to manuscript file")
+    audit_fact.add_argument("--evidence", required=True, help="Path to screened_evidence.json")
+    audit_fact.add_argument(
+        "--threshold", type=float, default=0.30, help="Overlap threshold (default: 0.30)"
+    )
+    audit_fact.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_fact.set_defaults(func=_cmd_audit_factuality)
+    audit_tbl = audit_sub.add_parser(
+        "tables", help="Validate draft sections for required tables and figures."
+    )
+    audit_tbl.add_argument("draft_dir", help="Path to draft sections directory")
+    audit_tbl.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_tbl.set_defaults(func=_cmd_audit_tables)
+    audit_qa = audit_sub.add_parser(
+        "quality-appraisal", help="Score study quality on 5 dimensions."
+    )
+    audit_qa.add_argument("--evidence", required=True, help="Path to screened_evidence.json")
+    audit_qa.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_qa.set_defaults(func=_cmd_audit_quality_appraisal)
+
+    # paper trace
+    trace_parser = subparsers.add_parser(
+        "trace", help="Trace code structure (callers, callees, paths) via Trifecta graph."
+    )
+    trace_parser.add_argument("symbol", help="Symbol to trace (e.g. 'Orchestrator.execute')")
+    trace_parser.add_argument(
+        "--action",
+        "-a",
+        choices=["callers", "callees", "path"],
+        default="callers",
+        help="Trace action (default: callers)",
+    )
+    trace_parser.add_argument(
+        "--to",
+        dest="to_symbol",
+        default=None,
+        help="Target symbol (required for 'path' action)",
+    )
+    trace_parser.add_argument(
+        "--depth",
+        "-d",
+        type=int,
+        default=1,
+        help="Traversal depth for callers (1=direct, 3=transitive). Default: 1",
+    )
+    trace_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    trace_parser.set_defaults(func=_cmd_trace)
+
+    # paper graph-overview
+    overview_parser = subparsers.add_parser(
+        "graph-overview",
+        help="Show Trifecta graph health overview (nodes, edges, cycles, orphans, hubs).",
+    )
+    overview_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    overview_parser.set_defaults(func=_cmd_graph_overview)
+
+    # paper gate
+    gate_parser = subparsers.add_parser(
+        "gate", help="Run fail-closed methodological gates (Phase 0)."
+    )
+    gate_sub = gate_parser.add_subparsers(dest="subcommand", required=True)
+    gate_method = gate_sub.add_parser("method", help="Apply EQUATOR-derived checklist gate.")
+    gate_method.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
+    gate_method.add_argument(
+        "--study-type",
+        "-t",
+        default="*",
+        choices=[
+            "*",
+            "rct",
+            "randomized_controlled_trial",
+            "randomised_controlled_trial",
+            "cohort",
+            "case_control",
+            "cross_sectional",
+            "observational",
+            "prospective",
+            "retrospective",
+            "systematic_review",
+            "meta_analysis",
+            "scoping_review",
+            "literature_review",
+            "narrative_review",
+            "qualitative",
+        ],
+        help="Study type for checklist selection",
+    )
+    gate_method.add_argument(
+        "--checklist",
+        "-c",
+        default=None,
+        help="Explicit checklist name (e.g. 'consort', 'strobe', 'prisma')",
+    )
+    gate_method.add_argument(
+        "--na", action="append", default=[], help="Item ID to mark as not applicable (repeatable)"
+    )
+    gate_method.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    gate_method.set_defaults(func=_cmd_gate_method)
+
+    # paper import
+    import_parser = subparsers.add_parser("import", help="Import external resources.")
+    import_sub = import_parser.add_subparsers(dest="subcommand", required=True)
+    import_bib = import_sub.add_parser("bib", help="Import .bib from Zotero/Better BibTeX export.")
+
+    import_bib_source = import_bib.add_mutually_exclusive_group()
+    import_bib_source.add_argument("source", nargs="?", help="Path to source .bib file to import.")
+    import_bib_source.add_argument(
+        "--from-zotero",
+        action="store_true",
+        help="Sync directly from Zotero/Better BibTeX library/collection.",
+    )
+
+    import_bib.add_argument(
+        "--target",
+        default="templates/references.bib",
+        help="Target bibliography path (default: templates/references.bib).",
+    )
+    import_bib.add_argument(
+        "--collection",
+        default=None,
+        help="Specific Zotero collection key (8-char string) to sync.",
+    )
+    import_bib.add_argument(
+        "--since",
+        type=int,
+        default=None,
+        help="Sync only changes made since this library version (integer).",
+    )
+    import_bib.add_argument(
+        "--bbt-local",
+        action="store_true",
+        help="Pull from local Better BibTeX endpoint instead of cloud API.",
+    )
+
+    # paper render
+    render_parser = subparsers.add_parser("render", help="Render final output formats.")
+    render_parser.add_argument(
+        "--format",
+        dest="formats",
+        action="append",
+        choices=["docx", "pdf"],
+        default=None,
+        help="Output format(s). Can be repeated. Default: docx and pdf.",
+    )
+    render_parser.add_argument(
+        "--csl",
+        default=None,
+        help="Path to CSL citation style file (e.g. styles/csl/vancouver.csl).",
+    )
+    render_parser.add_argument(
+        "--reference-doc",
+        default=None,
+        help="Path to reference docx for styling.",
+    )
+
+    # paper zotero
+    register_zotero(subparsers)
+
+    # paper verify
+    subparsers.add_parser("verify", help="Run final verification check.")
+
+    # paper doctor
+    register_doctor(subparsers)
+
+    # paper thesaurus
+    register_thesaurus(subparsers)
+
+    # paper mesh
+    register_mesh(subparsers)
+
+    return parser
