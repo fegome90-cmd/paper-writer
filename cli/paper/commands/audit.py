@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from cli.paper.errors import UserInputError
-from cli.paper.output import emit_json, emit_result
+from cli.paper.output import emit_info, emit_json, emit_result, emit_warning
 
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
@@ -55,7 +55,7 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
     required_keys = {"command", "file", "findings", "summary", "metadata"}
     missing = required_keys - set(result.keys())
     if missing:
-        print(f"Warning: result missing schema fields: {missing}", file=sys.stderr)
+        emit_warning(f"result missing schema fields: {missing}")
 
     if args.output == "json":
         emit_json(result)
@@ -274,7 +274,7 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
                 )
         if report.error or dep_report.error:
             err = report.error or dep_report.error
-            print(f"  Note: {err}", file=sys.stderr)
+            emit_info(f"  Note: {err}")
 
     # Exit 1 if there are actionable findings, 0 otherwise
     sys.exit(1 if (report.findings or dep_report.findings) else 0)

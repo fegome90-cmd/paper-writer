@@ -7,12 +7,11 @@ lazy imports of clients.zotero inside handler bodies.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Any
 
 from cli.paper.errors import ExternalServiceError, UserInputError
-from cli.paper.output import emit_json, emit_result
+from cli.paper.output import emit_info, emit_json, emit_result
 
 
 def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
@@ -135,7 +134,7 @@ def _cmd_zotero_create(args: Any) -> None:
             else:
                 emit_result(f"  [{idx}]: {item_data}")
         for idx, info in failed.items():
-            print(f"  FAILED [{idx}]: {info}", file=sys.stderr)
+            emit_info(f"  FAILED [{idx}]: {info}")
     except ZoteroError as exc:
         raise ExternalServiceError(str(exc)) from exc
 

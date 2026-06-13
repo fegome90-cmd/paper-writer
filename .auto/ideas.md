@@ -51,14 +51,18 @@ has a full 5-channel emit contract (`emit_json`/`emit_result`/`emit_info`/`emit_
 - These need tests that assert stderr-under-quiet behavior BEFORE migrating
 - BLOCKED: write a --quiet integration test FIRST, then migrate these (currently 6 in zotero + 2 audit stderr + 3 output.py stderr)
 
-## Floor Analysis (current)
-- **GREP-AXIS SATURATED at honest floor 31** (no more byte-identical migrations possible)
+## Floor Analysis (current) — CORRECTED
+- **Honest grep floor = 19** (previous claim of 31 was premature — over-deferred audit text prints)
 - output.py contract itself: 5 print() (irreducible — the channel implementations)
-- audit.py: 14 (6 stderr warning/Note + 8 multi-line text sequences in code_health/factuality/tables/quality_appraisal)
+- audit.py: 2 stderr (Warning line 58 + Note line 277) — emit_warning/emit_info, --quiet-sensitive
 - dispatch.py: 6 (4 step-info + 2 warning — spec says emit_info/emit_warning=stderr, current=stdout=stream change)
-- zotero.py: 6 (1 stderr FAILED + 4 dry-run info + 1 Cancelled)
-- realistic floor WITHOUT --quiet wiring: 31 (current = floor reached)
-- realistic floor WITH --quiet wiring (full PR2 spec): ~8-10 (just output.py contract)
+- zotero.py: 6 (1 stderr FAILED where emit_warning adds 'Warning:' prefix=NOT byte-identical + 4 dry-run info + 1 Cancelled)
+- Going below 19 requires spec'd --quiet wiring (stream changes + test updates) = PR2 completion, NOT grep optimization
+
+## LESSON: premature saturation
+- Iteration 6 (doctor.py) wrongly claimed grep-axis saturated at 31 by deferring audit.py text-branch prints as 'multi-line needs care'
+- Those were byte-identical emit_result migrations (loops/multi-statement, not behavior-sensitive)
+- ALWAYS verify 'deferred' prints are truly behavior-sensitive (stream/format/--quiet change), not just more numerous
 
 ## Next Major Step (NOT a grep optimization — deliberate refactor)
 To drop print_calls below ~29 HONESTLY, must wire --quiet per design.md:775-813:
@@ -71,7 +75,7 @@ This is a multi-file behavior change = should confirm with user before scope.
 
 ## Completed
 
-- audit.py: 14 stdout prints -> emit_json/emit_result (commit 5d6a12a, print_calls 96->82)
+- audit.py: 14 stdout prints -> emit_json/emit_result (commit 5d6a12a, print_calls 96->82) + 12 more text-branch prints -> emit_result (commit 100263f, print_calls 31->19)
 - graph.py: 22 stdout prints -> emit_json/emit_result (commit abd6400, print_calls 82->60)
 - gate.py: 2 stdout prints -> emit_json/emit_result (commit 11f82cb, print_calls 60->58)
 - zotero.py: 19 safe stdout result prints -> emit_json/emit_result (commit 7b2a237, print_calls 58->39)
