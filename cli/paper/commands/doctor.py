@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from cli.paper.output import emit_result
 from cli.paper.project import resolve_project_root
 
 
@@ -25,14 +26,14 @@ def _cmd_doctor(args: Any) -> None:
     repo_path = resolve_project_root(args.project, Path.cwd())
     tools = check_all_tools()
     caps = check_internal_capabilities(repo_path)
-    print(format_doctor_report(tools, caps))
+    emit_result(format_doctor_report(tools, caps))
 
     # --live / --live-search-probe: preserved from main.py (~lines 1019-1023)
     if getattr(args, "live", False) or getattr(args, "live_search_probe", False):
-        print()
+        emit_result("")
         from harness.services.doctor import run_live_checks
 
-        print(run_live_checks(run_search_probe=getattr(args, "live_search_probe", False)))
+        emit_result(run_live_checks(run_search_probe=getattr(args, "live_search_probe", False)))
 
     sys.exit(0)
 
