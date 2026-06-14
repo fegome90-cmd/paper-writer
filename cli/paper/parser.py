@@ -288,42 +288,42 @@ def build_parser() -> argparse.ArgumentParser:
     audit_sub.add_parser("reporting", help="Audit manuscript against reporting checklists.")
     audit_prose = audit_sub.add_parser("prose", help="Analyze scientific prose quality (Phase 0).")
     audit_prose.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
-    audit_prose.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_prose.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
     audit_prose.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
-    audit_prose.set_defaults(func=_cmd_audit_prose)
+    audit_prose.set_defaults(func=_cmd_audit_prose, output_policy="json-capable")
     audit_claims = audit_sub.add_parser("claims", help="Detect claim candidates (Phase 0).")
     audit_claims.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
-    audit_claims.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_claims.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
     audit_claims.add_argument(
         "--whitelist", "-w", action="append", default=[], help="Terms to skip"
     )
-    audit_claims.set_defaults(func=_cmd_audit_claims)
+    audit_claims.set_defaults(func=_cmd_audit_claims, output_policy="json-capable")
     audit_code_health = audit_sub.add_parser(
         "code-health",
         help="Audit code health (dead code, unused methods) via Trifecta graph.",
     )
     audit_code_health.add_argument(
-        "--output", "-o", choices=["terminal", "json"], default="terminal"
+        "--output", "-o", choices=["terminal", "json"], default=None
     )
-    audit_code_health.set_defaults(func=_cmd_audit_code_health)
+    audit_code_health.set_defaults(func=_cmd_audit_code_health, output_policy="json-capable")
     audit_citations = audit_sub.add_parser(
         "citations", help="Verify citations against Crossref + Semantic Scholar."
     )
     audit_citations.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
-    audit_citations.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_citations.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
     audit_citations.add_argument(
         "--offline", action="store_true", help="Skip API calls (offline mode)"
     )
-    audit_citations.set_defaults(func=_cmd_audit_citations)
+    audit_citations.set_defaults(func=_cmd_audit_citations, output_policy="json-capable")
     audit_ethics = audit_sub.add_parser("ethics", help="Check AI disclosure compliance.")
     audit_ethics.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
-    audit_ethics.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    audit_ethics.set_defaults(func=_cmd_audit_ethics)
+    audit_ethics.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    audit_ethics.set_defaults(func=_cmd_audit_ethics, output_policy="json-capable")
     audit_wq = audit_sub.add_parser("writing-quality", help="Detect AI-typical writing patterns.")
     audit_wq.add_argument("file", help="Path to manuscript file (.md, .tex, .txt)")
-    audit_wq.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
+    audit_wq.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
     audit_wq.add_argument("--whitelist", "-w", action="append", default=[], help="Terms to skip")
-    audit_wq.set_defaults(func=_cmd_audit_writing_quality)
+    audit_wq.set_defaults(func=_cmd_audit_writing_quality, output_policy="json-capable")
     audit_fact = audit_sub.add_parser(
         "factuality", help="Check claim-evidence factual accuracy via keyword overlap."
     )
@@ -332,20 +332,20 @@ def build_parser() -> argparse.ArgumentParser:
     audit_fact.add_argument(
         "--threshold", type=float, default=0.30, help="Overlap threshold (default: 0.30)"
     )
-    audit_fact.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    audit_fact.set_defaults(func=_cmd_audit_factuality)
+    audit_fact.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    audit_fact.set_defaults(func=_cmd_audit_factuality, output_policy="json-capable")
     audit_tbl = audit_sub.add_parser(
         "tables", help="Validate draft sections for required tables and figures."
     )
     audit_tbl.add_argument("draft_dir", help="Path to draft sections directory")
-    audit_tbl.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    audit_tbl.set_defaults(func=_cmd_audit_tables)
+    audit_tbl.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    audit_tbl.set_defaults(func=_cmd_audit_tables, output_policy="json-capable")
     audit_qa = audit_sub.add_parser(
         "quality-appraisal", help="Score study quality on 5 dimensions."
     )
     audit_qa.add_argument("--evidence", required=True, help="Path to screened_evidence.json")
-    audit_qa.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    audit_qa.set_defaults(func=_cmd_audit_quality_appraisal)
+    audit_qa.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    audit_qa.set_defaults(func=_cmd_audit_quality_appraisal, output_policy="json-capable")
 
     # paper trace
     trace_parser = subparsers.add_parser(
@@ -372,16 +372,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Traversal depth for callers (1=direct, 3=transitive). Default: 1",
     )
-    trace_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    trace_parser.set_defaults(func=_cmd_trace)
+    trace_parser.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    trace_parser.set_defaults(func=_cmd_trace, output_policy="json-capable")
 
     # paper graph-overview
     overview_parser = subparsers.add_parser(
         "graph-overview",
         help="Show Trifecta graph health overview (nodes, edges, cycles, orphans, hubs).",
     )
-    overview_parser.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    overview_parser.set_defaults(func=_cmd_graph_overview)
+    overview_parser.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    overview_parser.set_defaults(func=_cmd_graph_overview, output_policy="json-capable")
 
     # paper gate
     gate_parser = subparsers.add_parser(
@@ -423,8 +423,8 @@ def build_parser() -> argparse.ArgumentParser:
     gate_method.add_argument(
         "--na", action="append", default=[], help="Item ID to mark as not applicable (repeatable)"
     )
-    gate_method.add_argument("--output", "-o", choices=["terminal", "json"], default="terminal")
-    gate_method.set_defaults(func=_cmd_gate_method)
+    gate_method.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    gate_method.set_defaults(func=_cmd_gate_method, output_policy="json-capable")
 
     # paper import
     import_parser = subparsers.add_parser("import", help="Import external resources.")

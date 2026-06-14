@@ -51,4 +51,4 @@ def register_doctor(subparsers: Any) -> None:
         action="store_true",
         help="Perform live connection checks AND execute a search probe.",
     )
-    doc_parser.set_defaults(func=_cmd_doctor)
+    doc_parser.set_defaults(func=_cmd_doctor, output_policy="text-only")
