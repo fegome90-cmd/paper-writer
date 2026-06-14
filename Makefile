@@ -36,3 +36,6 @@ setup-github-checks:
 
 clean:
 	rm -rf .venv .mypy_cache .pytest_cache .ruff_cache build dist *.egg-info
+
+coverage:
+	.venv/bin/pytest --cov=cli/paper --cov-report=term-missing --cov-report=html tests/
