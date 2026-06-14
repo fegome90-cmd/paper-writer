@@ -66,7 +66,9 @@ def build_parser() -> argparse.ArgumentParser:
         dest="output_format",
         choices=["text", "json"],
         default="text",
-        help="Output format: text (default) or json. Rejected by text-only commands.",
+        help="Output format (text default, json routes via emit_json). Per-command "
+        "policy enforcement (P2.5.2) pending: text-only commands currently accept "
+        "json silently rather than rejecting it.",
     )
     parser.add_argument(
         "--quiet",

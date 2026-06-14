@@ -168,7 +168,6 @@ def test_cli_exit_code_unexpected_internal_error_returns_1_not_3(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """XR6: unexpected internal error -> exit 1, NEVER misclassified as external (3)."""
-    from cli.paper.errors import ExternalServiceError
 
     def _internal_bug(_args: object) -> None:
         # A KeyError is an internal bug, not an external service failure.
@@ -181,5 +180,3 @@ def test_cli_exit_code_unexpected_internal_error_returns_1_not_3(
     assert code != 3
     assert "Internal error" in output
     assert "Traceback" not in output
-    # Guard: ExternalServiceError is still 3 (the catch-all doesn't swallow it)
-    del ExternalServiceError
