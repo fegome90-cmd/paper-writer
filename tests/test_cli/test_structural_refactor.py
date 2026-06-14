@@ -44,64 +44,86 @@ def test_resolve_project_root_reexport_preserves_contract() -> None:
 
 
 def test_every_parser_leaf_has_exactly_one_dispatch_owner() -> None:
-    """Every subcommand in the parser resolves via either func callback OR
-    PIPELINE_MAP equivalent, never both, never neither.
+    """Bidirectional coverage: parser leaves ↔ dispatch owners (Phase C8 closure).
 
-    We verify by introspecting the parser: every leaf subparser either has
-    a 'func' default (Phase 0 callback) or is a known pipeline command.
+    This replaces the prior hardcoded-set test that could NOT detect the 'verify'
+    gap. Now it iterates the REAL PIPELINE_MAP in both directions:
+    1. Every PIPELINE_MAP key maps to a parser leaf that exists.
+    2. Every pipeline parser leaf has a PIPELINE_MAP entry (no orphans).
+    Phase 0 callbacks (func set) are excluded — they don't use the MAP.
     """
+    from cli.paper.dispatch import PIPELINE_MAP, _make_key
     from cli.paper.parser import build_parser
 
     parser = build_parser()
 
-    # Known pipeline commands (dispatched via if/elif, NOT func callback)
-    pipeline_commands = {
-        "init",
-        "search",
-        "chain",
-        "screen",
-        "export-bib",
-        "draft",
-        "protocol",
-        "lint",
-        "check",
-        "audit",  # audit:reporting and audit:ethics are pipeline; rest are callback
-        "import",
-        "render",
-        "verify",
-    }
+    # Collect parser leaves: (command) and (command:sub) for nested subparsers.
+    # A leaf is a terminal subparser (no further required subcommands).
+    def _collect_leaves() -> set[str]:
+        leaves: set[str] = set()
+        root_action = next(
+            a for a in parser._actions if hasattr(a, "choices") and isinstance(a.choices, dict)
+        )
+        for cmd, subparser in root_action.choices.items():
+            nested = next(
+                (
+                    a
+                    for a in subparser._actions
+                    if hasattr(a, "choices") and isinstance(a.choices, dict)
+                ),
+                None,
+            )
+            if nested is None:
+                leaves.add(cmd)
+            else:
+                for sub in nested.choices:
+                    leaves.add(_make_key(cmd, sub))
+        return leaves
 
-    # Commands that are fully handled via func callback
-    callback_commands = {
-        "zotero",
-        "doctor",
-        "trace",
-        "graph-overview",
-        "gate",
-        "thesaurus",
-        "mesh",
-    }
+    parser_leaves = _collect_leaves()
 
-    # Get all registered subcommands from the parser
-    # The subparsers action is stored in parser._subparsers
-    subparsers_action = None
-    for action in parser._actions:
-        if hasattr(action, "choices") and isinstance(action.choices, dict):
-            subparsers_action = action
-            break
+    # Identify which parser leaves are Phase 0 callbacks (have 'func' default)
+    # vs pipeline commands (no func, routed through PIPELINE_MAP).
+    callback_leaves: set[str] = set()
+    root_action = next(
+        a for a in parser._actions if hasattr(a, "choices") and isinstance(a.choices, dict)
+    )
+    for cmd, subparser in root_action.choices.items():
+        nested = next(
+            (
+                a
+                for a in subparser._actions
+                if hasattr(a, "choices") and isinstance(a.choices, dict)
+            ),
+            None,
+        )
+        if nested is None:
+            if subparser.get_default("func") is not None:
+                callback_leaves.add(cmd)
+        else:
+            for sub_name, sub_sub in nested.choices.items():
+                if sub_sub.get_default("func") is not None:
+                    callback_leaves.add(_make_key(cmd, sub_name))
 
-    assert subparsers_action is not None, "Parser has no subparsers"
+    pipeline_leaves = parser_leaves - callback_leaves
 
-    all_commands = set(subparsers_action.choices.keys())
+    # BIDIRECTIONAL GATE (the real check, not a hardcoded set):
+    # 1. Every PIPELINE_MAP key has a corresponding parser leaf.
+    map_keys_without_leaf = set(PIPELINE_MAP.keys()) - pipeline_leaves
+    assert not map_keys_without_leaf, (
+        f"PIPELINE_MAP keys with no parser leaf: {map_keys_without_leaf}"
+    )
 
-    # Verify every command is known
-    all_known = pipeline_commands | callback_commands
-    unknown = all_commands - all_known
-    assert not unknown, f"Unknown commands not in pipeline or callback set: {unknown}"
+    # 2. Every pipeline parser leaf has a PIPELINE_MAP entry (catches the verify
+    #    gap that the prior hardcoded test missed).
+    leaves_without_map = pipeline_leaves - set(PIPELINE_MAP.keys())
+    assert not leaves_without_map, (
+        f"Parser pipeline leaves with no PIPELINE_MAP entry: {leaves_without_map}"
+    )
 
-    # Verify all known commands appear in the parser
-    missing = all_known - all_commands
-    assert not missing, f"Known commands missing from parser: {missing}"
+    # 3. A leaf is never BOTH a callback AND a MAP entry (no double-dispatch).
+    overlap = callback_leaves & set(PIPELINE_MAP.keys())
+    assert not overlap, f"Leaves dispatched both as callback and MAP entry: {overlap}"
 
 
 def test_audit_ethics_has_single_dispatch_path() -> None:

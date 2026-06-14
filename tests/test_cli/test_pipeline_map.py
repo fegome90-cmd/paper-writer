@@ -14,24 +14,26 @@ import pytest
 
 from cli.paper.dispatch import PIPELINE_MAP, _make_key
 
-EXPECTED_PIPELINE_KEYS = frozenset({
-    "init",
-    "search",
-    "chain",
-    "export-bib",
-    "screen",
-    "draft:outline",
-    "draft:section",
-    "draft:all",
-    "protocol",
-    "lint:bib",
-    "lint:style",
-    "check:refs",
-    "audit:reporting",
-    "import:bib",
-    "render",
-    "verify",
-})
+EXPECTED_PIPELINE_KEYS = frozenset(
+    {
+        "init",
+        "search",
+        "chain",
+        "export-bib",
+        "screen",
+        "draft:outline",
+        "draft:section",
+        "draft:all",
+        "protocol",
+        "lint:bib",
+        "lint:style",
+        "check:refs",
+        "audit:reporting",
+        "import:bib",
+        "render",
+        "verify",
+    }
+)
 
 
 class TestMakeKey:

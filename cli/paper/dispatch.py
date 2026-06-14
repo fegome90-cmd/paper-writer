@@ -110,9 +110,7 @@ def _resolve_chain(args: Any) -> PipelineInvocation:
     if args.max_papers < 1:
         errors.append(f"--max-papers must be ≥1, got {args.max_papers}")
     if args.relevance_threshold <= 0 or args.relevance_threshold > 1:
-        errors.append(
-            f"--relevance-threshold must be 0<val≤1, got {args.relevance_threshold}"
-        )
+        errors.append(f"--relevance-threshold must be 0<val≤1, got {args.relevance_threshold}")
     if errors:
         raise UserInputError("Chain parameter validation error: " + "; ".join(errors))
     orch_args: dict[str, Any] = {
@@ -177,9 +175,7 @@ PIPELINE_MAP: dict[str, PipelineSpec] = {
     "screen": PipelineSpec(
         resolve=lambda a: PipelineInvocation("screen", {"min_tier": a.min_tier})
     ),
-    "draft:outline": PipelineSpec(
-        resolve=lambda a: PipelineInvocation("draft_outline", {})
-    ),
+    "draft:outline": PipelineSpec(resolve=lambda a: PipelineInvocation("draft_outline", {})),
     "draft:section": PipelineSpec(
         resolve=lambda a: PipelineInvocation("draft_section", {"name": a.name})
     ),
