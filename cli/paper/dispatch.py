@@ -57,6 +57,156 @@ class PipelineSpec:
     needs_review_config: bool = True
 
 
+def _make_key(cmd_name: str, sub_name: str | None) -> str:
+    """Build the PIPELINE_MAP key: composite 'cmd:sub' when sub present, else 'cmd'."""
+    return f"{cmd_name}:{sub_name}" if sub_name else cmd_name
+
+
+# --- Resolvers: each maps a CLI command's args to a PipelineInvocation. ---
+# Semantics migrated 1:1 from the prior if/elif chain (failure_policy +
+# needs_review_config declared on the PipelineSpec, not in the resolver).
+
+
+def _resolve_init(args: Any) -> PipelineInvocation:
+    orch_args: dict[str, Any] = {"preset": args.preset, "mode": args.mode}
+    if args.search_window_start is not None and args.search_window_end is not None:
+        orch_args["search_window"] = {
+            "start_year": args.search_window_start,
+            "end_year": args.search_window_end,
+        }
+    return PipelineInvocation("init", orch_args)
+
+
+def _resolve_search(args: Any) -> PipelineInvocation:
+    if not args.query or not args.query.strip():
+        raise UserInputError("--query is required. Provide a research query.")
+    orch_args: dict[str, Any] = {"query": args.query}
+    if args.raw_papers:
+        orch_args["raw_papers"] = args.raw_papers
+    filter_map = {
+        "year_min": args.year_min,
+        "year_max": args.year_max,
+        "study_types": args.study_types,
+        "human": args.human or None,
+        "sample_size_min": args.sample_size_min,
+        "sjr_max": args.sjr_max,
+        "duration_min": args.duration_min,
+        "duration_max": args.duration_max,
+        "exclude_preprints": args.exclude_preprints or None,
+        "publisher_name": args.publisher_name,
+        "clinical_guideline": args.clinical_guideline or None,
+        "medical_mode": args.medical_mode or None,
+    }
+    for key, val in filter_map.items():
+        if val is not None:
+            orch_args[key] = val
+    return PipelineInvocation("search", orch_args)
+
+
+def _resolve_chain(args: Any) -> PipelineInvocation:
+    errors: list[str] = []
+    if args.max_rounds < 1:
+        errors.append(f"--max-rounds must be ≥1, got {args.max_rounds}")
+    if args.max_papers < 1:
+        errors.append(f"--max-papers must be ≥1, got {args.max_papers}")
+    if args.relevance_threshold <= 0 or args.relevance_threshold > 1:
+        errors.append(
+            f"--relevance-threshold must be 0<val≤1, got {args.relevance_threshold}"
+        )
+    if errors:
+        raise UserInputError("Chain parameter validation error: " + "; ".join(errors))
+    orch_args: dict[str, Any] = {
+        "max_rounds": args.max_rounds,
+        "max_papers": args.max_papers,
+        "relevance_threshold": args.relevance_threshold,
+    }
+    if not args.no_cache:
+        orch_args["cache_dir"] = "outputs/.cache/s2_api"
+    return PipelineInvocation("chain", orch_args)
+
+
+def _resolve_import_bib(args: Any) -> PipelineInvocation:
+    if not args.source and not args.from_zotero:
+        raise UserInputError(
+            "Must specify source .bib file or use --from-zotero to sync from Zotero."
+        )
+    orch_command = "zotero_sync" if args.from_zotero else "import_bib"
+    orch_args: dict[str, Any] = {
+        "source_bib": args.source or "",
+        "target_bib": args.target,
+        "from_zotero": args.from_zotero,
+        "collection_key": args.collection,
+        "since_version": args.since,
+        "bbt_local": args.bbt_local,
+    }
+    return PipelineInvocation(orch_command, orch_args)
+
+
+def _resolve_protocol(args: Any) -> PipelineInvocation:
+    return PipelineInvocation(
+        "protocol",
+        {
+            "search_dir": args.search_dir,
+            "output": args.output,
+            "project_name": args.project_name,
+        },
+    )
+
+
+def _resolve_render(args: Any) -> PipelineInvocation:
+    return PipelineInvocation(
+        "render",
+        {
+            "output_formats": args.formats if args.formats else ["docx", "pdf"],
+            "csl": args.csl,
+            "reference_doc": args.reference_doc,
+        },
+    )
+
+
+# The authoritative registry of pipeline commands (spec S3, design.md:222-242).
+# Every key has an explicit owner — no implicit `orch_command = cmd_name` default.
+# This closes the CRITICAL 'verify' gap (verify now has an explicit entry).
+PIPELINE_MAP: dict[str, PipelineSpec] = {
+    "init": PipelineSpec(resolve=_resolve_init, needs_review_config=False),
+    "search": PipelineSpec(resolve=_resolve_search),
+    "chain": PipelineSpec(resolve=_resolve_chain),
+    "export-bib": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("export_bib", {"bib_path": a.bib_path})
+    ),
+    "screen": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("screen", {"min_tier": a.min_tier})
+    ),
+    "draft:outline": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("draft_outline", {})
+    ),
+    "draft:section": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("draft_section", {"name": a.name})
+    ),
+    "draft:all": PipelineSpec(resolve=lambda a: PipelineInvocation("draft_all", {})),
+    "protocol": PipelineSpec(resolve=_resolve_protocol),
+    "lint:bib": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("lint_bib", {}),
+        failure_policy="continue_on_error",
+    ),
+    "lint:style": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("lint_style", {}),
+        failure_policy="continue_on_error",
+    ),
+    "check:refs": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("check_refs", {}),
+        failure_policy="continue_on_error",
+    ),
+    "audit:reporting": PipelineSpec(
+        resolve=lambda a: PipelineInvocation("audit_reporting", {}),
+        failure_policy="continue_on_error",
+    ),
+    "import:bib": PipelineSpec(resolve=_resolve_import_bib),
+    "render": PipelineSpec(resolve=_resolve_render),
+    "verify": PipelineSpec(resolve=lambda a: PipelineInvocation("verify", {})),
+}
+
+
 def execute(args: Any) -> int:
     """Route parsed args to Phase 0 callback or pipeline dispatch. Returns exit code."""
     # Wire the output contract (P2.5.1): configure emit_* channels from root flags.
