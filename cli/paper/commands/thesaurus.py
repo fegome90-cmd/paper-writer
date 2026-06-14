@@ -33,20 +33,20 @@ def register_thesaurus(subparsers: Any) -> None:
 
     thesaurus_import = thesaurus_sub.add_parser("import", help="Import concepts from JSONL.")
     thesaurus_import.add_argument("file", help="Path to JSONL file.")
-    thesaurus_import.set_defaults(func=_cmd_import)
+    thesaurus_import.set_defaults(func=_cmd_import, output_policy="external")
 
     thesaurus_search = thesaurus_sub.add_parser("search", help="Search concepts.")
     thesaurus_search.add_argument("query", help="Search query.")
     thesaurus_search.add_argument("--limit", type=int, default=20, help="Max results (default 20).")
-    thesaurus_search.set_defaults(func=_cmd_search)
+    thesaurus_search.set_defaults(func=_cmd_search, output_policy="external")
 
     thesaurus_list = thesaurus_sub.add_parser("list", help="List loaded concepts.")
     thesaurus_list.add_argument("--offset", type=int, default=0, help="Offset for pagination.")
     thesaurus_list.add_argument("--limit", type=int, default=50, help="Max results (default 50).")
-    thesaurus_list.set_defaults(func=_cmd_list)
+    thesaurus_list.set_defaults(func=_cmd_list, output_policy="external")
 
     thesaurus_audit = thesaurus_sub.add_parser("audit", help="Show thesaurus audit info.")
-    thesaurus_audit.set_defaults(func=_cmd_audit)
+    thesaurus_audit.set_defaults(func=_cmd_audit, output_policy="external")
 
     thesaurus_rebuild = thesaurus_sub.add_parser("rebuild", help="Rebuild DB from JSONL.")
-    thesaurus_rebuild.set_defaults(func=_cmd_rebuild)
+    thesaurus_rebuild.set_defaults(func=_cmd_rebuild, output_policy="external")

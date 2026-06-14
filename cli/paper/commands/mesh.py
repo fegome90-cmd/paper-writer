@@ -24,10 +24,14 @@ def register_mesh(subparsers: Any) -> None:
 
         # The external register() uses dest="mesh_subcommand".
         # Normalize to dest="subcommand" per spec S6.
+        # Also attach output_policy="external" since the external register()
+        # does not set it (P2.7.6 — mesh delegates output to its own module).
         for action in subparsers.choices["mesh"]._actions:
             if hasattr(action, "choices") and isinstance(action.choices, dict):
                 if action.dest == "mesh_subcommand":
                     action.dest = "subcommand"
+                for choice_parser in action.choices.values():
+                    choice_parser.set_defaults(output_policy="external")
     except ImportError:
 
         def _cmd_mesh_unavailable(args: Any) -> None:
@@ -39,10 +43,10 @@ def register_mesh(subparsers: Any) -> None:
         mesh_parser = subparsers.add_parser("mesh", help="MeSH vocabulary import and lookup.")
         mesh_sub = mesh_parser.add_subparsers(dest="subcommand", required=True)
         mesh_fallback = mesh_sub.add_parser("import")
-        mesh_fallback.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_fallback.set_defaults(func=_cmd_mesh_unavailable, output_policy="external")
         mesh_resolve_fb = mesh_sub.add_parser("resolve")
-        mesh_resolve_fb.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_resolve_fb.set_defaults(func=_cmd_mesh_unavailable, output_policy="external")
         mesh_expand_fb = mesh_sub.add_parser("expand")
-        mesh_expand_fb.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_expand_fb.set_defaults(func=_cmd_mesh_unavailable, output_policy="external")
         mesh_export_fb = mesh_sub.add_parser("export")
-        mesh_export_fb.set_defaults(func=_cmd_mesh_unavailable)
+        mesh_export_fb.set_defaults(func=_cmd_mesh_unavailable, output_policy="external")

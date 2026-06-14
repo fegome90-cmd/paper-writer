@@ -317,7 +317,7 @@ def register_zotero(subparsers: Any) -> None:
 
     # zotero collections
     zotero_collections = zotero_sub.add_parser("collections", help="List all collections.")
-    zotero_collections.set_defaults(func=_cmd_zotero_collections)
+    zotero_collections.set_defaults(func=_cmd_zotero_collections, output_policy="json-capable")
 
     # zotero search
     zotero_search = zotero_sub.add_parser("search", help="Full-text search in library.")
@@ -331,7 +331,7 @@ def register_zotero(subparsers: Any) -> None:
     zotero_search.add_argument(
         "--json", dest="output_json", action="store_true", help="Output as JSON."
     )
-    zotero_search.set_defaults(func=_cmd_zotero_search)
+    zotero_search.set_defaults(func=_cmd_zotero_search, output_policy="json-capable")
 
     # zotero get
     zotero_get = zotero_sub.add_parser("get", help="Fetch a single item by key.")
@@ -339,7 +339,7 @@ def register_zotero(subparsers: Any) -> None:
     zotero_get.add_argument(
         "--json", dest="output_json", action="store_true", help="Output as JSON."
     )
-    zotero_get.set_defaults(func=_cmd_zotero_get)
+    zotero_get.set_defaults(func=_cmd_zotero_get, output_policy="json-capable")
 
     # zotero create
     zotero_create = zotero_sub.add_parser("create", help="Create items from a JSON file.")
@@ -347,12 +347,12 @@ def register_zotero(subparsers: Any) -> None:
     zotero_create.add_argument(
         "--collection", default=None, help="Add items to this collection key."
     )
-    zotero_create.set_defaults(func=_cmd_zotero_create)
+    zotero_create.set_defaults(func=_cmd_zotero_create, output_policy="text-only")
 
     # zotero template
     zotero_template = zotero_sub.add_parser("template", help="Get empty template for an item type.")
     zotero_template.add_argument("item_type", help="Item type (e.g. journalArticle, book).")
-    zotero_template.set_defaults(func=_cmd_zotero_template)
+    zotero_template.set_defaults(func=_cmd_zotero_template, output_policy="json-capable")
 
     # zotero update
     zotero_update = zotero_sub.add_parser("update", help="Update an existing item.")
@@ -365,7 +365,7 @@ def register_zotero(subparsers: Any) -> None:
     zotero_update.add_argument(
         "--dry-run", action="store_true", help="Show what would be updated without executing."
     )
-    zotero_update.set_defaults(func=_cmd_zotero_update)
+    zotero_update.set_defaults(func=_cmd_zotero_update, output_policy="text-only")
 
     # zotero delete
     zotero_delete = zotero_sub.add_parser("delete", help="Delete one or more items.")
@@ -380,7 +380,7 @@ def register_zotero(subparsers: Any) -> None:
         "--dry-run", action="store_true", help="Show what would be deleted without executing."
     )
     zotero_delete.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt.")
-    zotero_delete.set_defaults(func=_cmd_zotero_delete)
+    zotero_delete.set_defaults(func=_cmd_zotero_delete, output_policy="text-only")
 
     # zotero upload
     zotero_upload = zotero_sub.add_parser("upload", help="Upload file to an attachment item.")
@@ -392,4 +392,4 @@ def register_zotero(subparsers: Any) -> None:
     zotero_upload.add_argument(
         "--force", action="store_true", help="Force re-upload if file exists."
     )
-    zotero_upload.set_defaults(func=_cmd_zotero_upload)
+    zotero_upload.set_defaults(func=_cmd_zotero_upload, output_policy="text-only")
