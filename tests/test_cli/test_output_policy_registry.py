@@ -82,9 +82,7 @@ def test_audit_subcommands_are_json_capable() -> None:
         "zotero upload",
     ],
 )
-def test_zotero_callback_policies_match_registration_table(
-    argv: list[str], expected: str
-) -> None:
+def test_zotero_callback_policies_match_registration_table(argv: list[str], expected: str) -> None:
     """Registration Table: zotero read ops=json-capable, write ops=text-only."""
     parser = build_parser()
     args = parser.parse_args(argv)

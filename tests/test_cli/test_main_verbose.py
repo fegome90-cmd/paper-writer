@@ -46,9 +46,7 @@ def _reset_logging() -> object:
 class TestVerboseFlag:
     """S12: --verbose flag at root level."""
 
-    def test_verbose_flag_parsed(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_verbose_flag_parsed(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """paper --verbose doctor sets args.verbose=True."""
         from cli.paper.parser import build_parser
 
@@ -69,9 +67,7 @@ class TestVerboseFlag:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Without --verbose, logging stays at WARNING (default)."""
-        code, _out, _err = _run_main(
-            ["paper", "--project", str(tmp_path), "doctor"], monkeypatch
-        )
+        code, _out, _err = _run_main(["paper", "--project", str(tmp_path), "doctor"], monkeypatch)
         assert code == 0
         assert logging.getLogger().level == logging.WARNING
 
@@ -83,9 +79,7 @@ class TestPaperVerboseEnvVar:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("PAPER_VERBOSE", "1")
-        code, _out, _err = _run_main(
-            ["paper", "--project", str(tmp_path), "doctor"], monkeypatch
-        )
+        code, _out, _err = _run_main(["paper", "--project", str(tmp_path), "doctor"], monkeypatch)
         assert code == 0
         assert logging.getLogger().level == logging.DEBUG
 

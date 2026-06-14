@@ -126,9 +126,7 @@ class TestErrorPrefixNotDuplicated:
         exc = UserInputError("bad input here")
         assert "Error:" not in str(exc)
 
-    def test_emit_error_adds_prefix_once(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_emit_error_adds_prefix_once(self, capsys: pytest.CaptureFixture[str]) -> None:
         """emit_error adds 'Error:' exactly once — no double-prefix."""
         output.emit_error("boom")
         captured = capsys.readouterr()

@@ -193,7 +193,5 @@ def _validate_output_policy(args: argparse.Namespace, output_format: OutputForma
 
     if output_format == "json" and policy == "text-only":
         # No "Error:" prefix — emit_error() adds it at the boundary
-        raise UserInputError(
-            f"--output-format json is not supported for '{args.command}'"
-        )
+        raise UserInputError(f"--output-format json is not supported for '{args.command}'")
     # 'external' and 'json-capable' fall through: no rejection

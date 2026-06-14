@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from cli.paper.errors import UserInputError
 
 from cli.paper.commands.audit import (
     _cmd_audit_citations,
@@ -18,6 +17,7 @@ from cli.paper.commands.audit import (
     _cmd_audit_prose,
     _cmd_audit_writing_quality,
 )
+from cli.paper.errors import UserInputError
 
 
 def _make_args(
