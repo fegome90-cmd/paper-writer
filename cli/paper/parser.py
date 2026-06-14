@@ -75,6 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Suppress progress info and warnings (results/JSON/errors always shown).",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable DEBUG logging to stderr (tracebacks on unexpected errors).",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # paper init
@@ -301,9 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
         "code-health",
         help="Audit code health (dead code, unused methods) via Trifecta graph.",
     )
-    audit_code_health.add_argument(
-        "--output", "-o", choices=["terminal", "json"], default=None
-    )
+    audit_code_health.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
     audit_code_health.set_defaults(func=_cmd_audit_code_health, output_policy="json-capable")
     audit_citations = audit_sub.add_parser(
         "citations", help="Verify citations against Crossref + Semantic Scholar."
