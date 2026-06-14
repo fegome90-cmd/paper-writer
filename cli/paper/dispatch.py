@@ -36,10 +36,19 @@ def execute(args: Any) -> int:
     output.configure(quiet=getattr(args, "quiet", False), output_format=effective_format)
     output._validate_output_policy(args, effective_format)
 
-    # Phase 0 commands — run directly via func callback
+    # Phase 0 commands — run directly via func callback.
+    # S16: callbacks marked clean_cancel=True (Zotero write ops) are wrapped in
+    # temporary_sigint_handler() so Ctrl+C during long operations raises
+    # KeyboardInterrupt -> exit 130 cleanly. Read-only commands are NOT wrapped.
     func = getattr(args, "func", None)
     if func is not None:
-        func(args)
+        if getattr(args, "clean_cancel", False):
+            from cli.paper.runtime import temporary_sigint_handler
+
+            with temporary_sigint_handler():
+                func(args)
+        else:
+            func(args)
         return 0
 
     # Map parsed arguments to OrchestratorRequest

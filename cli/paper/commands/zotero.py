@@ -347,7 +347,11 @@ def register_zotero(subparsers: Any) -> None:
     zotero_create.add_argument(
         "--collection", default=None, help="Add items to this collection key."
     )
-    zotero_create.set_defaults(func=_cmd_zotero_create, output_policy="text-only")
+    zotero_create.set_defaults(
+
+        func=_cmd_zotero_create, output_policy="text-only", clean_cancel=True
+
+    )
 
     # zotero template
     zotero_template = zotero_sub.add_parser("template", help="Get empty template for an item type.")
@@ -365,7 +369,11 @@ def register_zotero(subparsers: Any) -> None:
     zotero_update.add_argument(
         "--dry-run", action="store_true", help="Show what would be updated without executing."
     )
-    zotero_update.set_defaults(func=_cmd_zotero_update, output_policy="text-only")
+    zotero_update.set_defaults(
+
+        func=_cmd_zotero_update, output_policy="text-only", clean_cancel=True
+
+    )
 
     # zotero delete
     zotero_delete = zotero_sub.add_parser("delete", help="Delete one or more items.")
@@ -380,7 +388,11 @@ def register_zotero(subparsers: Any) -> None:
         "--dry-run", action="store_true", help="Show what would be deleted without executing."
     )
     zotero_delete.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt.")
-    zotero_delete.set_defaults(func=_cmd_zotero_delete, output_policy="text-only")
+    zotero_delete.set_defaults(
+
+        func=_cmd_zotero_delete, output_policy="text-only", clean_cancel=True
+
+    )
 
     # zotero upload
     zotero_upload = zotero_sub.add_parser("upload", help="Upload file to an attachment item.")
@@ -392,4 +404,8 @@ def register_zotero(subparsers: Any) -> None:
     zotero_upload.add_argument(
         "--force", action="store_true", help="Force re-upload if file exists."
     )
-    zotero_upload.set_defaults(func=_cmd_zotero_upload, output_policy="text-only")
+    zotero_upload.set_defaults(
+
+        func=_cmd_zotero_upload, output_policy="text-only", clean_cancel=True
+
+    )
