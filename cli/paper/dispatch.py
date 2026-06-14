@@ -18,6 +18,8 @@ PIPELINE_MAP will be implemented in a dedicated iteration.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,33 @@ from cli.paper.errors import UserInputError
 from cli.paper.project import resolve_project_root
 from harness.services.orchestrator import Orchestrator, OrchestratorRequest
 from harness.services.orchestrator_builder import build_orchestrator_dependencies
+
+
+@dataclass(frozen=True)
+class PipelineInvocation:
+    """The complete orchestrator invocation: command + args (decided at runtime).
+
+    Spec S3 + design.md:212-216. The indirection through a resolver lets a
+    single CLI key (e.g. import:bib) choose the orchestrator command at runtime
+    (import_bib vs zotero_sync) — impossible with a plain command->command dict.
+    """
+
+    orch_command: str
+    args: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class PipelineSpec:
+    """Maps a CLI command key to a resolver that produces a complete invocation.
+
+    Spec S3 + design.md:218-222. resolve(args) returns the PipelineInvocation.
+    failure_policy and needs_review_config are declared per-command so the
+    dispatch can construct OrchestratorRequest without command-specific branching.
+    """
+
+    resolve: Callable[[Any], PipelineInvocation]
+    failure_policy: str = "stop_on_error"
+    needs_review_config: bool = True
 
 
 def execute(args: Any) -> int:
