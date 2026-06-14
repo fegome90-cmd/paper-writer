@@ -1,19 +1,19 @@
 """Command dispatch and orchestrator wiring.
 
-Extracted from main.py in PR1 of cli-structural-refactoring.
-Contains the if/elif dispatch block, review_config injection,
-orchestrator construction, and summary rendering (delegated to output.summary).
+Extracted from main.py in PR1 of cli-structural-refactoring. Provides the
+declarative PIPELINE_MAP dispatch (Phase C): every pipeline command has an
+explicit owner, resolved via `_make_key(cmd, sub) -> spec.resolve(args) ->
+PipelineInvocation`. Phase 0 callbacks (audit/gate/graph/zotero/doctor/
+thesaurus/mesh) bypass the MAP via argparse's `func` default.
 
-NOTE: P1.7.1-P1.7.3 (PipelineInvocation/PipelineSpec/PIPELINE_MAP) were
-deferred to a follow-up PR. The if/elif dispatch pattern is preserved
-verbatim from the original main.py. This is a documented decision, not
-an oversight -- see tasks.md amendment below.
+The MAP was introduced in Phase C5-C8 to replace the original if/elif chain.
+It closes the `verify` CRITICAL gap (verify now has an explicit entry rather
+than falling through to an implicit default) and makes dispatch testable via
+the bidirectional parser-leaves↔PIPELINE_MAP coverage test.
 
-Tasks.md amendment: P1.7.1-P1.7.3 deferred. The declarative PIPELINE_MAP
-redesign requires import:bib dynamic command selection (PipelineInvocation)
-which adds complexity beyond pure structural extraction. PR1 scope is
-"move code without changing behavior" -- the if/elif achieves that.
-PIPELINE_MAP will be implemented in a dedicated iteration.
+Contains: output contract wiring, output_policy validation, clean_cancel
+SIGINT wrapping for Zotero write ops, review_config injection, orchestrator
+construction, and summary rendering (delegated to output.summary).
 """
 
 from __future__ import annotations
