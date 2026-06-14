@@ -180,3 +180,16 @@ def test_cli_exit_code_unexpected_internal_error_returns_1_not_3(
     assert code != 3
     assert "Internal error" in output
     assert "Traceback" not in output
+
+
+def test_cli_exit_code_doctor_rejects_output_format_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """P2.8.10/P2.9.3: doctor is text-only; --output-format json → UserInputError exit 2."""
+    code, output = _run_cli(
+        tmp_path, monkeypatch, capsys, ["paper", "--output-format", "json", "doctor"]
+    )
+    assert code == 2, "text-only command + --output-format json MUST exit 2"
+    assert "json" in output.lower()
