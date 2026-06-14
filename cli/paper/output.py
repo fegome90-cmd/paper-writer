@@ -22,10 +22,13 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
+from cli.paper.errors import UserInputError
+
 if TYPE_CHECKING:
     from harness.services.orchestrator import OrchestratorResult
 
 OutputFormat = Literal["text", "json"]
+OutputPolicy = Literal["json-capable", "text-only", "external"]
 JSONScalar = str | int | float | bool | None
 JSONValue = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
 
@@ -166,3 +169,31 @@ def to_json_value(value: object) -> JSONValue:
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     raise TypeError(f"No JSON normalization defined for {type(value).__name__}")
+
+
+def _validate_output_policy(args: argparse.Namespace, output_format: OutputFormat) -> None:
+    """Reject --output-format json for text-only callbacks. Fail-closed (P2.5.3).
+
+    Policies (per design.md Registration Table):
+    - 'json-capable': accepts --output-format json
+    - 'text-only': rejects json with UserInputError (exit 2 path)
+    - 'external': ignores global format (module controls its own output)
+
+    Fail-closed: a callback WITHOUT output_policy metadata raises RuntimeError
+    (config error), NOT an implicit json-capable default.
+    Pipelines (func=None) skip validation — they are orchestrator-driven.
+    """
+    # Pipelines (no func callback) skip policy validation
+    if getattr(args, "func", None) is None:
+        return
+
+    policy: OutputPolicy | None = getattr(args, "output_policy", None)
+    if policy is None:
+        raise RuntimeError(f"Missing output_policy for callback command: {args.command}")
+
+    if output_format == "json" and policy == "text-only":
+        # No "Error:" prefix — emit_error() adds it at the boundary
+        raise UserInputError(
+            f"--output-format json is not supported for '{args.command}'"
+        )
+    # 'external' and 'json-capable' fall through: no rejection
