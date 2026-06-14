@@ -348,9 +348,7 @@ def register_zotero(subparsers: Any) -> None:
         "--collection", default=None, help="Add items to this collection key."
     )
     zotero_create.set_defaults(
-
         func=_cmd_zotero_create, output_policy="text-only", clean_cancel=True
-
     )
 
     # zotero template
@@ -370,9 +368,7 @@ def register_zotero(subparsers: Any) -> None:
         "--dry-run", action="store_true", help="Show what would be updated without executing."
     )
     zotero_update.set_defaults(
-
         func=_cmd_zotero_update, output_policy="text-only", clean_cancel=True
-
     )
 
     # zotero delete
@@ -389,9 +385,7 @@ def register_zotero(subparsers: Any) -> None:
     )
     zotero_delete.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt.")
     zotero_delete.set_defaults(
-
         func=_cmd_zotero_delete, output_policy="text-only", clean_cancel=True
-
     )
 
     # zotero upload
@@ -405,7 +399,5 @@ def register_zotero(subparsers: Any) -> None:
         "--force", action="store_true", help="Force re-upload if file exists."
     )
     zotero_upload.set_defaults(
-
         func=_cmd_zotero_upload, output_policy="text-only", clean_cancel=True
-
     )

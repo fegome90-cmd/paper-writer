@@ -1,8 +1,10 @@
 import asyncio
-import httpx
-from mcp.client.streamable_http import streamable_http_client
-from mcp.client.session import ClientSession
 import traceback
+
+import httpx
+from mcp.client.session import ClientSession
+from mcp.client.streamable_http import streamable_http_client
+
 
 async def main():
     url = "https://mcp.consensus.app/mcp"
@@ -15,27 +17,32 @@ async def main():
                 async with ClientSession(read_stream, write_stream) as session:
                     print("Initializing MCP session...")
                     init_result = await session.initialize()
-                    print(f"Initialized server: {init_result.serverInfo.name} v{init_result.serverInfo.version}")
-                    
+                    server = init_result.serverInfo
+                    print(f"Initialized server: {server.name} v{server.version}")
+
                     print("Calling 'search' tool with query='machine learning'...")
-                    result = await session.call_tool("search", arguments={"query": "machine learning"})
+                    result = await session.call_tool(
+                        "search", arguments={"query": "machine learning"}
+                    )
                     if result.content:
                         content_type = type(result.content[0]).__name__
                         print(f"Response content type: {content_type}")
-                        if content_type == 'TextContent':
+                        if content_type == "TextContent":
                             import json
+
                             raw = json.loads(result.content[0].text)
                             print(f"Total results: {raw.get('total_results', 'N/A')}")
-                            papers = raw.get('papers', [])
+                            papers = raw.get("papers", [])
                             print(f"Returned papers count: {len(papers)}")
                             if papers:
                                 print(f"First paper keys: {list(papers[0].keys())}")
                                 print(f"First paper title: {papers[0].get('title')}")
                     else:
                         print("No content returned.")
-    except Exception as e:
-        print(f"Spike failed with exception:")
+    except Exception:
+        print("Spike failed with exception:")
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

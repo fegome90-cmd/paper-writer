@@ -64,6 +64,7 @@ class TestUnexpectedExceptionCatchAll:
             (UserInputError("bad input"), 2),
             (ExternalServiceError("api down"), 3),
         ]:
+
             def _raise(_args: object, _exc: BaseException = exc) -> None:
                 raise _exc
 
