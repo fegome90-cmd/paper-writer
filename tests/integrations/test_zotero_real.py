@@ -1,10 +1,15 @@
-"""Real integration tests against a running local Zotero instance."""
+"""Real integration tests against a running local Zotero instance.
+
+These require a live Zotero with the Better BibTeX plugin. They are skipped
+when Zotero is not running locally. Per AGENTS.md gotcha #4, marked
+@ pytest.mark.integration so they can be excluded with -m "not integration".
+"""
 
 import socket
 
 import pytest
 
-from clients.zotero import ZoteroClient, ZoteroConfig
+from clients.zotero import ZoteroClient, ZoteroConfig, ZoteroUnavailableError
 
 
 def is_zotero_running() -> bool:
@@ -15,10 +20,15 @@ def is_zotero_running() -> bool:
         return False
 
 
-# Skip all tests in this module if Zotero is not running locally.
-pytestmark = pytest.mark.skipif(
-    not is_zotero_running(), reason="Local Zotero instance is not running on port 23119"
-)
+# Mark all tests in this module as integration (real adapters) per AGENTS.md #4,
+# and skip when Zotero is not running locally.
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        not is_zotero_running(),
+        reason="Local Zotero instance is not running on port 23119",
+    ),
+]
 
 
 class TestZoteroRealIntegration:
@@ -41,7 +51,13 @@ class TestZoteroRealIntegration:
         assert isinstance(bib, str)
 
     def test_bbt_local_fetch_bibtex(self) -> None:
+        # The BBT endpoint can return 500 even when the Zotero socket responds
+        # (plugin misconfigured/not installed). Skip rather than fail so local
+        # 'make test' stays clean when only the BBT plugin is down.
         config = ZoteroConfig(user_id="20772197", bbt_local=True)
         client = ZoteroClient(config=config)
-        bib = client.fetch_bibtex()
+        try:
+            bib = client.fetch_bibtex()
+        except ZoteroUnavailableError as exc:
+            pytest.skip(f"Better BibTeX endpoint unavailable: {exc}")
         assert isinstance(bib, str)
