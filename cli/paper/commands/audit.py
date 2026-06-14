@@ -276,8 +276,15 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
             err = report.error or dep_report.error
             emit_info(f"  Note: {err}")
 
-    # Exit 1 if there are actionable findings, 0 otherwise
-    sys.exit(1 if (report.findings or dep_report.findings) else 0)
+    # Exit 1 if there are actionable findings OR a real Trifecta error occurred
+    # while enabled (error with empty findings would otherwise mask as success
+    # under --quiet). When trifecta_enabled=False, the error is informational
+    # (SKIPPED), not a failure — exit 0 so optional-Trifecta doesn't break CI.
+    has_real_error = bool(
+        (report.trifecta_enabled and report.error)
+        or (dep_report.trifecta_enabled and dep_report.error)
+    )
+    sys.exit(1 if (report.findings or dep_report.findings or has_real_error) else 0)
 
 
 def _cmd_audit_factuality(args: argparse.Namespace) -> None:
