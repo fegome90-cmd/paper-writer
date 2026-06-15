@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
@@ -143,29 +143,59 @@ def _serialize_result(result: OrchestratorResult) -> dict[str, JSONValue]:
 def to_json_value(value: object) -> JSONValue:
     """Explicit normalization of arbitrary objects to JSONValue.
 
-    NEVER use default=str — it hides contract errors.
+    NEVER use default=str — it hides contract errors. Raises TypeError on
+    circular references (self-referential dataclasses) instead of RecursionError.
     """
+    return _to_json_value(value, set())
+
+
+def _to_json_value(value: object, seen: set[int]) -> JSONValue:
+    """Recursive normalizer. ``seen`` tracks id() of mutable containers to detect cycles."""
     # NOTE: check bool BEFORE int (bool is a subclass of int in Python)
     if isinstance(value, (str, bool, int, float)) or value is None:
         return value
+    # Cycle detection for compound types (list/dict/dataclass). Primitives are
+    # immutable and cannot participate in cycles, so they skip the guard.
+    if isinstance(value, (list, tuple, dict)):
+        obj_id = id(value)
+        if obj_id in seen:
+            raise TypeError(
+                f"Circular reference detected in {type(value).__name__} "
+                f"(JSON cannot represent cycles)"
+            )
+        seen.add(obj_id)
     if isinstance(value, list):
-        return [to_json_value(v) for v in value]
+        return [_to_json_value(v, seen) for v in value]
     if isinstance(value, tuple):
-        return [to_json_value(v) for v in value]
+        return [_to_json_value(v, seen) for v in value]
     if isinstance(value, dict):
         result: dict[str, JSONValue] = {}
         for key, item in value.items():
             if not isinstance(key, str):
                 raise TypeError(f"JSON object key must be str, got {type(key).__name__}")
-            result[key] = to_json_value(item)
+            result[key] = _to_json_value(item, seen)
         return result
     # Path, Enum, dataclass, datetime -> explicit normalization (NO default=str per spec S9)
     if isinstance(value, Path):
         return str(value)
     if isinstance(value, Enum):
-        return to_json_value(value.value)
+        return _to_json_value(value.value, seen)
     if is_dataclass(value) and not isinstance(value, type):
-        return to_json_value(asdict(value))
+        # Detect cycle on the dataclass INSTANCE before recursing into its fields.
+        # NOTE: asdict() recurses internally and would stack-overflow on cycles
+        # BEFORE our seen-guard runs. So we iterate fields manually and delegate
+        # each field value to _to_json_value, letting the seen-set catch cycles.
+        obj_id = id(value)
+        if obj_id in seen:
+            raise TypeError(
+                f"Circular reference detected in dataclass {type(value).__name__} "
+                f"(JSON cannot represent cycles)"
+            )
+        seen.add(obj_id)
+        result_dc: dict[str, JSONValue] = {}
+        for f in fields(value):
+            result_dc[f.name] = _to_json_value(getattr(value, f.name), seen)
+        return result_dc
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     raise TypeError(f"No JSON normalization defined for {type(value).__name__}")

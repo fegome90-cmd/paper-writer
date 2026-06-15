@@ -82,3 +82,23 @@ class TestJsonNormalizerRejectsInvalidInput:
 
         with pytest.raises(TypeError):
             to_json_value(_Unknown())
+
+    def test_circular_dataclass_reference_raises_typeerror_not_recursionerror(self) -> None:
+        """W1 fix: self-referential dataclass must raise TypeError, not RecursionError.
+
+        A dataclass that references itself (directly or transitively) would make
+        asdict() + to_json_value recurse infinitely. The depth/seen guard converts
+        that into a clear TypeError so the user gets an actionable message.
+        """
+        from dataclasses import dataclass
+
+        @dataclass
+        class _Node:
+            name: str
+            parent: _Node | None = None
+
+        root = _Node(name="root")
+        root.parent = root  # circular reference
+
+        with pytest.raises(TypeError, match=r"circular|cycle|depth|recursion"):
+            to_json_value(root)
