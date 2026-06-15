@@ -189,16 +189,10 @@ PIPELINE_MAP: dict[str, PipelineSpec] = {
     "init": PipelineSpec(resolve=_resolve_init, needs_review_config=False),
     "search": PipelineSpec(resolve=_resolve_search),
     "chain": PipelineSpec(resolve=_resolve_chain),
-    "export-bib": PipelineSpec(
-        resolve=lambda a: PipelineInvocation("export_bib", {"bib_path": a.bib_path})
-    ),
-    "screen": PipelineSpec(
-        resolve=lambda a: PipelineInvocation("screen", {"min_tier": a.min_tier})
-    ),
+    "export-bib": PipelineSpec(resolve=_resolve_export_bib),
+    "screen": PipelineSpec(resolve=_resolve_screen),
     "draft:outline": PipelineSpec(resolve=lambda a: PipelineInvocation("draft_outline", {})),
-    "draft:section": PipelineSpec(
-        resolve=lambda a: PipelineInvocation("draft_section", {"name": a.name})
-    ),
+    "draft:section": PipelineSpec(resolve=_resolve_draft_section),
     "draft:all": PipelineSpec(resolve=lambda a: PipelineInvocation("draft_all", {})),
     "protocol": PipelineSpec(resolve=_resolve_protocol),
     "lint:bib": PipelineSpec(
