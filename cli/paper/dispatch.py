@@ -171,14 +171,18 @@ def _resolve_export_bib(args: Any) -> PipelineInvocation:
 
 
 def _resolve_screen(args: Any) -> PipelineInvocation:
-    """Screen evidence — defensive getattr."""
+    """Screen evidence — defensive getattr with explicit default."""
     min_tier = getattr(args, "min_tier", None)
+    if min_tier is None:
+        raise UserInputError("--min-tier is required for screen")
     return PipelineInvocation("screen", {"min_tier": min_tier})
 
 
 def _resolve_draft_section(args: Any) -> PipelineInvocation:
-    """Draft a section — defensive getattr for name."""
+    """Draft a section — validates name is provided."""
     name = getattr(args, "name", None)
+    if name is None:
+        raise UserInputError("name is required for draft section")
     return PipelineInvocation("draft_section", {"name": name})
 
 

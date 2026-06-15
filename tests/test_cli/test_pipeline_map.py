@@ -13,6 +13,7 @@ import argparse
 import pytest
 
 from cli.paper.dispatch import PIPELINE_MAP, _make_key
+from cli.paper.errors import UserInputError
 
 EXPECTED_PIPELINE_KEYS = frozenset(
     {
@@ -179,3 +180,22 @@ class TestResolverSemantics:
         inv = PIPELINE_MAP["render"].resolve(args)
         assert inv.orch_command == "render"
         assert inv.args["output_formats"] == ["docx", "pdf"]
+
+
+class TestResolverStrictValidation:
+    """Resolvers must reject None with UserInputError, not send None to orchestrator."""
+
+    def test_resolve_screen_rejects_none_min_tier(self) -> None:
+        args = argparse.Namespace(min_tier=None)
+        with pytest.raises(UserInputError, match="--min-tier"):
+            PIPELINE_MAP["screen"].resolve(args)
+
+    def test_resolve_draft_section_rejects_none_name(self) -> None:
+        args = argparse.Namespace(name=None)
+        with pytest.raises(UserInputError, match="name"):
+            PIPELINE_MAP["draft:section"].resolve(args)
+
+    def test_resolve_export_bib_rejects_none_bib_path(self) -> None:
+        args = argparse.Namespace(bib_path=None)
+        with pytest.raises(UserInputError, match="--bib-path"):
+            PIPELINE_MAP["export-bib"].resolve(args)
