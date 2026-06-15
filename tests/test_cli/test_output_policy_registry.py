@@ -2,7 +2,7 @@
 
 Fail-closed enforcement: every callback parser MUST attach output_policy
 metadata via set_defaults(). Missing metadata would raise RuntimeError at
-validation time (per _validate_output_policy fail-closed contract).
+validation time (per validate_output_policy fail-closed contract).
 """
 
 from __future__ import annotations

@@ -171,7 +171,7 @@ def to_json_value(value: object) -> JSONValue:
     raise TypeError(f"No JSON normalization defined for {type(value).__name__}")
 
 
-def _validate_output_policy(args: argparse.Namespace, output_format: OutputFormat) -> None:
+def validate_output_policy(args: argparse.Namespace, output_format: OutputFormat) -> None:
     """Reject --output-format json for text-only callbacks. Fail-closed (P2.5.3).
 
     Policies (per design.md Registration Table):

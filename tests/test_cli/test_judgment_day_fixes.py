@@ -4,7 +4,7 @@ W-3: audit_code_health exits 1 when report.error is set even if findings list
      is empty (Trifecta failure with --quiet would otherwise show success).
 W-4: a callback missing output_policy metadata gives a clear "Configuration
      error" message, not the generic "Internal error" (RuntimeError from
-     _validate_output_policy fail-closed).
+     validate_output_policy fail-closed).
 """
 
 from __future__ import annotations
@@ -34,9 +34,7 @@ class _FakeCodeHealthReport:
 class TestAuditCodeHealthErrorExit:
     """W-3: error in report (Trifecta down) MUST exit 1 even with no findings."""
 
-    def test_error_without_findings_exits_1(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_error_without_findings_exits_1(self, capsys: pytest.CaptureFixture[str]) -> None:
         """If report.error is set but findings empty, exit 1 (not 0)."""
         import argparse
 
@@ -47,12 +45,15 @@ class TestAuditCodeHealthErrorExit:
         )
         ok_report = _FakeCodeHealthReport(findings=[])
 
-        with patch(
-            "validators.code_health.analyze_code_health",
-            return_value=error_report,
-        ), patch(
-            "validators.code_health.analyze_dependency_risk",
-            return_value=ok_report,
+        with (
+            patch(
+                "validators.code_health.analyze_code_health",
+                return_value=error_report,
+            ),
+            patch(
+                "validators.code_health.analyze_dependency_risk",
+                return_value=ok_report,
+            ),
         ):
             args = argparse.Namespace(output="json")
             with pytest.raises(SystemExit) as exc:
@@ -61,18 +62,15 @@ class TestAuditCodeHealthErrorExit:
             "audit code-health MUST exit 1 when report.error is set (closes W-3)"
         )
 
-    def test_no_error_no_findings_exits_0(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_no_error_no_findings_exits_0(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Happy path: no error, no findings -> exit 0."""
         import argparse
 
         ok_report = _FakeCodeHealthReport(findings=[])
 
-        with patch(
-            "validators.code_health.analyze_code_health", return_value=ok_report
-        ), patch(
-            "validators.code_health.analyze_dependency_risk", return_value=ok_report
+        with (
+            patch("validators.code_health.analyze_code_health", return_value=ok_report),
+            patch("validators.code_health.analyze_dependency_risk", return_value=ok_report),
         ):
             args = argparse.Namespace(output="json")
             with pytest.raises(SystemExit) as exc:
@@ -94,7 +92,7 @@ class TestValidateOutputPolicyRuntimeErrorClarity:
         """
         import argparse
 
-        from cli.paper.output import _validate_output_policy
+        from cli.paper.output import validate_output_policy
 
         args = argparse.Namespace(
             command="test_cmd",
@@ -103,6 +101,6 @@ class TestValidateOutputPolicyRuntimeErrorClarity:
             output_format="text",
         )
         with pytest.raises(RuntimeError, match="Missing output_policy"):
-            _validate_output_policy(args, "text")
+            validate_output_policy(args, "text")
         # The RuntimeError message itself is the clear config-error signal.
         # main.py's catch-all surfaces it as 'Internal error: Missing output_policy...'.

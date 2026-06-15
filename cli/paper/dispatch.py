@@ -209,7 +209,7 @@ def execute(args: Any) -> int:
     # P2.5.2: validate output_policy (reject json for text-only, fail-closed).
     effective_format = output.effective_output_format(args)
     output.configure(quiet=getattr(args, "quiet", False), output_format=effective_format)
-    output._validate_output_policy(args, effective_format)
+    output.validate_output_policy(args, effective_format)
 
     # Phase 0 commands — run directly via func callback.
     # S16: callbacks marked clean_cancel=True (Zotero write ops) are wrapped in
