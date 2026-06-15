@@ -35,6 +35,22 @@ jobs:
       # Note: mesh-import has only lxml as dependency, already covered by
       # Dependabot and root audit. Its pyproject.toml has no separate lockfile.
 
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@4901385134134e04cec5fbe5ddfe3b2c5bd5d976 # v4
+
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
