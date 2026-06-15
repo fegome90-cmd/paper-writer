@@ -40,6 +40,9 @@ def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Any test that forgets to patch _zotero_client (and thus instantiates the
     real ZoteroClient reaching the network) fails immediately rather than flaking.
+
+    Also resets output config to text defaults so tests are isolated from
+    --output-format json state set by other test modules.
     """
     import socket as _socket
 
@@ -47,6 +50,9 @@ def _no_network(monkeypatch: pytest.MonkeyPatch) -> None:
         pytest.fail("NETWORK LEAK: real socket created — did you patch _zotero_client?")
 
     monkeypatch.setattr(_socket, "socket", _fail)
+    from cli.paper import output as _output
+
+    _output.configure(quiet=False, output_format="text")
 
 
 def _mock_client() -> MagicMock:
@@ -74,7 +80,7 @@ class TestCollections:
             {"key": "ABC12345", "name": "My Papers", "parentCollection": False}
         ]
         with _patch_client(client):
-            _cmd_zotero_collections(MagicMock(local=False))
+            _cmd_zotero_collections(MagicMock(local=False, output_json=False))
         out = capsys.readouterr().out
         assert "ABC12345" in out
         assert "My Papers" in out
@@ -85,12 +91,12 @@ class TestCollections:
         client.fetch_collections.side_effect = ZoteroError("api down")
         with _patch_client(client):
             with pytest.raises(ExternalServiceError, match="api down"):
-                _cmd_zotero_collections(MagicMock(local=False))
+                _cmd_zotero_collections(MagicMock(local=False, output_json=False))
 
     def test_env_missing_raises_user_input(self) -> None:
         with _patch_client(error="ZOTERO_USER_ID is not set"):
             with pytest.raises(UserInputError, match="ZOTERO_USER_ID"):
-                _cmd_zotero_collections(MagicMock(local=False))
+                _cmd_zotero_collections(MagicMock(local=False, output_json=False))
 
 
 # --- _cmd_zotero_search ---

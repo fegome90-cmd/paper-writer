@@ -10,8 +10,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from cli.paper import output as output_mod
 from cli.paper.errors import ExternalServiceError, UserInputError
 from cli.paper.output import emit_info, emit_json, emit_result
+
+
+def _should_emit_json(args: Any) -> bool:
+    """Decide JSON output: global --output-format json OR legacy per-handler --json.
+
+    Reads output_mod._config (module attribute) so configure() reassignment is seen.
+    """
+    return output_mod._config.output_format == "json" or getattr(args, "output_json", False)
 
 
 def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
@@ -37,11 +46,14 @@ def _cmd_zotero_collections(args: Any) -> None:
         raise UserInputError(err)
     try:
         collections = client.fetch_collections()
-        for c in collections:
-            parent = c.get("parentCollection", False)
-            prefix = "  " if parent else ""
-            emit_result(f"{prefix}{c['key']}: {c['name']}")
-        emit_result(f"\n{len(collections)} collection(s)")
+        if _should_emit_json(args):
+            emit_json(collections)
+        else:
+            for c in collections:
+                parent = c.get("parentCollection", False)
+                prefix = "  " if parent else ""
+                emit_result(f"{prefix}{c['key']}: {c['name']}")
+            emit_result(f"\n{len(collections)} collection(s)")
     except ZoteroError as exc:
         raise ExternalServiceError(str(exc)) from exc
 
@@ -61,7 +73,7 @@ def _cmd_zotero_search(args: Any) -> None:
             collection_key=args.collection,
             limit=args.limit,
         )
-        if args.output_json:
+        if _should_emit_json(args):
             emit_json(results)
             return
         for item in results:
@@ -84,7 +96,7 @@ def _cmd_zotero_get(args: Any) -> None:
         raise UserInputError(err)
     try:
         item = client.get_item(args.key)
-        if args.output_json:
+        if _should_emit_json(args):
             emit_json(item)
             return
         data = item.get("data", item) if isinstance(item, dict) else item
