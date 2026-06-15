@@ -71,3 +71,29 @@ class TestUnexpectedExceptionCatchAll:
             with patch("cli.paper.commands.doctor._cmd_doctor", _raise):
                 code, _ = _run_main(["paper", "doctor"], monkeypatch)
             assert code == expected
+
+    def test_keyboard_interrupt_exits_130(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """S17: KeyboardInterrupt -> exit 130, "Interrupted" to stderr, no traceback.
+
+        KI is raised inside execute() at main.py:31 (inside the try); it propagates
+        to `except KeyboardInterrupt` at main.py:35 -> emit_error("Interrupted") +
+        sys.exit(130). doctor is Phase 0 (not clean_cancel) so the bare raise reaches
+        main() directly. --version cannot be the target: argparse raises SystemExit
+        during parse_args() BEFORE the try block, so KI is never observed there.
+        """
+        monkeypatch.chdir(tmp_path)
+
+        def _interrupt(_args: object) -> None:
+            raise KeyboardInterrupt
+
+        with patch("cli.paper.commands.doctor._cmd_doctor", _interrupt):
+            code, _ = _run_main(["paper", "doctor"], monkeypatch)
+        captured = capsys.readouterr()
+        assert code == 130, "KeyboardInterrupt MUST exit 130 (S17)"
+        assert "Interrupted" in captured.err
+        assert "Traceback" not in captured.err
