@@ -124,7 +124,7 @@ class TestGateGlobalJsonContract:
     ) -> None:
         manuscript = tmp_path / "test.md"
         manuscript.write_text("# Test\n\nContent.")
-        code, out, _err = _run_cli(
+        _code, out, _err = _run_cli(
             tmp_path,
             monkeypatch,
             capsys,
