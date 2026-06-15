@@ -162,6 +162,26 @@ def _resolve_render(args: Any) -> PipelineInvocation:
     )
 
 
+def _resolve_export_bib(args: Any) -> PipelineInvocation:
+    """Export BibTeX — defensive getattr so argparse misconfig gives clear error."""
+    bib_path = getattr(args, "bib_path", None)
+    if bib_path is None:
+        raise UserInputError("--bib-path is required for export-bib")
+    return PipelineInvocation("export_bib", {"bib_path": bib_path})
+
+
+def _resolve_screen(args: Any) -> PipelineInvocation:
+    """Screen evidence — defensive getattr."""
+    min_tier = getattr(args, "min_tier", None)
+    return PipelineInvocation("screen", {"min_tier": min_tier})
+
+
+def _resolve_draft_section(args: Any) -> PipelineInvocation:
+    """Draft a section — defensive getattr for name."""
+    name = getattr(args, "name", None)
+    return PipelineInvocation("draft_section", {"name": name})
+
+
 # The authoritative registry of pipeline commands (spec S3, design.md:222-242).
 # Every key has an explicit owner — no implicit `orch_command = cmd_name` default.
 # This closes the CRITICAL 'verify' gap (verify now has an explicit entry).
