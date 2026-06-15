@@ -113,12 +113,12 @@ def _cmd_zotero_create(args: Any) -> None:
         items = [items]
 
     if args.collection:
-        for item in items:
+        for i, item in enumerate(items):
             if isinstance(item, dict):
                 collections = item.get("collections", [])
                 if args.collection not in collections:
-                    collections.append(args.collection)
-                item["collections"] = collections
+                    collections = [*collections, args.collection]
+                items[i] = {**item, "collections": collections}
 
     try:
         result = client.create_items(items)

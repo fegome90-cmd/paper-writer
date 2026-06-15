@@ -80,7 +80,11 @@ def emit_info(message: str) -> None:
 
 
 def emit_warning(message: str) -> None:
-    """Write warning to stderr. Suppressed by --quiet."""
+    """Write warning to stderr. Suppressed by --quiet.
+
+    NOTE: The message should NOT include a 'Warning:' prefix —
+    emit_warning() adds it.
+    """
     if not _config.quiet:
         print(f"Warning: {message}", file=sys.stderr)
 
