@@ -107,7 +107,7 @@ def _setup_full_pipeline(project: Path) -> None:
         ["audit", "reporting"],
     ]:
         r = _run(CLI_CMD + cmd_args, project)
-        assert "Step:" in r.stdout, f"{cmd_args} crashed: {r.stdout}"
+        assert "Step:" in (r.stdout + r.stderr), f"{cmd_args} crashed: {r.stdout}"
 
 
 @pytest.fixture
@@ -218,17 +218,17 @@ class TestE2EValidation:
         """Lint bib with a real .bib imported."""
         _setup_to_validating(project)
         result = _run(CLI_CMD + ["lint", "bib"], project)
-        assert "Step:" in result.stdout
+        assert "Step:" in (result.stdout + result.stderr)
 
     def test_lint_style(self, project: Path) -> None:
         _setup_to_validating(project)
         result = _run(CLI_CMD + ["lint", "style"], project)
-        assert "Step:" in result.stdout
+        assert "Step:" in (result.stdout + result.stderr)
 
     def test_check_refs(self, project: Path) -> None:
         _setup_to_validating(project)
         result = _run(CLI_CMD + ["check", "refs"], project)
-        assert "Step:" in result.stdout
+        assert "Step:" in (result.stdout + result.stderr)
 
 
 class TestE2EFullPipeline:
