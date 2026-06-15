@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from cli.paper.errors import UserInputError
-from cli.paper.output import emit_info, emit_json, emit_result, emit_warning
+from cli.paper.output import emit_info, emit_json, emit_result, emit_warning, should_emit_json
 
 
 def _cmd_audit_prose(args: argparse.Namespace) -> None:
@@ -57,7 +57,7 @@ def _cmd_audit_prose(args: argparse.Namespace) -> None:
     if missing:
         emit_warning(f"result missing schema fields: {missing}")
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         emit_result(format_terminal(findings))
@@ -81,7 +81,7 @@ def _cmd_audit_claims(args: argparse.Namespace) -> None:
 
     result = build_claims_report(manuscript, candidates, elapsed, rules_loaded=len(validator.rules))
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         from engine.formatter import format_claims_output
@@ -127,7 +127,7 @@ def _cmd_audit_citations(args: argparse.Namespace) -> None:
         },
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         emit_result(format_terminal(findings))
@@ -167,7 +167,7 @@ def _cmd_audit_ethics(args: argparse.Namespace) -> None:
         },
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         emit_result(format_terminal(findings))
@@ -214,7 +214,7 @@ def _cmd_audit_writing_quality(args: argparse.Namespace) -> None:
         },
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         emit_result(format_terminal(findings))
@@ -257,7 +257,7 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
         "dead_hubs": [f.to_dict() for f in dep_report.findings],
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(output)
     else:
         emit_result(str(output["summary"]))
@@ -328,7 +328,7 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
         "findings": findings,
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(output)
     else:
         emit_result(f"Claim-evidence factuality audit: {len(findings)} findings")
@@ -357,7 +357,7 @@ def _cmd_audit_tables(args: argparse.Namespace) -> None:
         "findings": findings,
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(output)
     else:
         if findings:
@@ -396,7 +396,7 @@ def _cmd_audit_quality_appraisal(args: argparse.Namespace) -> None:
         "findings": [f if isinstance(f, dict) else str(f) for f in findings],
     }
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(output)
     else:
         emit_result(f"Quality appraisal: {len(findings)} findings")

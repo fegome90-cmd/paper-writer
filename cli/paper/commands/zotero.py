@@ -10,17 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from cli.paper import output as output_mod
 from cli.paper.errors import ExternalServiceError, UserInputError
-from cli.paper.output import emit_info, emit_json, emit_result
-
-
-def _should_emit_json(args: Any) -> bool:
-    """Decide JSON output: global --output-format json OR legacy per-handler --json.
-
-    Reads output_mod._config (module attribute) so configure() reassignment is seen.
-    """
-    return output_mod._config.output_format == "json" or getattr(args, "output_json", False)
+from cli.paper.output import emit_info, emit_json, emit_result, should_emit_json
 
 
 def _zotero_client(*, local: bool = False) -> tuple[Any, str | None]:
@@ -46,7 +37,7 @@ def _cmd_zotero_collections(args: Any) -> None:
         raise UserInputError(err)
     try:
         collections = client.fetch_collections()
-        if _should_emit_json(args):
+        if should_emit_json(args):
             emit_json(collections)
         else:
             for c in collections:
@@ -73,7 +64,7 @@ def _cmd_zotero_search(args: Any) -> None:
             collection_key=args.collection,
             limit=args.limit,
         )
-        if _should_emit_json(args):
+        if should_emit_json(args):
             emit_json(results)
             return
         for item in results:
@@ -96,7 +87,7 @@ def _cmd_zotero_get(args: Any) -> None:
         raise UserInputError(err)
     try:
         item = client.get_item(args.key)
-        if _should_emit_json(args):
+        if should_emit_json(args):
             emit_json(item)
             return
         data = item.get("data", item) if isinstance(item, dict) else item

@@ -63,6 +63,21 @@ def effective_output_format(args: argparse.Namespace) -> OutputFormat:
     return cast(OutputFormat, getattr(args, "output_format", "text"))
 
 
+def should_emit_json(args: argparse.Namespace) -> bool:
+    """Single source of truth: should this handler emit JSON?
+
+    Reads the GLOBAL _config.output_format (already resolved by dispatch.execute()
+    via effective_output_format + configure()) as the primary signal, with fallback
+    to per-handler args.output=="json" and the legacy --json flag (zotero).
+    All Phase 0 handlers MUST use this instead of `args.output == "json"`.
+    """
+    return (
+        _config.output_format == "json"
+        or getattr(args, "output", None) == "json"
+        or getattr(args, "output_json", False)
+    )
+
+
 def emit_result(msg: str) -> None:
     """Write requested result to stdout. NEVER suppressed by --quiet."""
     print(msg)

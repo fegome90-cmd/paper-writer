@@ -3,7 +3,7 @@
 import argparse
 
 from cli.paper.errors import ExternalServiceError, UserInputError
-from cli.paper.output import emit_json, emit_result
+from cli.paper.output import emit_json, emit_result, should_emit_json
 
 
 def _cmd_trace(args: argparse.Namespace) -> None:
@@ -26,7 +26,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
         result = client.find_callers(symbol, depth=args.depth)
         if not result.success:
             raise ExternalServiceError(str(result.error))
-        if args.output == "json":
+        if should_emit_json(args):
             emit_json(result.data)
         else:
             if not result.data:
@@ -42,7 +42,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
         result = client.find_callees(symbol)
         if not result.success:
             raise ExternalServiceError(str(result.error))
-        if args.output == "json":
+        if should_emit_json(args):
             emit_json(result.data)
         else:
             if not result.data:
@@ -60,7 +60,7 @@ def _cmd_trace(args: argparse.Namespace) -> None:
         result = client.find_path(symbol, args.to_symbol)
         if not result.success:
             raise ExternalServiceError(str(result.error))
-        if args.output == "json":
+        if should_emit_json(args):
             emit_json(result.data)
         else:
             data = result.data
@@ -88,7 +88,7 @@ def _cmd_graph_overview(args: argparse.Namespace) -> None:
         raise ExternalServiceError(str(result.error))
 
     data = result.data
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(data)
     else:
         emit_result("Graph Overview")

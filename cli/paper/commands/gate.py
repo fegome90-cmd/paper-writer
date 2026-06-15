@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from cli.paper.errors import UserInputError
-from cli.paper.output import emit_json, emit_result
+from cli.paper.output import emit_json, emit_result, should_emit_json
 
 
 def _cmd_gate_method(args: argparse.Namespace) -> None:
@@ -31,7 +31,7 @@ def _cmd_gate_method(args: argparse.Namespace) -> None:
     elapsed = int((time.time() - t0) * 1000)
     result["metadata"]["execution_time_ms"] = elapsed
 
-    if args.output == "json":
+    if should_emit_json(args):
         emit_json(result)
     else:
         emit_result(format_gate_result(result))
