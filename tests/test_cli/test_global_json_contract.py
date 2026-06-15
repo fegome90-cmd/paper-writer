@@ -52,37 +52,64 @@ def _run_cli(
 class TestAuditGlobalJsonContract:
     """paper --output-format json audit prose file.md → must emit JSON, not text."""
 
-    def test_audit_prose_global_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                                     capsys: pytest.CaptureFixture[str]) -> None:
+    def test_audit_prose_global_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         manuscript = tmp_path / "test.md"
         manuscript.write_text("# Test manuscript\n\nSome content.")
         code, out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
-            ["paper", "--output-format", "json", "--project", str(tmp_path), "audit", "prose", str(manuscript)],
+            tmp_path,
+            monkeypatch,
+            capsys,
+            [
+                "paper",
+                "--output-format",
+                "json",
+                "--project",
+                str(tmp_path),
+                "audit",
+                "prose",
+                str(manuscript),
+            ],
         )
         assert code == 0
         data = json.loads(out)  # raises if not JSON — the regression guard
         assert data["command"] == "audit_prose"
 
-    def test_audit_prose_subcmd_output_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                                            capsys: pytest.CaptureFixture[str]) -> None:
+    def test_audit_prose_subcmd_output_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """Subcommand --output json also works (backward compat)."""
         manuscript = tmp_path / "test.md"
         manuscript.write_text("# Test\n\nContent.")
         code, out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
-            ["paper", "--project", str(tmp_path), "audit", "prose", str(manuscript), "--output", "json"],
+            tmp_path,
+            monkeypatch,
+            capsys,
+            [
+                "paper",
+                "--project",
+                str(tmp_path),
+                "audit",
+                "prose",
+                str(manuscript),
+                "--output",
+                "json",
+            ],
         )
         assert code == 0
         json.loads(out)  # must be valid JSON
 
-    def test_audit_prose_text_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                                      capsys: pytest.CaptureFixture[str]) -> None:
+    def test_audit_prose_text_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """Without json flags, audit prose emits text (not JSON)."""
         manuscript = tmp_path / "test.md"
         manuscript.write_text("# Test\n\nContent.")
         code, out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
+            tmp_path,
+            monkeypatch,
+            capsys,
             ["paper", "--project", str(tmp_path), "audit", "prose", str(manuscript)],
         )
         assert code == 0
@@ -92,13 +119,25 @@ class TestAuditGlobalJsonContract:
 class TestGateGlobalJsonContract:
     """paper --output-format json gate method file.md → must emit JSON."""
 
-    def test_gate_method_global_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                                     capsys: pytest.CaptureFixture[str]) -> None:
+    def test_gate_method_global_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         manuscript = tmp_path / "test.md"
         manuscript.write_text("# Test\n\nContent.")
         code, out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
-            ["paper", "--output-format", "json", "--project", str(tmp_path), "gate", "method", str(manuscript)],
+            tmp_path,
+            monkeypatch,
+            capsys,
+            [
+                "paper",
+                "--output-format",
+                "json",
+                "--project",
+                str(tmp_path),
+                "gate",
+                "method",
+                str(manuscript),
+            ],
         )
         json.loads(out)  # must be valid JSON
 
@@ -110,11 +149,13 @@ class TestGraphGlobalJsonContract:
     the JSON decision path (not text). The exit 3 confirms it tried the service.
     """
 
-    def test_graph_overview_global_json_reaches_handler(self, tmp_path: Path,
-                                                        monkeypatch: pytest.MonkeyPatch,
-                                                        capsys: pytest.CaptureFixture[str]) -> None:
+    def test_graph_overview_global_json_reaches_handler(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, _out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
+            tmp_path,
+            monkeypatch,
+            capsys,
             ["paper", "--output-format", "json", "--project", str(tmp_path), "graph-overview"],
         )
         # Trifecta not available → ExternalServiceError → exit 3
@@ -127,11 +168,22 @@ class TestGraphGlobalJsonContract:
 class TestZoteroGlobalJsonContract:
     """paper --output-format json zotero collections → ExternalServiceError (no Zotero) exit 3."""
 
-    def test_zotero_collections_global_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                                             capsys: pytest.CaptureFixture[str]) -> None:
+    def test_zotero_collections_global_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, _out, _err = _run_cli(
-            tmp_path, monkeypatch, capsys,
-            ["paper", "--output-format", "json", "--project", str(tmp_path), "zotero", "collections"],
+            tmp_path,
+            monkeypatch,
+            capsys,
+            [
+                "paper",
+                "--output-format",
+                "json",
+                "--project",
+                str(tmp_path),
+                "zotero",
+                "collections",
+            ],
         )
         # Zotero env not configured → UserInputError → exit 2
         assert code == 2, "zotero without config must exit 2 (UserInputError)"
