@@ -181,7 +181,11 @@ def test_cli_full_pipeline(
         main()
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "ready_for_delivery" in captured.out
+    # verify emits the manifest artifact path, not 'ready_for_delivery' in stdout.
+    # The gate is set internally in state YAML; the user sees the artifact + stage message.
+    assert "manifest" in captured.out, (
+        f"verify should emit manifest artifact in output, got: {captured.out!r}"
+    )
 
 
 def test_cli_search_with_query_uses_provider(

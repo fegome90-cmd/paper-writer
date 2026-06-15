@@ -1,0 +1,19 @@
+# paper-writer environment configuration
+# Copy to .envrc and fill in your values. Use direnv to auto-load.
+
+# Required: search provider for `paper search` (fail-closed without it)
+# Options: fixture (test data), mcp (paper-mcp server), consensus (Consensus API)
+export PAPER_SEARCH_PROVIDER=fixture
+
+# Optional: Trifecta code graph (off by default)
+# export MCP_TRIFECTA_MODE=real
+
+# Optional: Consensus API (requires API key)
+# export CONSENSUS_API_KEY=your-key-here
+
+# Optional: Zotero local integration
+# export ZOTERO_USER_ID=your-user-id
+# export ZOTERO_API_KEY=your-api-key
+
+# Optional: paper-mcp server path
+# export PAPER_MCP_SERVER_PATH=/path/to/paper-mcp/server.js

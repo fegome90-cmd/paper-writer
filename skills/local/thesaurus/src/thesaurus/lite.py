@@ -428,6 +428,32 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
             for ext in ["", "-wal", "-shm"]:
                 Path(str(staging_path) + ext).unlink(missing_ok=True)
 
+            # BUG-001 FIX: Ensure schema_migrations reflects ALL applied migrations.
+            # The backup() copies the staging DB (which has correct schema_migrations),
+            # but if a previous rebuild left a stale state where v2 schema was applied
+            # without recording v2 in schema_migrations, the next _ensure_schema() would
+            # re-apply 0002 and crash (no such column: c.alt_labels).
+            # Force-register all migration versions to match the actual schema state.
+            import sqlite3 as _sqlite3
+
+            post_conn = _sqlite3.connect(str(self._db_path))
+            try:
+                sql_dir = Path(str(_MIGRATIONS_DIR))
+                for sql_f in sorted(sql_dir.glob("*.sql")):
+                    version = int(sql_f.stem.split("_")[0])
+                    existing = post_conn.execute(
+                        "SELECT version FROM schema_migrations WHERE version = ?", (version,)
+                    ).fetchone()
+                    if existing is None:
+                        post_conn.execute(
+                            "INSERT INTO schema_migrations (version, applied_at) "
+                            "VALUES (?, datetime('now'))",
+                            (version,),
+                        )
+                post_conn.commit()
+            finally:
+                post_conn.close()
+
         except Exception as e:
             # On any failure, clean up staging and preserve live DB
             for ext in ["", "-wal", "-shm"]:
