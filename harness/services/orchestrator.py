@@ -397,8 +397,7 @@ class Orchestrator:
             raise ValueError(
                 f"Command '{command}' requires stage '{min_stage}' or later. "
                 f"Current stage is '{current_stage}'. "
-                f"Run earlier pipeline steps first (e.g. 'paper render' to reach "
-                f"'{min_stage}')."
+                f"Run earlier pipeline steps first to reach '{min_stage}'."
             )
 
         if command == "verify":

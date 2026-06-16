@@ -434,11 +434,11 @@ class LiteSemanticStore(SemanticStore):  # type: ignore[misc]
             # without recording v2 in schema_migrations, the next _ensure_schema() would
             # re-apply 0002 and crash (no such column: c.alt_labels).
             # Force-register all migration versions to match the actual schema state.
-            import sqlite3 as _sqlite3
+            import sqlite3 as _sqlite3  # already imported at module scope; kept for clarity
 
             post_conn = _sqlite3.connect(str(self._db_path))
             try:
-                sql_dir = Path(str(_MIGRATIONS_DIR))
+                sql_dir = _MIGRATIONS_DIR
                 for sql_f in sorted(sql_dir.glob("*.sql")):
                     version = int(sql_f.stem.split("_")[0])
                     existing = post_conn.execute(
