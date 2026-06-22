@@ -800,3 +800,55 @@ class TestReviewConfigNullMode:
         snapshot = load_review_config_snapshot(tmp_path)
 
         assert legacy["mode"] == snapshot.values["mode"] == "rapid"
+
+
+class TestBinaryReviewConfig:
+    """P1: Binary/non-UTF8 review_config.yaml must produce default_invalid, not crash."""
+
+    def test_binary_review_config_returns_default_invalid_snapshot(
+        self, tmp_path: Path
+    ) -> None:
+        """Binary review_config.yaml → source=default_invalid, defaults returned."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "review_config.yaml").write_bytes(b"\x80\x81\x82\xff\xfe")
+
+        snapshot = load_review_config_snapshot(tmp_path)
+
+        assert snapshot.source == "default_invalid"
+        assert snapshot.values["mode"] == "rapid"
+        assert len(snapshot.warnings) > 0
+
+    def test_binary_review_config_preflight_emits_valid_json(
+        self, tmp_path: Path
+    ) -> None:
+        """Binary review_config.yaml + preflight → PreflightResult with valid status."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "review_config.yaml").write_bytes(b"\x80\x81\x82\xff\xfe")
+
+        result = resolve_preflight(tmp_path, review_config=None)
+
+        # Must not crash — must produce a structured result
+        assert result.status in ("ready", "needs_input", "blocked")
+        assert result.review_mode == "rapid"
+
+
+class TestUnknownCommandWithMissingState:
+    """P2: unknown_command + state_missing must report BOTH blockers."""
+
+    def test_unknown_command_with_missing_state_reports_both_blockers(
+        self, tmp_path: Path
+    ) -> None:
+        """Unknown cmd + missing state → both state_missing and unknown_command."""
+        # No state.yaml — state is missing
+        result = resolve_preflight(
+            tmp_path,
+            command="nonexistent:command",
+            review_config=_rapid_snapshot(),
+        )
+
+        assert result.status == "blocked"
+        codes = [b.code for b in result.blockers]
+        assert "unknown_command" in codes
+        assert "state_missing" in codes

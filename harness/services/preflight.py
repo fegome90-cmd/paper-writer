@@ -304,7 +304,12 @@ def resolve_preflight(
 
     # state_missing blockers/warnings
     if state_missing:
-        if command is None or (
+        # Pipeline-level state_missing blocker applies to:
+        # - general preflight (no command)
+        # - unknown command (pipeline state is still missing)
+        # - pipeline_governed commands
+        # Standalone and pipeline_initializer are exempt (warning only).
+        if command is None or spec is None or (
             spec is not None and spec.state_policy == "pipeline_governed"
         ):
             blockers.append(

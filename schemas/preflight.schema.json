@@ -6,7 +6,7 @@
   "type": "object",
   "properties": {
     "schema_version": {
-      "type": "string",
+      "const": "1.0",
       "description": "PreflightResult schema version (always '1.0')"
     },
     "status": {
@@ -52,7 +52,8 @@
             "items": { "type": "string" }
           }
         },
-        "required": ["command", "reason"]
+        "required": ["command", "reason", "required_stage", "missing_gates"],
+        "additionalProperties": false
       },
       "description": "Commands that cannot execute with reasons"
     },
@@ -70,7 +71,8 @@
           "message": { "type": "string" },
           "resolution": { "type": "string" }
         },
-        "required": ["code", "scope", "message", "resolution"]
+        "required": ["code", "scope", "message", "resolution"],
+        "additionalProperties": false
       },
       "description": "Structured blockers preventing execution"
     },

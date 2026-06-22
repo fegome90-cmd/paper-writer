@@ -87,7 +87,7 @@ def load_review_config_snapshot(project_root: Path) -> ReviewConfigSnapshot:
             source="file",
             warnings=tuple(warnings_list),
         )
-    except (yaml.YAMLError, OSError) as exc:
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as exc:
         return ReviewConfigSnapshot(
             values=dict(_DEFAULT_CONFIG),
             source="default_invalid",
