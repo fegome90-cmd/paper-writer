@@ -192,16 +192,22 @@ def _to_json_value(value: object, seen: set[int]) -> JSONValue:
             )
         seen.add(obj_id)
     if isinstance(value, list):
-        return [_to_json_value(v, seen) for v in value]
+        try:
+            return [_to_json_value(v, seen) for v in value]
+        finally:
+            seen.discard(id(value))
     if isinstance(value, tuple):
         return [_to_json_value(v, seen) for v in value]
     if isinstance(value, dict):
-        result: dict[str, JSONValue] = {}
-        for key, item in value.items():
-            if not isinstance(key, str):
-                raise TypeError(f"JSON object key must be str, got {type(key).__name__}")
-            result[key] = _to_json_value(item, seen)
-        return result
+        try:
+            result: dict[str, JSONValue] = {}
+            for key, item in value.items():
+                if not isinstance(key, str):
+                    raise TypeError(f"JSON object key must be str, got {type(key).__name__}")
+                result[key] = _to_json_value(item, seen)
+            return result
+        finally:
+            seen.discard(id(value))
     # Path, Enum, dataclass, datetime -> explicit normalization (NO default=str per spec S9)
     if isinstance(value, Path):
         return str(value)
@@ -219,10 +225,13 @@ def _to_json_value(value: object, seen: set[int]) -> JSONValue:
                 f"(JSON cannot represent cycles)"
             )
         seen.add(obj_id)
-        result_dc: dict[str, JSONValue] = {}
-        for f in fields(value):
-            result_dc[f.name] = _to_json_value(getattr(value, f.name), seen)
-        return result_dc
+        try:
+            result_dc: dict[str, JSONValue] = {}
+            for f in fields(value):
+                result_dc[f.name] = _to_json_value(getattr(value, f.name), seen)
+            return result_dc
+        finally:
+            seen.discard(obj_id)
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     raise TypeError(f"No JSON normalization defined for {type(value).__name__}")

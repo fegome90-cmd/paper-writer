@@ -470,6 +470,19 @@ class TestResolvePreflightReviewConfig:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.review_mode == "rapid"
 
+    def test_resolve_preflight_review_mode_invalid_normalized(
+        self, tmp_path: Path
+    ) -> None:
+        """Invalid mode passed directly via snapshot is normalized to 'rapid'."""
+        _write_state(tmp_path, "bootstrap")
+        snap = ReviewConfigSnapshot(
+            values={"mode": "turbo", "search_window": None, "amendments": []},
+            source="file",
+            warnings=(),
+        )
+        result = resolve_preflight(tmp_path, review_config=snap)
+        assert result.review_mode == "rapid"
+
 
 # ─── resolve_preflight: Available/Blocked Commands (Task B3) ─────────────────
 

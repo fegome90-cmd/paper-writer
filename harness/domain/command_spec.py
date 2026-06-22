@@ -12,6 +12,7 @@ without importing from CLI (hexagonal architecture: CLI → Core, never reverse)
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Literal
 
 
@@ -68,7 +69,7 @@ class CommandSpec:
     description: str = ""
 
 
-COMMAND_REGISTRY: dict[str, CommandSpec] = {
+_COMMAND_REGISTRY: dict[str, CommandSpec] = {
     # ═══════════════════════════════════════════════
     # ORCHESTRATED COMMANDS (go through Orchestrator)
     # ═══════════════════════════════════════════════
@@ -754,6 +755,8 @@ COMMAND_REGISTRY: dict[str, CommandSpec] = {
         description="Export MeSH to JSONL",
     ),
 }
+
+COMMAND_REGISTRY: MappingProxyType[str, CommandSpec] = MappingProxyType(_COMMAND_REGISTRY)
 
 
 __all__ = ["COMMAND_REGISTRY", "CommandSpec"]

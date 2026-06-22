@@ -72,14 +72,16 @@ def _cmd_preflight(args: argparse.Namespace) -> int:
 
 
 def _sanitize_text(value: str) -> str:
-    """Escape newline, carriage-return, and tab characters in user-controlled values.
+    r"""Escape all C0 control characters and DEL in user-controlled values.
 
-    Prevents output forgery where a malicious --command containing newlines
-    could inject fake lines into the text output (e.g. a forged 'Status: ready'
-    line). Only \\r, \\n, and \\t are escaped; other control characters are
-    left as-is since they do not create new visible lines.
+    Prevents output forgery (newline injection) and terminal control-sequence
+    injection (ANSI escapes). All ASCII control chars (0x00-0x1F, 0x7F) are
+    replaced with their \\xHH representation.
     """
-    return value.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+    return "".join(
+        f"\\x{ord(c):02x}" if ord(c) < 0x20 or ord(c) == 0x7F else c
+        for c in value
+    )
 
 
 def _print_preflight(result: PreflightResult) -> None:

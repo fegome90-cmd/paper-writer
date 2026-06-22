@@ -356,15 +356,17 @@ class TestNewlineInjection:
         lines = out.split("\n")
         forged = [ln for ln in lines if ln.strip() == "Status: ready"]
         assert len(forged) == 0, "Forged 'Status: ready' appears as standalone line!"
-        # The escaped \\n must be present in the output
-        assert "\\n" in out
+        # The escaped control char must be present in the output
+        assert "\\x0a" in out
 
     def test_sanitize_text_replaces_control_chars(self) -> None:
         """Unit test for _sanitize_text helper."""
         from cli.paper.commands.preflight import _sanitize_text
 
         assert _sanitize_text("hello") == "hello"
-        assert _sanitize_text("a\nb") == "a\\nb"
-        assert _sanitize_text("a\rb") == "a\\rb"
-        assert _sanitize_text("a\tb") == "a\\tb"
+        assert _sanitize_text("a\nb") == "a\\x0ab"
+        assert _sanitize_text("a\rb") == "a\\x0db"
+        assert _sanitize_text("a\tb") == "a\\x09b"
+        assert _sanitize_text("a\x1bb") == "a\\x1bb"  # ESC
+        assert _sanitize_text("a\x00b") == "a\\x00b"  # NUL
         assert _sanitize_text("normal") == "normal"

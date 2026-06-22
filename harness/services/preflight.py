@@ -242,6 +242,8 @@ def resolve_preflight(
     if review_config is None:
         review_config = load_review_config_snapshot(project_root)
     review_mode = review_config.values.get("mode", "rapid")
+    if review_mode not in ("rapid", "academic"):
+        review_mode = "rapid"
 
     # 2. Load state
     current_stage, current_gates, state_missing, state_invalid, state_error = (

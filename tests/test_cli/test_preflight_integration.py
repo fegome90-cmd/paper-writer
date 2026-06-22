@@ -26,6 +26,8 @@ from cli.paper.main import main
 from harness.adapters.yaml_repository import YamlFileStateRepository
 from harness.domain.state import ManuscriptState
 
+pytestmark = pytest.mark.integration
+
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 
