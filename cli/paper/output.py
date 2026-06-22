@@ -155,6 +155,9 @@ def _serialize_result(result: OrchestratorResult) -> dict[str, JSONValue]:
         "blockers": to_json_value(result.blockers),
         "warnings": to_json_value(result.warnings),
         "artifacts": to_json_value(result.artifacts),
+        "gate_changes": to_json_value(result.gate_changes),
+        "state_changes": to_json_value(result.state_changes),
+        "failure_policy": to_json_value(result.failure_policy),
         "exit_code": to_json_value(result.exit_code),
     }
 
@@ -173,9 +176,14 @@ def _to_json_value(value: object, seen: set[int]) -> JSONValue:
     # NOTE: check bool BEFORE int (bool is a subclass of int in Python)
     if isinstance(value, (str, bool, int, float)) or value is None:
         return value
-    # Cycle detection for compound types (list/dict/dataclass). Primitives are
-    # immutable and cannot participate in cycles, so they skip the guard.
-    if isinstance(value, (list, tuple, dict)):
+    # Cycle detection for mutable compound types (list/dict). Primitives and
+    # tuples are immutable and cannot participate in cycles, so they skip the
+    # guard. Tuples are excluded because CPython interns the empty tuple (),
+    # giving all () instances the same id() — tracking them would falsely flag
+    # shared empty tuples (e.g. default missing_gates=() on BlockedCommand) as
+    # cycles. Any genuine cycle involving a tuple still gets caught: the mutable
+    # container (list/dict/dataclass) that closes the loop IS guarded.
+    if isinstance(value, (list, dict)):
         obj_id = id(value)
         if obj_id in seen:
             raise TypeError(
