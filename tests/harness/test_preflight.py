@@ -739,3 +739,64 @@ class TestResolvePreflightSchemaVersion:
     def test_schema_version_missing_state(self, tmp_path: Path) -> None:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.schema_version == "1.0"
+
+
+# ─── Bug Hunt Fixes ──────────────────────────────────────────────────────────
+
+
+class TestBinaryStateYaml:
+    """H1: Binary/non-UTF8 state.yaml must produce state_invalid, not crash."""
+
+    def test_binary_state_yaml_produces_blocked_result(self, tmp_path: Path) -> None:
+        """Binary garbage in state.yaml → status=blocked, state_invalid blocker."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        # Write binary data that cannot be decoded as UTF-8
+        (outputs / "state.yaml").write_bytes(b"\x80\x81\x82\xff\xfe")
+
+        result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
+
+        assert result.status == "blocked"
+        assert result.can_proceed is False
+        codes = [b.code for b in result.blockers]
+        assert "state_invalid" in codes
+
+    def test_binary_state_yaml_with_command(self, tmp_path: Path) -> None:
+        """Binary state + standalone command → ready (standalone exempt)."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "state.yaml").write_bytes(b"\x80\x81\x82\xff\xfe")
+
+        result = resolve_preflight(
+            tmp_path, command="audit:prose", review_config=_rapid_snapshot()
+        )
+
+        assert result.status == "ready"
+        assert result.can_proceed is True
+
+
+class TestReviewConfigNullMode:
+    """L2: mode: null must produce a warning, unlike other invalid modes."""
+
+    def test_null_mode_emits_warning(self, tmp_path: Path) -> None:
+        """mode: null in review_config.yaml → warning emitted, mode='rapid'."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "review_config.yaml").write_text("mode: null\n")
+
+        snapshot = load_review_config_snapshot(tmp_path)
+
+        assert snapshot.values["mode"] == "rapid"
+        assert len(snapshot.warnings) > 0
+        assert any("null" in w.lower() for w in snapshot.warnings)
+
+    def test_null_mode_legacy_loader_matches_snapshot(self, tmp_path: Path) -> None:
+        """Both loaders produce identical values for mode: null."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "review_config.yaml").write_text("mode: null\n")
+
+        legacy = load_review_config(tmp_path)
+        snapshot = load_review_config_snapshot(tmp_path)
+
+        assert legacy["mode"] == snapshot.values["mode"] == "rapid"

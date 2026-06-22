@@ -71,6 +71,16 @@ def _cmd_preflight(args: argparse.Namespace) -> int:
     return {"ready": 0, "needs_input": 2, "blocked": 1}[result.status]
 
 
+def _sanitize_text(value: str) -> str:
+    """Replace control characters that could forge output lines.
+
+    Newlines, carriage returns, and other C0 controls are replaced with
+    their escaped representations so a malicious --command value cannot
+    inject fake lines into the text output.
+    """
+    return value.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+
+
 def _print_preflight(result: PreflightResult) -> None:
     """Emit human-readable preflight text to stdout.
 
@@ -83,11 +93,11 @@ def _print_preflight(result: PreflightResult) -> None:
     lines.append(f"Status: {result.status}")
     lines.append(f"Stage:  {result.current_stage}")
     command_label = result.command if result.command is not None else "(none)"
-    lines.append(f"Command: {command_label}")
+    lines.append(f"Command: {_sanitize_text(command_label)}")
     lines.append(f"Operation: {result.operation}")
     lines.append(f"Mode:   {result.review_mode}")
     next_label = result.next_action if result.next_action is not None else "(none)"
-    lines.append(f"Next:   {next_label}")
+    lines.append(f"Next:   {_sanitize_text(next_label)}")
     lines.append("")
 
     # Gates
@@ -104,7 +114,7 @@ def _print_preflight(result: PreflightResult) -> None:
     lines.append("Available commands:")
     if result.available_commands:
         for cmd in result.available_commands:
-            lines.append(f"  - {cmd}")
+            lines.append(f"  - {_sanitize_text(cmd)}")
     else:
         lines.append("  (none)")
     lines.append("")
@@ -113,7 +123,9 @@ def _print_preflight(result: PreflightResult) -> None:
     lines.append("Blocked commands:")
     if result.blocked_commands:
         for blk in result.blocked_commands:
-            lines.append(f"  - {blk.command} -> {blk.reason}")
+            cmd = _sanitize_text(blk.command)
+            reason = _sanitize_text(blk.reason)
+            lines.append(f"  - {cmd} -> {reason}")
     else:
         lines.append("  (none)")
     lines.append("")
@@ -122,8 +134,10 @@ def _print_preflight(result: PreflightResult) -> None:
     lines.append("Blockers:")
     if result.blockers:
         for blocker in result.blockers:
-            lines.append(f"  - [{blocker.code}] ({blocker.scope}) {blocker.message}")
-            lines.append(f"      resolution: {blocker.resolution}")
+            msg = _sanitize_text(blocker.message)
+            res = _sanitize_text(blocker.resolution)
+            lines.append(f"  - [{blocker.code}] ({blocker.scope}) {msg}")
+            lines.append(f"      resolution: {res}")
     else:
         lines.append("  (none)")
     lines.append("")
@@ -132,7 +146,7 @@ def _print_preflight(result: PreflightResult) -> None:
     lines.append("Warnings:")
     if result.warnings:
         for warning in result.warnings:
-            lines.append(f"  - {warning}")
+            lines.append(f"  - {_sanitize_text(warning)}")
     else:
         lines.append("  (none)")
     lines.append("")

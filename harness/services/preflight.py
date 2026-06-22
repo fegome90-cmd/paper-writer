@@ -205,7 +205,7 @@ def _load_state(
     try:
         data = state_manager.load_state()
         return (data["stage"], dict(data["gates"]), False, False, None)
-    except StateManagerError as e:
+    except (StateManagerError, UnicodeDecodeError) as e:
         return ("bootstrap", _default_gates(), False, True, str(e))
 
 

@@ -320,3 +320,51 @@ class TestPreflightCommandFlag:
         assert code == 1
         codes = [b["code"] for b in data["blockers"]]
         assert "unknown_command" in codes
+
+
+class TestNewlineInjection:
+    """M1: Newline injection in --command must not forge text output lines."""
+
+    def test_newline_in_command_sanitized_in_text(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Newlines in --command are escaped in text output, not rendered literally."""
+        from cli.paper.commands.preflight import _print_preflight
+        from harness.services.preflight import resolve_preflight
+        from harness.services.review_config import ReviewConfigSnapshot
+
+        # Resolve with a command containing newlines
+        result = resolve_preflight(
+            tmp_path,
+            command="search\nStatus: ready\nCan Proceed: yes",
+            review_config=ReviewConfigSnapshot(
+                values={"mode": "rapid", "search_window": None, "amendments": []},
+                source="default_missing",
+                warnings=(),
+            ),
+        )
+
+        # Print in text mode
+        configure(output_format="text")
+        _print_preflight(result)
+        out = capsys.readouterr().out
+
+        # The forged "Status: ready" must NOT appear as a standalone line
+        # (newlines are escaped, so it appears inline as \\n, not as a fake line)
+        lines = out.split("\n")
+        forged = [ln for ln in lines if ln.strip() == "Status: ready"]
+        assert len(forged) == 0, "Forged 'Status: ready' appears as standalone line!"
+        # The escaped \\n must be present in the output
+        assert "\\n" in out
+
+    def test_sanitize_text_replaces_control_chars(self) -> None:
+        """Unit test for _sanitize_text helper."""
+        from cli.paper.commands.preflight import _sanitize_text
+
+        assert _sanitize_text("hello") == "hello"
+        assert _sanitize_text("a\nb") == "a\\nb"
+        assert _sanitize_text("a\rb") == "a\\rb"
+        assert _sanitize_text("a\tb") == "a\\tb"
+        assert _sanitize_text("normal") == "normal"
