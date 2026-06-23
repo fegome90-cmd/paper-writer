@@ -13,9 +13,68 @@ permissions:
   contents: read
 
 jobs:
+  # Preflight: probe the dependency graph by SBOM endpoint EXIT CODE before
+  # dependency-review runs. Branches on exit code: 0 = ready, 403 = permission
+  # gap (C7 — fail loudly, never silently pass), non-zero/404 = graph off.
+  # The probe MUST NOT use `gh api -w '%{http_code}'` (that is a curl flag gh
+  # silently ignores). The job is unconditional on PR/push (no continue-on-error,
+  # no if: that can skip it on either protected trigger).
+  repo-config-preflight:
+    name: Repo config preflight
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Probe dependency graph via SBOM endpoint
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # Scope the exit-code probe to a single command without leaking the
+          # raw output, then restore errexit semantics for the rest of the job.
+          set +e
+          gh api "repos/${REPO}/dependency-graph/sbom" >/dev/null 2>&1
+          probe_rc=$?
+          set -e
+          if [ "$probe_rc" -eq 0 ]; then
+            echo "::notice::Dependency graph is enabled (SBOM endpoint returned 200)."
+            exit 0
+          fi
+          # Distinguish 403 (permission gap, C7) from 404 (graph off) by
+          # re-probing with -i to capture the HTTP status line.
+          http_status=$(gh api -i "repos/${REPO}/dependency-graph/sbom" 2>/dev/null | head -1 | grep -oE '[0-9]{3}' || echo "000")
+          case "$http_status" in
+            403)
+              echo "::error::SBOM read rejected with 403 under permissions: contents: read."
+              echo "::error::GitHub does not document contents: read as sufficient for GET .../dependency-graph/sbom."
+              echo "::error::Fix: add an Administration-scoped token (Administration: read) to the preflight job, or escalate as a blocking design issue."
+              echo "::error::This MUST be resolved before dependency-review can run. See docs/SECURITY_CI.md."
+              exit 1
+              ;;
+            404|*)
+              echo "::error::Dependency graph is disabled for this repository. dependency-review cannot run."
+              echo "::error::Fix (requires admin, one line):"
+              echo "::error::  gh api -X PUT repos/${REPO}/vulnerability-alerts"
+              echo "::error::Then re-run this workflow. See docs/SECURITY_CI.md."
+              exit 1
+              ;;
+          esac
+
   dependency-audit:
     name: Python dependency audit
     runs-on: ubuntu-latest
+    # NOTE: deliberately does NOT `needs: [repo-config-preflight]`. This job
+    # scans the local uv.lock against PyPI advisories via pip-audit; it has no
+    # dependency on the GitHub dependency graph. The preflight only runs on
+    # PR/push, so gating this job on it would silently skip the weekly
+    # scheduled audit.
     steps:
       - name: Checkout
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
@@ -38,6 +97,7 @@ jobs:
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
+    needs: [repo-config-preflight]
     if: github.event_name == 'pull_request'
     permissions:
       contents: read

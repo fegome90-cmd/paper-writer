@@ -1,0 +1,109 @@
+name: Check names lint
+
+# Drift detection: verifies that the job `name:` values declared under `jobs:`
+# in ci.yml and security.yml match the pinned list in .github/expected-checks.json.
+# Fails on mismatch (a job added or renamed without updating the JSON, or vice
+# versa). See docs/SECURITY_CI.md section 5.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-checks-sync:
+    name: Verify expected-checks.json sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Extract job names and diff against expected-checks.json
+        run: |
+          set -euo pipefail
+          # Extraction approach (no YAML parser dependency — bash + awk):
+          # For each workflow, pull every `name:` line that sits under the
+          # `jobs:` block (NOT step names, which are indented further). The awk
+          # below tracks indentation: a job-level `name:` is indented exactly 4
+          # spaces (jobs.<job_id>.name); step names are indented 8+ spaces.
+          #
+          # Matrix expansion: the ci.yml `Core tests — Python ${{ matrix.python-version }}`
+          # job uses matrix ["3.10", "3.12", "3.13"]. The extraction expands
+          # that single literal into the 3 concrete names pinned in
+          # expected-checks.json. All other names are literal.
+          #
+          # Non-required jobs: some jobs are intentionally NOT required checks
+          # (not enforced by branch protection) and therefore MUST be excluded
+          # from the diff. Currently: "Repo config preflight" — it gates
+          # dependency-review via needs: but is itself a preflight guard, not a
+          # status check that must pass independently for merge. If a job is
+          # added that SHOULD be required, add it to expected-checks.json
+          # instead of here.
+          EXCLUDE_FILE="$(mktemp)"
+          printf '%s\n' "Repo config preflight" > "$EXCLUDE_FILE"
+
+          extract_job_names() {
+            local file="$1"
+            # job-level `name:` is indented exactly 4 spaces under `jobs:`.
+            # The awk single-quotes are escaped via the standard '"'"' idiom.
+            awk '
+              /^jobs:/ { in_jobs=1; next }
+              in_jobs && /^[^ ]/ { in_jobs=0 }
+              in_jobs && /^    name:/ {
+                val=$0
+                sub(/^    name:[ ]*/, "", val)
+                gsub(/^["'"'"']|["'"'"']$/, "", val)
+                print val
+              }
+            ' "$file"
+          }
+
+          ci_names=$(extract_job_names .github/workflows/ci.yml)
+          security_names=$(extract_job_names .github/workflows/security.yml)
+
+          all_names="$ci_names
+          $security_names"
+
+          # Expand the matrix placeholder into the 3 concrete pinned names.
+          expanded=$(echo "$all_names" | awk '
+            /\$\{\{ matrix.python-version \}\}/ {
+              for (v = 0; v < 3; v++) {
+                pv = (v == 0 ? "3.10" : (v == 1 ? "3.12" : "3.13"))
+                line = $0
+                sub(/\$\{\{ matrix.python-version \}\}/, pv, line)
+                print line
+              }
+              next
+            }
+            { if (NF > 0) print }
+          ')
+
+          # Drop the explicitly-non-required jobs, then build a sorted,
+          # de-duplicated set from the workflow names.
+          actual=$(echo "$expanded" | grep -v '^$' | grep -vxF -f "$EXCLUDE_FILE" | sort -u)
+          expected=$(jq -r '.[]' .github/expected-checks.json | sort -u)
+
+          echo "=== Declared job names (from workflows, excluding non-required) ==="
+          echo "$actual"
+          echo ""
+          echo "=== Pinned expected-checks.json ==="
+          echo "$expected"
+          echo ""
+
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Check-name drift detected. The job name: values in"
+            echo "::error::.github/workflows/{ci,security}.yml do not match"
+            echo "::error::.github/expected-checks.json."
+            echo ""
+            echo "=== diff (workflow names < vs pinned >) ==="
+            diff <(echo "$actual") <(echo "$expected") || true
+            exit 1
+          fi
+
+          echo "::notice::expected-checks.json is in sync with declared job names."

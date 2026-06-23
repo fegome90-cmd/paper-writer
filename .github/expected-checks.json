@@ -1,0 +1,12 @@
+[
+    "Quality",
+    "Core tests — Python 3.10",
+    "Core tests — Python 3.12",
+    "Core tests — Python 3.13",
+    "Local skills — thesaurus + MeSH import",
+    "Offline E2E",
+    "Build and install smoke test",
+    "Dependency review",
+    "Python dependency audit",
+    "CodeQL"
+]
