@@ -1,0 +1,39 @@
+name: C7 SBOM Permission Probe
+
+on:
+  push:
+    branches: [ chore/c7-sbom-probe ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe GET /dependency-graph/sbom under contents:read
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "repo=$GITHUB_REPOSITORY"
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/dependency-graph/sbom" --jq '.sbom.spdxVersion' > /tmp/spdx.txt 2> /tmp/err.txt
+          code=$?
+          echo "exit_code=$code"
+          echo "--- stderr ---"
+          cat /tmp/err.txt 2>/dev/null || true
+          echo "--- spdxVersion (on success) ---"
+          cat /tmp/spdx.txt 2>/dev/null || true
+          verdict="FAIL - contents:read cannot read SBOM (check stderr: 403=permission, 404=graph off)"
+          if [ "$code" -eq 0 ]; then
+            verdict="PASS - contents:read CAN read SBOM (spdxVersion=$(cat /tmp/spdx.txt))"
+          fi
+          echo "verdict=$verdict"
+          {
+            echo "## C7 SBOM Permission Probe"
+            echo ""
+            echo "- **exit_code**: $code"
+            echo "- **repo**: $GITHUB_REPOSITORY"
+            echo "- **verdict**: $verdict"
+          } >> "$GITHUB_STEP_SUMMARY"
