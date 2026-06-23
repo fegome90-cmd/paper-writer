@@ -531,6 +531,32 @@ class TestReadinessScopeAndMutatingStandalone:
         assert result.can_proceed is True
         assert not any("side effects" in w for w in result.warnings)
 
+    def test_zotero_delete_emits_warning(self, tmp_path: Path) -> None:
+        """zotero:delete (external mutating) must warn about side effects."""
+        result = resolve_preflight(
+            tmp_path,
+            command="zotero:delete",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.can_proceed is True
+        assert result.status == "ready"
+        assert any("side effects" in w for w in result.warnings)
+
+    def test_zotero_delete_corrupt_state_warning(self, tmp_path: Path) -> None:
+        """zotero:delete with corrupt state → ready + side effects warning."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "state.yaml").write_bytes(b"\x80\x81\x82")
+
+        result = resolve_preflight(
+            tmp_path,
+            command="zotero:delete",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.status == "ready"
+        assert result.can_proceed is True
+        assert any("side effects" in w for w in result.warnings)
+
 
 # ─── resolve_preflight: Available/Blocked Commands (Task B3) ─────────────────
 

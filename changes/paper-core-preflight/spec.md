@@ -361,6 +361,7 @@ class PreflightResult:
     warnings: list[str]                  # non-blocking observations
     can_proceed: bool                    # whether command can execute NOW (policy-eligible)
     command: str | None                  # echo of input command (if any)
+    readiness_scope: str                 # always "workflow_preconditions_only" in v1
 ```
 
 The resolver MUST NOT expose fields that lack an implementable source in v1. Specifically, the following fields are NOT part of `PreflightResult` and MUST NOT be computed, serialized, or documented as available:

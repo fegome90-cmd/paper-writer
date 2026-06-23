@@ -192,6 +192,7 @@ These tasks were completed during the exploration phase and do NOT require imple
   - `blockers: list[PreflightBlocker]`
   - `warnings: list[str]`
   - `can_proceed: bool` (whether command can execute NOW)
+  - `readiness_scope: str` (always "workflow_preconditions_only" in v1)
   - `command: str | None`
 - `PreflightBlocker` dataclass with `code`, `scope`, `message`, `resolution`
 - `ReviewConfigSnapshot` dataclass with `values`, `source`, `warnings`

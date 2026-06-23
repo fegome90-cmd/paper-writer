@@ -154,8 +154,9 @@ def _print_preflight(result: PreflightResult) -> None:
         lines.append("  (none)")
     lines.append("")
 
-    # Can proceed
+    # Can proceed + readiness scope
     proceed_label = "yes" if result.can_proceed else "no"
     lines.append(f"Can Proceed: {proceed_label}")
+    lines.append(f"Readiness Scope: {result.readiness_scope}")
 
     emit_result("\n".join(lines))

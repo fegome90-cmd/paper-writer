@@ -298,3 +298,18 @@ class TestParserDerivedParity:
         assert registry_with_dispatch <= pipeline_keys, (
             f"Registry dispatch keys not in PIPELINE_MAP: {registry_with_dispatch - pipeline_keys}"
         )
+
+    def test_dispatch_key_equals_registry_key(self) -> None:
+        """Orchestrated commands must have dispatch_key == registry key.
+        Callbacks must have dispatch_key is None. Catches swapped mappings."""
+        for key, spec in COMMAND_REGISTRY.items():
+            if spec.handler_kind == "orchestrated":
+                assert spec.dispatch_key == key, (
+                    f"Orchestrated '{key}' has dispatch_key='{spec.dispatch_key}'"
+                    f" (expected '{key}')"
+                )
+            else:
+                assert spec.dispatch_key is None, (
+                    f"Callback '{key}' has dispatch_key='{spec.dispatch_key}'"
+                    f" (expected None)"
+                )

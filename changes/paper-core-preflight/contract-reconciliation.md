@@ -134,6 +134,8 @@ class PreflightResult:
     blockers: list[PreflightBlocker]     # structured blockers (scope-aware)
     warnings: list[str]                  # non-blocking observations
     can_proceed: bool                    # whether command can execute NOW (policy-eligible)
+    command: str | None                  # echo of input command
+    readiness_scope: str                 # "workflow_preconditions_only" in v1
     command: str | None                  # echo of input command (if any)
 ```
 
