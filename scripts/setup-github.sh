@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EM_DASH=$'—'
-
 # ---------------------------------------------------------------------------
 # Preflight: verify bash, gh, jq, authentication, and admin permissions
 # ---------------------------------------------------------------------------
@@ -84,6 +82,49 @@ configure_security() {
 		return 1
 	fi
 	printf "  OK: Push protection enabled\n"
+}
+
+# ---------------------------------------------------------------------------
+# Enable the dependency graph and Dependabot security updates via the documented
+# canonical endpoints (verified against official GitHub docs via context7).
+#
+# - Dependency graph: PUT repos/{owner}/{repo}/vulnerability-alerts
+#   (NOT PATCH security_and_analysis[dependency_graph] — that field is
+#   GET-only, not a documented PATCH setter.)
+# - Dependabot security updates: PUT repos/{owner}/{repo}/automated-security-fixes
+#   (NOT PATCH security_and_analysis[dependabot_security_updates] — same reason.)
+#
+# Precondition: caller (main) has already run check_admin successfully; both
+# PUTs require Administration: write. Returns 0 on success AND on the
+# enterprise/policy edge case (warn, don't fail) so the rest of setup completes.
+# ---------------------------------------------------------------------------
+configure_dependency_graph() {
+	local put_err
+
+	# 1) Enable the dependency graph via the documented dedicated endpoint.
+	put_err=$(gh api -X PUT "repos/${REPO}/vulnerability-alerts" 2>&1) || {
+		printf "  ERROR: Failed to enable dependency graph: %s\n" "$put_err" >&2
+		return 1
+	}
+	printf "  OK: Dependency graph enabled (PUT vulnerability-alerts)\n"
+
+	# 2) Enable Dependabot security updates via the documented dedicated endpoint.
+	put_err=$(gh api -X PUT "repos/${REPO}/automated-security-fixes" 2>&1) || {
+		printf "  ERROR: Failed to enable Dependabot security updates: %s\n" "$put_err" >&2
+		return 1
+	}
+	printf "  OK: Dependabot security updates enabled (PUT automated-security-fixes)\n"
+
+	# 3) Re-probe the SBOM endpoint by exit code. Non-zero after both PUTs is an
+	#    enterprise/policy edge case: warn but do not fail (some org policies block
+	#    the graph regardless of the admin token). See docs/SECURITY_CI.md.
+	if ! gh api "repos/${REPO}/dependency-graph/sbom" >/dev/null 2>&1; then
+		printf "  WARN: SBOM probe still non-zero after enabling. This may be an\n" >&2
+		printf "        enterprise/policy restriction blocking the dependency graph.\n" >&2
+		printf "        dependency-review will fail in CI until resolved.\n" >&2
+		return 0
+	fi
+	printf "  OK: SBOM endpoint reachable (graph ready)\n"
 }
 
 # ---------------------------------------------------------------------------
@@ -179,23 +220,13 @@ build_rules_json() {
 }
 
 # ---------------------------------------------------------------------------
-# Build the standard check names JSON array (with em-dash U+2014)
-# Source of truth: .github/workflows/ci.yml job names
-# Keep in sync with .github/workflows/ci.yml and .github/workflows/security.yml
+# Build the standard check names JSON array (single source of truth)
+# Reads verbatim from .github/expected-checks.json — the committed artifact is
+# the source of truth, kept in sync with .github/workflows/{ci,security}.yml
+# job names. Drift is caught by .github/workflows/check-names-lint.yml.
 # ---------------------------------------------------------------------------
 build_check_names_json() {
-	jq -n --arg em "$EM_DASH" '[
-    "Quality",
-    ("Core tests " + $em + " Python 3.10"),
-    ("Core tests " + $em + " Python 3.12"),
-    ("Core tests " + $em + " Python 3.13"),
-    ("Local skills " + $em + " thesaurus + MeSH import"),
-    "Offline E2E",
-    "Build and install smoke test",
-    "Dependency review",
-    "Python dependency audit",
-    "CodeQL"
-  ]'
+	jq -c . .github/expected-checks.json
 }
 
 # ---------------------------------------------------------------------------
@@ -359,20 +390,23 @@ main() {
 
 	printf "\n=== Configuring %s ===\n\n" "$REPO"
 
-	printf "[1/5] Preflight checks\n"
+	printf "[1/6] Preflight checks\n"
 	check_admin || return 1
 
-	printf "\n[2/5] Security scanning + push protection\n"
+	printf "\n[2/6] Security scanning + push protection\n"
 	configure_security || return 1
 
-	printf "\n[3/5] Branch ruleset for main (profile: %s)\n" "${RULESET_PROFILE:-solo}"
+	printf "\n[3/6] Dependency graph + Dependabot security updates\n"
+	configure_dependency_graph || return 1
+
+	printf "\n[4/6] Branch ruleset for main (profile: %s)\n" "${RULESET_PROFILE:-solo}"
 	validate_required_checks || return 1
 	configure_ruleset || return 1
 
-	printf "\n[4/5] Environment 'live-integrations'\n"
+	printf "\n[5/6] Environment 'live-integrations'\n"
 	configure_environment || return 1
 
-	printf "\n[5/5] Zotero secrets\n"
+	printf "\n[6/6] Zotero secrets\n"
 	configure_secrets || return 1
 
 	local verify_rc=0
