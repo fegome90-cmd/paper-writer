@@ -241,7 +241,6 @@ class PreflightResult:
     can_proceed: bool                    # whether command can execute NOW (policy-eligible)
     command: str | None                  # echo of input command
     readiness_scope: str                 # "workflow_preconditions_only" — agents must not auto-execute mutating commands without additional authorization
-    command: str | None                  # echo of input command (if any)
 ```
 
 ### ReviewConfigSnapshot (in review_config.py, NOT preflight.py)

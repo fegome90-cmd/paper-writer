@@ -244,6 +244,7 @@ class TestPreflightTextOutput:
         assert "Blockers:" in out
         assert "Warnings:" in out
         assert "Can Proceed:" in out
+        assert "Readiness Scope:" in out
 
     def test_preflight_text_output_status_ready(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

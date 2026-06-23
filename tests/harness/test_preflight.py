@@ -557,6 +557,16 @@ class TestReadinessScopeAndMutatingStandalone:
         assert result.can_proceed is True
         assert any("side effects" in w for w in result.warnings)
 
+    def test_mesh_export_emits_warning(self, tmp_path: Path) -> None:
+        """mesh:export (writes files) must warn about side effects."""
+        result = resolve_preflight(
+            tmp_path,
+            command="mesh:export",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.can_proceed is True
+        assert any("side effects" in w for w in result.warnings)
+
 
 # ─── resolve_preflight: Available/Blocked Commands (Task B3) ─────────────────
 

@@ -182,7 +182,6 @@ class PreflightResult:
     can_proceed: bool                    # whether command can execute NOW (policy-eligible)
     command: str | None                  # echo of input command
     readiness_scope: str                 # "workflow_preconditions_only" — scope is limited to workflow preconditions, not full authorization
-    command: str | None                  # echo of input command (if any)
 ```
 
 ```python

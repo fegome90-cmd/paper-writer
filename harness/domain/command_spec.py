@@ -754,6 +754,7 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         handler_kind="callback_direct",
         owner_kind="local_subproject",
         minimum_stage="bootstrap",
+        mutates_project=True,
         target="mesh_jsonl",
         state_policy="standalone_allowed",
         description="Export MeSH to JSONL",
