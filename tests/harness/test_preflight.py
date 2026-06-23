@@ -484,6 +484,54 @@ class TestResolvePreflightReviewConfig:
         assert result.review_mode == "rapid"
 
 
+class TestReadinessScopeAndMutatingStandalone:
+    """P1: readiness_scope field + warning for mutating standalone commands."""
+
+    def test_readiness_scope_always_present(self, tmp_path: Path) -> None:
+        """PreflightResult always includes readiness_scope."""
+        result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
+        assert result.readiness_scope == "workflow_preconditions_only"
+
+    def test_mutating_standalone_emits_warning(self, tmp_path: Path) -> None:
+        """Mutating standalone command (e.g. thesaurus:rebuild) with
+        can_proceed=True must warn about external side effects."""
+        result = resolve_preflight(
+            tmp_path,
+            command="thesaurus:rebuild",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.can_proceed is True
+        assert result.status == "ready"
+        assert any("side effects" in w for w in result.warnings)
+
+    def test_mutating_standalone_corrupt_state_warning(self, tmp_path: Path) -> None:
+        """thesaurus:import with corrupt state → ready + warning about side effects."""
+        outputs = tmp_path / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "state.yaml").write_bytes(b"\x80\x81\x82")
+
+        result = resolve_preflight(
+            tmp_path,
+            command="thesaurus:import",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.status == "ready"
+        assert result.can_proceed is True
+        assert any("side effects" in w for w in result.warnings)
+
+    def test_non_mutating_standalone_no_side_effects_warning(
+        self, tmp_path: Path
+    ) -> None:
+        """audit:prose (read-only standalone) must NOT get side-effects warning."""
+        result = resolve_preflight(
+            tmp_path,
+            command="audit:prose",
+            review_config=_rapid_snapshot(),
+        )
+        assert result.can_proceed is True
+        assert not any("side effects" in w for w in result.warnings)
+
+
 # ─── resolve_preflight: Available/Blocked Commands (Task B3) ─────────────────
 
 

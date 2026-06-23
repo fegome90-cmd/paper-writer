@@ -31,8 +31,40 @@
     },
     "current_gates": {
       "type": "object",
-      "description": "All gates with boolean values",
-      "additionalProperties": { "type": "boolean" }
+      "description": "Pipeline gates (13 hard required + 2 soft optional)",
+      "properties": {
+        "repo_initialized": { "type": "boolean" },
+        "search_completed": { "type": "boolean" },
+        "screened_evidence": { "type": "boolean" },
+        "outline_drafted": { "type": "boolean" },
+        "sections_completed": { "type": "boolean" },
+        "bib_imported": { "type": "boolean" },
+        "bib_normalized": { "type": "boolean" },
+        "citations_resolved": { "type": "boolean" },
+        "refs_validated": { "type": "boolean" },
+        "style_passed": { "type": "boolean" },
+        "reporting_passed": { "type": "boolean" },
+        "render_passed": { "type": "boolean" },
+        "ready_for_delivery": { "type": "boolean" },
+        "citation_verified": { "type": "boolean" },
+        "ethics_passed": { "type": "boolean" }
+      },
+      "required": [
+        "repo_initialized",
+        "search_completed",
+        "screened_evidence",
+        "outline_drafted",
+        "sections_completed",
+        "bib_imported",
+        "bib_normalized",
+        "citations_resolved",
+        "refs_validated",
+        "style_passed",
+        "reporting_passed",
+        "render_passed",
+        "ready_for_delivery"
+      ],
+      "additionalProperties": false
     },
     "available_commands": {
       "type": "array",
@@ -88,6 +120,10 @@
     "command": {
       "type": ["string", "null"],
       "description": "Echo of input command (if any)"
+    },
+    "readiness_scope": {
+      "const": "workflow_preconditions_only",
+      "description": "Scope of can_proceed check. v1 always 'workflow_preconditions_only' — agent consumers must perform their own authorization for mutating operations."
     }
   },
   "required": [
@@ -103,7 +139,8 @@
     "blockers",
     "warnings",
     "can_proceed",
-    "command"
+    "command",
+    "readiness_scope"
   ],
   "additionalProperties": false
 }

@@ -237,3 +237,64 @@ class TestCommandSpecTypeAnnotations:
         assert args == _VALID_STATE_POLICIES, (
             f"state_policy Literal must include {_VALID_STATE_POLICIES}, got {args}"
         )
+
+
+class TestParserDerivedParity:
+    """P2: Parity derived from the actual parser, not manual lists."""
+
+    @staticmethod
+    def _extract_parser_leaves(parser, prefix: str = "") -> set[str]:
+        """Recursively walk subparsers to extract all leaf command paths."""
+        import argparse as ap
+
+        leaves: set[str] = set()
+        for action in parser._actions:
+            if not isinstance(action, ap._SubParsersAction):
+                continue
+            for cmd_name, sub_parser in action.choices.items():
+                full = f"{prefix}:{cmd_name}" if prefix else cmd_name
+                # Check if this sub_parser has its own subparsers
+                has_sub = any(
+                    isinstance(a, ap._SubParsersAction)
+                    for a in sub_parser._actions
+                )
+                if has_sub:
+                    leaves |= TestParserDerivedParity._extract_parser_leaves(
+                        sub_parser, full
+                    )
+                else:
+                    leaves.add(full)
+        return leaves
+
+    def test_parser_leaves_match_registry_keys(self) -> None:
+        """Every parser leaf command must exist in COMMAND_REGISTRY and vice versa."""
+        from cli.paper.parser import build_parser
+
+        parser = build_parser()
+        parser_leaves = self._extract_parser_leaves(parser)
+        registry_keys = set(COMMAND_REGISTRY.keys())
+
+        missing_from_registry = parser_leaves - registry_keys
+        missing_from_parser = registry_keys - parser_leaves
+
+        assert not missing_from_registry, (
+            f"Parser commands missing from COMMAND_REGISTRY: {missing_from_registry}"
+        )
+        assert not missing_from_parser, (
+            f"COMMAND_REGISTRY commands missing from parser: {missing_from_parser}"
+        )
+
+    def test_pipeline_dispatch_keys_match_registry(self) -> None:
+        """Every PIPELINE_MAP dispatch_key must have a matching COMMAND_REGISTRY entry."""
+        pipeline_keys = set(PIPELINE_MAP.keys())
+        registry_with_dispatch = {
+            k for k, v in COMMAND_REGISTRY.items() if v.dispatch_key is not None
+        }
+        # All PIPELINE_MAP keys must be in registry
+        assert pipeline_keys <= registry_with_dispatch, (
+            f"PIPELINE_MAP keys missing from registry: {pipeline_keys - registry_with_dispatch}"
+        )
+        # All registry dispatch keys must be in PIPELINE_MAP
+        assert registry_with_dispatch <= pipeline_keys, (
+            f"Registry dispatch keys not in PIPELINE_MAP: {registry_with_dispatch - pipeline_keys}"
+        )

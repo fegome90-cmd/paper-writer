@@ -47,7 +47,12 @@ class BlockedCommand:
 
 @dataclass(frozen=True)
 class PreflightResult:
-    """Read-only snapshot of pipeline status for agents and CLI."""
+    """Read-only snapshot of pipeline status for agents and CLI.
+
+    Note: frozen=True provides shallow immutability — the top-level
+    attributes cannot be reassigned, but list/dict contents are mutable.
+    Consumers should treat the contents as read-only by convention.
+    """
 
     schema_version: str
     status: str
@@ -62,6 +67,7 @@ class PreflightResult:
     warnings: list[str]
     can_proceed: bool
     command: str | None
+    readiness_scope: str = "workflow_preconditions_only"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -415,6 +421,21 @@ def resolve_preflight(
 
     # 9. Compute operation
     operation = spec.operation if spec is not None else "unknown"
+
+    # 9a. Warn about mutating standalone commands — these are eligible
+    # (can_proceed=True) but have side effects outside the pipeline.
+    # Agent consumers should check readiness_scope before auto-executing.
+    if (
+        can_proceed
+        and spec is not None
+        and spec.mutates_project
+        and spec.state_policy == "standalone_allowed"
+    ):
+        warnings.append(
+            f"Command '{command}' has external side effects; "
+            f"only workflow preconditions were checked "
+            f"(readiness_scope=workflow_preconditions_only)"
+        )
 
     # 10. Build and return frozen result
     return PreflightResult(
