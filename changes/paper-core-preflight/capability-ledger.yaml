@@ -1,0 +1,2090 @@
+# Capability Ledger: Paper Writer Repository
+# Generated: 2026-06-19
+# Status: COMPLETE — full exploration done, 60+ capabilities cataloged
+# Coverage: 72% implemented, 8% planned, 19% not started
+
+# ═══════════════════════════════════════════════════════════════════════
+# CORE WORKFLOW
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: core.orchestrator
+  name: Pipeline Orchestrator
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: workflow_engine
+  owner:
+    module: harness/services/orchestrator.py
+    symbol: Orchestrator
+  contracts:
+    input: OrchestratorRequest
+    output: OrchestratorResult
+  invocation:
+    cli:
+      - paper init
+      - paper search
+      - paper screen
+      - paper draft
+      - paper render
+      - paper verify
+  effects:
+    state: true
+    gates: true
+    artifacts: true
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: core.state_machine
+  name: ManuscriptState State Machine
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: state_management
+  owner:
+    module: harness/domain/state.py
+    symbol: ManuscriptState
+  contracts:
+    input: stage + gates
+    output: validated state
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: core.state_manager
+  name: StateManager
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: state_management
+  owner:
+    module: harness/services/state_manager.py
+    symbol: StateManager
+  contracts:
+    input: StateRepository
+    output: ManuscriptState
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: core.gates
+  name: Gate System
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: validation
+  owner:
+    module: harness/services/gates.py
+    symbol: run_gate
+  contracts:
+    input: Check[]
+    output: GateResult
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: core.pipeline_map
+  name: Pipeline Command Routing
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: routing
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP
+  contracts:
+    input: CLI args
+    output: OrchestratorRequest
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: core.preflight
+  name: Preflight Resolution (PLANNED)
+  status: planned
+  classification:
+    layer: core
+    runtime: core
+    category: inspection
+  owner:
+    module: harness/services/preflight.py (planned)
+    symbol: resolve_preflight
+  contracts:
+    input: project_root + command
+    output: PreflightResult
+  effects:
+    state: false
+  tests:
+    unit: planned
+  roadmap:
+    disposition: implement
+    sprint: core-preflight
+    priority: P0
+
+# ═══════════════════════════════════════════════════════════════════════
+# RESEARCH AND EVIDENCE
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: research.search.provider
+  name: Search Provider Port
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_search
+  owner:
+    module: harness/ports/paper_search_provider.py
+    symbol: PaperSearchProvider
+  contracts:
+    input: query + filters
+    output: SearchProviderResult
+    provenance: SearchProvenance
+  configuration:
+    - PAPER_SEARCH_PROVIDER
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain_and_harden
+    sprint: research-capability-integration
+    priority: P1
+
+- id: research.search.fixture
+  name: Fixture Search Provider
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_search
+  owner:
+    module: harness/ports/paper_search_provider.py
+    symbol: FixturePaperSearchProvider
+  contracts:
+    input: query
+    output: SearchProviderResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P2
+
+- id: research.search.mcp
+  name: MCP Paper Search Provider
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_search
+  owner:
+    module: integrations/tools/mcp_paper_client.py
+    symbol: McpPaperSearchProvider
+  contracts:
+    input: query
+    output: SearchProviderResult
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: research.search.consensus
+  name: Consensus REST Search Provider
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_search
+  owner:
+    module: integrations/tools/consensus_client.py
+    symbol: ConsensusSearchProvider
+  contracts:
+    input: query + filters
+    output: SearchProviderResult
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: research.search.consensus_mcp_remote
+  name: Consensus Remote MCP Search Provider
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_search
+  owner:
+    module: integrations/tools/consensus_mcp_client.py
+    symbol: ConsensusRemoteMcpSearchProvider
+  contracts:
+    input: query + filters
+    output: SearchProviderResult
+  configuration:
+    - CONSENSUS_MCP_API_KEY
+    - CONSENSUS_MCP_URL
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: research.screening
+  name: Evidence Screening
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: research_screening
+  owner:
+    module: skills/imported/literature_search/scoring.py
+    symbol: search (scoring)
+  contracts:
+    input: raw_results
+    output: screened_evidence
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: research.chaining
+  name: Search Chain Execution
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: research_search
+  owner:
+    module: skills/imported/literature_search/chaining.py
+    symbol: chain_search_rounds
+  contracts:
+    input: query + state
+    output: chained results
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# DOCUMENT INTEGRITY
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: document.parsers
+  name: Manuscript Parsers
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: document_processing
+  owner:
+    module: parsers/manuscript.py
+    symbol: ManuscriptParser
+  contracts:
+    input: file path
+    output: parsed manuscript
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: document.source_map
+  name: Source Map Generation
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: document_processing
+  owner:
+    module: parsers/source_map.py
+    symbol: SourceMap
+  contracts:
+    input: parsed manuscript
+    output: source map
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: document.assembler
+  name: Manuscript Assembler
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: document_processing
+  owner:
+    module: harness/services/assembler.py
+    symbol: assemble_manuscript
+  contracts:
+    input: draft sections
+    output: assembled manuscript
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: document.verify_artifacts
+  name: Verify Artifacts Generator
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: document_integrity
+  owner:
+    module: harness/services/verify_artifacts.py
+    symbol: generate_verify_artifacts
+  contracts:
+    input: search_dir + draft_dir + bib_path
+    output: 4 mandatory artifacts
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# VALIDATORS
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: validator.refs
+  name: Reference Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: bibliographic_integrity
+  owner:
+    module: validators/refs.py
+    symbol: RefsValidator
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: refs_validator
+  gate: refs_validated
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.citations
+  name: Citation Consistency Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: bibliographic_integrity
+  owner:
+    module: validators/citations.py
+    symbol: CitationsValidator
+  contracts:
+    input: manuscript + bib
+    output: ValidatorResult
+  wrapper: citations_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.citation_verify
+  name: Citation Verification (Crossref + S2)
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: bibliographic_existence
+  owner:
+    module: validators/citation_verify.py
+    symbol: CitationVerifyValidator
+  contracts:
+    input: citations
+    output: ValidatorResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.bibliography
+  name: Bibliography Format Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: bibliographic_integrity
+  owner:
+    module: validators/bibliography.py
+    symbol: BibliographyValidator
+  contracts:
+    input: bib file
+    output: ValidatorResult
+  wrapper: bibtex_tidy
+  gate: bib_normalized
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.structure
+  name: Manuscript Structure Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: document_structure
+  owner:
+    module: validators/structure.py
+    symbol: StructureValidator
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.prose
+  name: Scientific Prose Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: writing_quality
+  owner:
+    module: validators/prose.py
+    symbol: ProseAuditor
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: prose_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.claims
+  name: Claim Detection Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: claim_integrity
+  owner:
+    module: validators/claims.py
+    symbol: ClaimsValidator
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: claims_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.claim_alignment
+  name: Claim-Evidence Alignment
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: claim_integrity
+  owner:
+    module: validators/claim_alignment.py
+    symbol: ClaimAlignmentValidator
+  contracts:
+    input: claims + evidence
+    output: ValidatorResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.ethics
+  name: Ethics Compliance Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance
+  owner:
+    module: validators/ethics.py
+    symbol: EthicsAuditor
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: ethics_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.writing_quality
+  name: Writing Quality Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: writing_quality
+  owner:
+    module: validators/writing_quality.py
+    symbol: WritingQualityAuditor
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: writing_quality_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.style
+  name: Style Rules Validator (Vale)
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: style
+  owner:
+    module: validators/style.py
+    symbol: StyleAuditor
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: vale
+  gate: style_passed
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.reporting
+  name: Reporting Checklist Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance
+  owner:
+    module: validators/reporting.py
+    symbol: ReportingAuditor
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  wrapper: reporting_auditor
+  gate: reporting_passed
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.method_gate
+  name: Method Gate (EQUATOR)
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance
+  owner:
+    module: validators/method_gate.py
+    symbol: MethodGateValidator
+  contracts:
+    input: manuscript
+    output: GateResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: validator.code_health
+  name: Code Health Validator (Trifecta)
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: code_quality
+  owner:
+    module: validators/code_health.py
+    symbol: CodeHealthAuditor
+  contracts:
+    input: codebase
+    output: ValidatorResult
+  wrapper: code_health_auditor
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P2
+
+- id: validator.quality_appraisal
+  name: Study Quality Appraisal
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: evidence_quality
+  owner:
+    module: validators/quality_appraisal.py
+    symbol: QualityAppraisalValidator
+  contracts:
+    input: evidence
+    output: ValidatorResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: validator.preset
+  name: Journal Preset Validator
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance
+  owner:
+    module: validators/preset.py
+    symbol: PresetValidator
+  contracts:
+    input: manuscript + preset
+    output: ValidatorResult
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P2
+
+- id: validator.gate_verdict
+  name: Gate Verdict Triage
+  status: active
+  classification:
+    layer: validation
+    runtime: core
+    category: validation_triage
+  owner:
+    module: validators/gate_verdict.py
+    symbol: GateVerdict
+  contracts:
+    input: findings
+    output: tiered verdict
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+# ═══════════════════════════════════════════════════════════════════════
+# TOOL WRAPPERS
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: wrapper.bibtex_tidy
+  name: BibTeX Normalizer
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliography_processing
+  owner:
+    module: integrations/tools/bibtex_tidy.py
+    symbol: BibliographyNormalizer
+  contracts:
+    input: bib file
+    output: ValidatorResult
+  external_tool: bibtex-tidy
+  gate: bib_normalized
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: wrapper.refs_validator
+  name: Reference Validator Wrapper
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliographic_integrity
+  owner:
+    module: integrations/tools/refs_validator.py
+    symbol: RefsValidatorWrapper
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  external_tool: local validation
+  gate: refs_validated
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: wrapper.vale
+  name: Vale Style Linter
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: style
+  owner:
+    module: integrations/tools/vale.py
+    symbol: StyleLinter
+  contracts:
+    input: manuscript
+    output: ValidatorResult
+  external_tool: vale
+  gate: style_passed
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: wrapper.pandoc
+  name: Pandoc Renderer
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: rendering
+  owner:
+    module: integrations/tools/pandoc.py
+    symbol: PandocRenderer
+  contracts:
+    input: manuscript
+    output: rendered document
+  external_tool: pandoc
+  gate: render_passed
+  tests:
+    unit: true
+    e2e: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# CLIENTS
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: client.crossref
+  name: Crossref Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliographic_metadata
+  owner:
+    module: clients/crossref.py
+    symbol: CrossrefClient
+  contracts:
+    input: DOI/query
+    output: metadata
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: client.semantic_scholar
+  name: Semantic Scholar Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliographic_metadata
+  owner:
+    module: clients/semantic_scholar.py
+    symbol: SemanticScholarClient
+  contracts:
+    input: DOI/query
+    output: metadata
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: client.openalex
+  name: OpenAlex Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliographic_metadata
+  owner:
+    module: clients/openalex.py
+    symbol: OpenAlexClient
+  contracts:
+    input: DOI/query
+    output: metadata
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: client.arxiv
+  name: arXiv Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: preprint_access
+  owner:
+    module: clients/arxiv.py
+    symbol: ArxivClient
+  contracts:
+    input: query
+    output: papers
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P2
+
+- id: client.zotero
+  name: Zotero Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: bibliographic_management
+  owner:
+    module: clients/zotero.py
+    symbol: ZoteroClient
+  contracts:
+    input: collection/query
+    output: bibliography
+  tests:
+    unit: true
+    integration: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: client.trifecta
+  name: Trifecta Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: code_traceability
+  owner:
+    module: clients/trifecta.py
+    symbol: TrifectaClient
+  contracts:
+    input: symbol
+    output: trace graph
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: client.llm_content
+  name: LLM Content Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: content_generation
+  owner:
+    module: clients/llm_content.py
+    symbol: LLMContentClient
+  contracts:
+    input: prompt
+    output: generated content
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: agent-integration
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# MCP ECOSYSTEM
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: mcp.paper_client
+  name: Paper MCP Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: mcp_client
+  owner:
+    module: integrations/tools/mcp_paper_client.py
+    symbol: McpPaperSearchProvider
+  contracts:
+    direction: client
+    transport: stdio
+    tool: search_papers
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: mcp.consensus_remote
+  name: Consensus Remote MCP Client
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: mcp_client
+  owner:
+    module: integrations/tools/consensus_mcp_client.py
+    symbol: ConsensusRemoteMcpSearchProvider
+  contracts:
+    direction: client
+    transport: streamable_http
+    tool: search
+  configuration:
+    - CONSENSUS_MCP_API_KEY
+    - CONSENSUS_MCP_URL
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: mcp.trifecta
+  name: Trifecta MCP
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: mcp_client
+  owner:
+    module: skills/local/trifecta-mcp/
+    symbol: trifecta_mcp
+  contracts:
+    direction: client
+    transport: stdio
+    tools:
+      - callers
+      - ast_hover
+      - trace_symbol
+  configuration:
+    - MCP_TRIFECTA_MODE
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: mcp.paper_server
+  name: Paper Writer MCP Server (FUTURE)
+  status: planned
+  classification:
+    layer: integration
+    runtime: optional
+    category: mcp_server
+  owner:
+    module: TBD
+    symbol: TBD
+  contracts:
+    direction: server
+    tools:
+      - paper_status
+      - paper_continue
+      - paper_preflight
+      - paper_execute
+      - paper_get_artifacts
+      - paper_get_blockers
+  tests:
+    unit: planned
+  roadmap:
+    disposition: implement
+    sprint: agent-integration
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# SKILLS
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: skill.literature_search
+  name: Literature Search Skill (Imported)
+  status: active
+  classification:
+    layer: integration
+    runtime: core
+    category: research_search
+  owner:
+    module: skills/imported/literature_search/
+    symbol: literature_search
+  contracts:
+    input: query + state
+    output: search results
+  type: executable_code
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: skill.academic_writer
+  name: Academic Writer Skill (Imported)
+  status: active
+  classification:
+    layer: integration
+    runtime: core
+    category: content_generation
+  owner:
+    module: skills/imported/academic_writer/
+    symbol: academic_writer
+  contracts:
+    input: outline + evidence
+    output: draft sections
+  type: prompt + code
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: agent-integration
+    priority: P1
+
+- id: skill.thesaurus
+  name: Thesaurus (Local)
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: concept_normalization
+  owner:
+    module: skills/local/thesaurus/
+    symbol: thesaurus
+  contracts:
+    input: terms
+    output: normalized concepts
+  type: executable_code (subproject)
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P2
+
+- id: skill.mesh_import
+  name: MeSH Importer (Local)
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: concept_normalization
+  owner:
+    module: skills/local/mesh-import/
+    symbol: mesh_import
+  contracts:
+    input: MeSH data
+    output: normalized terms
+  type: executable_code (subproject)
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P2
+
+- id: skill.essay_crafter
+  name: Essay Crafter (Local)
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: content_generation
+  owner:
+    module: skills/local/essay_crafter/
+    symbol: essay_crafter
+  contracts:
+    input: outline
+    output: essay
+  type: executable_code
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: agent-integration
+    priority: P2
+
+- id: skill.trifecta_mcp
+  name: Trifecta MCP Skill (Local)
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: code_traceability
+  owner:
+    module: skills/local/trifecta-mcp/
+    symbol: trifecta_mcp_skill
+  contracts:
+    input: symbol
+    output: trace
+  type: executable_code
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: skill.science_bundle
+  name: Science Bundle (Local)
+  status: active
+  classification:
+    layer: integration
+    runtime: optional
+    category: research_support
+  owner:
+    module: skills/local/science-bundle/
+    symbol: science_bundle
+  type: executable_code
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P2
+
+# ═══════════════════════════════════════════════════════════════════════
+# ENGINE
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: engine.deduplication
+  name: Deduplication Engine
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: data_processing
+  owner:
+    module: engine/deduplicator.py
+    symbol: deduplicate
+  contracts:
+    input: papers[]
+    output: deduplicated papers[]
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: engine.formatter
+  name: Formatting Engine
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: document_processing
+  owner:
+    module: engine/formatter.py
+    symbol: format_manuscript
+  contracts:
+    input: manuscript
+    output: formatted manuscript
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: engine.loader
+  name: Data Loader
+  status: active
+  classification:
+    layer: core
+    runtime: core
+    category: data_processing
+  owner:
+    module: engine/loader.py
+    symbol: load_data
+  contracts:
+    input: file path
+    output: parsed data
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# RULES AND SCHEMAS
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: rules.prose
+  name: Prose Quality Rules
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: writing_rules
+  owner:
+    module: rules/prose/
+  contracts:
+    format: YAML
+  consumed_by: validators/prose.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: rules.claims
+  name: Claims Detection Rules
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: claim_rules
+  owner:
+    module: rules/claims/
+  contracts:
+    format: YAML
+  consumed_by: validators/claims.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: rules.ethics
+  name: Ethics Compliance Rules
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance_rules
+  owner:
+    module: rules/ethics/
+  contracts:
+    format: YAML
+  consumed_by: validators/ethics.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: rules.citations
+  name: Citation Rules
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: bibliographic_rules
+  owner:
+    module: rules/citations/
+  contracts:
+    format: YAML
+  consumed_by: validators/citations.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: rules.writing_quality
+  name: Writing Quality Rules
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: writing_rules
+  owner:
+    module: rules/writing_quality/
+  contracts:
+    format: YAML
+  consumed_by: validators/writing_quality.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: rules.method_gate
+  name: Method Gate Rules (EQUATOR)
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: compliance_rules
+  owner:
+    module: rules/method_gate/
+  contracts:
+    format: YAML
+  consumed_by: validators/method_gate.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: schemas.claim_audit
+  name: Claim Audit Schema
+  status: active
+  classification:
+    layer: validation
+    runtime: optional
+    category: output_schema
+  owner:
+    module: schemas/
+  contracts:
+    format: JSON Schema
+  produced_by: validators/claims.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# TEMPLATES AND STYLES
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: template.journal_presets
+  name: Journal Presets (Nature, Elsevier, Springer)
+  status: active
+  classification:
+    layer: presentation
+    runtime: optional
+    category: template
+  owner:
+    module: templates/journals/
+  contracts:
+    format: YAML preset + QMD template
+  consumed_by: cli/paper/commands/init.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P2
+
+- id: style.vale
+  name: Vale Style Rules
+  status: active
+  classification:
+    layer: presentation
+    runtime: optional
+    category: style
+  owner:
+    module: styles/vale/
+  contracts:
+    format: YAML
+  consumed_by: integrations/tools/vale.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: style.csl
+  name: CSL Citation Styles
+  status: active
+  classification:
+    layer: presentation
+    runtime: optional
+    category: citation_style
+  owner:
+    module: styles/csl/
+  contracts:
+    format: CSL XML
+  consumed_by: integrations/tools/pandoc.py
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+# ═══════════════════════════════════════════════════════════════════════
+# PLATFORM AND QUALITY
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: platform.doctor
+  name: Environment Doctor
+  status: active
+  classification:
+    layer: platform
+    runtime: core
+    category: diagnostics
+  owner:
+    module: harness/services/doctor.py
+    symbol: check_all_tools
+  contracts:
+    input: none
+    output: ToolStatus[]
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain_and_harden
+    sprint: platform-quality
+    priority: P1
+
+- id: platform.ci
+  name: CI Pipeline
+  status: active
+  classification:
+    layer: platform
+    runtime: developer_tooling
+    category: ci_cd
+  owner:
+    module: .github/workflows/
+  contracts:
+    format: GitHub Actions YAML
+  tests:
+    unit: false
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P1
+
+- id: platform.verification
+  name: Real-Material Validation
+  status: active
+  classification:
+    layer: platform
+    runtime: developer_tooling
+    category: validation
+  owner:
+    module: verification/
+  contracts:
+    input: local-data/*.yaml
+    output: validation reports
+  tests:
+    unit: false
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: platform.benchmarks
+  name: Benchmarks (FAIR)
+  status: active
+  classification:
+    layer: platform
+    runtime: developer_tooling
+    category: evaluation
+  owner:
+    module: benchmarks/
+  contracts:
+    input: synthetic repo
+    output: benchmark reports
+  tests:
+    unit: false
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: platform.autoresearch
+  name: Autoresearch Experiments
+  status: active
+  classification:
+    layer: platform
+    runtime: developer_tooling
+    category: research
+  owner:
+    module: autoresearch/
+  contracts:
+    input: research questions
+    output: research logs
+  tests:
+    unit: false
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+# ═══════════════════════════════════════════════════════════════════════
+# CLI COMMANDS (COMPLETE INVENTORY)
+# ═══════════════════════════════════════════════════════════════════════
+
+- id: cli.init
+  name: paper init
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["init"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.search
+  name: paper search
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["search"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.screen
+  name: paper screen
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["screen"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.draft
+  name: paper draft (outline/section/all)
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["draft:*"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.render
+  name: paper render
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["render"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+    e2e: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.verify
+  name: paper verify
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: workflow
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["verify"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: core-preflight
+    priority: P0
+
+- id: cli.audit_prose
+  name: paper audit prose
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_prose
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_claims
+  name: paper audit claims
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_claims
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_citations
+  name: paper audit citations
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_citations
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_ethics
+  name: paper audit ethics
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_ethics
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_writing_quality
+  name: paper audit writing-quality
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_writing_quality
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_code_health
+  name: paper audit code-health
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_code_health
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: cli.audit_factuality
+  name: paper audit factuality
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_factuality
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_tables
+  name: paper audit tables
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_tables
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.audit_quality_appraisal
+  name: paper audit quality-appraisal
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/audit.py
+    symbol: _cmd_audit_quality_appraisal
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: cli.gate_method
+  name: paper gate method
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: audit
+  owner:
+    module: cli/paper/commands/gate.py
+    symbol: _cmd_gate_method
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.trace
+  name: paper trace
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: graph
+  owner:
+    module: cli/paper/commands/graph.py
+    symbol: _cmd_trace
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: cli.graph_overview
+  name: paper graph-overview
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: graph
+  owner:
+    module: cli/paper/commands/graph.py
+    symbol: _cmd_graph_overview
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P2
+
+- id: cli.import_bib
+  name: paper import bib
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: import
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["import:bib"]
+  invocation: orchestrated
+  effects:
+    state: true
+    artifacts: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: research-capability-integration
+    priority: P1
+
+- id: cli.lint_bib
+  name: paper lint bib
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: validation
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["lint:bib"]
+  invocation: orchestrated
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.lint_style
+  name: paper lint style
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: validation
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["lint:style"]
+  invocation: orchestrated
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.check_refs
+  name: paper check refs
+  status: active
+  classification:
+    layer: cli
+    runtime: optional
+    category: validation
+  owner:
+    module: cli/paper/dispatch.py
+    symbol: PIPELINE_MAP["check:refs"]
+  invocation: orchestrated
+  effects:
+    state: true
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: document-integrity
+    priority: P1
+
+- id: cli.doctor
+  name: paper doctor
+  status: active
+  classification:
+    layer: cli
+    runtime: core
+    category: diagnostics
+  owner:
+    module: harness/services/doctor.py
+    symbol: check_all_tools
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: true
+  roadmap:
+    disposition: retain
+    sprint: platform-quality
+    priority: P1
+
+- id: cli.preflight
+  name: paper preflight (PLANNED)
+  status: planned
+  classification:
+    layer: cli
+    runtime: core
+    category: inspection
+  owner:
+    module: cli/paper/commands/preflight.py (planned)
+    symbol: _cmd_preflight
+  invocation: callback_direct
+  effects:
+    state: false
+  tests:
+    unit: planned
+  roadmap:
+    disposition: implement
+    sprint: core-preflight
+    priority: P0

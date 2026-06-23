@@ -31,6 +31,7 @@ from cli.paper.commands.doctor import register_doctor
 from cli.paper.commands.gate import _cmd_gate_method
 from cli.paper.commands.graph import _cmd_graph_overview, _cmd_trace
 from cli.paper.commands.mesh import register_mesh
+from cli.paper.commands.preflight import register_preflight
 from cli.paper.commands.thesaurus import register_thesaurus
 from cli.paper.commands.zotero import register_zotero
 
@@ -499,5 +500,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     # paper mesh
     register_mesh(subparsers)
+
+    # paper preflight
+    register_preflight(subparsers)
 
     return parser
