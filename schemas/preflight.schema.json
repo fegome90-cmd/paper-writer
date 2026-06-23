@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "paper-writer-preflight-v1",
+  "title": "PreflightResult",
+  "description": "Read-only snapshot of pipeline status for Paper Writer agents and CLI.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "PreflightResult schema version (always '1.0')"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ready", "needs_input", "blocked"],
+      "description": "Pipeline readiness state"
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["create", "audit", "revise", "unknown"],
+      "description": "Type of operation the command performs"
+    },
+    "review_mode": {
+      "type": "string",
+      "enum": ["rapid", "academic"],
+      "description": "Review mode from review_config.yaml"
+    },
+    "current_stage": {
+      "type": "string",
+      "enum": ["bootstrap", "search", "screen", "outline", "drafting", "validating", "rendering", "rendered"],
+      "description": "Current pipeline stage"
+    },
+    "current_gates": {
+      "type": "object",
+      "description": "Pipeline gates (13 hard required + 2 soft optional)",
+      "properties": {
+        "repo_initialized": { "type": "boolean" },
+        "search_completed": { "type": "boolean" },
+        "screened_evidence": { "type": "boolean" },
+        "outline_drafted": { "type": "boolean" },
+        "sections_completed": { "type": "boolean" },
+        "bib_imported": { "type": "boolean" },
+        "bib_normalized": { "type": "boolean" },
+        "citations_resolved": { "type": "boolean" },
+        "refs_validated": { "type": "boolean" },
+        "style_passed": { "type": "boolean" },
+        "reporting_passed": { "type": "boolean" },
+        "render_passed": { "type": "boolean" },
+        "ready_for_delivery": { "type": "boolean" },
+        "citation_verified": { "type": "boolean" },
+        "ethics_passed": { "type": "boolean" }
+      },
+      "required": [
+        "repo_initialized",
+        "search_completed",
+        "screened_evidence",
+        "outline_drafted",
+        "sections_completed",
+        "bib_imported",
+        "bib_normalized",
+        "citations_resolved",
+        "refs_validated",
+        "style_passed",
+        "reporting_passed",
+        "render_passed",
+        "ready_for_delivery"
+      ],
+      "additionalProperties": false
+    },
+    "available_commands": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Commands executable at current state"
+    },
+    "blocked_commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "reason": { "type": "string" },
+          "required_stage": { "type": ["string", "null"] },
+          "missing_gates": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["command", "reason", "required_stage", "missing_gates"],
+        "additionalProperties": false
+      },
+      "description": "Commands that cannot execute with reasons"
+    },
+    "next_action": {
+      "type": ["string", "null"],
+      "description": "Recommended next command"
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "scope": { "type": "string", "enum": ["pipeline", "command"] },
+          "message": { "type": "string" },
+          "resolution": { "type": "string" }
+        },
+        "required": ["code", "scope", "message", "resolution"],
+        "additionalProperties": false
+      },
+      "description": "Structured blockers preventing execution"
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Non-blocking observations"
+    },
+    "can_proceed": {
+      "type": "boolean",
+      "description": "Whether the requested command can execute NOW (False when no command specified)"
+    },
+    "command": {
+      "type": ["string", "null"],
+      "description": "Echo of input command (if any)"
+    },
+    "readiness_scope": {
+      "const": "workflow_preconditions_only",
+      "description": "Scope of can_proceed check. v1 always 'workflow_preconditions_only' — agent consumers must perform their own authorization for mutating operations."
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "operation",
+    "review_mode",
+    "current_stage",
+    "current_gates",
+    "available_commands",
+    "blocked_commands",
+    "next_action",
+    "blockers",
+    "warnings",
+    "can_proceed",
+    "command",
+    "readiness_scope"
+  ],
+  "additionalProperties": false
+}

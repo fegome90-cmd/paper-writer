@@ -239,9 +239,14 @@ def execute(args: Any) -> int:
             from cli.paper.runtime import temporary_sigint_handler
 
             with temporary_sigint_handler():
-                func(args)
+                callback_result = func(args)
         else:
-            func(args)
+            callback_result = func(args)
+        # Support explicit exit codes from callbacks (e.g., preflight).
+        # Existing callbacks return None → default to 0 (backward compatible).
+        # Use type() is int (NOT isinstance) so bool is NOT treated as exit code 1.
+        if type(callback_result) is int:
+            return callback_result
         return 0
 
     # Map parsed arguments to OrchestratorRequest via the declarative PIPELINE_MAP
