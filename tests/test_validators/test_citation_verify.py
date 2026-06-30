@@ -436,3 +436,147 @@ class TestCleanTitleSegmentPreservesArxivWord:
         """Trailing venue names must be stripped."""
         assert CitationVerifyValidator._clean_title_segment("My Paper Nature") == "My Paper"
         assert CitationVerifyValidator._clean_title_segment("My Paper NeurIPS") == "My Paper"
+
+
+class TestClassifyTransient:
+    """P1 end-to-end: when a source is rate-limited (transient), the
+    classifier must NOT count it as a definitive 'not found' — otherwise
+    a DOI citation gets misclassified as fabricated (P0)."""
+
+    def test_all_sources_transient_is_transient_not_not_found(self) -> None:
+        v = self._make_validator_offline()
+        verdict, severity = v._classify_citation(
+            crossref=CrossrefResult(found=False, transient_error=True),
+            s2=S2Result(found=False),
+        )
+        assert verdict == "transient"
+        assert severity == "P2"
+
+    def test_one_source_found_others_transient_is_partial(self) -> None:
+        v = self._make_validator_offline()
+        verdict, severity = v._classify_citation(
+            crossref=CrossrefResult(found=True, title="T", score=0.95),
+            s2=S2Result(found=False),
+        )
+        assert verdict == "partial"
+        assert severity == "P2"
+
+    def test_one_found_one_transient_one_not_found_is_partial(self) -> None:
+        v = self._make_validator_offline()
+        verdict, severity = v._classify_citation(
+            crossref=CrossrefResult(found=True, title="T", score=0.95),
+            s2=S2Result(found=False),
+            openalex=OpenAlexResult(found=False),
+            arxiv=ArxivResult(found=False),
+        )
+        assert verdict == "partial"
+        assert severity == "P2"
+
+    def test_no_transient_all_not_found_is_not_found(self) -> None:
+        v = self._make_validator_offline()
+        verdict, severity = v._classify_citation(
+            crossref=CrossrefResult(found=False),
+            s2=S2Result(found=False),
+        )
+        assert verdict == "not_found"
+        assert severity == "P0"
+
+    @staticmethod
+    def _make_validator_offline() -> CitationVerifyValidator:
+        return CitationVerifyValidator(offline=True)
+
+
+class TestQueryCrossrefTransientNoFallback:
+    """P1: when verify_doi returns a transient result, _query_crossref
+    must NOT fall back to a title search (which would fire another
+    rate-limited request). It must return the transient result directly."""
+
+    @patch("validators.citation_verify.CrossrefClient")
+    def test_transient_verify_doi_skips_title_search(self, mock_crossref_cls: MagicMock) -> None:
+        from validators.citation_verify import CitationVerifyValidator
+
+        mock_client = MagicMock()
+        mock_client.verify_doi.return_value = CrossrefResult(found=False, transient_error=True)
+        mock_client.search_by_title.return_value = []  # must not be called
+        mock_crossref_cls.return_value = mock_client
+
+        validator = CitationVerifyValidator(crossref_client=mock_client)
+        result = validator._query_crossref({"doi": "10.1000/test"})
+        assert result is not None
+        assert result.transient_error is True
+        # Critical: title search must NOT fire (would be another rate-limited call)
+        mock_client.search_by_title.assert_not_called()
+
+
+class TestReduceCitationVerdictTransient:
+    """P1 end-to-end: a transient finding (rate-limited citation with DOI)
+    must reduce to 'unresolvable', NOT 'fabricated'. Previously it would
+    be misclassified as fabrication (P0 false positive) because rate-limit
+    was indistinguishable from a definitive not-found."""
+
+    def test_transient_doi_finding_is_unresolvable_not_fabricated(self) -> None:
+        from validators.citation_verify import reduce_citation_verdict
+
+        findings = [
+            {
+                "rule_id": "citation_verify.transient",
+                "severity": "P2",
+                "evidence": {"doi": "10.1000/test", "transient_sources": ["crossref"]},
+            }
+        ]
+        verdict = reduce_citation_verdict(findings)
+        assert verdict == "unresolvable"
+
+    def test_real_not_found_doi_is_still_fabricated(self) -> None:
+        from validators.citation_verify import reduce_citation_verdict
+
+        findings = [
+            {
+                "rule_id": "citation_verify.not_found",
+                "severity": "P0",
+                "evidence": {"doi": "10.99999/fake"},
+            }
+        ]
+        verdict = reduce_citation_verdict(findings)
+        assert verdict == "fabricated"
+
+
+class TestTransientEndToEnd:
+    """B5 (Judgment Day): end-to-end test that a rate-limited Crossref
+    (transient) for a DOI citation flows all the way through to
+    reduce_citation_verdict == 'unresolvable', NOT 'fabricated'."""
+
+    def test_rate_limited_doi_reduces_to_unresolvable_not_fabricated(self) -> None:
+        from validators.citation_verify import reduce_citation_verdict
+
+        # Crossref rate-limited on the DOI lookup; other sources not found.
+        mock_crossref = MagicMock()
+        mock_crossref.verify_doi.return_value = CrossrefResult(found=False, transient_error=True)
+        mock_crossref.search_by_title.return_value = []
+
+        manuscript = _make_manuscript(
+            text="We cite a paper.",
+            references="Smith et al. Nature. 10.1038/s41586-020-2649-2",
+        )
+        validator = CitationVerifyValidator(
+            crossref_client=mock_crossref,
+            s2_client=MagicMock(verify_doi=MagicMock(return_value=S2Result(found=False))),
+            openalex_client=MagicMock(
+                verify_doi=MagicMock(return_value=OpenAlexResult(found=False))
+            ),
+            arxiv_client=MagicMock(
+                verify_arxiv_id=MagicMock(return_value=ArxivResult(found=False))
+            ),
+        )
+        findings = validator.validate(manuscript)
+
+        # The citation must produce a transient finding (not a not_found P0).
+        transient_findings = [f for f in findings if "transient" in f.get("rule_id", "")]
+        not_found_findings = [f for f in findings if "not_found" in f.get("rule_id", "")]
+        assert len(transient_findings) == 1, f"expected 1 transient finding, got {findings}"
+        assert len(not_found_findings) == 0, "must NOT classify as not_found (would be fabrication)"
+
+        # And the aggregated verdict must be 'unresolvable', never 'fabricated'.
+        verdict = reduce_citation_verdict(findings)
+        assert verdict == "unresolvable", f"expected unresolvable, got {verdict!r}"
+        assert verdict != "fabricated"

@@ -225,6 +225,10 @@ class CitationVerifyValidator:
                 resolved_by.append("openalex")
             if arxiv and arxiv.found:
                 resolved_by.append("arxiv")
+            # B2 (Judgment Day): record which queried sources were
+            # transient so the partial verdict doesn't silently swallow
+            # degraded-verification signal.
+            transient_sources = self._transient_sources(crossref, s2, openalex, arxiv)
             return self._make_finding(
                 rule_id="citation_verify.partial",
                 severity="P2",
@@ -234,6 +238,33 @@ class CitationVerifyValidator:
                 evidence={
                     "doi": citation.get("doi"),
                     "resolved_by": resolved_by,
+                    "transient_sources": transient_sources,
+                    "crossref_found": crossref.found if crossref else False,
+                    "s2_found": s2.found if s2 else False,
+                    "openalex_found": openalex.found if openalex else False,
+                    "arxiv_found": arxiv.found if arxiv else False,
+                    **contamination.to_dict(),
+                },
+            )
+
+        if verdict == "transient":
+            # At least one source was queried but returned a transient
+            # error (e.g. rate-limited). This is NOT fabrication evidence
+            # — the citation may well be valid, we just could not confirm.
+            # Report as P2 so the user knows verification was incomplete.
+            transient_sources = self._transient_sources(crossref, s2, openalex, arxiv)
+            return self._make_finding(
+                rule_id="citation_verify.transient",
+                severity="P2",
+                message=(
+                    f"Citation verification incomplete (transient API error): {ref}. "
+                    "Sources: " + ", ".join(transient_sources) + "."
+                ),
+                line=citation.get("line", 0),
+                section=citation.get("section", "references"),
+                evidence={
+                    "doi": citation.get("doi"),
+                    "transient_sources": transient_sources,
                     "crossref_found": crossref.found if crossref else False,
                     "s2_found": s2.found if s2 else False,
                     "openalex_found": openalex.found if openalex else False,
@@ -435,13 +466,30 @@ class CitationVerifyValidator:
         return None
 
     def _query_crossref(self, citation: dict[str, Any]) -> CrossrefResult | None:
-        """Query Crossref for a citation."""
+        """Query Crossref for a citation.
+
+        If verify_doi returns a transient result (e.g. rate-limited),
+        propagate it directly — do NOT fall back to title search, which
+        would fire another rate-limited request.
+        """
         if self.offline:
             return None
         try:
             if citation.get("doi"):
                 result = self.crossref_client.verify_doi(citation["doi"])
                 if result and result.found:
+                    return result
+                if result and getattr(result, "transient_error", False):
+                    # Transient (rate-limited): surface the result directly.
+                    # Deliberate tradeoff (Judgment Day B3): we do NOT fall
+                    # back to title search even though /works/{doi} and
+                    # /works?query.title= may have separate rate counters.
+                    # Rationale: in a batch hitting 429s, firing a second
+                    # request per citation amplifies load and risks more
+                    # 429s. We accept reduced coverage (a typo'd DOI with
+                    # a valid title won't be recovered in this run) to
+                    # avoid worsening a rate-limit storm. A re-run later
+                    # will recover such citations.
                     return result
             # Fallback to title search (from explicit field or extracted from raw)
             title = self._resolve_title(citation)
@@ -592,6 +640,34 @@ class CitationVerifyValidator:
 
         return {}
 
+    @staticmethod
+    def _transient_sources(
+        crossref: CrossrefResult | None,
+        s2: S2Result | None,
+        openalex: OpenAlexResult | None,
+        arxiv: ArxivResult | None,
+    ) -> list[str]:
+        """Return the names of sources whose result carries
+        ``transient_error=True``.
+
+        NOTE (Judgment Day B1): only ``CrossrefResult`` currently has the
+        ``transient_error`` field. S2/OpenAlex/arXiv result types do not,
+        so a rate-limit on those sources is NOT detected here — it falls
+        through as a plain ``found=False``. Extending ``transient_error``
+        to the other result types is tracked as deferred work; until then,
+        transient protection is Crossref-only by design.
+        """
+        sources: list[str] = []
+        if crossref and getattr(crossref, "transient_error", False):
+            sources.append("crossref")
+        if s2 and getattr(s2, "transient_error", False):
+            sources.append("semantic_scholar")
+        if openalex and getattr(openalex, "transient_error", False):
+            sources.append("openalex")
+        if arxiv and getattr(arxiv, "transient_error", False):
+            sources.append("arxiv")
+        return sources
+
     def _classify_citation(
         self,
         crossref: CrossrefResult | None,
@@ -603,12 +679,26 @@ class CitationVerifyValidator:
 
         Returns (verdict, severity). Uses all available resolvers
         (Crossref, S2, OpenAlex, arXiv) for triangulation.
+
+        A source with ``transient_error=True`` (e.g. rate-limited) is
+        neither a positive signal nor a definitive "not found". If every
+        queried source is transient and none found the citation, the
+        verdict is ``transient`` (P2) rather than ``not_found`` (P0), so
+        a rate-limited DOI citation is not misclassified as fabricated.
         """
         cr_found = crossref.found if crossref else False
         s2_found = s2.found if s2 else False
         oa_found = openalex.found if openalex else False
         ar_found = arxiv.found if arxiv else False
         sources_found = sum([cr_found, s2_found, oa_found, ar_found])
+
+        # A source is "transient" if it responded with a transient error.
+        # Only CrossrefResult currently carries this flag; getattr keeps
+        # this safe for the other result types.
+        cr_transient = bool(crossref and getattr(crossref, "transient_error", False))
+        s2_transient = bool(s2 and getattr(s2, "transient_error", False))
+        oa_transient = bool(openalex and getattr(openalex, "transient_error", False))
+        ar_transient = bool(arxiv and getattr(arxiv, "transient_error", False))
 
         if sources_found >= 2:
             # Collect scores only from sources that found the citation
@@ -629,6 +719,14 @@ class CitationVerifyValidator:
 
         if sources_found == 1:
             return "partial", "P2"
+
+        # sources_found == 0. Distinguish "definitively not found" from
+        # "we couldn't get a definitive answer (rate-limited)".
+        any_transient = any([cr_transient, s2_transient, oa_transient, ar_transient])
+        if any_transient:
+            # At least one source was queried but returned transient
+            # (couldn't answer). This is NOT fabrication evidence.
+            return "transient", "P2"
 
         return "not_found", "P0"
 
@@ -706,6 +804,11 @@ def reduce_citation_verdict(findings: list[dict[str, Any]]) -> str:
         elif "unresolvable" in rule_id or severity == "P3":
             has_unresolvable = True
         elif "partial" in rule_id:
+            has_unresolvable = True
+        elif "transient" in rule_id:
+            # Verification incomplete due to transient API errors
+            # (e.g. rate-limiting). NOT fabrication — treat as
+            # unresolvable so the user knows verification was partial.
             has_unresolvable = True
 
     # Decision logic (mirrors ARS C-V6(a)):
