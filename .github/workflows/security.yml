@@ -58,11 +58,19 @@ jobs:
               echo "::error::This MUST be resolved before dependency-review can run. See docs/SECURITY_CI.md."
               exit 1
               ;;
-            404|*)
+            404)
               echo "::error::Dependency graph is disabled for this repository. dependency-review cannot run."
               echo "::error::Fix (requires admin, one line):"
               echo "::error::  gh api -X PUT repos/${REPO}/vulnerability-alerts"
               echo "::error::Then re-run this workflow. See docs/SECURITY_CI.md."
+              exit 1
+              ;;
+            *)
+              echo "::error::Unexpected SBOM probe response (HTTP ${http_status})."
+              echo "::error::This is NOT a known config state. Likely causes:"
+              echo "::error::  - Transient (429 rate-limit, 5xx GitHub outage, runner network): re-run the workflow."
+              echo "::error::  - 401 auth/token: check GITHUB_TOKEN permissions or credential config — re-running will not fix this."
+              echo "::error::Investigate before changing repository settings. See docs/SECURITY_CI.md."
               exit 1
               ;;
           esac
