@@ -64,14 +64,19 @@ dependency graph by **exit code**, not HTTP status flag:
 gh api repos/${{ github.repository }}/dependency-graph/sbom >/dev/null 2>&1
 ```
 
-| Exit code | Meaning | Preflight action |
-|-----------|---------|------------------|
-| `0`       | Graph ready (HTTP 200) | succeed, `dependency-review` runs |
-| non-zero  | Graph off (404) **or** permission gap (403) | FAIL — pinned `::error::` message |
+| HTTP status | Exit code | Meaning | Preflight action |
+|-------------|-----------|---------|------------------|
+| `200`       | `0`       | Graph ready | succeed, `dependency-review` runs |
+| `403`       | non-zero  | Permission gap (`contents: read` insufficient) | FAIL — pinned permission-gap message (add Administration-scoped token) |
+| `404`       | non-zero  | Dependency graph is disabled | FAIL — pinned message (`PUT .../vulnerability-alerts`, then re-run) |
+| other       | non-zero  | Unexpected status (transient GitHub error, runner network issue, or rate limit) | FAIL — **do NOT change config**; re-run the workflow first |
 
 To distinguish 403 (permission gap) from 404 (graph off), the job re-probes with
-`gh api -i` and inspects the HTTP status line, routing to the correct pinned
-message.
+`gh api -i` and inspects the HTTP status line, routing each status to a distinct
+pinned message. Any status other than 200 / 403 / 404 (e.g. 401, 429, 5xx, or
+`000` on a network failure) is treated as unexpected: the preflight fails but
+advises re-running the workflow before changing any repository config, since the
+remediations for 403 or 404 do not address those cases.
 
 > **The `-w '%{http_code}'` curl flag is NOT valid for `gh`.** `gh` silently
 > ignores it. Branch on the exit code instead. This is a pinned load-bearing
