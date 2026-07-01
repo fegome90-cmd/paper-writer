@@ -279,12 +279,25 @@ def _cmd_audit_code_health(args: argparse.Namespace) -> None:
     # Exit 1 if there are actionable findings OR a real Trifecta error occurred
     # while enabled (error with empty findings would otherwise mask as success
     # under --quiet). When trifecta_enabled=False, the error is informational
-    # (SKIPPED), not a failure — exit 0 so optional-Trifecta doesn't break CI.
+    # (SKIPPED), not a failure — exit 0 so optional-Trifecta doesn't break CI,
+    # UNLESS the caller opted into --require-trifecta (CI strict mode that wants
+    # to detect "audit was effectively a no-op").
     has_real_error = bool(
         (report.trifecta_enabled and report.error)
         or (dep_report.trifecta_enabled and dep_report.error)
     )
-    sys.exit(1 if (report.findings or dep_report.findings or has_real_error) else 0)
+    require_trifecta = getattr(args, "require_trifecta", False)
+    skipped_while_required = bool(
+        require_trifecta
+        and not report.trifecta_enabled
+        and not dep_report.trifecta_enabled
+        and (report.error or dep_report.error)
+    )
+    sys.exit(
+        1
+        if (report.findings or dep_report.findings or has_real_error or skipped_while_required)
+        else 0
+    )
 
 
 def _cmd_audit_factuality(args: argparse.Namespace) -> None:
@@ -295,12 +308,16 @@ def _cmd_audit_factuality(args: argparse.Namespace) -> None:
     """
     from validators.claim_evidence import ClaimEvidenceValidator
 
+    # S3 (CLI triage): use is_file() (not exists()) so a directory passed
+    # as --file/--evidence fails fast with a clear UserInputError instead
+    # of a confusing IsADirectoryError downstream in the parser. Matches
+    # the convention used by every other audit subcommand.
     evidence_path = Path(args.evidence)
-    if not evidence_path.exists():
+    if not evidence_path.is_file():
         raise UserInputError(f"Evidence file not found: {evidence_path}")
 
     manuscript_path = Path(args.file)
-    if not manuscript_path.exists():
+    if not manuscript_path.is_file():
         raise UserInputError(f"Manuscript not found: {manuscript_path}")
 
     validator = ClaimEvidenceValidator(

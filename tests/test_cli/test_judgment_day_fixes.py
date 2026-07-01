@@ -104,3 +104,45 @@ class TestValidateOutputPolicyRuntimeErrorClarity:
             validate_output_policy(args, "text")
         # The RuntimeError message itself is the clear config-error signal.
         # main.py's catch-all surfaces it as 'Internal error: Missing output_policy...'.
+
+
+class TestAuditCodeHealthRequireTrifecta:
+    """S1 (CLI triage): --require-trifecta makes a SKIPPED (disabled) audit
+    exit 1 so CI can detect the audit was effectively a no-op. Without the
+    flag, a disabled Trifecta stays exit 0 (optional-Trifecta default)."""
+
+    def test_disabled_without_flag_exits_0(self) -> None:
+        """Default: Trifecta disabled + SKIPPED error -> exit 0 (no breakage)."""
+        import argparse
+
+        skipped = _FakeCodeHealthReport(
+            trifecta_enabled=False, findings=[], error="trifecta disabled"
+        )
+        ok = _FakeCodeHealthReport(findings=[])
+        with (
+            patch("validators.code_health.analyze_code_health", return_value=skipped),
+            patch("validators.code_health.analyze_dependency_risk", return_value=ok),
+        ):
+            args = argparse.Namespace(output="json", require_trifecta=False)
+            with pytest.raises(SystemExit) as exc:
+                _cmd_audit_code_health(args)
+        assert exc.value.code == 0, "disabled Trifecta must exit 0 by default"
+
+    def test_disabled_with_require_trifecta_exits_1(self) -> None:
+        """--require-trifecta: disabled + SKIPPED error -> exit 1 (CI strict)."""
+        import argparse
+
+        skipped = _FakeCodeHealthReport(
+            trifecta_enabled=False, findings=[], error="trifecta disabled"
+        )
+        ok = _FakeCodeHealthReport(findings=[])
+        with (
+            patch("validators.code_health.analyze_code_health", return_value=skipped),
+            patch("validators.code_health.analyze_dependency_risk", return_value=ok),
+        ):
+            args = argparse.Namespace(output="json", require_trifecta=True)
+            with pytest.raises(SystemExit) as exc:
+                _cmd_audit_code_health(args)
+        assert exc.value.code == 1, (
+            "--require-trifecta MUST exit 1 when Trifecta is disabled (closes S1)"
+        )

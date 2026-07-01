@@ -309,6 +309,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Audit code health (dead code, unused methods) via Trifecta graph.",
     )
     audit_code_health.add_argument("--output", "-o", choices=["terminal", "json"], default=None)
+    audit_code_health.add_argument(
+        "--require-trifecta",
+        action="store_true",
+        help="Exit 1 if Trifecta is disabled/unavailable (CI strict mode). "
+        "Without this flag, a SKIPPED audit exits 0 so optional-Trifecta "
+        "does not break CI.",
+    )
     audit_code_health.set_defaults(func=_cmd_audit_code_health, output_policy="json-capable")
     audit_citations = audit_sub.add_parser(
         "citations", help="Verify citations against Crossref + Semantic Scholar."

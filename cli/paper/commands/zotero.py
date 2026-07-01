@@ -224,6 +224,26 @@ def _cmd_zotero_update(args: Any) -> None:
         raise ExternalServiceError(str(exc)) from exc
 
 
+def _extract_version(item: Any) -> int | None:
+    """Extract the version from a Zotero item response, defensively.
+
+    Zotero items may carry version at the top level or nested under ``data``.
+    The ``data`` field can be ``None`` (not just absent) on some responses,
+    so a naive ``item.get("data", {}).get("version")`` raises
+    ``AttributeError`` when ``data`` is explicitly null. This helper guards
+    with ``isinstance`` (mirroring the update-path defense) to avoid
+    misclassifying a malformed response as an Internal error (exit 1).
+    """
+    if not isinstance(item, dict):
+        return None
+    version = item.get("version")
+    if version is None:
+        data = item.get("data")
+        if isinstance(data, dict):
+            version = data.get("version")
+    return version
+
+
 def _cmd_zotero_delete(args: Any) -> None:
     from clients.zotero import ZoteroError
 
@@ -257,7 +277,7 @@ def _cmd_zotero_delete(args: Any) -> None:
             version = args.version
             if version is None:
                 item = client.get_item(args.keys[0])
-                version = item.get("version") or item.get("data", {}).get("version")
+                version = _extract_version(item)
                 if version is None:
                     raise UserInputError("Could not determine item version. Use --version.")
             try:
@@ -266,7 +286,7 @@ def _cmd_zotero_delete(args: Any) -> None:
                 if "412" in str(exc) and args.version is None:
                     # Race: item was modified since auto-detect. Retry once.
                     item = client.get_item(args.keys[0])
-                    version = item.get("version") or item.get("data", {}).get("version")
+                    version = _extract_version(item)
                     if version is None:
                         raise
                     client.delete_item(args.keys[0], version=version)

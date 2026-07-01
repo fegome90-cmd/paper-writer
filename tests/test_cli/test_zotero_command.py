@@ -762,6 +762,19 @@ class TestDeleteExtraBranches:
         assert "Deleted K1" in out
         assert "version 4" in out
 
+    def test_single_data_null_does_not_attribute_error(self) -> None:
+        """S6 (triage): Zotero response with explicit {"data": null} must NOT
+        raise AttributeError (Internal error exit 1). The naive
+        item.get("data", {}).get("version") breaks because the dict default
+        only applies when the key is ABSENT, not when the value is null.
+        Must surface as UserInputError (exit 2) cleanly."""
+        client = _mock_client()
+        client.get_item.return_value = {"data": None}  # data explicitly null
+        args = MagicMock(local=False, keys=["K1"], dry_run=False, yes=True, version=None)
+        with _patch_client(client):
+            with pytest.raises(UserInputError, match="Could not determine item version"):
+                _cmd_zotero_delete(args)
+
 
 # --- register_zotero (lines 310-401) ---
 

@@ -14,6 +14,7 @@ from cli.paper.commands.audit import (
     _cmd_audit_claims,
     _cmd_audit_code_health,
     _cmd_audit_ethics,
+    _cmd_audit_factuality,
     _cmd_audit_prose,
     _cmd_audit_writing_quality,
 )
@@ -349,3 +350,48 @@ class TestCmdAuditCodeHealth:
                 _cmd_audit_code_health(args)
         err = capsys.readouterr().err
         assert "Trifecta unavailable" in err
+
+
+class TestCmdAuditFactuality:
+    """S3 (CLI triage): factuality must use is_file() so a directory passed as
+    --file/--evidence fails fast with UserInputError, not a downstream
+    IsADirectoryError. Also adds basic missing-file coverage that was absent."""
+
+    def test_evidence_missing_raises_user_input(self, tmp_path: Path) -> None:
+        md = tmp_path / "m.md"
+        md.write_text("# Test")
+        args = argparse.Namespace(
+            file=str(md), evidence=str(tmp_path / "missing.json"), output="json", threshold=0.30
+        )
+        with pytest.raises(UserInputError, match="Evidence file not found"):
+            _cmd_audit_factuality(args)
+
+    def test_manuscript_missing_raises_user_input(self, tmp_path: Path) -> None:
+        ev = tmp_path / "e.json"
+        ev.write_text("{}")
+        args = argparse.Namespace(
+            file=str(tmp_path / "missing.md"), evidence=str(ev), output="json", threshold=0.30
+        )
+        with pytest.raises(UserInputError, match="Manuscript not found"):
+            _cmd_audit_factuality(args)
+
+    def test_evidence_directory_raises_user_input_not_isadir(self, tmp_path: Path) -> None:
+        """S3: a directory passed as --evidence must raise UserInputError
+        (clean exit 2), NOT leak an IsADirectoryError (Internal exit 1)."""
+        md = tmp_path / "m.md"
+        md.write_text("# Test")
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        args = argparse.Namespace(file=str(md), evidence=str(subdir), output="json", threshold=0.30)
+        with pytest.raises(UserInputError, match="Evidence file not found"):
+            _cmd_audit_factuality(args)
+
+    def test_manuscript_directory_raises_user_input_not_isadir(self, tmp_path: Path) -> None:
+        """S3: a directory passed as --file must raise UserInputError."""
+        ev = tmp_path / "e.json"
+        ev.write_text("{}")
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        args = argparse.Namespace(file=str(subdir), evidence=str(ev), output="json", threshold=0.30)
+        with pytest.raises(UserInputError, match="Manuscript not found"):
+            _cmd_audit_factuality(args)
