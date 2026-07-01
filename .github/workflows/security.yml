@@ -67,8 +67,10 @@ jobs:
               ;;
             *)
               echo "::error::Unexpected SBOM probe response (HTTP ${http_status})."
-              echo "::error::This is NOT a known config state — possible transient GitHub error,"
-              echo "::error::runner network issue, or rate limit. Re-run the workflow before changing config."
+              echo "::error::This is NOT a known config state. Likely causes:"
+              echo "::error::  - Transient (429 rate-limit, 5xx GitHub outage, runner network): re-run the workflow."
+              echo "::error::  - 401 auth/token: check GITHUB_TOKEN permissions or credential config — re-running will not fix this."
+              echo "::error::Investigate before changing repository settings. See docs/SECURITY_CI.md."
               exit 1
               ;;
           esac
