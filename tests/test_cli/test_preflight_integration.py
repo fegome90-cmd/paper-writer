@@ -105,9 +105,7 @@ def _reset_output_config() -> None:
 class TestPreflightGeneralQuery:
     """B6: `paper preflight` with no --command shows overall pipeline status."""
 
-    def test_preflight_general_query(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_general_query(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """No --command → status, available commands, next action all present."""
         _write_state(tmp_path, "search")
         code, out, _err = _run_cli(
@@ -120,9 +118,7 @@ class TestPreflightGeneralQuery:
         assert "Available commands:" in out
         assert "Next:" in out
 
-    def test_preflight_command_query(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_command_query(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """`--command search` → command-specific status with echo."""
         _write_state(tmp_path, "search")
         code, out, _err = _run_cli(
@@ -140,9 +136,7 @@ class TestPreflightGeneralQuery:
 class TestPreflightAfterPipelineStages:
     """B6: preflight reflects stage progression after real init / manual state."""
 
-    def test_preflight_after_init(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_after_init(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Run `paper init` then `paper preflight` → stage=search, next=search."""
         # Run init live (lightweight: scaffolds project, no external services).
         init_code, _out, _err = _run_cli(
@@ -165,9 +159,7 @@ class TestPreflightAfterPipelineStages:
         assert data["next_action"] == "search"
         assert data["can_proceed"] is False  # no --command given
 
-    def test_preflight_after_search(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_after_search(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Post-search state (stage=screen) → available_commands includes screen."""
         # Create post-search state manually (paper search needs external APIs).
         _write_state(tmp_path, "screen")
@@ -183,9 +175,7 @@ class TestPreflightAfterPipelineStages:
         assert data["status"] == "ready"
         assert data["next_action"] == "screen"
 
-    def test_preflight_after_render(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_after_render(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Rendered stage with render_passed → next_action=verify."""
         _write_state(tmp_path, "rendered")
         code, out, _err = _run_cli(
@@ -275,9 +265,7 @@ class TestPreflightOutputFormats:
         )
         assert code == 0
         data = json.loads(out)
-        schema_path = (
-            Path(__file__).resolve().parents[2] / "schemas" / "preflight.schema.json"
-        )
+        schema_path = Path(__file__).resolve().parents[2] / "schemas" / "preflight.schema.json"
         schema = json.loads(schema_path.read_text())
         jsonschema.validate(data, schema)  # raises on violation
 
@@ -316,9 +304,7 @@ class TestPreflightOutputFormats:
 class TestPreflightReviewMode:
     """B6: preflight reflects review_config.yaml mode."""
 
-    def test_preflight_academic_mode(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_preflight_academic_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """review_config.yaml with mode: academic → preflight review_mode=academic."""
         _write_state(tmp_path, "search")
         _write_review_config(tmp_path, "academic")
@@ -390,9 +376,7 @@ class TestPreflightStandaloneAndRegression:
 class TestSliceAJsonCompletion:
     """B6: orchestrated command JSON includes Slice A fields end-to-end."""
 
-    def test_slice_a_json_completion(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_slice_a_json_completion(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """`paper --output-format json init` JSON includes gate_changes,
         state_changes, and failure_policy (Slice A contract).
         """

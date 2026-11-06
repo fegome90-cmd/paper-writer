@@ -37,8 +37,6 @@ def _mock_client() -> MagicMock:
     return client
 
 
-
-
 def _patch(client: MagicMock | None = None) -> Any:
     return patch(
         "cli.paper.commands.zotero._zotero_client",
@@ -49,9 +47,7 @@ def _patch(client: MagicMock | None = None) -> Any:
 class TestCollectionsRespectsGlobalJson:
     """S10: zotero collections --output-format json → emit_json."""
 
-    def test_global_json_produces_json(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_global_json_produces_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         client = _mock_client()
         client.fetch_collections.return_value = [{"key": "K1", "name": "My"}]
         output.configure(quiet=False, output_format="json")
@@ -65,14 +61,19 @@ class TestCollectionsRespectsGlobalJson:
 class TestSearchRespectsGlobalJson:
     """S10: zotero search --output-format json (without legacy --json) → emit_json."""
 
-    def test_global_json_without_legacy_flag(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_global_json_without_legacy_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         client = _mock_client()
         client.search_items.return_value = [{"key": "K1", "title": "Paper"}]
         output.configure(quiet=False, output_format="json")
-        args = MagicMock(local=False, query="test", item_type=None, tag=None,
-                         collection=None, limit=25, output_json=False)
+        args = MagicMock(
+            local=False,
+            query="test",
+            item_type=None,
+            tag=None,
+            collection=None,
+            limit=25,
+            output_json=False,
+        )
         with _patch(client):
             _cmd_zotero_search(args)
         data = json.loads(capsys.readouterr().out)
@@ -83,9 +84,7 @@ class TestSearchRespectsGlobalJson:
 class TestGetRespectsGlobalJson:
     """S10: zotero get --output-format json (without legacy --json) → emit_json."""
 
-    def test_global_json_without_legacy_flag(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_global_json_without_legacy_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         client = _mock_client()
         client.get_item.return_value = {"key": "K1", "title": "Item"}
         output.configure(quiet=False, output_format="json")
@@ -99,9 +98,7 @@ class TestGetRespectsGlobalJson:
 class TestTemplateRespectsGlobalJson:
     """S10: zotero template already uses emit_json directly — verify it stays."""
 
-    def test_global_json_produces_json(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_global_json_produces_json(self, capsys: pytest.CaptureFixture[str]) -> None:
         client = _mock_client()
         client.get_item_template.return_value = {"itemType": "journalArticle"}
         output.configure(quiet=False, output_format="json")

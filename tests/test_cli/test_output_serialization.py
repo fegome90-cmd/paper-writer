@@ -38,9 +38,7 @@ class TestSerializeResultNewFields:
         assert serialized["gate_changes"] == {"repo_initialized": True}
 
     def test_serialize_result_includes_state_changes(self) -> None:
-        result = _make_result(
-            state_changes={"stage_before": "bootstrap", "stage_after": "search"}
-        )
+        result = _make_result(state_changes={"stage_before": "bootstrap", "stage_after": "search"})
         serialized = _serialize_result(result)
         assert "state_changes" in serialized
         assert serialized["state_changes"] == {

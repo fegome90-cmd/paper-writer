@@ -78,10 +78,7 @@ def _sanitize_text(value: str) -> str:
     injection (ANSI escapes). All ASCII control chars (0x00-0x1F, 0x7F) are
     replaced with their \\xHH representation.
     """
-    return "".join(
-        f"\\x{ord(c):02x}" if ord(c) < 0x20 or ord(c) == 0x7F else c
-        for c in value
-    )
+    return "".join(f"\\x{ord(c):02x}" if ord(c) < 0x20 or ord(c) == 0x7F else c for c in value)
 
 
 def _print_preflight(result: PreflightResult) -> None:
