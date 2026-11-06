@@ -56,9 +56,7 @@ class TestBuildCommandLogPayloadNewFields:
 
     def test_build_command_log_payload_includes_failure_policy(self) -> None:
         orch, action_runner = _create_orchestrator()
-        orch.execute(
-            OrchestratorRequest("init", "search", "continue_on_error")
-        )
+        orch.execute(OrchestratorRequest("init", "search", "continue_on_error"))
         _, payload = action_runner.command_logs[0]
         assert "failure_policy" in payload
         assert payload["failure_policy"] == "continue_on_error"

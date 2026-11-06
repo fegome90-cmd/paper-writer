@@ -53,17 +53,15 @@ class CommandSpec:
     creates_run: bool = False
 
     # Network requirements
-    network_policy: Literal["local_only", "external_allowed", "external_required"] = (
-        "local_only"
-    )
+    network_policy: Literal["local_only", "external_allowed", "external_required"] = "local_only"
 
     # Arguments
     requires_args: tuple[str, ...] = ()
 
     # State policy
-    state_policy: Literal[
-        "pipeline_initializer", "pipeline_governed", "standalone_allowed"
-    ] = "pipeline_governed"
+    state_policy: Literal["pipeline_initializer", "pipeline_governed", "standalone_allowed"] = (
+        "pipeline_governed"
+    )
 
     # Human info
     description: str = ""
@@ -73,7 +71,6 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
     # ═══════════════════════════════════════════════
     # ORCHESTRATED COMMANDS (go through Orchestrator)
     # ═══════════════════════════════════════════════
-
     "init": CommandSpec(
         id="init",
         dispatch_key="init",
@@ -368,11 +365,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="pipeline_governed",
         description="Verify publication readiness",
     ),
-
     # ═══════════════════════════════════════════════
     # PREFLIGHT COMMAND (Phase 0, read-only, standalone)
     # ═══════════════════════════════════════════════
-
     "preflight": CommandSpec(
         id="preflight",
         dispatch_key=None,
@@ -384,11 +379,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="standalone_allowed",
         description="Show pipeline status, blockers, and recommended next action",
     ),
-
     # ═══════════════════════════════════════════════
     # PHASE 0 COMMANDS (direct callback, bypass Orchestrator)
     # ═══════════════════════════════════════════════
-
     "doctor": CommandSpec(
         id="doctor",
         dispatch_key=None,
@@ -433,11 +426,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="standalone_allowed",
         description="Show graph overview via Trifecta",
     ),
-
     # ═══════════════════════════════════════════════
     # AUDIT COMMANDS (Phase 0, read-only, standalone)
     # ═══════════════════════════════════════════════
-
     "audit:prose": CommandSpec(
         id="audit:prose",
         dispatch_key=None,
@@ -537,11 +528,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="standalone_allowed",
         description="Appraise study quality",
     ),
-
     # ═══════════════════════════════════════════════
     # ZOTERO COMMANDS (Phase 0, external, standalone)
     # ═══════════════════════════════════════════════
-
     "zotero:collections": CommandSpec(
         id="zotero:collections",
         dispatch_key=None,
@@ -642,11 +631,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="standalone_allowed",
         description="Upload attachment to Zotero",
     ),
-
     # ═══════════════════════════════════════════════
     # THESAURUS COMMANDS (external subproject, standalone)
     # ═══════════════════════════════════════════════
-
     "thesaurus:import": CommandSpec(
         id="thesaurus:import",
         dispatch_key=None,
@@ -706,11 +693,9 @@ _COMMAND_REGISTRY: dict[str, CommandSpec] = {
         state_policy="standalone_allowed",
         description="Rebuild thesaurus from JSONL",
     ),
-
     # ═══════════════════════════════════════════════
     # MESH COMMANDS (external subproject, standalone)
     # ═══════════════════════════════════════════════
-
     "mesh:import": CommandSpec(
         id="mesh:import",
         dispatch_key=None,

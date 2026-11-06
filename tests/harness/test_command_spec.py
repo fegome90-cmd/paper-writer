@@ -144,9 +144,7 @@ class TestCommandRegistryParity:
     def test_command_registry_parity_with_pipeline_map(self) -> None:
         """Every PIPELINE_MAP dispatch_key must have a matching dispatch_key."""
         registry_dispatch_keys = {
-            spec.dispatch_key
-            for spec in COMMAND_REGISTRY.values()
-            if spec.dispatch_key is not None
+            spec.dispatch_key for spec in COMMAND_REGISTRY.values() if spec.dispatch_key is not None
         }
         for key in PIPELINE_MAP:
             assert key in registry_dispatch_keys, (
@@ -218,9 +216,7 @@ class TestCommandRegistryWorkflowRank:
     def test_workflow_rank_fields(self) -> None:
         for spec in COMMAND_REGISTRY.values():
             if spec.workflow_rank is not None:
-                assert spec.produced_gates, (
-                    f"{spec.id} has workflow_rank but no produced_gates"
-                )
+                assert spec.produced_gates, f"{spec.id} has workflow_rank but no produced_gates"
                 assert spec.recommended_when_gates_missing, (
                     f"{spec.id} has workflow_rank but no recommended_when_gates_missing"
                 )
@@ -254,14 +250,9 @@ class TestParserDerivedParity:
             for cmd_name, sub_parser in action.choices.items():
                 full = f"{prefix}:{cmd_name}" if prefix else cmd_name
                 # Check if this sub_parser has its own subparsers
-                has_sub = any(
-                    isinstance(a, ap._SubParsersAction)
-                    for a in sub_parser._actions
-                )
+                has_sub = any(isinstance(a, ap._SubParsersAction) for a in sub_parser._actions)
                 if has_sub:
-                    leaves |= TestParserDerivedParity._extract_parser_leaves(
-                        sub_parser, full
-                    )
+                    leaves |= TestParserDerivedParity._extract_parser_leaves(sub_parser, full)
                 else:
                     leaves.add(full)
         return leaves
@@ -310,6 +301,5 @@ class TestParserDerivedParity:
                 )
             else:
                 assert spec.dispatch_key is None, (
-                    f"Callback '{key}' has dispatch_key='{spec.dispatch_key}'"
-                    f" (expected None)"
+                    f"Callback '{key}' has dispatch_key='{spec.dispatch_key}' (expected None)"
                 )

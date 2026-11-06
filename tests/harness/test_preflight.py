@@ -92,9 +92,7 @@ class TestPreflightResultImmutability:
             result.status = "blocked"  # type: ignore[misc]
 
     def test_preflight_blocker_immutability(self) -> None:
-        blocker = PreflightBlocker(
-            code="x", scope="pipeline", message="m", resolution="r"
-        )
+        blocker = PreflightBlocker(code="x", scope="pipeline", message="m", resolution="r")
         with pytest.raises(FrozenInstanceError):
             blocker.code = "y"  # type: ignore[misc]
 
@@ -201,9 +199,7 @@ class TestReviewConfigSnapshotSourceTracking:
 class TestLegacyLoaderParity:
     """B2: load_review_config() delegates to load_review_config_snapshot()."""
 
-    def test_legacy_loader_matches_snapshot_values_for_valid_config(
-        self, tmp_path: Path
-    ) -> None:
+    def test_legacy_loader_matches_snapshot_values_for_valid_config(self, tmp_path: Path) -> None:
         config_dir = tmp_path / "outputs"
         config_dir.mkdir()
         (config_dir / "review_config.yaml").write_text("mode: academic\n")
@@ -211,9 +207,7 @@ class TestLegacyLoaderParity:
         snapshot = load_review_config_snapshot(tmp_path)
         assert legacy["mode"] == snapshot.values["mode"] == "academic"
 
-    def test_legacy_loader_matches_snapshot_values_for_invalid_yaml(
-        self, tmp_path: Path
-    ) -> None:
+    def test_legacy_loader_matches_snapshot_values_for_invalid_yaml(self, tmp_path: Path) -> None:
         config_dir = tmp_path / "outputs"
         config_dir.mkdir()
         (config_dir / "review_config.yaml").write_text(": : broken : :\n")
@@ -221,9 +215,7 @@ class TestLegacyLoaderParity:
         snapshot = load_review_config_snapshot(tmp_path)
         assert legacy["mode"] == snapshot.values["mode"] == "rapid"
 
-    def test_legacy_loader_matches_snapshot_values_for_unknown_mode(
-        self, tmp_path: Path
-    ) -> None:
+    def test_legacy_loader_matches_snapshot_values_for_unknown_mode(self, tmp_path: Path) -> None:
         config_dir = tmp_path / "outputs"
         config_dir.mkdir()
         (config_dir / "review_config.yaml").write_text("mode: turbo\n")
@@ -232,17 +224,13 @@ class TestLegacyLoaderParity:
         # Both should normalize unknown mode → "rapid"
         assert legacy["mode"] == snapshot.values["mode"] == "rapid"
 
-    def test_legacy_loader_matches_snapshot_for_missing_file(
-        self, tmp_path: Path
-    ) -> None:
+    def test_legacy_loader_matches_snapshot_for_missing_file(self, tmp_path: Path) -> None:
         legacy = load_review_config(tmp_path)
         snapshot = load_review_config_snapshot(tmp_path)
         assert legacy["mode"] == snapshot.values["mode"] == "rapid"
         assert legacy["search_window"] == snapshot.values["search_window"] is None
 
-    def test_legacy_loader_matches_snapshot_for_non_dict_yaml(
-        self, tmp_path: Path
-    ) -> None:
+    def test_legacy_loader_matches_snapshot_for_non_dict_yaml(self, tmp_path: Path) -> None:
         config_dir = tmp_path / "outputs"
         config_dir.mkdir()
         (config_dir / "review_config.yaml").write_text("- just\n- a\n- list\n")
@@ -273,9 +261,7 @@ def _write_state(
     # Set cumulative preconditions from all stages up to current (realistic state)
     stage_idx = ManuscriptState.STAGE_ORDER.index(stage)
     for prior_stage in ManuscriptState.STAGE_ORDER[: stage_idx + 1]:
-        for gate in ManuscriptState.STAGE_PRECONDITIONS.get(
-            prior_stage, frozenset()
-        ):
+        for gate in ManuscriptState.STAGE_PRECONDITIONS.get(prior_stage, frozenset()):
             all_gates[gate] = True
     if gates:
         all_gates.update(gates)
@@ -364,29 +350,19 @@ class TestResolvePreflightMissingState:
         assert any(b.code == "state_missing" for b in result.blockers)
         assert result.can_proceed is False
 
-    def test_resolve_preflight_missing_state_pipeline_governed(
-        self, tmp_path: Path
-    ) -> None:
-        result = resolve_preflight(
-            tmp_path, command="search", review_config=_rapid_snapshot()
-        )
+    def test_resolve_preflight_missing_state_pipeline_governed(self, tmp_path: Path) -> None:
+        result = resolve_preflight(tmp_path, command="search", review_config=_rapid_snapshot())
         assert result.status == "needs_input"
         assert any(b.code == "state_missing" for b in result.blockers)
 
-    def test_resolve_preflight_pipeline_initializer_no_state(
-        self, tmp_path: Path
-    ) -> None:
-        result = resolve_preflight(
-            tmp_path, command="init", review_config=_rapid_snapshot()
-        )
+    def test_resolve_preflight_pipeline_initializer_no_state(self, tmp_path: Path) -> None:
+        result = resolve_preflight(tmp_path, command="init", review_config=_rapid_snapshot())
         assert result.status == "ready"
         assert result.can_proceed is True
         assert not any(b.code == "state_missing" for b in result.blockers)
 
     def test_resolve_preflight_standalone_no_state(self, tmp_path: Path) -> None:
-        result = resolve_preflight(
-            tmp_path, command="audit:prose", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="audit:prose", review_config=_rapid_snapshot())
         assert result.status == "ready"
         assert result.can_proceed is True
 
@@ -403,23 +379,15 @@ class TestResolvePreflightInvalidState:
         assert result.status == "blocked"
         assert any(b.code == "state_invalid" for b in result.blockers)
 
-    def test_resolve_preflight_pipeline_initializer_corrupt_state(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_pipeline_initializer_corrupt_state(self, tmp_path: Path) -> None:
         _write_invalid_state(tmp_path)
-        result = resolve_preflight(
-            tmp_path, command="init", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="init", review_config=_rapid_snapshot())
         assert result.status == "blocked"
         assert result.can_proceed is False
 
-    def test_resolve_preflight_standalone_corrupt_state(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_standalone_corrupt_state(self, tmp_path: Path) -> None:
         _write_invalid_state(tmp_path)
-        result = resolve_preflight(
-            tmp_path, command="audit:prose", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="audit:prose", review_config=_rapid_snapshot())
         assert result.status == "ready"
         assert result.can_proceed is True
 
@@ -434,10 +402,7 @@ class TestResolvePreflightReviewConfig:
         _write_state(tmp_path, "bootstrap")
         result = resolve_preflight(tmp_path)
         assert result.review_mode == "rapid"
-        assert any(
-            "default" in w.lower() or "not found" in w.lower()
-            for w in result.warnings
-        )
+        assert any("default" in w.lower() or "not found" in w.lower() for w in result.warnings)
         assert result.status == "ready"
 
     def test_resolve_preflight_invalid_review_config(self, tmp_path: Path) -> None:
@@ -470,9 +435,7 @@ class TestResolvePreflightReviewConfig:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.review_mode == "rapid"
 
-    def test_resolve_preflight_review_mode_invalid_normalized(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_review_mode_invalid_normalized(self, tmp_path: Path) -> None:
         """Invalid mode passed directly via snapshot is normalized to 'rapid'."""
         _write_state(tmp_path, "bootstrap")
         snap = ReviewConfigSnapshot(
@@ -519,9 +482,7 @@ class TestReadinessScopeAndMutatingStandalone:
         assert result.can_proceed is True
         assert any("side effects" in w for w in result.warnings)
 
-    def test_non_mutating_standalone_no_side_effects_warning(
-        self, tmp_path: Path
-    ) -> None:
+    def test_non_mutating_standalone_no_side_effects_warning(self, tmp_path: Path) -> None:
         """audit:prose (read-only standalone) must NOT get side-effects warning."""
         result = resolve_preflight(
             tmp_path,
@@ -574,9 +535,7 @@ class TestReadinessScopeAndMutatingStandalone:
 class TestResolvePreflightCommands:
     """B3: available_commands and blocked_commands computation."""
 
-    def test_resolve_preflight_available_commands_bootstrap(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_available_commands_bootstrap(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "bootstrap")
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert "init" in result.available_commands
@@ -585,18 +544,14 @@ class TestResolvePreflightCommands:
         assert "doctor" in result.available_commands
         assert "audit:prose" in result.available_commands
 
-    def test_resolve_preflight_available_commands_search(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_available_commands_search(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "search")
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert "search" in result.available_commands
         assert "screen" not in result.available_commands
         assert "init" in result.available_commands
 
-    def test_resolve_preflight_available_commands_drafting(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_available_commands_drafting(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert "draft:section" in result.available_commands
@@ -611,14 +566,10 @@ class TestResolvePreflightCommands:
         assert "render" in blocked_ids
         assert "verify" in blocked_ids
 
-    def test_resolve_preflight_blocked_commands_with_reason(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_blocked_commands_with_reason(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
-        render_bc = next(
-            bc for bc in result.blocked_commands if bc.command == "render"
-        )
+        render_bc = next(bc for bc in result.blocked_commands if bc.command == "render")
         assert render_bc.required_stage == "rendering"
         assert len(render_bc.missing_gates) > 0
 
@@ -636,16 +587,12 @@ class TestResolvePreflightCommands:
 class TestResolvePreflightCanProceed:
     """B3: can_proceed invariant tests."""
 
-    def test_resolve_preflight_can_proceed_false_no_command(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_can_proceed_false_no_command(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.can_proceed is False
 
-    def test_resolve_preflight_can_proceed_true_command_eligible(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_can_proceed_true_command_eligible(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
         result = resolve_preflight(
             tmp_path, command="draft:section", review_config=_rapid_snapshot()
@@ -653,13 +600,9 @@ class TestResolvePreflightCanProceed:
         assert result.can_proceed is True
         assert result.status == "ready"
 
-    def test_resolve_preflight_can_proceed_false_command_blocked(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_can_proceed_false_command_blocked(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
-        result = resolve_preflight(
-            tmp_path, command="render", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="render", review_config=_rapid_snapshot())
         assert result.can_proceed is False
         assert result.status == "blocked"
 
@@ -704,13 +647,9 @@ class TestResolvePreflightNextAction:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.next_action == "verify"
 
-    def test_next_action_none_when_command_specified(
-        self, tmp_path: Path
-    ) -> None:
+    def test_next_action_none_when_command_specified(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "bootstrap")
-        result = resolve_preflight(
-            tmp_path, command="init", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="init", review_config=_rapid_snapshot())
         assert result.next_action is None
 
     def test_next_action_init_when_state_missing(self, tmp_path: Path) -> None:
@@ -731,9 +670,7 @@ class TestResolvePreflightBlockers:
 
     def test_resolve_preflight_blocker_structure(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
-        result = resolve_preflight(
-            tmp_path, command="render", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="render", review_config=_rapid_snapshot())
         assert len(result.blockers) > 0
         for blocker in result.blockers:
             assert hasattr(blocker, "code")
@@ -741,21 +678,15 @@ class TestResolvePreflightBlockers:
             assert hasattr(blocker, "message")
             assert hasattr(blocker, "resolution")
 
-    def test_resolve_preflight_blocker_scope_pipeline(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_blocker_scope_pipeline(self, tmp_path: Path) -> None:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         state_blockers = [b for b in result.blockers if b.code == "state_missing"]
         assert len(state_blockers) == 1
         assert state_blockers[0].scope == "pipeline"
 
-    def test_resolve_preflight_blocker_scope_command(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_blocker_scope_command(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
-        result = resolve_preflight(
-            tmp_path, command="render", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="render", review_config=_rapid_snapshot())
         command_blockers = [b for b in result.blockers if b.scope == "command"]
         assert len(command_blockers) >= 1
 
@@ -780,13 +711,9 @@ class TestResolvePreflightStatus:
         result = resolve_preflight(tmp_path, review_config=_rapid_snapshot())
         assert result.status == "blocked"
 
-    def test_resolve_preflight_status_blocked_command_not_eligible(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_status_blocked_command_not_eligible(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "drafting")
-        result = resolve_preflight(
-            tmp_path, command="render", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="render", review_config=_rapid_snapshot())
         assert result.status == "blocked"
 
 
@@ -798,22 +725,16 @@ class TestResolvePreflightUnknownCommand:
 
     def test_resolve_preflight_unknown_command(self, tmp_path: Path) -> None:
         _write_state(tmp_path, "bootstrap")
-        result = resolve_preflight(
-            tmp_path, command="nonexistent", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="nonexistent", review_config=_rapid_snapshot())
         assert result.status == "blocked"
         assert result.can_proceed is False
         assert any(b.code == "unknown_command" for b in result.blockers)
         assert result.next_action is None
 
-    def test_resolve_preflight_unknown_command_complete_result(
-        self, tmp_path: Path
-    ) -> None:
+    def test_resolve_preflight_unknown_command_complete_result(self, tmp_path: Path) -> None:
         """Unknown command still builds a complete PreflightResult."""
         _write_state(tmp_path, "bootstrap")
-        result = resolve_preflight(
-            tmp_path, command="nonexistent", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="nonexistent", review_config=_rapid_snapshot())
         assert result.schema_version == "1.0"
         assert result.review_mode == "rapid"
         assert result.current_stage == "bootstrap"
@@ -864,9 +785,7 @@ class TestBinaryStateYaml:
         outputs.mkdir(parents=True, exist_ok=True)
         (outputs / "state.yaml").write_bytes(b"\x80\x81\x82\xff\xfe")
 
-        result = resolve_preflight(
-            tmp_path, command="audit:prose", review_config=_rapid_snapshot()
-        )
+        result = resolve_preflight(tmp_path, command="audit:prose", review_config=_rapid_snapshot())
 
         assert result.status == "ready"
         assert result.can_proceed is True
@@ -902,9 +821,7 @@ class TestReviewConfigNullMode:
 class TestBinaryReviewConfig:
     """P1: Binary/non-UTF8 review_config.yaml must produce default_invalid, not crash."""
 
-    def test_binary_review_config_returns_default_invalid_snapshot(
-        self, tmp_path: Path
-    ) -> None:
+    def test_binary_review_config_returns_default_invalid_snapshot(self, tmp_path: Path) -> None:
         """Binary review_config.yaml → source=default_invalid, defaults returned."""
         outputs = tmp_path / "outputs"
         outputs.mkdir(parents=True, exist_ok=True)
@@ -916,9 +833,7 @@ class TestBinaryReviewConfig:
         assert snapshot.values["mode"] == "rapid"
         assert len(snapshot.warnings) > 0
 
-    def test_binary_review_config_preflight_emits_valid_json(
-        self, tmp_path: Path
-    ) -> None:
+    def test_binary_review_config_preflight_emits_valid_json(self, tmp_path: Path) -> None:
         """Binary review_config.yaml + preflight → PreflightResult with valid status."""
         outputs = tmp_path / "outputs"
         outputs.mkdir(parents=True, exist_ok=True)
@@ -934,9 +849,7 @@ class TestBinaryReviewConfig:
 class TestUnknownCommandWithMissingState:
     """P2: unknown_command + state_missing must report BOTH blockers."""
 
-    def test_unknown_command_with_missing_state_reports_both_blockers(
-        self, tmp_path: Path
-    ) -> None:
+    def test_unknown_command_with_missing_state_reports_both_blockers(self, tmp_path: Path) -> None:
         """Unknown cmd + missing state → both state_missing and unknown_command."""
         # No state.yaml — state is missing
         result = resolve_preflight(

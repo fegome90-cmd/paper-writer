@@ -74,13 +74,9 @@ def load_review_config_snapshot(project_root: Path) -> ReviewConfigSnapshot:
         # Without this, null mode skips the merge loop (is not None guard)
         # and silently keeps the default — no warning, unlike other invalid modes.
         if "mode" in data and data["mode"] is None:
-            warnings_list.append(
-                "Review mode is null in review_config.yaml, defaulting to 'rapid'"
-            )
+            warnings_list.append("Review mode is null in review_config.yaml, defaulting to 'rapid'")
         elif merged["mode"] not in ("rapid", "academic"):
-            warnings_list.append(
-                f"Unknown review mode '{merged['mode']}', defaulting to 'rapid'"
-            )
+            warnings_list.append(f"Unknown review mode '{merged['mode']}', defaulting to 'rapid'")
             merged["mode"] = "rapid"
         return ReviewConfigSnapshot(
             values=merged,

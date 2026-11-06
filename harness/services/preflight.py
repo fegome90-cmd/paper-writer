@@ -137,14 +137,9 @@ def _compute_next_action(
             state_missing=False,
             state_invalid=False,
         )
-        and any(
-            not current_gates.get(gate, False)
-            for gate in spec.recommended_when_gates_missing
-        )
+        and any(not current_gates.get(gate, False) for gate in spec.recommended_when_gates_missing)
     ]
-    candidates.sort(
-        key=lambda s: s.workflow_rank if s.workflow_rank is not None else 0
-    )
+    candidates.sort(key=lambda s: s.workflow_rank if s.workflow_rank is not None else 0)
     return candidates[0].id if candidates else None
 
 
@@ -169,9 +164,7 @@ def _build_blocked_command(
         )
 
     # State valid — determine stage/gate blockers
-    missing = tuple(
-        gate for gate in spec.required_gates if not current_gates.get(gate, False)
-    )
+    missing = tuple(gate for gate in spec.required_gates if not current_gates.get(gate, False))
     stage_low = _stage_index(current_stage) < _stage_index(spec.minimum_stage)
 
     parts: list[str] = []
@@ -240,9 +233,7 @@ def resolve_preflight(
         ValueError: If project_root does not exist or is not a directory.
     """
     if not project_root.is_dir():
-        raise ValueError(
-            f"Project root does not exist or is not a directory: {project_root}"
-        )
+        raise ValueError(f"Project root does not exist or is not a directory: {project_root}")
 
     # 1. Load review config
     if review_config is None:
@@ -252,8 +243,8 @@ def resolve_preflight(
         review_mode = "rapid"
 
     # 2. Load state
-    current_stage, current_gates, state_missing, state_invalid, state_error = (
-        _load_state(project_root)
+    current_stage, current_gates, state_missing, state_invalid, state_error = _load_state(
+        project_root
     )
 
     # 3. Lookup command in registry
@@ -317,8 +308,10 @@ def resolve_preflight(
         # - unknown command (pipeline state is still missing)
         # - pipeline_governed commands
         # Standalone and pipeline_initializer are exempt (warning only).
-        if command is None or spec is None or (
-            spec is not None and spec.state_policy == "pipeline_governed"
+        if (
+            command is None
+            or spec is None
+            or (spec is not None and spec.state_policy == "pipeline_governed")
         ):
             blockers.append(
                 PreflightBlocker(
@@ -343,9 +336,7 @@ def resolve_preflight(
                 )
             )
         else:
-            warnings.append(
-                "state.yaml is corrupt; standalone command can proceed"
-            )
+            warnings.append("state.yaml is corrupt; standalone command can proceed")
 
     # unknown_command blocker (no special-case jump — full result still built)
     if command is not None and spec is None:
@@ -367,9 +358,7 @@ def resolve_preflight(
         and not state_invalid
     ):
         stage_low = _stage_index(current_stage) < _stage_index(spec.minimum_stage)
-        missing_cmd_gates = tuple(
-            g for g in spec.required_gates if not current_gates.get(g, False)
-        )
+        missing_cmd_gates = tuple(g for g in spec.required_gates if not current_gates.get(g, False))
         if stage_low:
             blockers.append(
                 PreflightBlocker(
@@ -387,10 +376,7 @@ def resolve_preflight(
                 PreflightBlocker(
                     code="gate_not_passed",
                     scope="command",
-                    message=(
-                        f"Command '{command}' requires gate '{gate}' "
-                        f"which is not passed"
-                    ),
+                    message=(f"Command '{command}' requires gate '{gate}' which is not passed"),
                     resolution=f"Complete the step that produces gate '{gate}'",
                 )
             )
@@ -399,18 +385,12 @@ def resolve_preflight(
     if command is not None and spec is None:
         status = "blocked"
     elif state_missing:
-        if command is None or (
-            spec is not None and spec.state_policy == "pipeline_governed"
-        ):
+        if command is None or (spec is not None and spec.state_policy == "pipeline_governed"):
             status = "needs_input"
         else:
             status = "ready"
     elif state_invalid:
-        if (
-            command is not None
-            and spec is not None
-            and spec.state_policy == "standalone_allowed"
-        ):
+        if command is not None and spec is not None and spec.state_policy == "standalone_allowed":
             status = "ready"
         else:
             status = "blocked"
